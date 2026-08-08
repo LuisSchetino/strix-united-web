@@ -13,4 +13,6 @@ test("migration FC27 e aditiva e ativa RLS nos novos dominios", async () => {
   }
   assert.match(sql, /private\.has_minimum_tier\('dev'\)/);
   assert.match(sql, /private\.has_minimum_tier\('diretoria'\)/);
+  assert.match(sql, /created_by is immutable/);
+  assert.doesNotMatch(sql, /grant insert, update, delete on public\.competitions/i);
 });

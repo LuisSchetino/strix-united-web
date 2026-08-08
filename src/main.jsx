@@ -587,14 +587,10 @@ function useFc27Workspace(client, profile) {
       .from("fc27-team-assets")
       .upload(path, file, { cacheControl: "31536000", upsert: false, contentType: file.type || undefined });
     if (uploadError) throw uploadError;
-    const { data, error } = await client
-      .from("opponent_logos")
-      .upsert(
-        { canonical_name: name.trim(), storage_path: path, created_by: profile.user_id },
-        { onConflict: "normalized_name" },
-      )
-      .select("id")
-      .single();
+    const result = existing
+      ? await client.from("opponent_logos").update({ canonical_name: name.trim(), storage_path: path }).eq("id", existing.id).select("id").single()
+      : await client.from("opponent_logos").insert({ canonical_name: name.trim(), storage_path: path, created_by: profile.user_id }).select("id").single();
+    const { data, error } = result;
     if (error) throw error;
     return data.id;
   };
@@ -683,10 +679,23 @@ function useFc27Workspace(client, profile) {
   const savePlayerAliases = async (aliases, shouldRefresh = true) => {
     const rows = aliases
       .filter((item) => item.eaName && item.playerId)
-      .map((item) => ({ ea_name: item.eaName.trim(), player_id: item.playerId, created_by: profile.user_id, updated_by: profile.user_id }));
+      .map((item) => ({ ea_name: item.eaName.trim(), player_id: item.playerId, updated_by: profile.user_id }));
     if (!rows.length) return;
-    const { error } = await client.from("club_player_aliases").upsert(rows, { onConflict: "normalized_name" });
-    if (error) throw error;
+    const normalizeAlias = (name) => String(name || "").trim().toLocaleLowerCase("pt-BR").replace(/\s+/g, " ");
+    const existingByName = new Map(state.aliases.map((item) => [item.normalized_name, item]));
+    const inserts = [];
+    const updates = [];
+    for (const row of rows) {
+      const existing = existingByName.get(normalizeAlias(row.ea_name));
+      if (existing) updates.push(client.from("club_player_aliases").update(row).eq("id", existing.id));
+      else inserts.push({ ...row, created_by: profile.user_id });
+    }
+    const results = await Promise.all([
+      ...(inserts.length ? [client.from("club_player_aliases").insert(inserts)] : []),
+      ...updates,
+    ]);
+    const failure = results.find((result) => result.error)?.error;
+    if (failure) throw failure;
     if (shouldRefresh) await refresh();
   };
   const removeClubMatch = async (id) => {

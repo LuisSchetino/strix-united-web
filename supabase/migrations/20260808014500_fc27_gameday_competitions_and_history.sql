@@ -9,32 +9,77 @@ create unique index if not exists club_players_active_shirt_number_unique
   on public.club_players (shirt_number)
   where is_active and shirt_number is not null;
 
--- Directors must be able to maintain records created by a different director.
--- These permissive UPDATE policies complement the original ALL policies without
--- weakening the tier check or allowing the actor fields to be forged.
-create policy "directors update FC27 squad across managers"
+create or replace function private.preserve_created_by()
+returns trigger
+language plpgsql
+security invoker
+set search_path = pg_catalog
+as $$
+begin
+  if new.created_by is distinct from old.created_by then
+    raise exception 'created_by is immutable' using errcode = '23514';
+  end if;
+  return new;
+end;
+$$;
+revoke all on function private.preserve_created_by() from public;
+
+-- Replace the original broad ALL policies with operation-specific policies.
+-- This keeps SELECT evaluation singular and lets directors maintain records
+-- across managers without allowing created_by/updated_by to be forged.
+drop policy if exists "directors manage FC27 squad" on public.club_players;
+create policy "directors create FC27 squad"
+on public.club_players for insert to authenticated with check (
+  private.has_minimum_tier('diretoria')
+  and created_by = (select auth.uid())
+  and updated_by = (select auth.uid())
+);
+create policy "directors update FC27 squad"
 on public.club_players for update to authenticated
 using (private.has_minimum_tier('diretoria'))
-with check (
+with check (private.has_minimum_tier('diretoria') and updated_by = (select auth.uid()));
+create policy "directors delete FC27 squad"
+on public.club_players for delete to authenticated using (private.has_minimum_tier('diretoria'));
+
+drop policy if exists "directors manage FC27 matches" on public.club_matches;
+create policy "directors create FC27 matches"
+on public.club_matches for insert to authenticated with check (
   private.has_minimum_tier('diretoria')
+  and created_by = (select auth.uid())
   and updated_by = (select auth.uid())
 );
-
-create policy "directors update FC27 matches across managers"
+create policy "directors update FC27 matches"
 on public.club_matches for update to authenticated
 using (private.has_minimum_tier('diretoria'))
-with check (
+with check (private.has_minimum_tier('diretoria') and updated_by = (select auth.uid()));
+create policy "directors delete FC27 matches"
+on public.club_matches for delete to authenticated using (private.has_minimum_tier('diretoria'));
+
+drop policy if exists "directors manage FC27 player aliases" on public.club_player_aliases;
+create policy "directors create FC27 player aliases"
+on public.club_player_aliases for insert to authenticated with check (
   private.has_minimum_tier('diretoria')
+  and created_by = (select auth.uid())
   and updated_by = (select auth.uid())
 );
-
-create policy "directors update FC27 aliases across managers"
+create policy "directors update FC27 player aliases"
 on public.club_player_aliases for update to authenticated
 using (private.has_minimum_tier('diretoria'))
-with check (
-  private.has_minimum_tier('diretoria')
-  and updated_by = (select auth.uid())
+with check (private.has_minimum_tier('diretoria') and updated_by = (select auth.uid()));
+create policy "directors delete FC27 player aliases"
+on public.club_player_aliases for delete to authenticated using (private.has_minimum_tier('diretoria'));
+
+drop policy if exists "directors manage opponent logos" on public.opponent_logos;
+create policy "directors create opponent logos"
+on public.opponent_logos for insert to authenticated with check (
+  private.has_minimum_tier('diretoria') and created_by = (select auth.uid())
 );
+create policy "directors update opponent logos"
+on public.opponent_logos for update to authenticated
+using (private.has_minimum_tier('diretoria'))
+with check (private.has_minimum_tier('diretoria'));
+create policy "directors delete opponent logos"
+on public.opponent_logos for delete to authenticated using (private.has_minimum_tier('diretoria'));
 
 create table if not exists public.gameday_projects (
   id uuid primary key default gen_random_uuid(),
@@ -271,6 +316,51 @@ create index if not exists competition_teams_strix_idx on public.competition_tea
 create index if not exists competition_standings_group_position_idx on public.competition_standings (edition_id, group_id, position);
 create index if not exists competition_fixtures_schedule_idx on public.competition_fixtures (edition_id, scheduled_at);
 create index if not exists competition_audit_log_edition_idx on public.competition_audit_log (edition_id, created_at desc);
+create index if not exists gameday_projects_created_by_idx on public.gameday_projects (created_by);
+create index if not exists gameday_projects_updated_by_idx on public.gameday_projects (updated_by);
+create index if not exists gameday_player_assets_created_by_idx on public.gameday_player_assets (created_by);
+create index if not exists gameday_player_assets_updated_by_idx on public.gameday_player_assets (updated_by);
+create index if not exists competitions_created_by_idx on public.competitions (created_by);
+create index if not exists competitions_updated_by_idx on public.competitions (updated_by);
+create index if not exists competition_editions_created_by_idx on public.competition_editions (created_by);
+create index if not exists competition_editions_updated_by_idx on public.competition_editions (updated_by);
+create index if not exists competition_sources_created_by_idx on public.competition_sources (created_by);
+create index if not exists competition_sources_updated_by_idx on public.competition_sources (updated_by);
+create index if not exists competition_groups_stage_id_idx on public.competition_groups (stage_id);
+create index if not exists competition_standings_team_id_idx on public.competition_standings (team_id);
+create index if not exists competition_fixtures_source_id_idx on public.competition_fixtures (source_id);
+create index if not exists competition_fixtures_stage_id_idx on public.competition_fixtures (stage_id);
+create index if not exists competition_fixtures_group_id_idx on public.competition_fixtures (group_id);
+create index if not exists competition_fixtures_home_team_id_idx on public.competition_fixtures (home_team_id);
+create index if not exists competition_fixtures_away_team_id_idx on public.competition_fixtures (away_team_id);
+create index if not exists competition_fixtures_club_match_id_idx on public.competition_fixtures (club_match_id);
+create index if not exists competition_fixtures_agenda_match_id_idx on public.competition_fixtures (agenda_match_id);
+create index if not exists competition_audit_log_competition_id_idx on public.competition_audit_log (competition_id);
+create index if not exists opponent_logos_created_by_idx on public.opponent_logos (created_by);
+create index if not exists agenda_matches_opponent_logo_id_idx on public.agenda_matches (opponent_logo_id);
+create index if not exists agenda_matches_previous_logo_id_idx on public.agenda_matches (previous_opponent_logo_id);
+create index if not exists agenda_matches_created_by_idx on public.agenda_matches (created_by);
+create index if not exists agenda_matches_updated_by_idx on public.agenda_matches (updated_by);
+create index if not exists club_players_created_by_idx on public.club_players (created_by);
+create index if not exists club_players_updated_by_idx on public.club_players (updated_by);
+create index if not exists club_matches_opponent_logo_id_idx on public.club_matches (opponent_logo_id);
+create index if not exists club_matches_created_by_idx on public.club_matches (created_by);
+create index if not exists club_matches_updated_by_idx on public.club_matches (updated_by);
+create index if not exists club_player_aliases_created_by_idx on public.club_player_aliases (created_by);
+create index if not exists club_player_aliases_updated_by_idx on public.club_player_aliases (updated_by);
+
+do $$
+declare table_name text;
+begin
+  foreach table_name in array array[
+    'opponent_logos', 'agenda_matches', 'club_players', 'club_matches',
+    'club_player_aliases', 'gameday_projects', 'gameday_player_assets',
+    'competitions', 'competition_editions', 'competition_sources'
+  ] loop
+    execute format('drop trigger if exists fc27_preserve_created_by on public.%I', table_name);
+    execute format('create trigger fc27_preserve_created_by before update on public.%I for each row execute function private.preserve_created_by()', table_name);
+  end loop;
+end $$;
 
 do $$
 declare table_name text;
@@ -315,9 +405,12 @@ alter table public.competition_audit_log enable row level security;
 grant select on public.competitions, public.competition_editions, public.competition_sources,
   public.competition_stages, public.competition_groups, public.competition_teams,
   public.competition_standings, public.competition_fixtures to authenticated;
-grant insert, update, delete on public.competitions, public.competition_editions, public.competition_sources,
+grant insert, update on public.competitions, public.competition_editions, public.competition_sources,
   public.competition_stages, public.competition_groups, public.competition_teams,
   public.competition_standings, public.competition_fixtures to authenticated;
+revoke delete on public.competitions, public.competition_editions, public.competition_sources,
+  public.competition_stages, public.competition_groups, public.competition_teams,
+  public.competition_standings, public.competition_fixtures from authenticated;
 grant select, insert on public.competition_audit_log to authenticated;
 grant usage, select on sequence public.competition_audit_log_id_seq to authenticated;
 
@@ -341,8 +434,39 @@ begin
   end loop;
 end $$;
 
-create policy "developers manage competitions"
-on public.competitions for all to authenticated
+create policy "developers create competitions"
+on public.competitions for insert to authenticated
+with check (
+  private.has_minimum_tier('dev')
+  and created_by = (select auth.uid())
+  and updated_by = (select auth.uid())
+);
+create policy "developers update competitions"
+on public.competitions for update to authenticated
+using (private.has_minimum_tier('dev'))
+with check (private.has_minimum_tier('dev') and updated_by = (select auth.uid()));
+
+create policy "developers create competition editions"
+on public.competition_editions for insert to authenticated
+with check (
+  private.has_minimum_tier('dev')
+  and created_by = (select auth.uid())
+  and updated_by = (select auth.uid())
+);
+create policy "developers update competition editions"
+on public.competition_editions for update to authenticated
+using (private.has_minimum_tier('dev'))
+with check (private.has_minimum_tier('dev') and updated_by = (select auth.uid()));
+
+create policy "developers create competition sources"
+on public.competition_sources for insert to authenticated
+with check (
+  private.has_minimum_tier('dev')
+  and created_by = (select auth.uid())
+  and updated_by = (select auth.uid())
+);
+create policy "developers update competition sources"
+on public.competition_sources for update to authenticated
 using (private.has_minimum_tier('dev'))
 with check (private.has_minimum_tier('dev') and updated_by = (select auth.uid()));
 
@@ -350,12 +474,15 @@ do $$
 declare table_name text;
 begin
   foreach table_name in array array[
-    'competition_editions', 'competition_sources', 'competition_stages',
-    'competition_groups', 'competition_teams', 'competition_standings',
-    'competition_fixtures'
+    'competition_stages', 'competition_groups', 'competition_teams',
+    'competition_standings', 'competition_fixtures'
   ] loop
     execute format(
-      'create policy "developers manage %1$s" on public.%1$I for all to authenticated using (private.has_minimum_tier(''dev'')) with check (private.has_minimum_tier(''dev''))',
+      'create policy "developers create %1$s" on public.%1$I for insert to authenticated with check (private.has_minimum_tier(''dev''))',
+      table_name
+    );
+    execute format(
+      'create policy "developers update %1$s" on public.%1$I for update to authenticated using (private.has_minimum_tier(''dev'')) with check (private.has_minimum_tier(''dev''))',
       table_name
     );
   end loop;
@@ -380,6 +507,10 @@ create index if not exists agenda_matches_competition_idx
   on public.agenda_matches (competition_id, scheduled_at);
 create index if not exists club_matches_competition_id_idx
   on public.club_matches (competition_id, played_at desc);
+create index if not exists agenda_matches_competition_edition_idx
+  on public.agenda_matches (competition_edition_id);
+create index if not exists club_matches_competition_edition_idx
+  on public.club_matches (competition_edition_id);
 
 -- Preserve legacy names by creating one first-class record per distinct existing
 -- non-friendly competition. No match or agenda row is deleted or rewritten.
