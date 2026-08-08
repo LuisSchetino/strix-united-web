@@ -1,7 +1,9 @@
 import http from "node:http";
+import { createEaMatchLoader } from "../shared/ea-fetch.js";
 
 const PORT = 8789;
 const EA_MATCHES_URL = "https://proclubs.ea.com/api/fc/clubs/matches?platform=common-gen5&clubIds=15686&matchType=friendlyMatch&maxResultCount=10";
+const loadEaMatches = createEaMatchLoader({ url: EA_MATCHES_URL });
 
 function respond(response, status, body) {
   response.writeHead(status, {
@@ -21,26 +23,10 @@ const server = http.createServer(async (request, response) => {
   }
 
   try {
-    const upstream = await fetch(EA_MATCHES_URL, {
-      headers: { accept: "application/json", "accept-language": "pt-BR,pt;q=0.9" },
-      cache: "no-store",
-    });
-    const text = await upstream.text();
-    let payload;
-    try {
-      payload = JSON.parse(text);
-    } catch {
-      payload = null;
-    }
-    if (!upstream.ok || !payload) {
-      return respond(response, upstream.status || 502, {
-        error: "A EA recusou a consulta no seu computador.",
-        message: `EA respondeu HTTP ${upstream.status || 502}. A ponte nao usa proxy, cookies ou tecnicas para burlar bloqueios.`,
-      });
-    }
-    return respond(response, 200, { matches: Array.isArray(payload) ? payload : payload.matches || payload, source: "pc-local" });
+    const result = await loadEaMatches();
+    return respond(response, 200, { matches: result.matches, source: "pc-local", duration_ms: result.durationMs, cached: result.cached });
   } catch (error) {
-    return respond(response, 502, { error: "Falha local ao consultar a EA.", message: error.message || "Erro de rede." });
+    return respond(response, error.status || 502, { error: "Falha local ao consultar a EA.", message: error.name === "AbortError" ? "A EA excedeu 9 segundos para responder." : error.message || "Erro de rede." });
   }
 });
 
@@ -48,3 +34,4 @@ server.listen(PORT, "127.0.0.1", () => {
   console.log(`Ponte EA FC27 ativa em http://127.0.0.1:${PORT}`);
   console.log("Deixe esta janela aberta e use BUSCAR PELO MEU PC no site.");
 });
+server.keepAliveTimeout = 10000;

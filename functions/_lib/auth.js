@@ -22,7 +22,7 @@ function discordId(user) {
   return "";
 }
 
-function roleTier(roleIds, map = {}) {
+export function roleTier(roleIds, map = {}) {
   const ids = new Set((roleIds || []).map(String));
   return Object.entries(map)
     .filter(([roleId]) => ids.has(String(roleId)))
