@@ -75,6 +75,125 @@ export function agendaMutationForFixture(current, fixture, { competition, editio
   };
 }
 
+const ensureData = (result) => {
+  if (result.error) throw result.error;
+  return result.data;
+};
+
+const competitionFormat = (preview, knockout) => {
+  if (knockout) return "knockout";
+  if (preview.phase === "groups") return "groups";
+  if (preview.phase === "league") return "league";
+  return "unknown";
+};
+
+export async function persistCompetitionSync(client, { competition, edition, actorUserId, preview }) {
+  const previews = [preview, ...(preview.relatedPreviews || [])]
+    .filter((item, index, all) => item?.source && all.findIndex((candidate) => candidate?.source === item.source) === index);
+  const identity = previews.find((item) => item.sourceKind === "standings") || preview;
+  const knockout = previews.find((item) => item.sourceKind === "knockout");
+  const inferredRule = !identity.qualificationRule?.slots && knockout?.knockout?.teams?.length
+    ? { slots: knockout.knockout.teams.length, kind: "top", source: "knockout_team_count" }
+    : null;
+  const qualificationRule = identity.qualificationRule || inferredRule;
+  const existingSources = ensureData(await client.from("competition_sources")
+    .select("source_url,created_by").eq("edition_id", edition.id));
+  const existingSourcesByUrl = new Map(existingSources.map((source) => [source.source_url, source]));
+  const sourceRows = previews.map((item) => ({
+    edition_id: edition.id,
+    provider: item.provider,
+    source_kind: item.sourceKind,
+    source_url: item.source,
+    external_competition_id: item.externalCompetitionId,
+    external_group_id: item.externalGroupId,
+    last_synced_at: item.fetchedAt,
+    sync_status: "ok",
+    sync_error: null,
+    snapshot: item.sourceKind === "standings" && qualificationRule
+      ? { ...item, qualificationRule }
+      : item,
+    created_by: existingSourcesByUrl.get(item.source)?.created_by || actorUserId,
+    updated_by: actorUserId,
+  }));
+  const sources = ensureData(await client.from("competition_sources")
+    .upsert(sourceRows, { onConflict: "edition_id,source_url" }).select("*"));
+
+  ensureData(await client.from("competitions").update({
+    organization: identity.organization || competition.organization,
+    logo_url: identity.logo || competition.logo_url,
+    updated_by: actorUserId,
+  }).eq("id", competition.id));
+  ensureData(await client.from("competition_editions").update({
+    format: competitionFormat(identity, knockout),
+    ...(qualificationRule?.slots ? {
+      qualification_slots: Number(qualificationRule.slots),
+      metadata: { ...(edition.metadata || {}), qualificationRule },
+    } : {}),
+    updated_by: actorUserId,
+  }).eq("id", edition.id));
+
+  const fixtureEntries = previews.flatMap((item) => [
+    ...(item.fixtures || []),
+    ...(item.knockout?.fixtures || []),
+  ].map((fixture) => ({ fixture, item })));
+  if (!fixtureEntries.length) return { sources, fixtures: 0 };
+
+  const teamMap = new Map();
+  for (const { fixture } of fixtureEntries) {
+    for (const [name, logo] of [
+      [fixture.homeTeamName, fixture.homeLogo],
+      [fixture.awayTeamName, fixture.awayLogo],
+    ]) {
+      if (!name) continue;
+      const key = normalizeName(name);
+      const current = teamMap.get(key);
+      teamMap.set(key, {
+        edition_id: edition.id,
+        name,
+        logo_url: logo || current?.logo_url || null,
+        is_strix: /\bstrix\b/i.test(name),
+        metadata: current?.metadata || {},
+      });
+    }
+  }
+  ensureData(await client.from("competition_teams")
+    .upsert([...teamMap.values()], { onConflict: "edition_id,normalized_name" }));
+  const teams = ensureData(await client.from("competition_teams").select("*").eq("edition_id", edition.id));
+  const teamsByName = new Map(teams.map((team) => [normalizeName(team.name), team]));
+  const sourcesByUrl = new Map(sources.map((source) => [source.source_url, source]));
+  const fixtureRows = fixtureEntries.map(({ fixture, item }) => {
+    const home = teamsByName.get(normalizeName(fixture.homeTeamName));
+    const away = teamsByName.get(normalizeName(fixture.awayTeamName));
+    return {
+      edition_id: edition.id,
+      source_id: sourcesByUrl.get(item.source)?.id || sources[0]?.id,
+      external_match_id: fixture.externalMatchId,
+      round_label: fixture.roundLabel || null,
+      scheduled_at: fixture.scheduledAt || null,
+      home_team_id: home?.id || null,
+      away_team_id: away?.id || null,
+      home_team_name: fixture.homeTeamName,
+      away_team_name: fixture.awayTeamName,
+      home_score: fixture.homeScore,
+      away_score: fixture.awayScore,
+      status: fixture.status || "scheduled",
+      metadata: {
+        provider: item.provider,
+        organization: item.organization,
+        source: item.source,
+        homeLogo: fixture.homeLogo || home?.logo_url || "",
+        awayLogo: fixture.awayLogo || away?.logo_url || "",
+        bracketPosition: fixture.bracketPosition ?? fixture.metadata?.bracketPosition ?? null,
+        feedsIntoPosition: fixture.feedsIntoPosition ?? fixture.metadata?.feedsIntoPosition ?? null,
+        ...(fixture.metadata || {}),
+      },
+    };
+  });
+  ensureData(await client.from("competition_fixtures")
+    .upsert(fixtureRows, { onConflict: "edition_id,external_match_id" }));
+  return { sources, fixtures: fixtureRows.length };
+}
+
 export async function syncTodayProviderAgenda(client, { competition, edition, actorUserId, fixtures, now = new Date() }) {
   const today = saoPauloDay(now);
   const official = fixtures.filter((fixture) => /\bstrix\b/i.test(`${fixture.home_team_name} ${fixture.away_team_name}`)

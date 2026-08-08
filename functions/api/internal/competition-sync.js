@@ -1,7 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { fetchCompetitionBundle } from "../../_lib/competition-providers.js";
-import { competitionFingerprint, countFixtureChanges, nextSyncAt, syncTodayProviderAgenda } from "../../_lib/competition-sync.js";
-import { saveCompetitionPreview } from "../../../src/features/competitions/competition-storage.js";
+import { competitionFingerprint, countFixtureChanges, nextSyncAt, persistCompetitionSync, syncTodayProviderAgenda } from "../../_lib/competition-sync.js";
 
 const response = (body, status = 200) => new Response(JSON.stringify(body), {
   status,
@@ -48,7 +47,7 @@ async function syncSource(client, source, edition, competition) {
       return { status: "unchanged", sourceId: source.id };
     }
 
-    await saveCompetitionPreview(client, { user_id: actor }, preview, competition.palette, competition.accent_color);
+    await persistCompetitionSync(client, { competition, edition, actorUserId: actor, preview });
     const { data: after = [], error: afterError } = await client.from("competition_fixtures").select("*").eq("edition_id", edition.id);
     if (afterError) throw afterError;
     const fixtureChanges = countFixtureChanges(before, after);

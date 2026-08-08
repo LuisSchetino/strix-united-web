@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { agendaMutationForFixture, competitionFingerprint, nextSyncAt, saoPauloDay } from "../functions/_lib/competition-sync.js";
+import { agendaMutationForFixture, competitionFingerprint, nextSyncAt, persistCompetitionSync, saoPauloDay } from "../functions/_lib/competition-sync.js";
 
 const context = {
   competition: { id: "competition", name: "VPR ELITE" },
@@ -34,4 +34,50 @@ test("timezone and cadence prefer game day without browser polling", () => {
   assert.equal(saoPauloDay("2026-08-11T02:30:00Z"), "2026-08-10");
   const next = nextSyncAt([{ home_team_name: "STRIX", away_team_name: "POA", scheduled_at: "2026-08-10T18:00:00Z", status: "scheduled" }], new Date("2026-08-10T17:00:00Z"));
   assert.equal(next, "2026-08-10T17:15:00.000Z");
+});
+
+test("automatic sync persists a provider snapshot in bounded bulk requests", async () => {
+  const calls = [];
+  let teamRows = [];
+  const client = {
+    from(table) {
+      let operation = "select";
+      let payload;
+      const query = {
+        upsert(value) { operation = "upsert"; payload = value; calls.push({ table, operation, payload }); return query; },
+        update(value) { operation = "update"; payload = value; calls.push({ table, operation, payload }); return query; },
+        select() { return query; },
+        eq() { return query; },
+        then(resolve) {
+          if (table === "competition_sources") {
+            if (operation === "select") return resolve({ data: [], error: null });
+            return resolve({ data: payload.map((row, index) => ({ ...row, id: `source-${index}` })), error: null });
+          }
+          if (table === "competition_teams" && operation === "upsert") {
+            teamRows = payload.map((row, index) => ({ ...row, id: `team-${index}` }));
+            return resolve({ data: null, error: null });
+          }
+          if (table === "competition_teams") return resolve({ data: teamRows, error: null });
+          return resolve({ data: null, error: null });
+        },
+      };
+      return query;
+    },
+  };
+  const preview = {
+    provider: "ccb", sourceKind: "standings", source: "https://ccb.test/standings", phase: "league",
+    externalCompetitionId: "100", externalGroupId: "1", fetchedAt: "2026-08-08T20:00:00Z",
+    organization: "CCB", fixtures: [{ externalMatchId: "match-1", roundLabel: "Rodada 1", scheduledAt: "2026-08-08T22:10:00-03:00", homeTeamName: "STRIX UNITED", awayTeamName: "POA CITY", status: "scheduled" }],
+  };
+  const result = await persistCompetitionSync(client, {
+    competition: { id: "competition", organization: "CCB" },
+    edition: { id: "edition", metadata: {} }, actorUserId: "actor", preview,
+  });
+  assert.equal(result.fixtures, 1);
+  assert.equal(calls.filter((call) => call.table === "competition_sources").length, 1);
+  assert.equal(calls.find((call) => call.table === "competition_teams").payload.length, 2);
+  const fixturePayload = calls.find((call) => call.table === "competition_fixtures").payload[0];
+  assert.equal(fixturePayload.external_match_id, "match-1");
+  assert.equal("agenda_match_id" in fixturePayload, false);
+  assert.ok(calls.length <= 5);
 });
