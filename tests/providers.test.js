@@ -23,6 +23,16 @@ test("normaliza classificação CCB com destaque Strix", () => {
   assert.equal(parsed.groups[0].standings[0].points, 10);
 });
 
+test("infere o corte pela marcação visual contínua do provider", () => {
+  const visualRows = standingsRows
+    .replace("<tr><td>1</td>", '<tr><td><div class="posicao classifica">1</div></td>')
+    .replace("<tr><td>2</td>", '<tr><td><div class="posicao">2</div></td>');
+  const html = `<html><body><h1>LIGA</h1><h3>Classificação - Grupo 1</h3>${visualRows}</body></html>`;
+  const parsed = parseCompetitionHtml(html, "https://ccbclubs.com.br/fifa.php?file=classificacao&campeonato=100");
+  assert.equal(parsed.groups[0].qualificationSlots, 1);
+  assert.deepEqual(parsed.qualificationRule, { slots: 1, kind: "top", source: "provider_visual" });
+});
+
 test("detecta múltiplos grupos LB", () => {
   const html = `<html><body><img src="/master.png"><h2 class="card-title">MASTER LEAGUE</h2><h3>Classificação - Grupo 1</h3>${standingsRows}<h3>Classificação - Grupo 2</h3>${standingsRows.replace(/STRIX UNITED/g, "OLD SKULL")}</body></html>`;
   const parsed = parseCompetitionHtml(html, "https://www.lbesports.com/fifa.php?file=classificacao&campeonato=73&grupo=1");
@@ -40,6 +50,13 @@ test("detecta estágios e times de mata-mata", () => {
   assert.equal(parsed.knockout.currentStage, "Quartas de final");
   assert.equal(parsed.knockout.fixtures[0].awayTeamName, "POA CITY FC");
   assert.equal(parsed.knockout.fixtures[0].scheduledAt, "2026-08-10T23:10:00-03:00");
+});
+
+test("associa ao time a logo posicionada antes do link no bracket CCB", () => {
+  const html = `<html><body><h1>COPA</h1><table><tr><td>Quartas de final<br>10/08/2026 23:10</td><td>Semifinais</td><td>Final</td></tr>${"x".repeat(500)}<tr><td><img alt="STRIX UNITED" src="/strix.png"><a title="STRIX UNITED">STRIX UNITED</a></td><td><img alt="POA CITY FC" src="/poa.png"><a title="POA CITY FC">POA CITY FC</a></td></tr></table></body></html>`;
+  const parsed = parseCompetitionHtml(html, "https://ccbclubs.com.br/fifa.php?file=eliminatoria&campeonato=100&grupo=12");
+  assert.equal(parsed.knockout.fixtures[0].homeLogo, "https://ccbclubs.com.br/strix.png");
+  assert.equal(parsed.knockout.fixtures[0].awayLogo, "https://ccbclubs.com.br/poa.png");
 });
 
 test("discovers fixtures in paginated round pages without competition-specific rules", () => {

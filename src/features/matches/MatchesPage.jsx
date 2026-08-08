@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   dedupeImportedMatches,
   normalizeEaMatch,
@@ -47,6 +48,32 @@ function TeamMark({ name, url }) {
   );
 }
 
+function MatchScoreline({
+  homeName,
+  homeLogo,
+  homeScore,
+  awayName,
+  awayLogo,
+  awayScore,
+  className = "",
+}) {
+  return (
+    <div className={`match-scoreline ${className}`.trim()}>
+      <div className="match-scoreline-home">
+        <b>{homeName}</b>
+        <TeamMark name={homeName} url={homeLogo} />
+        <strong>{homeScore ?? "—"}</strong>
+      </div>
+      <i>×</i>
+      <div className="match-scoreline-away">
+        <strong>{awayScore ?? "—"}</strong>
+        <TeamMark name={awayName} url={awayLogo} />
+        <b>{awayName}</b>
+      </div>
+    </div>
+  );
+}
+
 function MatchPreview({ match, workspace }) {
   const logo = workspace.logos.find(
     (item) =>
@@ -55,18 +82,14 @@ function MatchPreview({ match, workspace }) {
   return (
     <section className="match-live-preview" aria-label="Preview da partida">
       <small>PREVIEW NO FC27</small>
-      <div>
-        <TeamMark name="STRIX" url="/assets/strix-logo.png" />
-        <b>STRIX</b>
-        <strong>
-          {match.strixScore} <i>×</i> {match.opponentScore}
-        </strong>
-        <TeamMark
-          name={match.opponent}
-          url={logo?.storage_path ? workspace.assetUrl(logo.storage_path) : ""}
-        />
-        <b>{match.opponent || "ADVERSÁRIO"}</b>
-      </div>
+      <MatchScoreline
+        homeName="STRIX"
+        homeLogo="/assets/strix-logo.png"
+        homeScore={match.strixScore}
+        awayName={match.opponent || "ADVERSÁRIO"}
+        awayLogo={logo?.storage_path ? workspace.assetUrl(logo.storage_path) : ""}
+        awayScore={match.opponentScore}
+      />
       <footer>
         <span>
           {formatDate(match.date)} · {formatTime(match.date)}
@@ -106,7 +129,7 @@ function EditMatchModal({ match, workspace, close, save }) {
       .map((item) => item.trim())
       .filter(Boolean),
   };
-  return (
+  return createPortal((
     <div className="match-flow-backdrop" role="presentation">
       <form
         className="match-review-modal"
@@ -210,7 +233,7 @@ function EditMatchModal({ match, workspace, close, save }) {
         </footer>
       </form>
     </div>
-  );
+  ), document.body);
 }
 
 function ReviewStep({
@@ -554,10 +577,10 @@ function SummaryStep({
 function StatIcon({ name }) {
   const paths = {
     possession: <><circle cx="12" cy="12" r="8"/><path d="M12 4v16M4 12h16"/></>,
-    shots: <><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.5"/><path d="m6.5 6.5 11 11m0-11-11 11"/></>,
+    shots: <><circle cx="12" cy="12" r="8.5"/><path d="m12 7 3.7 2.7-1.4 4.3H9.7L8.3 9.7 12 7Z"/><path d="m12 7-.4-3.4M15.7 9.7l3.2-1.1M14.3 14l2.1 2.8M9.7 14l-2.1 2.8M8.3 9.7 5.1 8.6"/></>,
     passes: <><path d="M4 8h12m0 0-3-3m3 3-3 3M20 16H8m0 0 3-3m-3 3 3 3"/></>,
-    tackles: <><path d="M5 6h14l-2 12H7L5 6Z"/><path d="m8 10 8 4m0-4-8 4"/></>,
-    saves: <><path d="M5 20V9a7 7 0 0 1 14 0v11M3 20h18"/><path d="m9 12 3-3 3 3"/></>,
+    tackles: <><circle cx="12" cy="12" r="2.2"/><path d="M4 7.5 9.8 11M20 16.5 14.2 13M6.5 5 4 7.5l.8 3.4M17.5 19 20 16.5l-.8-3.4"/></>,
+    saves: <><path d="M6.5 20 4.8 10.5c-.2-1.1.5-2.1 1.5-2.3.9-.2 1.8.3 2.1 1.2l.4 1.1-.9-5.2c-.2-1.1.5-2.1 1.6-2.3 1.1-.2 2.1.5 2.3 1.6l.8 4.5-.4-4c-.1-1.1.7-2 1.8-2.1 1.1-.1 2 .7 2.1 1.8l.5 4.4-.1-2.8c0-1.1.8-2 1.9-2 1.1 0 2 .8 2 1.9l.1 6.7c.1 3.7-2.7 6.8-6.4 7H6.5Z"/></>,
     rating: <path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9L12 3Z"/>,
     goals: <><circle cx="12" cy="12" r="8"/><path d="m12 8 3 2-1 4h-4l-1-4 3-2Z"/></>,
     assists: <><path d="M4 16c4-6 8-8 16-8"/><path d="m15 4 5 4-4 5"/></>,
@@ -567,7 +590,19 @@ function StatIcon({ name }) {
 
 function MatchDetails({ match, workspace, close }) {
   const performance = match.performance || {};
-  const players = performance.players || [];
+  const players = [...(performance.players || [])].sort(
+    (left, right) => Number(right.rating || 0) - Number(left.rating || 0),
+  );
+  const statNumber = (value) => Number(String(value ?? 0).split("/")[0].trim()) || 0;
+  const disconnected = (player) => Number(player.rating) > 0 && Number(player.rating) <= 3
+    && [
+      player.goals,
+      player.assists,
+      player.passesMade ?? player.passes,
+      player.shots,
+      player.tackles,
+      player.saves,
+    ].every((value) => statNumber(value) === 0);
   const metrics = [
     ["Posse", performance.possession, "possession"],
     ["Passes", performance.passes, "passes"],
@@ -583,7 +618,7 @@ function MatchDetails({ match, workspace, close }) {
   const maxAssists = max("assists");
   const maxPasses = max("passesMade");
   const opponentLogo = match.opponent_logos?.storage_path ? workspace.assetUrl(match.opponent_logos.storage_path) : "";
-  return (
+  return createPortal((
     <div className="match-flow-backdrop" role="presentation">
       <section
         className="match-review-modal match-detail-modal"
@@ -599,11 +634,15 @@ function MatchDetails({ match, workspace, close }) {
           </button>
         </header>
         <div className="match-detail-body">
-          <section className="match-detail-score">
-            <div><TeamMark name="STRIX" url="/assets/strix-logo.png"/><strong>STRIX UNITED</strong></div>
-            <b><span>{match.strix_score}</span><i>×</i><span>{match.opponent_score}</span></b>
-            <div><TeamMark name={match.opponent_name} url={opponentLogo}/><strong>{match.opponent_name}</strong></div>
-          </section>
+          <MatchScoreline
+            className="match-detail-score"
+            homeName="STRIX UNITED"
+            homeLogo="/assets/strix-logo.png"
+            homeScore={match.strix_score}
+            awayName={match.opponent_name}
+            awayLogo={opponentLogo}
+            awayScore={match.opponent_score}
+          />
           <div className="match-detail-metrics">
             {metrics.map(([label, value, icon]) => (
               <article key={label}>
@@ -618,8 +657,8 @@ function MatchDetails({ match, workspace, close }) {
               <div className="match-player-table" role="table">
                 <header role="row"><span>JOGADOR</span><span>NOTA</span><span>G</span><span>A</span><span>PASSES</span><span>CHUTES</span><span>DESARMES</span><span>DEFESAS</span></header>
                 {players.map((player, index) => (
-                  <article role="row" className={Number(player.rating) === bestRating && bestRating > 0 ? "is-best" : ""} key={player.id || player.eaName || index}>
-                    <div><b>{player.name || player.eaName || "Jogador EA"}</b><small>{Number(player.rating) === bestRating && bestRating > 0 && <em>MELHOR NOTA</em>}{Number(player.goals) === maxGoals && maxGoals > 0 && <em><StatIcon name="goals"/> ARTILHEIRO</em>}{Number(player.assists) === maxAssists && maxAssists > 0 && <em><StatIcon name="assists"/> ASSISTÊNCIA</em>}{Number(player.passesMade) === maxPasses && maxPasses > 0 && <em>MAIS PASSES</em>}</small></div>
+                  <article role="row" className={`${Number(player.rating) === bestRating && bestRating > 0 ? "is-best " : ""}${disconnected(player) ? "is-disconnected" : ""}`} key={player.id || player.eaName || index}>
+                    <div><b>{player.name || player.eaName || "Jogador EA"}</b><small>{disconnected(player) && <em className="disconnect-badge">CAIU DA PARTIDA</em>}{!disconnected(player) && Number(player.rating) === bestRating && bestRating > 0 && <em>MELHOR NOTA</em>}{Number(player.goals) === maxGoals && maxGoals > 0 && <em><StatIcon name="goals"/> ARTILHEIRO</em>}{Number(player.assists) === maxAssists && maxAssists > 0 && <em><StatIcon name="assists"/> ASSISTÊNCIA</em>}{Number(player.passesMade) === maxPasses && maxPasses > 0 && <em>MAIS PASSES</em>}</small></div>
                     <strong>{player.rating ?? "—"}</strong><span>{player.goals ?? "—"}</span><span>{player.assists ?? "—"}</span><span>{player.passes ?? "—"}</span><span>{player.shots ?? "—"}</span><span>{player.tackles ?? "—"}</span><span>{player.saves ?? "—"}</span>
                   </article>
                 ))}
@@ -638,7 +677,7 @@ function MatchDetails({ match, workspace, close }) {
         </footer>
       </section>
     </div>
-  );
+  ), document.body);
 }
 
 function MatchHistory({ workspace, canManage, detail, edit, remove }) {
@@ -668,15 +707,15 @@ function MatchHistory({ workspace, canManage, detail, edit, remove }) {
                 {formatDate(match.played_at)}
                 <small>{formatTime(match.played_at)}</small>
               </span>
-              <div className="match-teams">
-                <TeamMark name="STRIX" url="/assets/strix-logo.png" />
-                <b>STRIX</b>
-                <strong>
-                  {match.strix_score} × {match.opponent_score}
-                </strong>
-                <TeamMark name={match.opponent_name} url={opponentLogo} />
-                <b>{match.opponent_name}</b>
-              </div>
+              <MatchScoreline
+                className="match-teams"
+                homeName="STRIX"
+                homeLogo="/assets/strix-logo.png"
+                homeScore={match.strix_score}
+                awayName={match.opponent_name}
+                awayLogo={opponentLogo}
+                awayScore={match.opponent_score}
+              />
               <em className={result.toLowerCase()}>{result}</em>
               <small>{match.competition_name || "AMISTOSO"}</small>
               <div className="match-row-actions">

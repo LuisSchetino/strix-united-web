@@ -11,6 +11,20 @@ const cloneTable = (standings) => standings.map((row) => ({
 
 const normalizedTeam = (value) => String(value || "").trim().toLowerCase();
 
+const normalizedFixture = (fixture) => ({
+  ...fixture,
+  home: fixture.home || fixture.homeTeamName || fixture.home_team_name || "",
+  away: fixture.away || fixture.awayTeamName || fixture.away_team_name || "",
+});
+
+const isPendingFixture = (fixture) => {
+  const status = String(fixture.status || "").toLowerCase();
+  if (["completed", "cancelled", "canceled", "finished"].includes(status)) return false;
+  const homeScore = fixture.homeScore ?? fixture.home_score;
+  const awayScore = fixture.awayScore ?? fixture.away_score;
+  return homeScore == null || awayScore == null;
+};
+
 const outcomeOptions = (fixture) => fixture.outcomes || [
   { id: "H", homeGoals: 1, awayGoals: 0 },
   { id: "D", homeGoals: 0, awayGoals: 0 },
@@ -61,24 +75,33 @@ export function calculateQualificationScenarios({
   tieBreakRules = [],
   maxCombinations = 59049,
 }) {
+  const pendingFixtures = (fixtures || [])
+    .map(normalizedFixture)
+    .filter((fixture) => fixture.home && fixture.away && isPendingFixture(fixture));
   const rules = tieBreakRules.length ? tieBreakRules : ["points"];
-  const combinations = fixtures.reduce((total, fixture) => total * outcomeOptions(fixture).length, 1);
+  const combinations = pendingFixtures.reduce((total, fixture) => total * outcomeOptions(fixture).length, 1);
   const base = cloneTable(standings);
   const sortedBase = [...base].sort(comparator(rules));
   const strixKey = normalizedTeam(strixName);
-  const currentPosition = sortedBase.findIndex((row) => normalizedTeam(row.name) === strixKey) + 1;
-  const strixFixtures = fixtures.filter((fixture) => [fixture.home, fixture.away].some((team) => normalizedTeam(team) === strixKey));
+  const strix = base.find((row) => normalizedTeam(row.name) === strixKey);
+  const computedPosition = sortedBase.findIndex((row) => normalizedTeam(row.name) === strixKey) + 1;
+  const currentPosition = Number(strix?.position) || computedPosition;
+  const strixFixtures = pendingFixtures.filter((fixture) => [fixture.home, fixture.away].some((team) => normalizedTeam(team) === strixKey));
   const pointsAvailable = strixFixtures.length * 3;
-  const cutoff = sortedBase[Math.max(0, qualificationSlots - 1)];
-  const strix = sortedBase.find((row) => normalizedTeam(row.name) === strixKey);
+  const cutoff = base.find((row) => Number(row.position) === Number(qualificationSlots))
+    || sortedBase[Math.max(0, qualificationSlots - 1)];
   const distanceToCutoff = cutoff && strix ? Math.max(0, cutoff.points - strix.points) : 0;
+  const tiedAtCutoff = Boolean(
+    cutoff && strix && currentPosition > qualificationSlots && cutoff.points === strix.points,
+  );
   if (!standings.length || !qualificationSlots || !strix) {
     return { status: "insufficient_data", confirmed: false, combinations: 0, scenarios: [] };
   }
   if (combinations > maxCombinations) {
     return {
       status: "too_many_combinations", confirmed: false, combinations,
-      currentPosition, remainingMatches: strixFixtures.length, pointsAvailable, distanceToCutoff, scenarios: [],
+      currentPosition, remainingMatches: strixFixtures.length, pointsAvailable,
+      distanceToCutoff, tiedAtCutoff, cutoffPosition: qualificationSlots, scenarios: [],
     };
   }
 
@@ -86,9 +109,9 @@ export function calculateQualificationScenarios({
   let misses = 0;
   let touchesUnresolvedTie = false;
   const byOwnResult = { V: { qualifies: 0, total: 0, sample: null }, E: { qualifies: 0, total: 0, sample: null }, D: { qualifies: 0, total: 0, sample: null } };
-  enumerate(fixtures, (choices) => {
+  enumerate(pendingFixtures, (choices) => {
     const table = cloneTable(base);
-    fixtures.forEach((fixture, index) => applyFixture(table, fixture, choices[index]));
+    pendingFixtures.forEach((fixture, index) => applyFixture(table, fixture, choices[index]));
     const sorted = table.sort(comparator(rules));
     const position = sorted.findIndex((row) => normalizedTeam(row.name) === strixKey) + 1;
     const qualified = position > 0 && position <= qualificationSlots;
@@ -99,9 +122,9 @@ export function calculateQualificationScenarios({
       const value = (row) => rule === "goal_difference" ? row.goalsFor - row.goalsAgainst : rule === "goals_for" ? row.goalsFor : row[rule];
       return value(boundaryA) === value(boundaryB);
     })) touchesUnresolvedTie = true;
-    const ownIndex = fixtures.findIndex((fixture) => [fixture.home, fixture.away].some((team) => normalizedTeam(team) === strixKey));
+    const ownIndex = pendingFixtures.findIndex((fixture) => [fixture.home, fixture.away].some((team) => normalizedTeam(team) === strixKey));
     if (ownIndex >= 0) {
-      const fixture = fixtures[ownIndex];
+      const fixture = pendingFixtures[ownIndex];
       const outcome = choices[ownIndex];
       const homeIsStrix = normalizedTeam(fixture.home) === strixKey;
       const ownGoals = homeIsStrix ? outcome.homeGoals : outcome.awayGoals;
@@ -110,7 +133,7 @@ export function calculateQualificationScenarios({
       byOwnResult[key].total += 1;
       if (qualified) {
         byOwnResult[key].qualifies += 1;
-        byOwnResult[key].sample ||= fixtures.map((item, index) => ({ fixture: `${item.home} × ${item.away}`, outcome: choices[index].id }));
+        byOwnResult[key].sample ||= pendingFixtures.map((item, index) => ({ fixture: `${item.home} × ${item.away}`, outcome: choices[index].id }));
       }
     }
   });
@@ -127,6 +150,7 @@ export function calculateQualificationScenarios({
     confirmed: tieBreakRules.length > 0 && !touchesUnresolvedTie,
     tieBreakWarning: tieBreakRules.length ? (touchesUnresolvedTie ? "Há empate além dos critérios configurados." : "") : "Critério de desempate não confirmado.",
     combinations, qualifies, misses, currentPosition,
-    remainingMatches: strixFixtures.length, pointsAvailable, distanceToCutoff, scenarios,
+    remainingMatches: strixFixtures.length, pointsAvailable, distanceToCutoff,
+    tiedAtCutoff, cutoffPosition: qualificationSlots, scenarios,
   };
 }

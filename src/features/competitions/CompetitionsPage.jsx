@@ -370,22 +370,22 @@ const fixtureLogo = (fixture, side) =>
 function FixtureClubs({ fixture }) {
   return (
     <div className="fixture-clubs">
-      <div>
+      <div className="fixture-club fixture-club-home">
+        <strong>{fixture.home_team_name}</strong>
         <ClubMark
           name={fixture.home_team_name}
           url={fixtureLogo(fixture, "home")}
         />
-        <strong>{fixture.home_team_name}</strong>
         <b>{fixture.home_score ?? "—"}</b>
       </div>
       <i>×</i>
-      <div>
+      <div className="fixture-club fixture-club-away">
+        <b>{fixture.away_score ?? "—"}</b>
         <ClubMark
           name={fixture.away_team_name}
           url={fixtureLogo(fixture, "away")}
         />
         <strong>{fixture.away_team_name}</strong>
-        <b>{fixture.away_score ?? "—"}</b>
       </div>
     </div>
   );
@@ -461,10 +461,16 @@ function CompetitionGames({ competition, view, workspace, organization }) {
             {internalOnly.map((match) => (
               <article key={match.id}>
                 <time>{dateTime(match.played_at)}</time>
-                <strong>
-                  STRIX {match.strix_score} × {match.opponent_score}{" "}
-                  {match.opponent_name}
-                </strong>
+                <FixtureClubs fixture={{
+                  home_team_name: "STRIX UNITED",
+                  away_team_name: match.opponent_name,
+                  home_score: match.strix_score,
+                  away_score: match.opponent_score,
+                  home_logo: "/assets/strix-logo.png",
+                  away_logo: match.opponent_logos?.storage_path
+                    ? workspace.assetUrl(match.opponent_logos.storage_path)
+                    : "",
+                }} />
                 <small>Histórico FC27</small>
               </article>
             ))}
@@ -515,6 +521,7 @@ function Knockout({ view, accent }) {
       return { ...round, slots };
     })
     .filter((round) => round.slots.length);
+  const firstRoundSize = bracketRounds[0]?.slots.length || 1;
   return (
     <section
       className="competition-section knockout-section"
@@ -535,30 +542,26 @@ function Knockout({ view, accent }) {
             >
               <h3>{round.name}</h3>
               {round.scheduledAt && <time>{dateTime(round.scheduledAt)}</time>}
-              <div>
-                {round.slots.map((fixture) => (
-                  <article
-                    className={`${/\bstrix\b/i.test(fixtureTitle(fixture)) ? "is-strix " : ""}${fixture.placeholder ? "is-pending" : ""}`}
-                    key={fixture.external_match_id}
-                  >
-                    <div>
-                      <ClubMark
-                        name={fixture.home_team_name}
-                        url={fixtureLogo(fixture, "home")}
-                      />
-                      <span>{fixture.home_team_name}</span>
-                      <b>{fixture.home_score ?? "—"}</b>
+              <div
+                className="bracket-round-matches"
+                style={{ gridTemplateRows: `repeat(${firstRoundSize}, 96px)` }}
+              >
+                {round.slots.map((fixture, fixtureIndex) => {
+                  const rowSpan = Math.max(1, Math.round(firstRoundSize / round.slots.length));
+                  return (
+                    <div
+                      className="bracket-slot"
+                      style={{ gridRow: `${fixtureIndex * rowSpan + 1} / span ${rowSpan}` }}
+                      key={fixture.external_match_id}
+                    >
+                      <article
+                        className={`${/\bstrix\b/i.test(fixtureTitle(fixture)) ? "is-strix " : ""}${fixture.placeholder ? "is-pending" : ""}`}
+                      >
+                        <FixtureClubs fixture={fixture} />
+                      </article>
                     </div>
-                    <div>
-                      <ClubMark
-                        name={fixture.away_team_name}
-                        url={fixtureLogo(fixture, "away")}
-                      />
-                      <span>{fixture.away_team_name}</span>
-                      <b>{fixture.away_score ?? "—"}</b>
-                    </div>
-                  </article>
-                ))}
+                  );
+                })}
               </div>
             </section>
           ))}
@@ -571,11 +574,11 @@ function Knockout({ view, accent }) {
   );
 }
 
-function ScenarioPanel({ edition, snapshot }) {
+function ScenarioPanel({ edition, snapshot, qualificationSlots }) {
   const group =
     snapshot?.groups?.find((item) => item.isStrixGroup) ||
     snapshot?.groups?.[0];
-  if (!group || !edition.qualification_slots || !snapshot.fixtures?.length)
+  if (!group || !qualificationSlots || !snapshot.fixtures?.length)
     return (
       <section className="competition-section scenario-panel">
         <header>
@@ -592,7 +595,7 @@ function ScenarioPanel({ edition, snapshot }) {
   const result = calculateQualificationScenarios({
     standings: group.standings.map((row) => ({ name: row.team, ...row })),
     fixtures: snapshot.fixtures,
-    qualificationSlots: edition.qualification_slots,
+    qualificationSlots,
     tieBreakRules: edition.tie_break_rules || [],
   });
   return (
@@ -610,7 +613,12 @@ function ScenarioPanel({ edition, snapshot }) {
         </article>
         <article>
           <small>DISTÂNCIA</small>
-          <b>{result.distanceToCutoff} pts</b>
+          <b>{result.tiedAtCutoff ? "Empatado" : `${result.distanceToCutoff} pts`}</b>
+          {result.tiedAtCutoff && (
+            <em className="scenario-context">
+              Fora pelos critérios · corte {result.cutoffPosition}º
+            </em>
+          )}
         </article>
         <article>
           <small>JOGOS</small>
@@ -874,7 +882,11 @@ function CompetitionExplorer({
         <Knockout view={view} accent={competition.accent_color} />
       )}
       {tab === "scenarios" && (
-        <ScenarioPanel edition={edition} snapshot={view.standings} />
+        <ScenarioPanel
+          edition={edition}
+          snapshot={view.standings}
+          qualificationSlots={view.qualificationSlots}
+        />
       )}
       {archiveOpen && (
         <div className="competition-modal-layer">

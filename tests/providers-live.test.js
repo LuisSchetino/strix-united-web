@@ -24,6 +24,7 @@ for (const [name, url, kind] of sources) {
       const strix = strixGroup.standings.find((row) => row.isStrix);
       assert.ok(Number(strix.position) > 0);
       assert.ok(Number(strix.points) >= 0);
+      assert.ok(Number(parsed.qualificationRule?.slots) > 0);
       if (name.startsWith("CCB")) assert.match(parsed.name, /COPA YESHUA/i);
       if (name.startsWith("LB")) assert.ok(parsed.groups.length >= 3);
     } else {

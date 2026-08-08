@@ -61,3 +61,42 @@ test("não confirma matemática quando o desempate não foi configurado", () => 
   assert.equal(result.confirmed, false);
   assert.match(result.tieBreakWarning, /não confirmado/i);
 });
+
+test("ignora resultados concluídos e entende os nomes de fixture do provider", () => {
+  const result = calculateQualificationScenarios({
+    standings: [
+      { name: "Líder", points: 12 },
+      { name: "STRIX UNITED", points: 9 },
+      { name: "Time X", points: 8 },
+    ],
+    fixtures: [
+      { homeTeamName: "STRIX UNITED", awayTeamName: "Líder", status: "scheduled" },
+      { homeTeamName: "STRIX UNITED", awayTeamName: "Time X", status: "completed", homeScore: 2, awayScore: 0 },
+    ],
+    qualificationSlots: 2,
+    tieBreakRules: rules,
+  });
+  assert.equal(result.remainingMatches, 1);
+  assert.equal(result.pointsAvailable, 3);
+  assert.equal(result.combinations, 3);
+});
+
+test("explica empate em pontos quando o Strix está fora pelos critérios", () => {
+  const result = calculateQualificationScenarios({
+    standings: [
+      { name: "A", points: 6, position: 1 },
+      { name: "B", points: 3, position: 2 },
+      { name: "C", points: 1, position: 3 },
+      { name: "D", points: 1, position: 4 },
+      { name: "STRIX UNITED", points: 1, position: 6 },
+      { name: "E", points: 1, position: 5 },
+    ],
+    fixtures: [{ home: "STRIX UNITED", away: "A" }],
+    qualificationSlots: 4,
+    tieBreakRules: ["points"],
+  });
+  assert.equal(result.currentPosition, 6);
+  assert.equal(result.distanceToCutoff, 0);
+  assert.equal(result.tiedAtCutoff, true);
+  assert.equal(result.cutoffPosition, 4);
+});

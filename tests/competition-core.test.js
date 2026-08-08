@@ -42,6 +42,21 @@ test("shows waiting for knockout only after a group phase has really ended", () 
 test("qualification zone keeps positions 1-8 in and 9-12 out", () => {
   const rows = Array.from({ length: 12 }, (_, index) => ({ position: index + 1 }));
   assert.equal(rows.filter((row) => qualificationState(row, 8).inside).length, 8);
-  assert.equal(qualificationState(rows[7], 8).label, "Dentro da zona");
-  assert.match(qualificationState(rows[8], 8).label, /1 posi/);
+  assert.equal(qualificationState(rows[7], 8).label, "Dentro da zona de classificação");
+  assert.equal(qualificationState(rows[8], 8).label, "Fora da zona • a 1 posição");
+  assert.equal(qualificationState(rows[9], 8).label, "Fora da zona • a 2 posições");
+});
+
+test("provider qualification slots take precedence over the manual fallback", () => {
+  const view = deriveCompetitionView([
+    {
+      source_kind: "standings",
+      snapshot: {
+        phase: "standings",
+        qualificationRule: { slots: 4, source: "provider_visual" },
+        groups: [],
+      },
+    },
+  ], [], { qualification_slots: 6 });
+  assert.equal(view.qualificationSlots, 4);
 });

@@ -18,8 +18,12 @@ export function qualificationState(row, slots) {
   if (!row || !Number(slots)) return null;
   const distance = Number(row.position) - Number(slots);
   return distance <= 0
-    ? { inside: true, label: "Dentro da zona", distance: 0 }
-    : { inside: false, label: `Fora da zona Â· ${distance} posiÃ§Ã£o${distance === 1 ? "" : "Ãµes"}`, distance };
+    ? { inside: true, label: "Dentro da zona de classifica\u00e7\u00e3o", distance: 0 }
+    : {
+      inside: false,
+      label: `Fora da zona \u2022 a ${distance} ${distance === 1 ? "posi\u00e7\u00e3o" : "posi\u00e7\u00f5es"}`,
+      distance,
+    };
 }
 
 export function deriveCompetitionView(sources = [], persistedFixtures = [], edition = {}) {
@@ -66,7 +70,11 @@ export function deriveCompetitionView(sources = [], persistedFixtures = [], edit
     providerResults,
     strixFixture,
     awaitingKnockout,
-    qualificationSlots: Number(edition.qualification_slots || standings.qualificationRule?.slots) || null,
+    qualificationSlots: Number(
+      standings.qualificationRule?.slots
+      || standings.groups?.find((group) => group.isStrixGroup)?.qualificationSlots
+      || edition.qualification_slots,
+    ) || null,
     lastSyncedAt: sources.map((source) => source.last_synced_at).filter(Boolean).sort().at(-1) || null,
   };
 }

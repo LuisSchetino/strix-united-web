@@ -52,6 +52,7 @@ export function validateProviderAssetUrl(rawUrl) {
 }
 
 const absoluteUrl = (base, candidate) => {
+  if (!String(candidate || "").trim()) return "";
   try { return new URL(decodeHtml(candidate), base).toString(); } catch { return ""; }
 };
 
@@ -102,13 +103,29 @@ function parseStandingTable(block, prefix, baseUrl) {
     const [points, played, wins, draws, losses, goalsFor, goalsAgainst, goalDifference] = stats;
     const form = [...teamCell.html.matchAll(/(?:forma-[a-z]+|badge\s+bg-[a-z-]+)[^>]*[^>]*>(WO|V|E|D)</gi)].map((match) => match[1].toUpperCase()).slice(0, 5);
     const image = teamCell.html.match(/<img[^>]+src=["']([^"']+)["']/i)?.[1] || "";
+    const ccbQualified = /class=["'][^"']*\bposicao\b[^"']*\bclassifica\b[^"']*["']/i.test(row);
+    const rankColor = row.match(/--rank-color:\s*([^;"']+)/i)?.[1] || "";
+    const lbeQualified = Boolean(rankColor) && !/rgba?\(\s*0\s*,\s*0\s*,\s*0\b/i.test(rankColor);
     standings.push({
       position: Number(cells[0].text.replace(/\D/g, "")), team: teamName,
       points, played, wins, draws, losses, goalsFor, goalsAgainst, goalDifference,
       form, logo: absoluteUrl(baseUrl, image), isStrix: /\bstrix\b/i.test(teamName),
+      isQualified: ccbQualified || lbeQualified,
     });
   }
-  return standings.length ? { name: groupName, standings, isStrixGroup: standings.some((row) => row.isStrix) } : null;
+  if (!standings.length) return null;
+  const qualified = standings.filter((row) => row.isQualified);
+  const qualificationSlots = qualified.length > 0
+    && qualified.every((row, index) => row.position === index + 1)
+    && standings.some((row) => !row.isQualified)
+    ? qualified.length
+    : null;
+  return {
+    name: groupName,
+    standings,
+    isStrixGroup: standings.some((row) => row.isStrix),
+    qualificationSlots,
+  };
 }
 
 function parseGroups(html, context) {
@@ -121,15 +138,18 @@ const providerDateTime = (value) => {
   return `${match[3]}-${match[2]}-${match[1]}T${match[4]}:${match[5]}:00-03:00`;
 };
 
-function parseQualificationRule(html) {
+function parseQualificationRule(html, groups = []) {
   const text = htmlText(html);
   const patterns = [
     /classificam(?:-se)?\s+(?:os\s+)?(?:top\s*)?(\d{1,2})\b/i,
     /(?:os\s+)?(\d{1,2})\s+primeir(?:os|as)\s+(?:se\s+)?classificam/i,
     /(?:zona\s+de\s+classifica[cç][aã]o|classificat[oó]rios?)\s*[:\-]?\s*(?:top\s*)?(\d{1,2})\b/i,
   ];
-  const slots = patterns.map((pattern) => Number(text.match(pattern)?.[1])).find((value) => Number.isInteger(value) && value > 0 && value <= 64) || null;
-  return slots ? { slots, kind: "top", source: "provider_explicit" } : null;
+  const explicitSlots = patterns.map((pattern) => Number(text.match(pattern)?.[1])).find((value) => Number.isInteger(value) && value > 0 && value <= 64) || null;
+  if (explicitSlots) return { slots: explicitSlots, kind: "top", source: "provider_explicit" };
+  const strixGroupSlots = groups.find((group) => group.isStrixGroup)?.qualificationSlots;
+  const visualSlots = strixGroupSlots || [...new Set(groups.map((group) => group.qualificationSlots).filter(Boolean))].at(0) || null;
+  return visualSlots ? { slots: visualSlots, kind: "top", source: "provider_visual" } : null;
 }
 
 function parseFixtureCards(html, context) {
@@ -183,7 +203,17 @@ function parseKnockout(html, context) {
     .map((match) => htmlText(match[0]))
     .filter((value, index, all) => all.findIndex((item) => item.toLowerCase() === value.toLowerCase()) === index);
   const teamEntries = [...html.matchAll(/<a[^>]+(?:title=["']([^"']+)["'])[^>]*>([\s\S]*?)<\/a>/gi)]
-    .map((match) => ({ name: htmlText(match[1] || match[2]), logo: absoluteUrl(context.url, match[2]?.match(/<img[^>]+src=["']([^"']+)["']/i)?.[1] || "") }))
+    .map((match) => {
+      const name = htmlText(match[1] || match[2]);
+      const nearby = html.slice(Math.max(0, match.index - 520), match.index);
+      const nearbyImages = [...nearby.matchAll(/<img[^>]+src=["']([^"']+)["'][^>]*>/gi)];
+      const namedImage = [...nearbyImages].reverse().find((image) => {
+        const tag = image[0];
+        return normalizeFixtureKey(tag.match(/alt=["']([^"']*)["']/i)?.[1] || "") === normalizeFixtureKey(name);
+      });
+      const nestedImage = match[2]?.match(/<img[^>]+src=["']([^"']+)["']/i)?.[1] || "";
+      return { name, logo: absoluteUrl(context.url, namedImage?.[1] || nestedImage) };
+    })
     .filter((team) => team.name && !/classifica|regulamento|ranking|goleiro|zagueiro|meia|atacante/i.test(team.name))
     .filter((team, index, all) => all.findIndex((item) => item.name.toLowerCase() === team.name.toLowerCase()) === index);
   const teams = teamEntries.map((team) => team.name);
@@ -245,7 +275,7 @@ export function parseCompetitionHtml(html, rawUrl) {
   const info = hero(html, context);
   const groups = parseGroups(html, context);
   const fixtures = parseFixtureCards(html, context);
-  const qualificationRule = parseQualificationRule(html);
+  const qualificationRule = parseQualificationRule(html, groups);
   const knockout = context.kind === "knockout" ? parseKnockout(html, context) : { stages: [], teams: [], rounds: [], currentStage: null, fixtures: [], hasStrix: false };
   const phase = knockout.stages.length ? "knockout"
     : groups.length > 1 ? "groups"
