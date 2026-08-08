@@ -1,0 +1,17 @@
+node_modules/
+dist/
+.env
+.env.*
+.wrangler/
+supabase/.branches/
+supabase/.temp/
+coverage/
+playwright-report/
+test-results/
+.vite/
+*.log
+*.tmp
+*.temp
+*.bak
+*.zip
+backups/

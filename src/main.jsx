@@ -1,0 +1,2521 @@
+import React, { StrictMode, useEffect, useMemo, useState } from "react";
+import { createClient } from "@supabase/supabase-js";
+import { createRoot } from "react-dom/client";
+import { createPortal } from "react-dom";
+import "./styles.css";
+import "./fc27-polish.css";
+import "./interaction-polish.css";
+import "./field-polish.css";
+import "./agenda.css";
+import "./agenda-polish.css";
+import "./formation-picker.css";
+import "./agenda-final.css";
+import "./agenda-sync.css";
+import "./partidas.css";
+import "./fc27-data.css";
+import "./fc27-fixes.css";
+import { GameDayEditor } from "./gameday/GameDayEditor.jsx";
+
+const icons = {
+  menu: "M4 7h16M4 12h16M4 17h16",
+  close: "m6 6 12 12M18 6 6 18",
+  search: "m20 20-4.2-4.2M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0z",
+  live: "M4 4v16M8 8a5.7 5.7 0 0 1 0 8M12 5a9.8 9.8 0 0 1 0 14",
+  calendar: "M5 4h14v17H5zM8 2v4M16 2v4M5 10h14",
+  game: "M7 7h10l4 5-4 5H7l-4-5zM8 12h4M10 10v4",
+  squad:
+    "M16 20v-1.4a4.6 4.6 0 0 0-4.6-4.6H7.6A4.6 4.6 0 0 0 3 18.6V20M9.5 10.5A3.5 3.5 0 1 0 9.5 3",
+  trophy:
+    "M8 4h8v4a4 4 0 0 1-8 0zM8 6H5v1a4 4 0 0 0 3 4M16 6h3v1a4 4 0 0 1-3 4M12 12v5M8 21h8",
+  stats: "M4 20V10M10 20V4M16 20v-7M22 20H2",
+  brain:
+    "M9 4a3 3 0 0 0-5 2.5A3.5 3.5 0 0 0 5.5 13 3.5 3.5 0 0 0 9 18h1v-5H8M15 4a3 3 0 0 1 5 2.5A3.5 3.5 0 0 1 18.5 13 3.5 3.5 0 0 1 15 18h-1v-5h2",
+  library:
+    "M4 5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v16l-4-2-4 2-4-2-4 2zM8 8h8M8 12h6",
+  media: "M4 6h11v12H4zM15 10l5-3v10l-5-3z",
+  bell: "M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9",
+  logout: "M10 5H5v14h5M14 8l4 4-4 4M18 12H9",
+  plus: "M12 5v14M5 12h14",
+  arrow: "m9 18 6-6-6-6",
+  upload: "M12 16V4m0 0-4 4m4-4 4 4M5 14v5h14v-5",
+  edit: "M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17v3zM13.5 8.5l3 3",
+  trash: "M4 7h16M10 11v5M14 11v5M6 7l1 13h10l1-13M9 7V4h6v3",
+  details: "M5 4h14v16H5zM8 8h8M8 12h8M8 16h5",
+  goal: "M4 7h16v10H4zM8 7V4h8v3M8 17v3h8v-3M12 10v4M10 12h4",
+  assist: "M4 12h4l3-5 3 10 3-5h3",
+  pass: "M4 18 20 6M15 6h5v5",
+  shield: "M12 3 5 6v5c0 4.7 2.9 8.8 7 10 4.1-1.2 7-5.3 7-10V6z",
+};
+function Icon({ name, size = 20 }) {
+  const path =
+    icons[name] ||
+    (name === "clock" ? "M12 7v5l3 2M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18z" : "");
+  return (
+    <svg
+      aria-hidden="true"
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d={path} />
+    </svg>
+  );
+}
+
+// Dialogs must live at the document root. Several pages animate their content,
+// which otherwise turns a fixed backdrop into a clipped child of that page.
+function ViewportDialog({ className = "modal-backdrop", children, ...props }) {
+  return createPortal(
+    <div className={className} {...props}>{children}</div>,
+    document.body,
+  );
+}
+const nav = [
+  ["agenda", "Agenda", "calendar"],
+  ["partidas", "Partidas", "game"],
+  ["elenco", "Elenco", "squad"],
+  ["campeonatos", "Campeonatos", "trophy"],
+  ["estatisticas", "Estatísticas", "stats"],
+  ["analise", "Análise", "brain"],
+  ["biblioteca", "Biblioteca", "library"],
+  ["midia", "Mídia", "media"],
+  ["desenvolvedor", "Desenvolvedor", "details"],
+];
+const games = [
+  ["21:10", "Sinceridade FC", "Amistoso", "SF"],
+  ["21:40", "SC Rebirth 2025", "Superliga Yeshua · Rodada 9", "SR"],
+  ["22:10", "Old Skull", "Master League · Rodada 6", "OS"],
+  ["22:40", "Wraith Gaming", "Amistoso", "WG"],
+];
+const EA_CLUB_ID = "15686";
+const eaImportedKey = "strix-fc27-ea-imported-matches";
+
+function asClubEntries(raw) {
+  const clubs = raw?.clubs || raw?.club || raw?.clubData || {};
+  return Array.isArray(clubs)
+    ? clubs
+    : Object.entries(clubs).map(([key, value]) => ({ ...value, _clubKey: key }));
+}
+
+function clubName(club, fallback) {
+  return (
+    club?.name ||
+    club?.clubName ||
+    club?.clubInfo?.name ||
+    club?.details?.name ||
+    fallback
+  );
+}
+
+function clubGoals(club) {
+  const value = club?.goals ?? club?.score ?? club?.clubGoals ?? 0;
+  return Number.isFinite(Number(value)) ? Number(value) : 0;
+}
+
+function eaDate(raw) {
+  const candidate = raw?.timestamp ?? raw?.matchTimestamp ?? raw?.date ?? raw?.time ?? raw?.createdAt;
+  if (typeof candidate === "number") {
+    return new Date(candidate < 1e12 ? candidate * 1000 : candidate);
+  }
+  const parsed = candidate ? new Date(candidate) : new Date();
+  return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
+}
+
+const readEaNumber = (source, keys) => {
+  for (const key of keys) {
+    const value = source?.[key];
+    if (value !== undefined && value !== null && value !== "") {
+      const number = Number(value);
+      if (Number.isFinite(number)) return number;
+    }
+  }
+  return null;
+};
+
+const asEntries = (value) =>
+  Array.isArray(value)
+    ? value
+    : value && typeof value === "object"
+      ? Object.entries(value).map(([key, item]) => ({ ...(item || {}), _eaKey: key }))
+      : [];
+
+function eaPlayerRows(raw) {
+  const team = raw?.players?.[EA_CLUB_ID]
+    || raw?.playerStats?.[EA_CLUB_ID]
+    || raw?.details?.players?.[EA_CLUB_ID]
+    || raw?.details?.[EA_CLUB_ID]?.players
+    || raw?.players;
+  return asEntries(team)
+    .filter((player) => player && typeof player === "object")
+    .map((player) => {
+      const stats = player.stats || player.matchStats || player;
+      // The EA payload uses lowercase names (passesmade, playername, etc.).
+      // Keep the newer variants too because the PC bridge can return either shape.
+      const made = readEaNumber(stats, ["passesmade", "passesMade", "passSuccess", "passes"]);
+      const attempts = readEaNumber(stats, ["passattempts", "passesAttempted", "passAttempts", "passesAttempt"]);
+      const goals = readEaNumber(stats, ["goals", "goal"] ) || 0;
+      const assists = readEaNumber(stats, ["assists", "assist"]) || 0;
+      const name = player.playername || player.name || player.playerName || player.personaName || player._eaKey;
+      return {
+        id: player.playerId || player.personaId || player._eaKey || name,
+        eaName: name,
+        name,
+        position: player.pos || player.position || player.positionAbbr || "",
+        rating: readEaNumber(stats, ["rating", "ratingAverage", "matchRating", "ratingValue"]),
+        goals,
+        assists,
+        goalAssists: goals + assists,
+        passesMade: made,
+        passesAttempts: attempts,
+        passes: made === null ? null : attempts ? `${made}/${attempts}` : made,
+        shots: readEaNumber(stats, ["shots", "shotsOnTarget", "shotAttempts"]),
+        tackles: readEaNumber(stats, ["tacklesmade", "tacklesMade", "tackles", "tackleSuccess"]),
+        saves: readEaNumber(stats, ["saves", "goalkeeperSaves"]),
+      };
+    })
+    .filter((player) => player.eaName && player.eaName !== EA_CLUB_ID);
+}
+
+function eaPerformance(raw, strix) {
+  const stats = raw?.aggregateStats?.[EA_CLUB_ID]
+    || raw?.aggregate?.[EA_CLUB_ID]
+    || raw?.stats?.[EA_CLUB_ID]
+    || strix?.stats
+    || strix?.details
+    || {};
+  const players = eaPlayerRows(raw);
+  const ratings = players.map((player) => player.rating).filter(Number.isFinite);
+  const sum = (getter) => {
+    const values = players.map(getter).filter(Number.isFinite);
+    return values.length ? values.reduce((total, item) => total + item, 0) : null;
+  };
+  const directPasses = readEaNumber(stats, ["passesmade", "passesMade", "passes", "passSuccess"]);
+  const directAttempts = readEaNumber(stats, ["passattempts", "passesAttempted", "passAttempts", "passesAttempt"]);
+  const playerPasses = sum((player) => player.passesMade);
+  const playerAttempts = sum((player) => player.passesAttempts);
+  const passMade = directPasses ?? playerPasses;
+  const passAttempts = directAttempts ?? playerAttempts;
+  return {
+    passes: passMade === null ? null : passAttempts ? `${passMade}/${passAttempts}` : passMade,
+    shots: readEaNumber(stats, ["shots", "shotsOnTarget", "shotAttempts"]) ?? sum((player) => player.shots),
+    tackles: readEaNumber(stats, ["tacklesmade", "tacklesMade", "tackles", "tackleSuccess"]) ?? sum((player) => player.tackles),
+    goalkeeperSaves: readEaNumber(stats, ["goalkeeperSaves", "saves"]) ?? sum((player) => player.saves),
+    averageRating: ratings.length ? Number((ratings.reduce((sum, value) => sum + value, 0) / ratings.length).toFixed(1)) : null,
+    players,
+  };
+}
+
+// Older imports stored the first (incomplete) EA parsing result. Rebuild the
+// display values from raw_ea when it exists, without changing the saved record.
+function currentMatchPerformance(match) {
+  const saved = match?.performance || match?.raw_ea?.performance || {};
+  const raw = match?.raw_ea;
+  if (!raw || typeof raw !== "object" || !Object.keys(raw).length) return saved;
+  const clubs = asClubEntries(raw);
+  const strix = clubs.find((club) => String(club?.clubId || club?.id || club?._clubKey) === EA_CLUB_ID) || clubs[0] || {};
+  const fresh = eaPerformance(raw, strix);
+  return {
+    ...saved,
+    ...Object.fromEntries(Object.entries(fresh).filter(([key, value]) => key === "players" ? value.length > 0 : value !== null && value !== undefined)),
+  };
+}
+
+function normalizeEaMatch(raw, index) {
+  const clubs = asClubEntries(raw);
+  const strix =
+    clubs.find((club) => String(club?.clubId || club?.id || club?._clubKey) === EA_CLUB_ID) ||
+    clubs[0] ||
+    {};
+  const opponent = clubs.find((club) => club !== strix) || {};
+  const date = eaDate(raw);
+  return {
+    id: String(raw?.matchId || raw?.id || raw?.gameId || `${date.getTime()}-${index}`),
+    date: date.toISOString(),
+    dateLabel: date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" }),
+    timeLabel: date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
+    opponent: clubName(opponent, "Adversario EA"),
+    strixScore: clubGoals(strix),
+    opponentScore: clubGoals(opponent),
+    competition: "AMISTOSO",
+    performance: eaPerformance(raw, strix),
+  };
+}
+function makeManualMatch(draft) {
+  const date = new Date(`${draft.date}T${draft.time || "00:00"}:00`);
+  const safeDate = Number.isNaN(date.getTime()) ? new Date() : date;
+  return {
+    id: `manual-${safeDate.getTime()}-${draft.opponent.trim().toLowerCase().replace(/[^a-z0-9]+/gi, "-")}`,
+    date: safeDate.toISOString(),
+    dateLabel: safeDate.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" }),
+    timeLabel: safeDate.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
+    opponent: draft.opponent.trim(),
+    strixScore: Number(draft.strixScore),
+    opponentScore: Number(draft.opponentScore),
+    competition: draft.competition.trim() || "PARTIDA MANUAL",
+  };
+}
+const legacyExamplePlayers = [
+  ["SANTOZZ", "ATA", 86, 35, 11],
+  ["SUCK", "ATA", 85, 65, 11],
+  ["TAYLOR", "ALA", 81, 19, 36],
+  ["OBEEN", "MC", 85, 40, 36],
+  ["NUNES", "MC", 83, 60, 36],
+  ["KESTOL", "ALA", 84, 81, 36],
+  ["JÚLIO", "VOL", 84, 50, 53],
+  ["YGO", "ZAG", 85, 27, 70],
+  ["SAMPAIO", "ZAG", 85, 50, 74],
+  ["CEDRAZ", "ZAG", 85, 73, 70],
+  ["JOÃO", "GOL", 91, 50, 89],
+];
+const players = [];
+function Crest({ small = false }) {
+  return (
+    <span className={`crest ${small ? "crest-small" : ""}`}>
+      <img src="/assets/strix-logo.png" alt="Strix United" />
+    </span>
+  );
+}
+const logoCatalogKey = "strix-fc27-logo-catalog";
+let browserSupabase = null;
+async function getBrowserSupabase() {
+  if (browserSupabase) return browserSupabase;
+  const response = await fetch("/api/public-config", { cache: "no-store" });
+  const config = await response.json();
+  if (!response.ok || !config.url || !config.publishableKey) {
+    throw new Error(config.error || "supabase_not_configured");
+  }
+  browserSupabase = createClient(config.url, config.publishableKey, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+    },
+  });
+  return browserSupabase;
+}
+const normalizeTeamName = (name) =>
+  String(name || "")
+    .trim()
+    .toLocaleLowerCase("pt-BR")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+const matchingLogo = (logos, name) => {
+  const normalized = normalizeTeamName(name);
+  if (!normalized) return null;
+  const exact = logos.find((logo) => normalizeTeamName(logo.canonical_name) === normalized);
+  if (exact) return exact;
+  const candidates = logos.filter((logo) => {
+    const candidate = normalizeTeamName(logo.canonical_name);
+    return normalized.length >= 3 && (candidate.startsWith(normalized) || normalized.startsWith(candidate));
+  });
+  return candidates.length === 1 ? candidates[0] : null;
+};
+function readLogoCatalog() {
+  try {
+    return JSON.parse(localStorage.getItem(logoCatalogKey) || "{}") || {};
+  } catch {
+    return {};
+  }
+}
+function catalogLogo(name) {
+  return readLogoCatalog()[normalizeTeamName(name)] || "";
+}
+function rememberLogo(name, logo) {
+  if (!name || !logo) return;
+  const catalog = readLogoCatalog();
+  catalog[normalizeTeamName(name)] = logo;
+  localStorage.setItem(logoCatalogKey, JSON.stringify(catalog));
+}
+function Avatar({ name, logo }) {
+  const resolvedLogo = logo || catalogLogo(name);
+  return (
+    <span className={`avatar ${resolvedLogo ? "has-logo" : ""}`}>
+      {resolvedLogo ? (
+        <img src={resolvedLogo} alt={`Logo ${name}`} />
+      ) : (
+        name
+          .split(" ")
+          .map((word) => word[0])
+          .slice(0, 2)
+          .join("")
+      )}
+    </span>
+  );
+}
+function tierLabel(tier) {
+  return (
+    {
+      dev: "Desenvolvedor",
+      diretoria: "Diretoria",
+      conselho: "Conselho",
+      player: "Jogador",
+      teste: "Teste",
+    }[tier] || "Membro"
+  );
+}
+function useTeamAuth() {
+  const [state, setState] = useState({
+    loading: true,
+    client: null,
+    session: null,
+    profile: null,
+    error: "",
+    syncWarning: "",
+  });
+  useEffect(() => {
+    let alive = true;
+    let subscription;
+    const verify = async (session, client) => {
+      if (!session) {
+        if (alive)
+          setState({
+            loading: false,
+            client,
+            session: null,
+            profile: null,
+            error: "",
+            syncWarning: "",
+          });
+        return;
+      }
+      if (alive)
+        setState((current) => ({ ...current, loading: true, client, session }));
+      try {
+        const response = await fetch("/api/auth/session", {
+          headers: { authorization: `Bearer ${session.access_token}` },
+          cache: "no-store",
+        });
+        const payload = await response.json();
+        if (!response.ok)
+          throw new Error(payload.error || "access_check_failed");
+        if (alive)
+          setState({
+            loading: false,
+            client,
+            session,
+            profile: payload.profile,
+            error: "",
+            syncWarning: payload.sync_warning || "",
+          });
+      } catch (error) {
+        if (alive)
+          setState({
+            loading: false,
+            client,
+            session: null,
+            profile: null,
+            error: error.message || "access_check_failed",
+            syncWarning: "",
+          });
+      }
+    };
+    getBrowserSupabase()
+      .then(async (client) => {
+        const {
+          data: { session },
+        } = await client.auth.getSession();
+        await verify(session, client);
+        ({
+          data: { subscription },
+        } = client.auth.onAuthStateChange((_event, nextSession) => {
+          void verify(nextSession, client);
+        }));
+      })
+      .catch((error) => {
+        if (alive)
+          setState({
+            loading: false,
+            client: null,
+            session: null,
+            profile: null,
+            error: error.message || "auth_setup_failed",
+            syncWarning: "",
+          });
+      });
+    return () => {
+      alive = false;
+      subscription?.unsubscribe();
+    };
+  }, []);
+  const signIn = async () => {
+    const client = state.client || (await getBrowserSupabase());
+    const { error } = await client.auth.signInWithOAuth({
+      provider: "discord",
+      options: { redirectTo: `${window.location.origin}/` },
+    });
+    if (error) throw error;
+  };
+  return {
+    ...state,
+    signIn,
+    signOut: async () => state.client?.auth.signOut(),
+  };
+}
+
+const toLocalDateTime = (date, time) => {
+  const raw = String(date || "").trim();
+  const isoDate = /^\d{2}\/\d{2}\/\d{4}$/.test(raw)
+    ? raw.split("/").reverse().join("-")
+    : raw || new Date().toISOString().slice(0, 10);
+  // Time inputs can be rendered as 21:10, 21h10 or 21H10 depending on the
+  // browser/locale. Postgres only accepts a real ISO clock here.
+  const clock = String(time || "21:10").match(/\d+/g) || [];
+  const hour = String(Math.max(0, Math.min(23, Number(clock[0] || 21)))).padStart(2, "0");
+  const minute = String(Math.max(0, Math.min(59, Number(clock[1] || 10)))).padStart(2, "0");
+  return `${isoDate}T${hour}:${minute}:00-03:00`;
+};
+const datePart = (value) =>
+  new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    timeZone: "America/Sao_Paulo",
+  }).format(new Date(value));
+const timePart = (value) =>
+  new Intl.DateTimeFormat("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: "America/Sao_Paulo",
+  }).format(new Date(value));
+const initialsOf = (name) =>
+  String(name || "?")
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((word) => word[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+const safeAssetName = (name) =>
+  String(name || "asset")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9._-]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "asset";
+
+function useFc27Workspace(client, profile) {
+  const [state, setState] = useState({
+    loading: true,
+    agenda: [],
+    logos: [],
+    players: [],
+    aliases: [],
+    matches: [],
+    error: "",
+  });
+  const assetUrl = (path) =>
+    path ? client?.storage.from("fc27-team-assets").getPublicUrl(path).data.publicUrl || "" : "";
+  const refresh = async () => {
+    if (!client || !profile?.user_id) return;
+    const [agendaResult, logosResult, playersResult, aliasesResult, matchesResult] = await Promise.all([
+      client.from("agenda_matches").select("*, opponent_logos!agenda_matches_opponent_logo_id_fkey(*)").order("scheduled_at", { ascending: true }),
+      client.from("opponent_logos").select("*").order("canonical_name"),
+      client.from("club_players").select("*").order("display_name"),
+      client.from("club_player_aliases").select("*, club_players(display_name)").order("ea_name"),
+      client.from("club_matches").select("*, opponent_logos(*), agenda_matches(id, opponent_name, scheduled_at)").order("played_at", { ascending: false }),
+    ]);
+    const failure = [agendaResult, logosResult, playersResult, aliasesResult, matchesResult].find((result) => result.error)?.error;
+    if (failure) {
+      setState((current) => ({
+        ...current,
+        loading: false,
+        error: failure.message || "Não foi possível sincronizar a base FC 27.",
+      }));
+      return;
+    }
+    setState({
+      loading: false,
+      agenda: agendaResult.data || [],
+      logos: logosResult.data || [],
+      players: playersResult.data || [],
+      aliases: aliasesResult.data || [],
+      matches: matchesResult.data || [],
+      error: "",
+    });
+  };
+  useEffect(() => {
+    if (!client || !profile?.user_id) return undefined;
+    void refresh();
+    const channel = client
+      .channel("fc27-team-data")
+      .on("postgres_changes", { event: "*", schema: "public", table: "agenda_matches" }, refresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "opponent_logos" }, refresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "club_players" }, refresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "club_player_aliases" }, refresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "club_matches" }, refresh)
+      .subscribe();
+    return () => {
+      client.removeChannel(channel);
+    };
+  }, [client, profile?.user_id]);
+
+  const resolveLogo = async (name, file) => {
+    const existing = matchingLogo(state.logos, name);
+    if (!file) return existing?.id || null;
+    const path = `opponents/${profile.user_id}/${crypto.randomUUID()}-${safeAssetName(file.name)}`;
+    const { error: uploadError } = await client.storage
+      .from("fc27-team-assets")
+      .upload(path, file, { cacheControl: "31536000", upsert: false, contentType: file.type || undefined });
+    if (uploadError) throw uploadError;
+    const { data, error } = await client
+      .from("opponent_logos")
+      .upsert(
+        { canonical_name: name.trim(), storage_path: path, created_by: profile.user_id },
+        { onConflict: "normalized_name" },
+      )
+      .select("id")
+      .single();
+    if (error) throw error;
+    return data.id;
+  };
+  const agendaPayload = async (item, extra = {}) => ({
+    opponent_name: item.opponent.trim(),
+    opponent_logo_id: await resolveLogo(item.opponent, item.logoFile),
+    competition_name: item.competition || "AMISTOSO",
+    scheduled_at: toLocalDateTime(item.date, item.time),
+    status: item.cancelled ? "cancelled" : item.status === "EM BREVE" ? "live" : "scheduled",
+    source: "manual",
+    lineup: item.lineup || [],
+    updated_by: profile.user_id,
+    ...extra,
+  });
+  const saveAgenda = async (payload, mode, existing) => {
+    const entries = Array.isArray(payload) ? payload : [payload];
+    if (existing) {
+      const data = await agendaPayload(entries[0], mode === "swap" ? {
+        previous_opponent_name: existing.opponent_name,
+        previous_opponent_logo_id: existing.opponent_logo_id,
+      } : {});
+      const { error } = await client.from("agenda_matches").update(data).eq("id", existing.id);
+      if (error) throw error;
+    } else {
+      const rows = await Promise.all(entries.map(async (item) => ({
+        ...(await agendaPayload(item)),
+        created_by: profile.user_id,
+      })));
+      const { error } = await client.from("agenda_matches").insert(rows);
+      if (error) throw error;
+    }
+    await refresh();
+  };
+  const setAgendaStatus = async (id, status) => {
+    const update = { status, updated_by: profile.user_id };
+    if (status === "cancelled") update.cancelled_at = new Date().toISOString();
+    const { error } = await client.from("agenda_matches").update(update).eq("id", id);
+    if (error) throw error;
+    await refresh();
+  };
+  const removeAgenda = async (id) => {
+    const { error } = await client.from("agenda_matches").delete().eq("id", id);
+    if (error) throw error;
+    await refresh();
+  };
+  const upsertClubMatch = async (match, source = "manual") => {
+    const existing = match.dbId
+      ? state.matches.find((item) => item.id === match.dbId)
+      : state.matches.find((item) => item.external_match_id && item.external_match_id === String(match.id));
+    const payload = {
+      external_match_id: source === "manual" ? null : String(match.id),
+      source,
+      played_at: match.date,
+      opponent_name: match.opponent.trim(),
+      opponent_logo_id: await resolveLogo(match.opponent, match.logoFile),
+      competition_name: match.competition || "AMISTOSO",
+      strix_score: Number(match.strixScore) || 0,
+      opponent_score: Number(match.opponentScore) || 0,
+      agenda_match_id: match.agendaId || null,
+      raw_ea: match.raw || {},
+      performance: match.performance || {},
+      updated_by: profile.user_id,
+    };
+    const result = existing
+      ? await client.from("club_matches").update(payload).eq("id", existing.id).select().single()
+      : await client.from("club_matches").insert({ ...payload, created_by: profile.user_id }).select().single();
+    if (result.error) throw result.error;
+    if (match.agendaId) {
+      const { error: agendaError } = await client
+        .from("agenda_matches")
+        .update({ status: "completed", updated_by: profile.user_id })
+        .eq("id", match.agendaId);
+      if (agendaError) throw agendaError;
+    }
+    await refresh();
+    return result.data;
+  };
+  const savePlayerAliases = async (aliases) => {
+    const rows = aliases
+      .filter((item) => item.eaName && item.playerId)
+      .map((item) => ({ ea_name: item.eaName.trim(), player_id: item.playerId, created_by: profile.user_id, updated_by: profile.user_id }));
+    if (!rows.length) return;
+    const { error } = await client.from("club_player_aliases").upsert(rows, { onConflict: "normalized_name" });
+    if (error) throw error;
+    await refresh();
+  };
+  const removeClubMatch = async (id) => {
+    const { error } = await client.from("club_matches").delete().eq("id", id);
+    if (error) throw error;
+    await refresh();
+  };
+  const savePlayer = async (player, file) => {
+    let avatarPath = player.avatar_path || null;
+    if (file) {
+      const path = `players/${profile.user_id}/${crypto.randomUUID()}-${safeAssetName(file.name)}`;
+      const { error: uploadError } = await client.storage.from("fc27-team-assets").upload(path, file, { upsert: false, contentType: file.type || undefined });
+      if (uploadError) throw uploadError;
+      avatarPath = path;
+    }
+    const payload = {
+      display_name: player.display_name.trim(),
+      avatar_path: avatarPath,
+      positions: player.positions || [],
+      member_type: player.member_type || "complete",
+      trial_expires_at: player.trial_expires_at || null,
+      is_active: player.is_active !== false,
+      updated_by: profile.user_id,
+    };
+    const result = player.id
+      ? await client.from("club_players").update(payload).eq("id", player.id)
+      : await client.from("club_players").insert({ ...payload, created_by: profile.user_id });
+    if (result.error) throw result.error;
+    await refresh();
+  };
+  const removePlayer = async (id) => {
+    const { error } = await client.from("club_players").update({ is_active: false, updated_by: profile.user_id }).eq("id", id);
+    if (error) throw error;
+    await refresh();
+  };
+  return {
+    ...state,
+    assetUrl,
+    refresh,
+    saveAgenda,
+    setAgendaStatus,
+    removeAgenda,
+    upsertClubMatch,
+    removeClubMatch,
+    savePlayerAliases,
+    savePlayer,
+    removePlayer,
+  };
+}
+function LoginScreen({ loading, error, onLogin }) {
+  const [submitting, setSubmitting] = useState(false);
+  const [message, setMessage] = useState("");
+  const login = async () => {
+    setSubmitting(true);
+    setMessage("");
+    try {
+      await onLogin();
+    } catch (loginError) {
+      setMessage(loginError.message || "Não foi possível iniciar o Discord.");
+      setSubmitting(false);
+    }
+  };
+  return (
+    <main className="login-screen">
+      <div className="login-stadium login-stadium-left" />
+      <div className="login-stadium login-stadium-right" />
+      <section className="login-card page-enter" aria-busy={loading}>
+        <Crest />
+        <span>STRIX UNITED · FC 27</span>
+        <h1>Seu vestiário começa aqui.</h1>
+        <p>
+          Entre com seu Discord para liberar a experiência certa para o seu
+          cargo no time.
+        </p>
+        <button
+          className="discord-login"
+          type="button"
+          onClick={login}
+          disabled={loading || submitting}
+        >
+          <img className="discord-login-icon" src="/discord-mark.svg" alt="" />
+          {loading
+            ? "VERIFICANDO SESSÃO"
+            : submitting
+              ? "ABRINDO DISCORD"
+              : "ENTRAR COM DISCORD"}
+        </button>
+        {(error || message) && (
+          <small className="login-error">{message || error}</small>
+        )}
+        <small className="login-note">
+          Seu acesso é conferido com o servidor do Strix em cada entrada.
+        </small>
+      </section>
+    </main>
+  );
+}
+function Sidebar({
+  active,
+  navigate,
+  compact,
+  setCompact,
+  mobileOpen,
+  setMobileOpen,
+  profile,
+  signOut,
+}) {
+  return (
+    <aside
+      className={`sidebar ${compact ? "is-compact" : ""} ${mobileOpen ? "mobile-open" : ""}`}
+    >
+      <div className="brand">
+        <Crest small />
+        <span>
+          STRIX
+          <br />
+          <b>FC 27</b>
+        </span>
+        <button
+          className="collapse"
+          onClick={() => setCompact(!compact)}
+          aria-label="Recolher menu"
+        >
+          ‹
+        </button>
+        <button
+          className="mobile-close"
+          onClick={() => setMobileOpen(false)}
+          aria-label="Fechar menu"
+        >
+          <Icon name="close" />
+        </button>
+      </div>
+      <div className="menu-group">
+        <p>Central</p>
+        <button
+          className={active === "central" ? "active" : ""}
+          onClick={() => navigate("central")}
+        >
+          <Icon name="live" />
+          <span>Central do time</span>
+        </button>
+      </div>
+      <div className="menu-group">
+        <p>Time</p>
+        {nav.map(([id, label, icon]) => (
+          <button
+            key={id}
+            className={active === id ? "active" : ""}
+            onClick={() => navigate(id)}
+          >
+            <Icon name={icon} />
+            <span>{label}</span>
+          </button>
+        ))}
+      </div>
+      <div className="sidebar-user">
+        <Avatar name={profile.display_name} logo={profile.avatar_url} />
+        <span>
+          <b>{profile.display_name}</b>
+          <small>{tierLabel(profile.access_tier)}</small>
+        </span>
+        <button type="button" className="sidebar-signout" onClick={signOut} title="Sair da conta" aria-label="Sair da conta">
+          <Icon name="logout" size={15} />
+        </button>
+      </div>
+    </aside>
+  );
+}
+function GameRow({ game, index }) {
+  let saved = [];
+  try {
+    saved = JSON.parse(localStorage.getItem("strix-fc27-agenda") || "[]");
+  } catch {}
+  const item = saved
+    .filter((value) => value.group === "today")
+    .sort((left, right) => left.time.localeCompare(right.time))[index];
+  const current = item
+    ? [item.time, item.opponent, item.competition, item.initials]
+    : game;
+  return (
+    <article className={`match-row ${item?.cancelled ? "is-cancelled" : ""}`}>
+      <time>{current[0]}</time>
+      <Avatar name={current[3]} logo={item?.logo} />
+      <div>
+        <span>{item?.cancelled ? "PARTIDA CANCELADA" : "STRIX UNITED VS"}</span>
+        <b>{current[1]}</b>
+        <small>{current[2]}</small>
+      </div>
+      <em>
+        {item?.cancelled ? "CANCELADO" : index === 0 ? "PRÓXIMO" : "HOJE"}
+      </em>
+    </article>
+  );
+}
+function Profile({ player, close }) {
+  if (!player) return null;
+  return (
+    <ViewportDialog className="modal-backdrop" onMouseDown={close}>
+      <article
+        className="profile-modal"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <button className="modal-close" onClick={close}>
+          <Icon name="close" />
+        </button>
+        <div className="profile-show">
+          <Avatar name={player[0]} />
+          <span>STRIX UNITED · FC 27</span>
+          <h2>{player[0]}</h2>
+          <p>{player[1]}</p>
+          <strong>{player[2]}</strong>
+        </div>
+        <div className="profile-data">
+          <span>PERFIL DO JOGADOR</span>
+          <h1>{player[0]}</h1>
+          <p>Visão rápida da temporada, função tática e evolução no elenco.</p>
+          <div className="stat-grid">
+            <b>
+              <small>POSIÇÃO</small>
+              {player[1]}
+            </b>
+            <b>
+              <small>OVER</small>
+              {player[2]}
+            </b>
+            <b>
+              <small>PARTIDAS</small>34
+            </b>
+            <b>
+              <small>NOTA</small>7.8
+            </b>
+          </div>
+          <button className="primary">ABRIR PERFIL COMPLETO</button>
+        </div>
+      </article>
+    </ViewportDialog>
+  );
+}
+function Central({ openPlayer }) {
+  return (
+    <section className="page-home page-enter">
+      <section className="match-hero">
+        <div className="stadium-light stadium-left" />
+        <div className="stadium-light stadium-right" />
+        <div className="smoke smoke-a" />
+        <div className="smoke smoke-b" />
+        <div className="hero-meta">
+          <span>TRANSMISSÃO · NOITE DE JOGO</span>
+          <b>30 JUL · 21:10</b>
+        </div>
+        <div className="hero-teams">
+          <div>
+            <Crest />
+            <strong>STRIX UNITED</strong>
+          </div>
+          <div className="versus">
+            <small>AMISTOSO</small>
+            <b>VS</b>
+            <i>21:10</i>
+          </div>
+          <div>
+            <Avatar name="Sinceridade FC" />
+            <strong>SINCERIDADE FC</strong>
+          </div>
+        </div>
+        <div className="hero-actions">
+          <button className="primary">
+            <Icon name="squad" size={17} />
+            ABRIR ESCALAÇÃO
+          </button>
+          <button className="secondary">
+            DETALHES DA PARTIDA <Icon name="arrow" size={16} />
+          </button>
+        </div>
+        <div className="stadium-caption">
+          <span>ARENA STRIX · SÃO PAULO</span>
+          <i>AO VIVO EM BREVE</i>
+        </div>
+      </section>
+      <div className="content-grid">
+        <section className="panel schedule">
+          <header className="panel-heading">
+            <div>
+              <span>AGENDA DA NOITE</span>
+              <h2>Próximas partidas</h2>
+            </div>
+            <button>
+              Ver agenda <Icon name="arrow" size={15} />
+            </button>
+          </header>
+          {games.map((game, index) => (
+            <GameRow key={game[1]} game={game} index={index} />
+          ))}
+        </section>
+        <section className="panel form-panel">
+          <header className="panel-heading">
+            <div>
+              <span>FORMAÇÃO PROVÁVEL</span>
+              <h2>3-1-4-2</h2>
+            </div>
+            <button>Editar</button>
+          </header>
+          <div className="pitch">
+            <div className="field-markings" aria-hidden="true">
+              <i className="field-outline" />
+              <i className="field-midline" />
+              <i className="field-circle" />
+              <i className="field-box field-box-top" />
+              <i className="field-box field-box-bottom" />
+              <i className="field-goal field-goal-top" />
+              <i className="field-goal field-goal-bottom" />
+            </div>
+            {players.map((player) => (
+              <button
+                key={player[0]}
+                onClick={() => openPlayer(player)}
+                style={{ "--x": player[3], "--y": player[4] }}
+                className="player-dot"
+              >
+                <b>{player[2]}</b>
+                <Avatar name={player[0]} />
+                <span>{player[0]}</span>
+                <small>{player[1]}</small>
+              </button>
+            ))}
+          </div>
+        </section>
+      </div>
+    </section>
+  );
+}
+const agendaDraftKey = "strix-fc27-agenda-draft";
+function CentralLive({ workspace, navigate }) {
+  const upcoming = useMemo(() => workspace.agenda
+    .filter((item) => !["cancelled", "completed"].includes(item.status))
+    .sort((left, right) => new Date(left.scheduled_at) - new Date(right.scheduled_at)), [workspace.agenda]);
+  const next = upcoming[0];
+  const nextLogo = next?.opponent_logos?.storage_path ? workspace.assetUrl(next.opponent_logos.storage_path) : "";
+  return (
+    <section className="page-home page-enter">
+      <section className="match-hero">
+        <div className="stadium-light stadium-left" /><div className="stadium-light stadium-right" /><div className="smoke smoke-a" /><div className="smoke smoke-b" />
+        <div className="hero-meta"><span>TRANSMISSÃO · NOITE DE JOGO</span><b>{next ? `${datePart(next.scheduled_at)} · ${timePart(next.scheduled_at)}` : "AGENDA LIVRE"}</b></div>
+        <div className="hero-teams">
+          <div><Crest /><strong>STRIX UNITED</strong></div>
+          <div className="versus"><small>{next?.competition_name || "SEM PARTIDA"}</small><b>VS</b><i>{next ? timePart(next.scheduled_at) : "—"}</i></div>
+          <div><Avatar name={next?.opponent_name || "?"} logo={nextLogo} /><strong>{next?.opponent_name || "AGUARDANDO ADVERSÁRIO"}</strong></div>
+        </div>
+        <div className="hero-actions"><button className="primary" onClick={() => navigate("agenda")}><Icon name="squad" size={17} />ABRIR ESCALAÇÃO</button><button className="secondary" onClick={() => navigate("agenda")}>DETALHES DA PARTIDA <Icon name="arrow" size={16} /></button></div>
+        <div className="stadium-caption"><span>ARENA STRIX · SÃO PAULO</span><i>{next?.status === "live" ? "AO VIVO" : "PRÓXIMA PARTIDA"}</i></div>
+      </section>
+      <div className="content-grid">
+        <section className="panel schedule">
+          <header className="panel-heading"><div><span>AGENDA DA NOITE</span><h2>Próximas partidas</h2></div><button onClick={() => navigate("agenda")}>Ver agenda <Icon name="arrow" size={15} /></button></header>
+          {upcoming.length ? upcoming.slice(0, 5).map((game, index) => <GameRowLive key={game.id} game={game} index={index} workspace={workspace} />) : <div className="agenda-empty">Nenhuma partida programada.</div>}
+        </section>
+        <section className="panel form-panel">
+          <header className="panel-heading"><div><span>FORMAÇÃO PROVÁVEL</span><h2>3-1-4-2</h2></div><button onClick={() => navigate("agenda")}>Editar</button></header>
+          <div className="pitch empty-pitch"><span>Adicione uma partida e monte a escalação.</span></div>
+        </section>
+      </div>
+    </section>
+  );
+}
+function GameRowLive({ game, index, workspace }) {
+  const logo = game.opponent_logos?.storage_path ? workspace.assetUrl(game.opponent_logos.storage_path) : "";
+  return <article className="match-row"><time>{timePart(game.scheduled_at)}</time><Avatar name={game.opponent_name} logo={logo} /><div><span>STRIX UNITED VS</span><b>{game.opponent_name}</b><small>{game.competition_name}</small></div><em>{index === 0 ? "PRÓXIMO" : "HOJE"}</em></article>;
+}
+const defaultAgendaForm = {
+  opponent: "",
+  competition: "AMISTOSO",
+  date: "30/07/2026",
+  time: "21:10",
+  logo: "",
+  presetId: "",
+};
+function nextKickoff(time) {
+  const [hour, minute] = String(time || "21:10")
+    .split(":")
+    .map(Number);
+  const total = hour * 60 + minute + 30;
+  return `${String(Math.floor(total / 60) % 24).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+}
+const lineupSlots = [
+  "ATA",
+  "ATA",
+  "ALA",
+  "MC",
+  "MC",
+  "ALA",
+  "VOL",
+  "ZAG",
+  "ZAG",
+  "ZAG",
+  "GOL",
+];
+const emptyLineup = () => Array(11).fill("");
+function FormationPicker({ lineup, onChange, compact = false }) {
+  const [slot, setSlot] = useState(null);
+  const choose = (player) => {
+    const next = [...lineup];
+    next[slot] = player[0];
+    onChange(next);
+    setSlot(null);
+  };
+  return (
+    <section className={`formation-picker ${compact ? "is-compact" : ""}`}>
+      <div className="formation-picker-field">
+        {lineupSlots.map((position, index) => (
+          <button
+            type="button"
+            className={`formation-slot slot-${index}`}
+            key={`${position}-${index}`}
+            onClick={() => setSlot(index)}
+          >
+            <i>{lineup[index] ? lineup[index].slice(0, 1) : "+"}</i>
+            <b>{lineup[index] || "Livre"}</b>
+            <small>{position}</small>
+          </button>
+        ))}
+      </div>
+      {slot !== null && (
+        <div
+          className="formation-roster"
+          role="dialog"
+          aria-label="Escolher jogador"
+        >
+          <header>
+            <span>POSIÇÃO · {lineupSlots[slot]}</span>
+            <button type="button" onClick={() => setSlot(null)}>
+              <Icon name="close" size={16} />
+            </button>
+          </header>
+          {players.map((player) => (
+            <button
+              type="button"
+              key={player[0]}
+              onClick={() => choose(player)}
+            >
+              <b>{player[2]}</b>
+              <Avatar name={player[0]} />
+              <span>
+                {player[0]}
+                <small>{player[1]}</small>
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+function AgendaModal({ entry, mode = "new", presets, onClose, onSave, logoForOpponent = catalogLogo }) {
+  const edit = Boolean(entry);
+  const [form, setForm] = useState(() => {
+    const saved = entry
+      ? { ...defaultAgendaForm, ...entry }
+      : {
+          ...defaultAgendaForm,
+          ...JSON.parse(localStorage.getItem(agendaDraftKey) || "{}"),
+        };
+    return { ...saved, logo: saved.logo || logoForOpponent(saved.opponent) };
+  });
+  const [gameNumber, setGameNumber] = useState(1);
+  const [lineup, setLineup] = useState(() => entry?.lineup || emptyLineup());
+  const [logoFile, setLogoFile] = useState(null);
+  const [queuedGames, setQueuedGames] = useState([]);
+  const [addFeedback, setAddFeedback] = useState("");
+  const swap = mode === "swap";
+  useEffect(() => {
+    if (!edit)
+      localStorage.setItem(agendaDraftKey, JSON.stringify({ ...form, lineup }));
+  }, [edit, form, lineup]);
+  const change = (event) => {
+    const { name, value } = event.target;
+    if (name === "opponent") {
+      const resolved = value.trim() ? logoForOpponent(value) : "";
+      setForm((current) => ({
+        ...current,
+        opponent: value,
+        // Clearing the opponent must never leave a stale crest in preview.
+        logo: value.trim() ? (resolved || current.logo) : "",
+      }));
+      if (!value.trim()) setLogoFile(null);
+      return;
+    }
+    setForm((current) => ({
+      ...current,
+      [name]: value,
+    }));
+    if (name === "presetId") {
+      const preset = presets.find((valueItem) => valueItem.id === value);
+      if (preset?.lineup) setLineup([...preset.lineup]);
+    }
+  };
+  const pickLogo = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setLogoFile(file);
+    setForm((current) => ({ ...current, logo: URL.createObjectURL(file) }));
+  };
+  const queueCurrentGame = () => {
+    if (!form.opponent.trim()) {
+      setAddFeedback("Informe o adversário antes de adicionar outro jogo.");
+      return;
+    }
+    setQueuedGames((current) => [
+      ...current,
+      { ...form, lineup: [...lineup], opponent: form.opponent.trim(), logoFile },
+    ]);
+    setGameNumber((value) => value + 1);
+    setLineup(emptyLineup());
+    setLogoFile(null);
+    setForm((current) => ({
+      ...defaultAgendaForm,
+      date: current.date,
+      time: nextKickoff(current.time),
+    }));
+    setAddFeedback("Jogo adicionado ao mesmo envio. Preencha o próximo abaixo.");
+  };
+  const editQueuedGame = (index) => {
+    const game = queuedGames[index];
+    setQueuedGames((current) => current.filter((_, itemIndex) => itemIndex !== index));
+    setForm({ ...game });
+    setLineup([...game.lineup]);
+    setGameNumber(index + 1);
+    setAddFeedback("Jogo reaberto para edição.");
+  };
+  const submit = (event) => {
+    event?.preventDefault();
+    if (!form.opponent.trim()) {
+      setAddFeedback("Informe o adversário antes de salvar a Agenda.");
+      return;
+    }
+    const currentGame = { ...entry, ...form, lineup, logoFile, opponent: form.opponent.trim() };
+    onSave(edit ? currentGame : [...queuedGames, currentGame], mode);
+  };
+  return (
+    <ViewportDialog className="modal-backdrop">
+      <article
+        className="agenda-modal agenda-modal-wide"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <header>
+          <div>
+            <span>
+              {String(gameNumber).padStart(2, "0")} ·{" "}
+              {swap
+                ? "TROCAR ADVERSÁRIO"
+                : edit
+                  ? "EDITAR PARTIDA"
+                  : "NOVA PARTIDA"}
+            </span>
+            <h2>
+              {swap
+                ? "Substituir confronto"
+                : edit
+                  ? "Ajustar jogo"
+                  : "Adicionar à agenda"}
+            </h2>
+          </div>
+          <button
+            type="button"
+            className="modal-close"
+            onClick={onClose}
+            aria-label="Fechar"
+          >
+            <Icon name="close" />
+          </button>
+        </header>
+        <form onSubmit={(event) => submit(event)}>
+          {!edit && queuedGames.length > 0 && (
+            <section className="modal-game-queue" aria-label="Jogos adicionados neste envio">
+              {queuedGames.map((game, index) => (
+                <article key={`${game.opponent}-${index}`}>
+                  <div>
+                    <span>JOGO {String(index + 1).padStart(2, "0")} PRONTO</span>
+                    <b>{game.opponent}</b>
+                    <small>{game.date} · {game.time} · {game.competition}</small>
+                  </div>
+                  <em>{game.lineup.filter(Boolean).length}/11</em>
+                  <button type="button" onClick={() => editQueuedGame(index)}>EDITAR</button>
+                </article>
+              ))}
+            </section>
+          )}
+          <div className="agenda-modal-body">
+            <div className="agenda-form">
+              {swap && (
+                <div className="swap-origin">
+                  <small>CONFRONTO ORIGINAL</small>
+                  <s>{entry?.opponent}</s>
+                  <span>será preservado no histórico da Agenda</span>
+                </div>
+              )}
+              <label>
+                {swap ? "NOVO ADVERSÁRIO" : "ADVERSÁRIO"}
+                <input
+                  required
+                  name="opponent"
+                  value={form.opponent}
+                  onChange={change}
+                  placeholder="Nome do adversário"
+                />
+              </label>
+              <label>
+                COMPETIÇÃO
+                <select
+                  name="competition"
+                  value={form.competition}
+                  onChange={change}
+                >
+                  <option>AMISTOSO</option>
+                  <option>SUPERLIGA YESHUA</option>
+                  <option>MASTER LEAGUE</option>
+                  <option>COPA YESHUA</option>
+                </select>
+              </label>
+              <div className="form-row">
+                <label>
+                  DATA
+                  <span className="input-icon">
+                    <Icon name="calendar" size={16} />
+                    <input
+                      required
+                      name="date"
+                      value={form.date}
+                      onChange={change}
+                    />
+                  </span>
+                </label>
+                <label>
+                  HORÁRIO
+                  <span className="input-icon">
+                    <Icon name="clock" size={16} />
+                    <input
+                      required
+                      name="time"
+                      value={form.time}
+                      onChange={change}
+                    />
+                  </span>
+                </label>
+              </div>
+              <label>
+                PREDEFINIÇÃO DA ESCALAÇÃO
+                <select
+                  name="presetId"
+                  value={form.presetId || ""}
+                  onChange={change}
+                >
+                  {<option value="">Sem predefinição</option>}
+                  {presets.map((preset) => (
+                    <option key={preset.id} value={preset.id}>
+                      {preset.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="logo-drop">
+                LOGO DO ADVERSÁRIO
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  onChange={pickLogo}
+                />
+                <span>
+                  <Icon name="upload" size={17} />
+                  {form.logo
+                    ? "Logo pronta para este jogo"
+                    : "Enviar do computador"}
+                </span>
+              </label>
+            </div>
+            <aside className="match-preview">
+              <span>PREVIEW DA AGENDA</span>
+              <div>
+                <Crest />
+                <b>VS</b>
+                <Avatar name={form.opponent || "?"} logo={form.logo} />
+              </div>
+              <strong>{form.opponent || "ADVERSÁRIO"}</strong>
+              <small>
+                {form.date} · {form.time}
+              </small>
+              <em>{form.competition}</em>
+            </aside>
+          </div>
+          <section className="modal-lineup">
+            <header>
+              <div>
+                <span>ESCALAÇÃO DO JOGO</span>
+                <h3>
+                  3-1-4-2 <small>{lineup.filter(Boolean).length}/11</small>
+                </h3>
+              </div>
+              <p>Toque em uma posição e escolha o jogador.</p>
+            </header>
+            <FormationPicker lineup={lineup} onChange={setLineup} />
+          </section>
+          {!edit && (
+            <>
+              <button
+                type="button"
+                className="add-game-block"
+                onClick={queueCurrentGame}
+              >
+                <Icon name="plus" size={18} />
+                Adicionar mais um jogo
+              </button>
+              {addFeedback && (
+                <p className="add-game-feedback" aria-live="polite">
+                  {addFeedback}
+                </p>
+              )}
+            </>
+          )}
+          <footer>
+            <button type="button" className="secondary" onClick={onClose}>
+              CANCELAR
+            </button>
+            <button className="primary">
+              {swap
+                ? "TROCAR ADVERSÁRIO"
+                : edit
+                  ? "SALVAR ALTERAÇÕES"
+                  : "ADICIONAR JOGO"}
+            </button>
+          </footer>
+        </form>
+      </article>
+    </ViewportDialog>
+  );
+}
+function PresetPanel({ presets, setPresets, onClose }) {
+  const [name, setName] = useState("");
+  const [duration, setDuration] = useState("1");
+  const [lineup, setLineup] = useState(emptyLineup());
+  const add = (event) => {
+    event.preventDefault();
+    if (!name.trim()) return;
+    setPresets((current) => [
+      ...current,
+      {
+        id: crypto.randomUUID(),
+        name: name.trim(),
+        lineup,
+        expiresAt: Date.now() + Number(duration) * 86400000,
+      },
+    ]);
+    setName("");
+    setLineup(emptyLineup());
+  };
+  return (
+    <ViewportDialog className="modal-backdrop">
+      <section className="preset-panel" role="dialog" aria-modal="true">
+        <header>
+          <div>
+            <span>ESCALAÇÃO</span>
+            <h2>Predefinições temporárias</h2>
+            <p>
+              Monte a escalação aqui. Ela some da escolha quando expirar, sem
+              alterar jogos já criados.
+            </p>
+          </div>
+          <button
+            type="button"
+            className="modal-close"
+            onClick={onClose}
+            aria-label="Fechar"
+          >
+            <Icon name="close" />
+          </button>
+        </header>
+        <FormationPicker compact lineup={lineup} onChange={setLineup} />
+        <form onSubmit={add}>
+          <input
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            placeholder="Ex.: Time da noite"
+          />
+          <select
+            value={duration}
+            onChange={(event) => setDuration(event.target.value)}
+          >
+            <option value="1">1 dia</option>
+            <option value="3">3 dias</option>
+            <option value="5">5 dias</option>
+          </select>
+          <button className="primary">SALVAR PREDEFINIÇÃO</button>
+        </form>
+        <div>
+          {presets.length ? (
+            presets.map((preset) => (
+              <span key={preset.id}>
+                <b>{preset.name}</b>
+                <small>
+                  {preset.lineup?.filter(Boolean).length || 0}/11 · ativa até{" "}
+                  {new Date(preset.expiresAt).toLocaleDateString("pt-BR")}
+                </small>
+              </span>
+            ))
+          ) : (
+            <p>Nenhuma predefinição ativa.</p>
+          )}
+        </div>
+      </section>
+    </ViewportDialog>
+  );
+}
+function Agenda({ navigate }) {
+  const starter = () =>
+    games.map((game, index) => ({
+      id: `seed-${index}`,
+      time: game[0],
+      opponent: game[1],
+      competition: game[2],
+      initials: game[3],
+      date: "30/07/2026",
+      status: index === 0 ? "EM BREVE" : "AGENDADO",
+      group: "today",
+      logo: "",
+    }));
+  const [tab, setTab] = useState("today"),
+    [items, setItems] = useState(() => {
+      try {
+        return (
+          JSON.parse(localStorage.getItem("strix-fc27-agenda") || "null") ||
+          starter()
+        );
+      } catch {
+        return starter();
+      }
+    }),
+    [modal, setModal] = useState(null),
+    [actions, setActions] = useState(null),
+    [showPresets, setShowPresets] = useState(false),
+    [presets, setPresets] = useState(() => {
+      try {
+        return JSON.parse(
+          localStorage.getItem("strix-fc27-presets") || "[]",
+        ).filter((preset) => preset.expiresAt > Date.now());
+      } catch {
+        return [];
+      }
+    });
+  useEffect(() => {
+    localStorage.setItem("strix-fc27-agenda", JSON.stringify(items));
+    window.dispatchEvent(new Event("strix-agenda-updated"));
+  }, [items]);
+  useEffect(
+    () => localStorage.setItem("strix-fc27-presets", JSON.stringify(presets)),
+    [presets],
+  );
+  const save = (payload, mode) => {
+    const batch = Array.isArray(payload) ? payload : [payload];
+    batch.forEach((item) => rememberLogo(item.opponent, item.logo));
+    setItems((current) =>
+      modal?.entry
+        ? current.map((value) =>
+            value.id === modal.entry.id
+              ? {
+                  ...value,
+                  ...batch[0],
+                  initials: batch[0].opponent
+                    .split(" ")
+                    .map((word) => word[0])
+                    .join("")
+                    .slice(0, 2)
+                    .toUpperCase(),
+                  ...(mode === "swap"
+                    ? {
+                        previousOpponent: modal.entry.opponent,
+                        previousLogo: modal.entry.logo,
+                        swappedAt: new Date().toISOString(),
+                      }
+                    : {}),
+                }
+              : value,
+          )
+        : [
+            ...current,
+            ...batch.map((item) => ({
+              ...item,
+              id: crypto.randomUUID(),
+              initials: item.opponent
+                .split(" ")
+                .map((word) => word[0])
+                .join("")
+                .slice(0, 2)
+                .toUpperCase(),
+              status: "AGENDADO",
+              group: "today",
+            })),
+          ],
+    );
+    localStorage.removeItem(agendaDraftKey);
+    setModal(null);
+  };
+  const cancel = (id) => {
+    setItems((current) =>
+      current.map((item) =>
+        item.id === id
+          ? { ...item, status: "CANCELADO", cancelled: true }
+          : item,
+      ),
+    );
+    setActions(null);
+  };
+  const remove = (id) => {
+    setItems((current) => current.filter((item) => item.id !== id));
+    setActions(null);
+  };
+  const visible = items
+    .filter((item) =>
+      tab === "today" ? item.group === "today" : item.group === "next",
+    )
+    .sort((a, b) => a.time.localeCompare(b.time));
+  return (
+    <section className="agenda-page page-enter">
+      <header className="agenda-hero">
+        <div>
+          <span>AGENDA DO TIME</span>
+          <h1>A noite começa aqui.</h1>
+          <p>
+            Organize os jogos e deixe a escalação pronta antes da bola rolar.
+          </p>
+        </div>
+        <div className="agenda-hero-actions">
+          <button
+            className="secondary preset-trigger"
+            onClick={() => setShowPresets(true)}
+          >
+            PREDEFINIÇÕES
+          </button>
+          <button className="primary" onClick={() => setModal({ mode: "new" })}>
+            <Icon name="plus" size={17} />
+            NOVO JOGO
+          </button>
+        </div>
+      </header>
+      {showPresets && (
+        <PresetPanel
+          presets={presets}
+          setPresets={setPresets}
+          onClose={() => setShowPresets(false)}
+        />
+      )}
+      <nav className="agenda-tabs">
+        <button
+          className={tab === "today" ? "selected" : ""}
+          onClick={() => setTab("today")}
+        >
+          Hoje <b>{items.filter((item) => item.group === "today").length}</b>
+        </button>
+        <button
+          className={tab === "next" ? "selected" : ""}
+          onClick={() => setTab("next")}
+        >
+          Próximos
+        </button>
+        <button onClick={() => navigate("partidas")}>
+          Concluídos <Icon name="arrow" size={13} />
+        </button>
+      </nav>
+      <section className="agenda-list">
+        <div className="agenda-list-heading">
+          <span>HORÁRIO</span>
+          <span>PARTIDA</span>
+          <span>CAMPEONATO</span>
+          <span>STATUS</span>
+        </div>
+        {visible.length ? (
+          visible.map((item) => (
+            <article
+              key={item.id}
+              className={`agenda-game ${item.cancelled ? "is-cancelled" : ""}`}
+            >
+              <time>{item.time}</time>
+              <div className="agenda-match">
+                <Avatar
+                  name={item.opponent || item.initials}
+                  logo={item.logo}
+                />
+                <div>
+                  {item.previousOpponent && (
+                    <small className="replaced-opponent">
+                      <s>{item.previousOpponent}</s> → TROCADO
+                    </small>
+                  )}
+                  <small>STRIX UNITED VS</small>
+                  <b>{item.opponent}</b>
+                </div>
+              </div>
+              <span className="game-competition">{item.competition}</span>
+              <em className={item.status === "EM BREVE" ? "soon" : ""}>
+                {item.status}
+              </em>
+              <button
+                aria-label={`Ações para ${item.opponent}`}
+                onClick={() => setActions(actions === item.id ? null : item.id)}
+              >
+                •••
+              </button>
+              {actions === item.id && (
+                <div className="agenda-actions">
+                  <button
+                    onClick={() => {
+                      setActions(null);
+                      setModal({ entry: item, mode: "edit" });
+                    }}
+                  >
+                    Editar partida
+                  </button>
+                  <button
+                    onClick={() => {
+                      setActions(null);
+                      setModal({ entry: item, mode: "swap" });
+                    }}
+                  >
+                    Trocar adversário
+                  </button>
+                  <button className="danger" onClick={() => cancel(item.id)}>
+                    Cancelar jogo
+                  </button>
+                  <button
+                    className="danger delete"
+                    onClick={() => remove(item.id)}
+                  >
+                    Excluir partida
+                  </button>
+                </div>
+              )}
+            </article>
+          ))
+        ) : (
+          <div className="agenda-empty">Nenhuma partida futura programada.</div>
+        )}
+      </section>
+      {modal && (
+        <AgendaModal
+          entry={modal.entry}
+          mode={modal.mode}
+          presets={presets}
+          onClose={() => setModal(null)}
+          onSave={save}
+        />
+      )}
+    </section>
+  );
+}
+function AgendaLive({ navigate, workspace }) {
+  const [tab, setTab] = useState("today");
+  const [modal, setModal] = useState(null);
+  const [actions, setActions] = useState(null);
+  const [showPresets, setShowPresets] = useState(false);
+  const [feedback, setFeedback] = useState("");
+  const [presets, setPresets] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("strix-fc27-presets") || "[]").filter((preset) => preset.expiresAt > Date.now());
+    } catch { return []; }
+  });
+  useEffect(() => localStorage.setItem("strix-fc27-presets", JSON.stringify(presets)), [presets]);
+  const items = useMemo(() => workspace.agenda.map((db) => ({
+    db,
+    id: db.id,
+    date: datePart(db.scheduled_at),
+    time: timePart(db.scheduled_at),
+    opponent: db.opponent_name,
+    competition: db.competition_name,
+    initials: initialsOf(db.opponent_name),
+    logo: db.opponent_logos?.storage_path ? workspace.assetUrl(db.opponent_logos.storage_path) : "",
+    status: db.status === "cancelled" ? "CANCELADO" : db.status === "live" ? "EM BREVE" : db.status === "completed" ? "JOGADO" : "AGENDADO",
+    cancelled: db.status === "cancelled",
+    previousOpponent: db.previous_opponent_name,
+    lineup: db.lineup || [],
+  })), [workspace.agenda, workspace.logos]);
+  const todayKey = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
+  const visible = items.filter((item) => tab === "today"
+    ? item.db.scheduled_at.slice(0, 10) <= todayKey
+    : item.db.scheduled_at.slice(0, 10) > todayKey
+  ).sort((left, right) => new Date(left.db.scheduled_at) - new Date(right.db.scheduled_at));
+  const run = async (work) => {
+    setFeedback("");
+    try { await work(); }
+    catch (error) { setFeedback(error.message || "Não foi possível concluir a alteração."); }
+  };
+  return (
+    <section className="agenda-page page-enter">
+      <header className="agenda-hero">
+        <div><span>AGENDA DO TIME</span><h1>A noite começa aqui.</h1><p>Organize os jogos e deixe a escalação pronta antes da bola rolar.</p></div>
+        <div className="agenda-hero-actions">
+          <button className="secondary preset-trigger" onClick={() => setShowPresets(true)}>PREDEFINIÇÕES</button>
+          <button className="primary" onClick={() => setModal({ mode: "new" })}><Icon name="plus" size={17} />NOVO JOGO</button>
+        </div>
+      </header>
+      <nav className="agenda-tabs">
+        <button className={tab === "today" ? "selected" : ""} onClick={() => setTab("today")}>Hoje <b>{items.filter((item) => item.db.scheduled_at.slice(0, 10) <= todayKey).length}</b></button>
+        <button className={tab === "next" ? "selected" : ""} onClick={() => setTab("next")}>Próximos</button>
+        <button onClick={() => navigate("partidas")}>Concluídos <Icon name="arrow" size={13} /></button>
+      </nav>
+      {(workspace.error || feedback) && <p className="matches-error">{feedback || workspace.error}</p>}
+      <section className="agenda-list" aria-busy={workspace.loading}>
+        <div className="agenda-list-heading"><span>HORÁRIO</span><span>PARTIDA</span><span>CAMPEONATO</span><span>STATUS</span></div>
+        {visible.length ? visible.map((item) => (
+          <article key={item.id} className={`agenda-game ${item.cancelled ? "is-cancelled" : ""}`}>
+            <time>{item.time}</time>
+            <div className="agenda-match">
+              <Avatar name={item.opponent} logo={item.logo} />
+              <div>{item.previousOpponent && <small className="replaced-opponent"><s>{item.previousOpponent}</s> → TROCADO</small>}<small>STRIX UNITED VS</small><b>{item.opponent}</b></div>
+            </div>
+            <span className="game-competition">{item.competition}</span>
+            <em className={item.status === "EM BREVE" ? "soon" : ""}>{item.status}</em>
+            <button aria-label={`Ações para ${item.opponent}`} onClick={() => setActions(actions === item.id ? null : item.id)}>•••</button>
+            {actions === item.id && <div className="agenda-actions">
+              <button onClick={() => { setActions(null); setModal({ entry: item, mode: "edit" }); }}><Icon name="edit" size={15} />Editar partida</button>
+              <button onClick={() => { setActions(null); setModal({ entry: item, mode: "swap" }); }}><Icon name="game" size={15} />Trocar adversário</button>
+              <button className="danger" onClick={() => void run(() => workspace.setAgendaStatus(item.id, "cancelled"))}>Cancelar jogo</button>
+              <button className="danger delete" onClick={() => void run(() => workspace.removeAgenda(item.id))}><Icon name="trash" size={15} />Excluir partida</button>
+            </div>}
+          </article>
+        )) : <div className="agenda-empty">{workspace.loading ? "Sincronizando agenda..." : "Nenhuma partida programada."}</div>}
+      </section>
+      {showPresets && <PresetPanel presets={presets} setPresets={setPresets} onClose={() => setShowPresets(false)} />}
+      {modal && <AgendaModal entry={modal.entry} mode={modal.mode} presets={presets} onClose={() => setModal(null)} logoForOpponent={(name) => { const logo = matchingLogo(workspace.logos, name); return logo?.storage_path ? workspace.assetUrl(logo.storage_path) : catalogLogo(name); }} onSave={(payload, mode) => void run(async () => { await workspace.saveAgenda(payload, mode, modal.entry?.db); setModal(null); })} />}
+    </section>
+  );
+}
+function SquadPage({ workspace, profile }) {
+  const canManage = ["diretoria", "dev"].includes(profile?.access_tier);
+  const [modal, setModal] = useState(false);
+  const [error, setError] = useState("");
+  const [draft, setDraft] = useState({ display_name: "", positions: [], member_type: "complete", trial_expires_at: "" });
+  const [photo, setPhoto] = useState(null);
+  const positions = ["GOL", "ZAG", "ALA", "VOL", "MC", "MEI", "ATA"];
+  const submit = async (event) => {
+    event.preventDefault();
+    try { await workspace.savePlayer(draft, photo); setModal(false); setDraft({ display_name:"", positions:[], member_type:"complete", trial_expires_at:"" }); setPhoto(null); }
+    catch (saveError) { setError(saveError.message || "Não foi possível salvar o jogador."); }
+  };
+  return <section className="data-page page-enter"><header className="data-page-header"><div><span>ELENCO DO CLUBE</span><h1>Squad FC 27.</h1><p>Cadastre só jogadores reais. Testes ficam identificados até a data definida.</p></div>{canManage && <button className="primary" onClick={() => setModal(true)}><Icon name="plus" size={16}/>ADICIONAR JOGADOR</button>}</header>{(workspace.error || error) && <p className="matches-error">{error || workspace.error}</p>}<section className="squad-list">{workspace.players.filter((player) => player.is_active).length ? workspace.players.filter((player) => player.is_active).map((player) => <article key={player.id}><Avatar name={player.display_name} logo={player.avatar_path ? workspace.assetUrl(player.avatar_path) : ""}/><div><b>{player.display_name}</b><small>{player.positions?.join(" · ") || "Posição não definida"}</small></div>{player.member_type === "teste" && <em className="test-tag">TESTE{player.trial_expires_at ? ` · até ${datePart(player.trial_expires_at)}` : ""}</em>}{canManage && <button className="icon-button" aria-label={`Remover ${player.display_name}`} onClick={() => void workspace.removePlayer(player.id).catch((removeError) => setError(removeError.message))}><Icon name="trash" size={16}/></button>}</article>) : <div className="matches-empty">O elenco FC 27 começa vazio. Adicione os jogadores oficiais quando estiver pronto.</div>}</section>{modal && <div className="match-manual-backdrop"><form className="match-manual-modal squad-modal" onSubmit={submit}><header><div><span>NOVO JOGADOR</span><h2>Adicionar ao elenco</h2><p>Foto, posições e vínculo ficam guardados no Supabase.</p></div><button type="button" className="icon-button" onClick={() => setModal(false)}><Icon name="close"/></button></header><div className="manual-form-grid"><label className="manual-full">NOME<input autoFocus value={draft.display_name} onChange={(event) => setDraft((current) => ({...current,display_name:event.target.value}))}/></label><label className="manual-full logo-drop">FOTO DO JOGADOR<input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => setPhoto(event.target.files?.[0] || null)}/><span><Icon name="upload" size={17}/>{photo ? photo.name : "Enviar do computador"}</span></label><fieldset className="position-picker manual-full"><legend>POSIÇÕES</legend>{positions.map((position) => <button type="button" className={draft.positions.includes(position) ? "selected" : ""} key={position} onClick={() => setDraft((current) => ({...current,positions:current.positions.includes(position) ? current.positions.filter((item) => item !== position) : [...current.positions,position]}))}>{position}</button>)}</fieldset><label>VÍNCULO<select value={draft.member_type} onChange={(event) => setDraft((current) => ({...current,member_type:event.target.value}))}><option value="complete">COMPLETE</option><option value="teste">TESTE</option></select></label>{draft.member_type === "teste" && <label>FIM DO TESTE<input type="date" value={draft.trial_expires_at} onChange={(event) => setDraft((current) => ({...current,trial_expires_at:event.target.value}))}/></label>}</div><footer><button type="button" className="secondary" onClick={() => setModal(false)}>CANCELAR</button><button className="primary"><Icon name="upload" size={16}/>SALVAR JOGADOR</button></footer></form></div>}</section>;
+}
+
+function SquadPageV2({ workspace, profile }) {
+  const canManage = ["diretoria", "dev"].includes(profile?.access_tier);
+  const [modal, setModal] = useState(false);
+  const [error, setError] = useState("");
+  const [draft, setDraft] = useState({ display_name: "", positions: [], member_type: "complete", trial_expires_at: "" });
+  const [photo, setPhoto] = useState(null);
+  const positions = ["GOL", "ZAG", "ALA", "VOL", "MC", "MEI", "ATA"];
+  const previewUrl = useMemo(() => photo ? URL.createObjectURL(photo) : "", [photo]);
+  useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
+  const close = () => { setModal(false); setPhoto(null); setDraft({ display_name: "", positions: [], member_type: "complete", trial_expires_at: "" }); };
+  const submit = async (event) => {
+    event.preventDefault();
+    try {
+      if (!draft.display_name.trim()) throw new Error("Informe o nome do jogador.");
+      if (!draft.positions.length) throw new Error("Escolha ao menos uma posição.");
+      await workspace.savePlayer(draft, photo);
+      close();
+    } catch (saveError) { setError(saveError.message || "Não foi possível salvar o jogador."); }
+  };
+  return <section className="data-page page-enter"><header className="data-page-header"><div><span>ELENCO DO CLUBE</span><h1>Squad FC 27.</h1><p>Perfis reais, posições múltiplas e status do vínculo visíveis antes de salvar.</p></div>{canManage && <button className="primary" onClick={() => setModal(true)}><Icon name="plus" size={16}/>ADICIONAR JOGADOR</button>}</header>{(workspace.error || error) && <p className="matches-error">{error || workspace.error}</p>}<section className="squad-list">{workspace.players.filter((player) => player.is_active).length ? workspace.players.filter((player) => player.is_active).map((player) => <article key={player.id}><Avatar name={player.display_name} logo={player.avatar_path ? workspace.assetUrl(player.avatar_path) : ""}/><div><b>{player.display_name}</b><small>{player.positions?.join(" · ") || "Posição não definida"}</small></div>{player.member_type === "teste" && <em className="test-tag">TESTE{player.trial_expires_at ? ` · até ${datePart(player.trial_expires_at)}` : ""}</em>}{canManage && <button className="icon-button" aria-label={`Remover ${player.display_name}`} onClick={() => void workspace.removePlayer(player.id).catch((removeError) => setError(removeError.message))}><Icon name="trash" size={16}/></button>}</article>) : <div className="matches-empty">O elenco FC 27 começa vazio. Adicione os jogadores oficiais quando estiver pronto.</div>}</section>{modal && <div className="match-manual-backdrop"><form className="match-manual-modal squad-modal-v2" onSubmit={submit}><header><div><span>ELENCO · NOVO PERFIL</span><h2>Adicionar jogador</h2><p>O preview acompanha a ficha antes de entrar no elenco.</p></div><button type="button" className="icon-button" onClick={close} aria-label="Fechar"><Icon name="close"/></button></header><div className="squad-editor"><section className="manual-form-grid"><label className="manual-full">NOME DE EXIBIÇÃO<input autoFocus value={draft.display_name} onChange={(event) => setDraft((current) => ({ ...current, display_name:event.target.value }))} placeholder="Como aparece no time"/></label><label className="manual-full logo-drop">FOTO DO JOGADOR<input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => setPhoto(event.target.files?.[0] || null)}/><span><Icon name="upload" size={17}/>{photo ? photo.name : "Enviar foto do computador"}</span></label><fieldset className="position-picker manual-full"><legend>POSIÇÕES EM QUE JOGA</legend>{positions.map((position) => <button type="button" className={draft.positions.includes(position) ? "selected" : ""} key={position} onClick={() => setDraft((current) => ({ ...current, positions:current.positions.includes(position) ? current.positions.filter((item) => item !== position) : [...current.positions, position] }))}>{position}</button>)}</fieldset><fieldset className="member-picker manual-full"><legend>VÍNCULO COM O TIME</legend><button type="button" className={draft.member_type === "complete" ? "selected" : ""} onClick={() => setDraft((current) => ({ ...current, member_type:"complete", trial_expires_at:"" }))}><b>COMPLETE</b><small>Fixo no elenco</small></button><button type="button" className={draft.member_type === "teste" ? "selected" : ""} onClick={() => setDraft((current) => ({ ...current, member_type:"teste" }))}><b>TESTE</b><small>Identificado em toda a escalação</small></button></fieldset>{draft.member_type === "teste" && <label className="manual-full">TESTE ATÉ<input type="date" value={draft.trial_expires_at} onChange={(event) => setDraft((current) => ({ ...current, trial_expires_at:event.target.value }))}/></label>}</section><aside className="squad-preview"><span>PREVIEW DO ELENCO</span><Avatar name={draft.display_name || "?"} logo={previewUrl}/><small>{draft.positions[0] || "POSIÇÃO"}</small><h3>{draft.display_name || "NOME DO JOGADOR"}</h3><p>{draft.member_type === "teste" ? "Jogador em teste" : "Jogador completo"}</p></aside></div><footer><button type="button" className="secondary" onClick={close}>CANCELAR</button><button className="primary"><Icon name="upload" size={16}/>SALVAR JOGADOR</button></footer></form></div>}</section>;
+}
+
+function SquadPageV3({ workspace, profile }) {
+  const canManage = ["diretoria", "dev"].includes(profile?.access_tier);
+  const emptyDraft = { display_name: "", positions: [], member_type: "elenco", trial_expires_at: "" };
+  const [editing, setEditing] = useState(null);
+  const [draft, setDraft] = useState(emptyDraft);
+  const [photo, setPhoto] = useState(null);
+  const [error, setError] = useState("");
+  const positions = ["GOL", "ZAG", "ALA", "VOL", "MC", "MEI", "ATA"];
+  const previewUrl = useMemo(() => photo ? URL.createObjectURL(photo) : "", [photo]);
+  const currentAvatar = previewUrl || (editing?.avatar_path ? workspace.assetUrl(editing.avatar_path) : "");
+
+  useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
+
+  const close = () => {
+    setEditing(null);
+    setDraft(emptyDraft);
+    setPhoto(null);
+    setError("");
+  };
+  const openCreate = () => {
+    setEditing({});
+    setDraft(emptyDraft);
+    setPhoto(null);
+    setError("");
+  };
+  const openEdit = (player) => {
+    setEditing(player);
+    setDraft({
+      display_name: player.display_name || "",
+      positions: player.positions || [],
+      member_type: player.member_type || "elenco",
+      trial_expires_at: player.trial_expires_at ? String(player.trial_expires_at).slice(0, 10) : "",
+    });
+    setPhoto(null);
+    setError("");
+  };
+  const togglePosition = (position) => setDraft((current) => ({
+    ...current,
+    positions: current.positions.includes(position)
+      ? current.positions.filter((item) => item !== position)
+      : [...current.positions, position],
+  }));
+  const save = async (event) => {
+    event.preventDefault();
+    try {
+      if (!draft.display_name.trim()) throw new Error("Informe o nome do jogador.");
+      if (!draft.positions.length) throw new Error("Escolha ao menos uma posição.");
+      await workspace.savePlayer({ ...draft, id: editing?.id, avatar_path: editing?.avatar_path || null }, photo);
+      close();
+    } catch (saveError) {
+      setError(saveError.message || "Não foi possível salvar o jogador.");
+    }
+  };
+  const classify = (player) => {
+    const playerPositions = (player.positions || []).map((position) => String(position).toUpperCase());
+    if (playerPositions.includes("GOL")) return "goalkeeper";
+    if (playerPositions.includes("ZAG")) return "defenders";
+    if (playerPositions.some((position) => ["MC", "VOL", "ALA", "MEI"].includes(position))) return "midfielders";
+    return "attackers";
+  };
+  const groups = [
+    ["goalkeeper", "GOLEIRO", "GOL"],
+    ["defenders", "DEFENSORES", "ZAG"],
+    ["midfielders", "MEIO-CAMPISTAS", "MC · VOL · ALAS"],
+    ["attackers", "ATACANTES", "ATA"],
+  ];
+  const activePlayers = workspace.players.filter((player) => player.is_active);
+
+  return (
+    <section className="data-page page-enter squad-page-v3">
+      <header className="data-page-header">
+        <div><span>ELENCO DO CLUBE</span><h1>Squad FC 27.</h1><p>Posições e vínculos organizados para escalar sem procurar jogador.</p></div>
+        {canManage && <button className="primary" onClick={openCreate}><Icon name="plus" size={16} />ADICIONAR JOGADOR</button>}
+      </header>
+      {(workspace.error || error) && <p className="matches-error">{error || workspace.error}</p>}
+      {activePlayers.length ? groups.map(([id, title, description]) => {
+        const players = activePlayers.filter((player) => classify(player) === id);
+        return (
+          <section className="squad-sector" key={id}>
+            <header><div><span>{title}</span><small>{description}</small></div><b>{players.length}</b></header>
+            {players.length ? <div className="squad-list">{players.map((player) => <article key={player.id}>
+              <Avatar name={player.display_name} logo={player.avatar_path ? workspace.assetUrl(player.avatar_path) : ""} />
+              <div><b>{player.display_name}</b><small>{player.positions?.join(" · ") || "Posição não definida"}</small></div>
+              <em className={`member-tag ${player.member_type || "elenco"}`}>{player.member_type === "teste" ? `TESTE${player.trial_expires_at ? ` · até ${datePart(player.trial_expires_at)}` : ""}` : player.member_type === "complete" ? "COMPLETE" : "ELENCO"}</em>
+              {canManage && <div className="squad-row-actions"><button className="icon-button" aria-label={`Editar ${player.display_name}`} onClick={() => openEdit(player)}><Icon name="edit" size={16} /></button><button className="icon-button danger" aria-label={`Remover ${player.display_name}`} onClick={() => void workspace.removePlayer(player.id).catch((removeError) => setError(removeError.message))}><Icon name="trash" size={16} /></button></div>}
+            </article>)}</div> : <p className="squad-sector-empty">Nenhum jogador nesta faixa.</p>}
+          </section>
+        );
+      }) : <div className="matches-empty">O elenco FC 27 começa vazio. Adicione os jogadores oficiais quando estiver pronto.</div>}
+      {editing !== null && <ViewportDialog className="match-manual-backdrop"><form className="match-manual-modal squad-modal-v2" onSubmit={save}>
+        <header><div><span>ELENCO · {editing?.id ? "EDITAR PERFIL" : "NOVO PERFIL"}</span><h2>{editing?.id ? "Editar jogador" : "Adicionar jogador"}</h2><p>O preview acompanha a ficha antes de entrar no elenco.</p></div><button type="button" className="icon-button" onClick={close} aria-label="Fechar"><Icon name="close" /></button></header>
+        <div className="squad-editor"><section className="manual-form-grid">
+          <label className="manual-full">NOME DE EXIBIÇÃO<input autoFocus value={draft.display_name} onChange={(event) => setDraft((current) => ({ ...current, display_name: event.target.value }))} placeholder="Como aparece no time" /></label>
+          <label className="manual-full logo-drop">FOTO DO JOGADOR<input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => setPhoto(event.target.files?.[0] || null)} /><span><Icon name="upload" size={17} />{photo ? photo.name : editing?.avatar_path ? "Trocar foto do computador" : "Enviar foto do computador"}</span></label>
+          <fieldset className="position-picker manual-full"><legend>POSIÇÕES EM QUE JOGA</legend>{positions.map((position) => <button type="button" className={draft.positions.includes(position) ? "selected" : ""} key={position} onClick={() => togglePosition(position)}>{position}</button>)}</fieldset>
+          <fieldset className="member-picker member-picker-three manual-full"><legend>VÍNCULO COM O TIME</legend>
+            <button type="button" className={draft.member_type === "elenco" ? "selected" : ""} onClick={() => setDraft((current) => ({ ...current, member_type: "elenco", trial_expires_at: "" }))}><b>ELENCO</b><small>Jogador do elenco</small></button>
+            <button type="button" className={draft.member_type === "teste" ? "selected" : ""} onClick={() => setDraft((current) => ({ ...current, member_type: "teste" }))}><b>TESTE</b><small>Em avaliação</small></button>
+            <button type="button" className={draft.member_type === "complete" ? "selected" : ""} onClick={() => setDraft((current) => ({ ...current, member_type: "complete", trial_expires_at: "" }))}><b>COMPLETE</b><small>Fixo no time</small></button>
+          </fieldset>
+          {draft.member_type === "teste" && <label className="manual-full">TESTE ATÉ<input type="date" value={draft.trial_expires_at} onChange={(event) => setDraft((current) => ({ ...current, trial_expires_at: event.target.value }))} /></label>}
+        </section><aside className="squad-preview"><span>PREVIEW DO ELENCO</span><Avatar name={draft.display_name || "?"} logo={currentAvatar} /><small>{draft.positions[0] || "POSIÇÃO"}</small><h3>{draft.display_name || "NOME DO JOGADOR"}</h3><p>{draft.member_type === "teste" ? "Jogador em teste" : draft.member_type === "complete" ? "Jogador completo" : "Jogador do elenco"}</p></aside></div>
+        <footer><button type="button" className="secondary" onClick={close}>CANCELAR</button><button className="primary"><Icon name="upload" size={16} />{editing?.id ? "SALVAR ALTERAÇÕES" : "SALVAR JOGADOR"}</button></footer>
+      </form></ViewportDialog>}
+    </section>
+  );
+}
+function StatisticsPage({ workspace }) {
+  const [tab, setTab] = useState("resumo");
+  const playerMap = workspace.matches.flatMap((match) => currentMatchPerformance(match).players || []).reduce((all, player) => {
+    const key = normalizeTeamName(player.eaName || player.name || player.id) || String(player.id || all.size);
+    const current = all.get(key) || { name: player.name || player.eaName || "Jogador EA", games: 0, goals: 0, assists: 0, passes: 0, passAttempts: 0, shots: 0, tackles: 0, saves: 0, ratingTotal: 0, ratings: 0 };
+    current.games += 1; current.goals += Number(player.goals || 0); current.assists += Number(player.assists || 0); current.passes += Number(player.passes || 0); current.passAttempts += Number(player.passAttempts || 0); current.shots += Number(player.shots || 0); current.tackles += Number(player.tackles || 0); current.saves += Number(player.saves || 0);
+    if (Number.isFinite(Number(player.rating))) { current.ratingTotal += Number(player.rating); current.ratings += 1; }
+    all.set(key, current); return all;
+  }, new Map());
+  const ranking = [...playerMap.values()].map((player) => ({ ...player, passRate: player.passAttempts ? Math.round((player.passes / player.passAttempts) * 100) : 0, averageRating: player.ratings ? (player.ratingTotal / player.ratings).toFixed(1) : "-" })).sort((a, b) => (b.goals + b.assists) - (a.goals + a.assists) || b.passes - a.passes);
+  const best = (metric) => [...ranking].sort((a, b) => Number(b[metric] || 0) - Number(a[metric] || 0))[0];
+  const total = (metric) => ranking.reduce((sum, player) => sum + Number(player[metric] || 0), 0);
+  const passRate = total("passAttempts") ? `${Math.round((total("passes") / total("passAttempts")) * 100)}%` : "-";
+  return <section className="data-page page-enter"><header className="data-page-header"><div><span>ESTATÍSTICAS</span><h1>Leitura da temporada.</h1><p>Resumo rápido e detalhes importados da EA, sem dados inventados.</p></div></header><nav className="statistics-tabs" aria-label="Dados estatísticos">{[["resumo", "Resumo"], ["time", "Dados do time"], ["players", "Dados individuais"]].map(([id, label]) => <button type="button" key={id} className={tab === id ? "selected" : ""} onClick={() => setTab(id)}>{label}</button>)}</nav>{tab === "resumo" && <section className="ranking-grid">{[["goal", "MAIS GOLS", best("goals"), "goals"], ["squad", "MAIS ASSISTÊNCIAS", best("assists"), "assists"], ["pass", "MAIS PASSES CERTOS", best("passes"), "passes"], ["stats", "MELHOR % DE PASSES", best("passRate"), "passRate"]].map(([icon, label, player, metric]) => <article key={label}><Icon name={icon} size={18}/><small>{label}</small><b>{player?.name || "Sem dados"}</b><strong>{player ? `${player[metric]}${metric === "passRate" ? "%" : ""}` : "-"}</strong></article>)}</section>}{tab === "time" && <section className="statistics-table"><header><span>MÉTRICA</span><span>VALOR</span><span>LEITURA</span></header>{[["Passes certos", total("passes"), "soma da API"], ["Precisão de passes", passRate, "passes certos / tentados"], ["Chutes", total("shots"), "finalizações"], ["Desarmes", total("tackles"), "ações defensivas"], ["Defesas", total("saves"), "goleiros"]].map(([label, value, note]) => <article key={label}><b>{label}</b><strong>{value}</strong><small>{note}</small></article>)}</section>}{tab === "players" && <section className="statistics-table player-statistics"><header><span>JOGADOR</span><span>NOTA</span><span>G</span><span>A</span><span>PASSES</span><span>%</span><span>CHUTES</span><span>DESARMES</span><span>DEFESAS</span></header>{ranking.length ? ranking.map((player) => <article key={player.name}><b>{player.name}<small>{player.games} jogo(s)</small></b><span>{player.averageRating}</span><span>{player.goals}</span><span>{player.assists}</span><span>{player.passes}/{player.passAttempts || "-"}</span><span>{player.passRate || "-"}{player.passRate ? "%" : ""}</span><span>{player.shots}</span><span>{player.tackles}</span><span>{player.saves}</span></article>) : <p>Importe uma partida com dados individuais para montar os rankings.</p>}</section>}</section>;
+}
+
+function DataPage({ id, workspace, profile, client }) {
+  if (id === "estatisticas") return <StatisticsPage workspace={workspace}/>;
+  if (id === "midia") return <GameDayEditor profile={profile} client={client}/>;
+  const matches = workspace.matches;
+  const agenda = workspace.agenda;
+  const completed = matches.length;
+  const wins = matches.filter((match) => match.strix_score > match.opponent_score).length;
+  const goalsFor = matches.reduce((total, match) => total + match.strix_score, 0);
+  const goalsAgainst = matches.reduce((total, match) => total + match.opponent_score, 0);
+  const details = {
+    campeonatos: ["CAMPEONATOS", "Competições ativas.", "Cada competição é formada pelos jogos reais da Agenda."],
+    estatisticas: ["ESTATÍSTICAS", "Leitura da temporada.", "Os indicadores entram conforme as partidas forem importadas."],
+    analise: ["ANÁLISE", "Sala de análise.", "Cruze resultados, adversários e desempenho sem preencher dados fictícios."],
+    biblioteca: ["BIBLIOTECA", "Jogadas e reviews.", "A biblioteca FC 27 recebe os materiais quando a estrutura de mídia for liberada."],
+    midia: ["MÍDIA", "Central social.", "Artes, Gameday e Resumo do Dia entram nesta nova temporada."],
+    desenvolvedor: ["DESENVOLVEDOR", "Saúde do sistema.", "Auditoria e diagnósticos ficam disponíveis apenas para Desenvolvimento."],
+  };
+  const [eyebrow, title, description] = details[id] || ["STRIX FC 27", "Em construção.", ""];
+  if (id === "desenvolvedor" && profile?.access_tier !== "dev") return <section className="placeholder page-enter"><span>ÁREA RESTRITA</span><h1>Desenvolvedor</h1><p>Esta área é exclusiva para Desenvolvimento.</p></section>;
+  return <section className="data-page page-enter"><header className="data-page-header"><div><span>{eyebrow}</span><h1>{title}</h1><p>{description}</p></div></header>{id === "campeonatos" ? <section className="data-grid">{agenda.length ? [...new Set(agenda.map((game) => game.competition_name))].map((competition) => <article className="data-card" key={competition}><Icon name="trophy"/><small>COMPETIÇÃO</small><h2>{competition}</h2><p>{agenda.filter((game) => game.competition_name === competition).length} partida(s) na agenda.</p></article>) : <div className="matches-empty">A Agenda ainda não possui campeonatos cadastrados.</div>}</section> : id === "estatisticas" || id === "analise" ? <><section className="data-grid"><article className="data-card"><small>PARTIDAS</small><h2>{completed}</h2><p>Registros no histórico.</p></article><article className="data-card"><small>VITÓRIAS</small><h2>{wins}</h2><p>Resultados positivos.</p></article><article className="data-card"><small>GOLS PRÓ</small><h2>{goalsFor}</h2><p>Produção ofensiva.</p></article><article className="data-card"><small>GOLS CONTRA</small><h2>{goalsAgainst}</h2><p>Leitura defensiva.</p></article></section><section className="analysis-line"><span>LINHA DA TEMPORADA</span><div>{matches.length ? matches.slice(0,10).reverse().map((match) => <i key={match.id} className={match.strix_score > match.opponent_score ? "win" : match.strix_score < match.opponent_score ? "loss" : "draw"}/>) : <p>Importe partidas para montar a leitura.</p>}</div></section></> : <section className="empty-section"><Icon name={id === "biblioteca" ? "library" : id === "midia" ? "media" : "details"} size={28}/><h2>Base pronta para a próxima fase.</h2><p>{description}</p></section>}</section>;
+}
+function Placeholder({ title }) {
+  return (
+    <section className="placeholder page-enter">
+      <span>STRIX UNITED · FC 27</span>
+      <h1>{title}</h1>
+      <p>Essa área entra na próxima etapa da nova base.</p>
+    </section>
+  );
+}
+function Partidas({ profile }) {
+  const [matches, setMatches] = useState([]);
+  const [selected, setSelected] = useState(() => new Set());
+  const [loadingSource, setLoadingSource] = useState("");
+  const [error, setError] = useState("");
+  const [manualOpen, setManualOpen] = useState(false);
+  const [manualDraft, setManualDraft] = useState(() => ({
+    opponent: "",
+    date: new Date().toISOString().slice(0, 10),
+    time: "21:10",
+    strixScore: "0",
+    opponentScore: "0",
+    competition: "Amistoso",
+  }));
+  const [imported, setImported] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem(eaImportedKey) || "[]");
+    } catch {
+      return [];
+    }
+  });
+  const canImport = ["diretoria", "dev"].includes(profile?.access_tier);
+  const loadMatches = async () => {
+    if (!canImport) {
+      setError("A busca oficial da EA e reservada a Diretoria e Desenvolvimento.");
+      return;
+    }
+    setLoadingSource("cloud");
+    setError("");
+    try {
+      const client = await getBrowserSupabase();
+      const { data } = await client.auth.getSession();
+      const accessToken = data.session?.access_token;
+      if (!accessToken) throw new Error("Sua sessao expirou. Entre novamente com o Discord.");
+      const response = await fetch("/api/ea/matches", {
+        headers: { authorization: `Bearer ${accessToken}` },
+        cache: "no-store",
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.message || payload.error || "Nao foi possivel consultar a EA.");
+      const normalized = (payload.matches || []).map(normalizeEaMatch);
+      setMatches(normalized);
+      setSelected(new Set(normalized.map((match) => match.id)));
+    } catch (requestError) {
+      setError(requestError.message || "Nao foi possivel consultar a EA.");
+    } finally {
+      setLoadingSource("");
+    }
+  };
+  const loadMatchesFromComputer = async () => {
+    if (!canImport) {
+      setError("A importacao fica reservada a Diretoria e Desenvolvimento.");
+      return;
+    }
+    setLoadingSource("computer");
+    setError("");
+    try {
+      const response = await fetch("http://127.0.0.1:8789/api/ea/matches", { cache: "no-store" });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.message || "A ponte local nao conseguiu consultar a EA.");
+      const normalized = (payload.matches || []).map(normalizeEaMatch);
+      if (!normalized.length) throw new Error("A EA respondeu, mas nao retornou partidas para este clube.");
+      setMatches(normalized);
+      setSelected(new Set(normalized.map((match) => match.id)));
+    } catch (requestError) {
+      const message = requestError.message || "A ponte local nao respondeu.";
+      setError(message.includes("fetch") || message.includes("NetworkError")
+        ? "Ponte local indisponivel. Abra INICIAR-PONTE-EA-FC27.cmd e tente de novo."
+        : message);
+    } finally {
+      setLoadingSource("");
+    }
+  };
+  const toggleMatch = (id) => {
+    setSelected((current) => {
+      const next = new Set(current);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+  const importSelected = () => {
+    const chosen = matches.filter((match) => selected.has(match.id));
+    if (!chosen.length) return;
+    const merged = [...imported];
+    chosen.forEach((match) => {
+      const position = merged.findIndex((entry) => entry.id === match.id);
+      if (position >= 0) merged[position] = match;
+      else merged.unshift(match);
+    });
+    merged.sort((left, right) => new Date(right.date) - new Date(left.date));
+    localStorage.setItem(eaImportedKey, JSON.stringify(merged));
+    setImported(merged);
+  };
+  const saveManualMatch = (event) => {
+    event.preventDefault();
+    if (!manualDraft.opponent.trim()) {
+      setError("Informe o adversario para salvar a partida manual.");
+      return;
+    }
+    const match = makeManualMatch(manualDraft);
+    const merged = [match, ...imported.filter((entry) => entry.id !== match.id)];
+    merged.sort((left, right) => new Date(right.date) - new Date(left.date));
+    localStorage.setItem(eaImportedKey, JSON.stringify(merged));
+    setImported(merged);
+    setMatches([]);
+    setError("");
+    setManualOpen(false);
+  };
+  const rows = matches.length ? matches : imported;
+  return (
+    <section className="matches-page page-enter">
+      <header className="matches-hero">
+        <div>
+          <span>PARTIDAS DO CLUBE</span>
+          <h1>Historico de jogo.</h1>
+          <p>Busque os resultados oficiais da EA e escolha o que entra no Strix FC 27.</p>
+        </div>
+        <div className="matches-actions">
+          <button className="secondary" onClick={loadMatchesFromComputer} disabled={Boolean(loadingSource)}>
+            <Icon name="game" size={16} />
+            {loadingSource === "computer" ? "CONSULTANDO SEU PC" : "BUSCAR PELO MEU PC"}
+          </button>
+          <button className="secondary" onClick={loadMatches} disabled={Boolean(loadingSource)}>
+            <Icon name="search" size={16} />
+            {loadingSource === "cloud" ? "CONSULTANDO EA" : "BUSCAR NA EA"}
+          </button>
+          <button className="secondary" onClick={() => { setError(""); setManualOpen(true); }}>
+            <Icon name="plus" size={16} />
+            ADICIONAR MANUAL
+          </button>
+          <button className="primary" onClick={importSelected} disabled={!matches.length || !selected.size}>
+            <Icon name="upload" size={16} />
+            IMPORTAR SELECIONADAS
+          </button>
+        </div>
+      </header>
+      {!canImport && (
+        <p className="matches-permission">A importacao oficial fica disponivel para Diretoria e Desenvolvimento.</p>
+      )}
+      {error && <p className="matches-error">{error}</p>}
+      <section className="matches-list" aria-label="Partidas importadas da EA">
+        <header>
+          <span>DATA</span><span>PARTIDA</span><span>PLACAR</span><span>ORIGEM</span>
+        </header>
+        {rows.length ? rows.map((match) => {
+          const result = match.strixScore > match.opponentScore ? "VITORIA" : match.strixScore < match.opponentScore ? "DERROTA" : "EMPATE";
+          return (
+            <article key={match.id} className={selected.has(match.id) ? "is-selected" : ""}>
+              <label className="match-select">
+                {matches.length > 0 && <input type="checkbox" checked={selected.has(match.id)} onChange={() => toggleMatch(match.id)} />}
+                <span>{match.dateLabel}<small>{match.timeLabel}</small></span>
+              </label>
+              <div className="match-teams"><Crest small /><b>STRIX</b><strong>{match.strixScore} x {match.opponentScore}</strong><b>{match.opponent}</b><Avatar name={match.opponent} /></div>
+              <em className={result.toLowerCase()}>{result}</em>
+              <small>{match.competition}</small>
+            </article>
+          );
+        }) : (
+          <div className="matches-empty">Use BUSCAR NA EA para consultar os dez ultimos jogos do clube.</div>
+        )}
+      </section>
+      {manualOpen && (
+        <div className="match-manual-backdrop" role="presentation">
+          <form className="match-manual-modal" onSubmit={saveManualMatch}>
+            <header>
+              <div>
+                <span>FALLBACK DO TIME</span>
+                <h2>Adicionar partida manual</h2>
+                <p>Use quando a EA estiver indisponivel. O registro entra na mesma lista de Partidas.</p>
+              </div>
+              <button type="button" className="icon-button" aria-label="Fechar" onClick={() => setManualOpen(false)}><Icon name="close" /></button>
+            </header>
+            <div className="manual-form-grid">
+              <label className="manual-full">ADVERSARIO<input autoFocus value={manualDraft.opponent} onChange={(event) => setManualDraft((current) => ({ ...current, opponent: event.target.value }))} placeholder="Ex.: Playmaker ES" /></label>
+              <label>DATA<input type="date" value={manualDraft.date} onChange={(event) => setManualDraft((current) => ({ ...current, date: event.target.value }))} /></label>
+              <label>HORA<input type="time" value={manualDraft.time} onChange={(event) => setManualDraft((current) => ({ ...current, time: event.target.value }))} /></label>
+              <label>STRIX<input min="0" type="number" value={manualDraft.strixScore} onChange={(event) => setManualDraft((current) => ({ ...current, strixScore: event.target.value }))} /></label>
+              <label>ADVERSARIO<input min="0" type="number" value={manualDraft.opponentScore} onChange={(event) => setManualDraft((current) => ({ ...current, opponentScore: event.target.value }))} /></label>
+              <label className="manual-full">COMPETICAO<input value={manualDraft.competition} onChange={(event) => setManualDraft((current) => ({ ...current, competition: event.target.value }))} placeholder="Amistoso, liga ou copa" /></label>
+            </div>
+            <footer>
+              <button type="button" className="secondary" onClick={() => setManualOpen(false)}>CANCELAR</button>
+              <button className="primary" type="submit"><Icon name="upload" size={16} />SALVAR PARTIDA</button>
+            </footer>
+          </form>
+        </div>
+      )}
+    </section>
+  );
+}
+function MatchDetails({ match, close }) {
+  if (!match) return null;
+  const performance = currentMatchPerformance(match);
+  const playerRows = Array.isArray(performance.players) ? performance.players : [];
+  const metrics = [
+    ["passes", "PASSES", performance.passes],
+    ["goal", "CHUTES", performance.shots],
+    ["shield", "DESARMES", performance.tackles],
+    ["squad", "NOTA MÉDIA", performance.averageRating],
+    ["shield", "DEFESAS", performance.goalkeeperSaves],
+  ];
+  return <div className="match-manual-backdrop"><section className="match-details-modal"><header><div><span>HISTÓRICO DA PARTIDA</span><h2>Strix {match.strix_score} x {match.opponent_score} {match.opponent_name}</h2><p>{datePart(match.played_at)} · {match.competition_name} · {match.source === "ea_api" || match.source === "local_bridge" ? "API EA" : "MANUAL"}</p></div><button className="icon-button" onClick={close} aria-label="Fechar"><Icon name="close" /></button></header><div className="match-metric-grid">{metrics.map(([icon,label,value]) => <article key={label}><Icon name={icon} /><small>{label}</small><b>{value ?? "—"}</b></article>)}</div><section className="match-player-data"><h3>Dados individuais</h3>{playerRows.length ? <div>{playerRows.map((player,index) => <article key={player.id || index}><b>{player.name || "Jogador EA"}</b><span>Nota {player.rating ?? "—"}</span><span>Passes {player.passes ?? "—"}</span><span>G+A {player.goalAssists ?? player.goals ?? "—"}</span></article>)}</div> : <p>A API desta partida não entregou dados individuais. O placar e o registro permanecem salvos.</p>}</section><footer><button className="secondary" onClick={close}>FECHAR</button></footer></section></div>;
+}
+
+function MatchDetailsV2({ match, close }) {
+  const performance = currentMatchPerformance(match);
+  const playerRows = Array.isArray(performance.players) ? performance.players : [];
+  const value = (item) => item === null || item === undefined || item === "" ? "—" : item;
+  const metrics = [
+    ["pass", "PASSES", performance.passes],
+    ["goal", "CHUTES", performance.shots],
+    ["shield", "DESARMES", performance.tackles],
+    ["stats", "NOTA MÉDIA", performance.averageRating],
+    ["squad", "DEFESAS", performance.goalkeeperSaves],
+  ];
+  return <div className="match-manual-backdrop"><section className="match-details-modal match-details-v2"><header><div><span>HISTÓRICO DA PARTIDA</span><h2>Strix {match.strix_score} × {match.opponent_score} {match.opponent_name}</h2><p>{datePart(match.played_at)} · {match.competition_name}</p></div><button className="icon-button" onClick={close} aria-label="Fechar"><Icon name="close" /></button></header><div className="match-metric-grid">{metrics.map(([icon, label, item]) => <article key={label}><Icon name={icon} /><small>{label}</small><b>{value(item)}</b></article>)}</div><section className="match-player-data"><header><div><span>DADOS INDIVIDUAIS</span><h3>Leitura de quem entrou em campo</h3></div><small>{playerRows.length ? `${playerRows.length} jogador(es) importados da EA` : "A API não enviou a ficha individual nesta partida"}</small></header>{playerRows.length ? <div className="match-player-table"><div className="match-player-table-head"><span>JOGADOR</span><span>NOTA</span><span>G+A</span><span>PASSES</span><span>CHUTES</span><span>DESARMES</span><span>DEFESAS</span></div>{playerRows.map((player, index) => <article key={player.id || index}><b>{player.name || player.eaName || "Jogador EA"}<small>{player.position || "EA FC"}</small></b><span>{value(player.rating)}</span><span>{value(player.goalAssists)}</span><span>{value(player.passes)}</span><span>{value(player.shots)}</span><span>{value(player.tackles)}</span><span>{value(player.saves)}</span></article>)}</div> : <p>O placar foi salvo, mas esta resposta da EA não trouxe as estatísticas individuais. Uma nova busca só substitui os dados quando a fonte realmente os entregar.</p>}</section><footer><button className="secondary" onClick={close}>FECHAR</button></footer></section></div>;
+}
+
+function PartidasLiveV2({ profile, workspace }) {
+  const canManage = ["diretoria", "dev"].includes(profile?.access_tier);
+  const [found, setFound] = useState([]);
+  const [foundSource, setFoundSource] = useState("ea_api");
+  const [selected, setSelected] = useState(() => new Set());
+  const [loadingSource, setLoadingSource] = useState("");
+  const [error, setError] = useState("");
+  const [detail, setDetail] = useState(null);
+  const [manualOpen, setManualOpen] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [linkPicker, setLinkPicker] = useState("");
+  const [aliasPicker, setAliasPicker] = useState("");
+  const [aliases, setAliases] = useState({});
+  const [manualDraft, setManualDraft] = useState({ opponent: "", date: new Date().toISOString().slice(0, 10), time: "21:10", strixScore: "0", opponentScore: "0", competition: "Amistoso" });
+  const activeAgenda = workspace.agenda.filter((item) => !["cancelled", "completed"].includes(item.status));
+  const getKnownPlayer = (eaName) => workspace.aliases.find((item) => normalizeTeamName(item.ea_name) === normalizeTeamName(eaName))?.player_id
+    || workspace.players.find((item) => normalizeTeamName(item.display_name) === normalizeTeamName(eaName))?.id
+    || "";
+  const applyFound = (rows, source) => {
+    const defaults = {};
+    rows.forEach((item) => (item.performance?.players || []).forEach((player) => { if (player.eaName) defaults[normalizeTeamName(player.eaName)] = getKnownPlayer(player.eaName); }));
+    setAliases(defaults);
+    setFound(rows.map((item) => {
+      const sameDay = activeAgenda.filter((agenda) => datePart(agenda.scheduled_at) === item.dateLabel);
+      const linked = sameDay.find((agenda) => normalizeTeamName(agenda.opponent_name) === normalizeTeamName(item.opponent));
+      return { ...item, agendaId: linked?.id || "", competition: item.competition || "Amistoso" };
+    }));
+    setSelected(new Set(rows.map((item) => item.id)));
+    setFoundSource(source);
+  };
+  const load = async (source) => {
+    if (!canManage) return setError("A importação oficial fica disponível para Diretoria e Desenvolvimento.");
+    setError(""); setLoadingSource(source);
+    try {
+      let response;
+      if (source === "computer") response = await fetch("http://127.0.0.1:8789/api/ea/matches", { cache: "no-store" });
+      else { const client = await getBrowserSupabase(); const { data } = await client.auth.getSession(); response = await fetch("/api/ea/matches", { headers: { authorization: `Bearer ${data.session?.access_token || ""}` }, cache: "no-store" }); }
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.message || payload.error || "A fonte não retornou partidas.");
+      const normalized = (payload.matches || []).map((match, index) => ({ ...normalizeEaMatch(match, index), raw: match }));
+      if (!normalized.length) throw new Error("A fonte respondeu, mas não retornou partidas para este clube.");
+      applyFound(normalized, source === "computer" ? "local_bridge" : "ea_api");
+    } catch (requestError) { setError(requestError.message || "Não foi possível consultar as partidas."); }
+    finally { setLoadingSource(""); }
+  };
+  const patchFound = (id, patch) => setFound((current) => current.map((item) => item.id === id ? { ...item, ...patch } : item));
+  const toggle = (id) => setSelected((current) => { const next = new Set(current); next.has(id) ? next.delete(id) : next.add(id); return next; });
+  const importSelected = async () => {
+    const chosen = found.filter((item) => selected.has(item.id));
+    if (!chosen.length) return setError("Escolha ao menos uma partida.");
+    if (chosen.some((item) => !item.competition.trim())) return setError("Toda partida selecionada precisa de competição.");
+    try {
+      for (const item of chosen) await workspace.upsertClubMatch(item, foundSource);
+      const aliasRows = Object.entries(aliases).map(([normalized, playerId]) => {
+        const row = chosen.flatMap((item) => item.performance?.players || []).find((player) => normalizeTeamName(player.eaName) === normalized);
+        return row ? { eaName: row.eaName, playerId } : null;
+      }).filter(Boolean);
+      await workspace.savePlayerAliases(aliasRows);
+      setFound([]); setSelected(new Set()); setAliases({});
+    } catch (saveError) { setError(saveError.message || "Não foi possível salvar a importação."); }
+  };
+  const openManual = (match) => { setEditing(match || null); setManualDraft(match ? { opponent:match.opponent_name, date:new Date(match.played_at).toISOString().slice(0, 10), time:timePart(match.played_at), strixScore:String(match.strix_score), opponentScore:String(match.opponent_score), competition:match.competition_name } : { opponent:"", date:new Date().toISOString().slice(0, 10), time:"21:10", strixScore:"0", opponentScore:"0", competition:"Amistoso" }); setManualOpen(true); };
+  const saveManual = async (event) => { event.preventDefault(); try { if (!manualDraft.opponent.trim()) throw new Error("Informe o adversário."); const item = makeManualMatch(manualDraft); if (editing) item.dbId = editing.id; await workspace.upsertClubMatch(item, "manual"); setManualOpen(false); setEditing(null); } catch (saveError) { setError(saveError.message || "Não foi possível salvar a partida."); } };
+  const resultOf = (match) => match.strix_score > match.opponent_score ? "VITÓRIA" : match.strix_score < match.opponent_score ? "DERROTA" : "EMPATE";
+  return <section className="matches-page page-enter"><header className="matches-hero"><div><span>PARTIDAS DO CLUBE</span><h1>Histórico de jogo.</h1><p>Importe, revise o contexto e mantenha a Agenda sincronizada com o resultado real.</p></div><div className="matches-actions"><button className="secondary" onClick={() => void load("computer")} disabled={Boolean(loadingSource)}><Icon name="game" size={16}/>{loadingSource === "computer" ? "CONSULTANDO SEU PC" : "BUSCAR PELO MEU PC"}</button><button className="secondary" onClick={() => void load("cloud")} disabled={Boolean(loadingSource)}><Icon name="search" size={16}/>{loadingSource === "cloud" ? "CONSULTANDO EA" : "BUSCAR NA EA"}</button>{canManage && <button className="secondary" onClick={() => openManual()}><Icon name="plus" size={16}/>ADICIONAR MANUAL</button>}</div></header>{(error || workspace.error) && <p className="matches-error">{error || workspace.error}</p>}<section className="matches-list matches-history"><header><span>DATA</span><span>PARTIDA</span><span>RESULTADO</span><span>COMPETIÇÃO</span><span>GESTÃO</span></header>{workspace.matches.length ? workspace.matches.map((match) => { const logo = match.opponent_logos?.storage_path ? workspace.assetUrl(match.opponent_logos.storage_path) : ""; const result = resultOf(match); return <article key={match.id}><span>{datePart(match.played_at)}<small>{timePart(match.played_at)}</small></span><div className="match-teams"><Crest small/><b>STRIX</b><strong>{match.strix_score} × {match.opponent_score}</strong><Avatar name={match.opponent_name} logo={logo}/><b>{match.opponent_name}</b></div><em className={result.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()}>{result}</em><small>{match.competition_name || "AMISTOSO"}</small><div className="match-row-actions"><button title="Ver dados" onClick={() => setDetail(match)}><Icon name="details" size={16}/></button>{canManage && <><button title="Editar" onClick={() => openManual(match)}><Icon name="edit" size={16}/></button><button title="Excluir" onClick={() => void workspace.removeClubMatch(match.id).catch((removeError) => setError(removeError.message))}><Icon name="trash" size={16}/></button></>}</div></article>; }) : <div className="matches-empty">Ainda não há partidas no histórico. Busque a EA ou adicione um resultado manual.</div>}</section>{found.length > 0 && <section className="import-workbench"><header><div><span>IMPORTAÇÃO · REVISÃO</span><h2>Confira antes de salvar</h2><p>{selected.size} de {found.length} partida(s) selecionada(s).</p></div><div className="import-bulk-actions"><button className="secondary" onClick={() => setSelected(new Set(found.map((item) => item.id)))}>SELECIONAR TODAS</button><button className="secondary" onClick={() => setSelected(new Set())}>LIMPAR</button><button className="primary" onClick={() => void importSelected()}><Icon name="upload" size={16}/>CONFIRMAR IMPORTAÇÃO</button></div></header><div className="import-cards">{found.map((item) => { const agenda = activeAgenda.find((row) => row.id === item.agendaId); const itemPlayers = item.performance?.players || []; return <article className={selected.has(item.id) ? "selected" : ""} key={item.id}><button className="import-check" onClick={() => toggle(item.id)} aria-label={`Selecionar ${item.opponent}`}>{selected.has(item.id) ? "✓" : ""}</button><div className="import-match-main"><small>{item.dateLabel} · {item.timeLabel}</small><h3>STRIX {item.strixScore} × {item.opponentScore} {item.opponent}</h3><label>COMPETIÇÃO<input value={item.competition} onChange={(event) => patchFound(item.id, { competition:event.target.value })} placeholder="Amistoso, liga ou copa"/></label></div><div className="import-link"><span>VÍNCULO COM A AGENDA</span><button className="picker-button" onClick={() => setLinkPicker(linkPicker === item.id ? "" : item.id)}>{agenda ? `${agenda.opponent_name} · ${timePart(agenda.scheduled_at)}` : "Sem vínculo"}<Icon name="arrow" size={15}/></button>{linkPicker === item.id && <div className="picker-menu"><button onClick={() => { patchFound(item.id, { agendaId:"" }); setLinkPicker(""); }}>Sem vínculo</button>{activeAgenda.map((row) => <button key={row.id} onClick={() => { patchFound(item.id, { agendaId:row.id }); setLinkPicker(""); }}>{timePart(row.scheduled_at)} · {row.opponent_name}</button>)}</div>}</div>{itemPlayers.length > 0 && <div className="import-players"><span>EA → ELENCO</span>{itemPlayers.map((player) => { const aliasKey = normalizeTeamName(player.eaName); const linkedPlayer = workspace.players.find((row) => row.id === aliases[aliasKey]); return <div key={`${item.id}-${player.id}`}><b>{player.eaName}</b><button className="picker-button" onClick={() => setAliasPicker(aliasPicker === aliasKey ? "" : aliasKey)}>{linkedPlayer?.display_name || "Fora do elenco"}<Icon name="arrow" size={14}/></button>{aliasPicker === aliasKey && <div className="picker-menu player-picker"><button onClick={() => { setAliases((current) => ({ ...current, [aliasKey]:"" })); setAliasPicker(""); }}>Fora do elenco</button>{workspace.players.filter((row) => row.is_active).map((row) => <button key={row.id} onClick={() => { setAliases((current) => ({ ...current, [aliasKey]:row.id })); setAliasPicker(""); }}>{row.display_name}</button>)}</div>}</div>; })}</div>}</article>; })}</div></section>}{manualOpen && <div className="match-manual-backdrop"><form className="match-manual-modal" onSubmit={saveManual}><header><div><span>REGISTRO DO CLUBE</span><h2>{editing ? "Editar partida" : "Adicionar partida manual"}</h2><p>O resultado entra no histórico e sincroniza com a leitura da temporada.</p></div><button type="button" className="icon-button" onClick={() => setManualOpen(false)} aria-label="Fechar"><Icon name="close"/></button></header><div className="manual-form-grid"><label className="manual-full">ADVERSÁRIO<input autoFocus value={manualDraft.opponent} onChange={(event) => setManualDraft((current) => ({ ...current, opponent:event.target.value }))}/></label><label>DATA<input type="date" value={manualDraft.date} onChange={(event) => setManualDraft((current) => ({ ...current, date:event.target.value }))}/></label><label>HORA<input type="time" value={manualDraft.time} onChange={(event) => setManualDraft((current) => ({ ...current, time:event.target.value }))}/></label><label>STRIX<input type="number" min="0" value={manualDraft.strixScore} onChange={(event) => setManualDraft((current) => ({ ...current, strixScore:event.target.value }))}/></label><label>ADVERSÁRIO<input type="number" min="0" value={manualDraft.opponentScore} onChange={(event) => setManualDraft((current) => ({ ...current, opponentScore:event.target.value }))}/></label><label className="manual-full">COMPETIÇÃO<input value={manualDraft.competition} onChange={(event) => setManualDraft((current) => ({ ...current, competition:event.target.value }))} placeholder="Amistoso, liga ou copa"/></label></div><footer><button type="button" className="secondary" onClick={() => setManualOpen(false)}>CANCELAR</button><button className="primary"><Icon name="upload" size={16}/>SALVAR PARTIDA</button></footer></form></div>}{detail && <MatchDetailsV2 match={detail} close={() => setDetail(null)}/>}</section>;
+}
+function PartidasLive({ profile, workspace }) {
+  const [found, setFound] = useState([]);
+  const [foundSource, setFoundSource] = useState("ea_api");
+  const [selected, setSelected] = useState(() => new Set());
+  const [loadingSource, setLoadingSource] = useState("");
+  const [error, setError] = useState("");
+  const [detail, setDetail] = useState(null);
+  const [manualOpen, setManualOpen] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [manualDraft, setManualDraft] = useState({ opponent: "", date: new Date().toISOString().slice(0, 10), time: "21:10", strixScore: "0", opponentScore: "0", competition: "Amistoso" });
+  const canManage = ["diretoria", "dev"].includes(profile?.access_tier);
+  const load = async (source) => {
+    if (!canManage) return setError("A importação oficial fica disponível para Diretoria e Desenvolvimento.");
+    setError(""); setLoadingSource(source);
+    try {
+      let response;
+      if (source === "computer") response = await fetch("http://127.0.0.1:8789/api/ea/matches", { cache: "no-store" });
+      else {
+        const client = await getBrowserSupabase(); const { data } = await client.auth.getSession();
+        response = await fetch("/api/ea/matches", { headers: { authorization: `Bearer ${data.session?.access_token || ""}` }, cache: "no-store" });
+      }
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.message || payload.error || "A fonte não retornou partidas.");
+      const normalized = (payload.matches || []).map((match, index) => ({ ...normalizeEaMatch(match, index), raw: match }));
+      if (!normalized.length) throw new Error("A fonte respondeu, mas não retornou partidas para este clube.");
+      setFound(normalized); setFoundSource(source === "computer" ? "local_bridge" : "ea_api"); setSelected(new Set(normalized.map((match) => match.id)));
+    } catch (requestError) {
+      setError(requestError.message || "Não foi possível consultar as partidas.");
+    } finally { setLoadingSource(""); }
+  };
+  const importSelected = async () => {
+    try {
+      const chosen = found.filter((match) => selected.has(match.id));
+      if (!chosen.length) return;
+      for (const match of chosen) await workspace.upsertClubMatch(match, foundSource);
+      setFound([]); setSelected(new Set());
+    } catch (saveError) { setError(saveError.message || "Não foi possível salvar a importação."); }
+  };
+  const openManual = (match) => {
+    setEditing(match || null);
+    setManualDraft(match ? { opponent: match.opponent_name, date: new Date(match.played_at).toISOString().slice(0,10), time: timePart(match.played_at), strixScore: String(match.strix_score), opponentScore: String(match.opponent_score), competition: match.competition_name } : { opponent:"", date:new Date().toISOString().slice(0,10), time:"21:10", strixScore:"0", opponentScore:"0", competition:"Amistoso" });
+    setManualOpen(true);
+  };
+  const saveManual = async (event) => {
+    event.preventDefault();
+    try {
+      if (!manualDraft.opponent.trim()) throw new Error("Informe o adversário.");
+      const item = makeManualMatch(manualDraft);
+      if (editing) item.dbId = editing.id;
+      await workspace.upsertClubMatch(item, "manual");
+      setManualOpen(false); setEditing(null);
+    } catch (saveError) { setError(saveError.message || "Não foi possível salvar a partida."); }
+  };
+  const rows = workspace.matches;
+  return <section className="matches-page page-enter"><header className="matches-hero"><div><span>PARTIDAS DO CLUBE</span><h1>Histórico de jogo.</h1><p>Dados oficiais da EA e registros manuais na mesma linha do tempo.</p></div><div className="matches-actions"><button className="secondary" onClick={() => void load("computer")} disabled={Boolean(loadingSource)}><Icon name="game" size={16}/>{loadingSource === "computer" ? "CONSULTANDO SEU PC" : "BUSCAR PELO MEU PC"}</button><button className="secondary" onClick={() => void load("cloud")} disabled={Boolean(loadingSource)}><Icon name="search" size={16}/>{loadingSource === "cloud" ? "CONSULTANDO EA" : "BUSCAR NA EA"}</button>{canManage && <button className="secondary" onClick={() => openManual()}><Icon name="plus" size={16}/>ADICIONAR MANUAL</button>}{found.length > 0 && <button className="primary" onClick={() => void importSelected()}><Icon name="upload" size={16}/>IMPORTAR SELECIONADAS</button>}</div></header>{(error || workspace.error) && <p className="matches-error">{error || workspace.error}</p>}<section className="matches-list"><header><span>DATA</span><span>PARTIDA</span><span>RESULTADO</span><span>COMPETIÇÃO</span><span>ORIGEM</span></header>{rows.length ? rows.map((match) => { const result = match.strix_score > match.opponent_score ? "VITÓRIA" : match.strix_score < match.opponent_score ? "DERROTA" : "EMPATE"; const logo = match.opponent_logos?.storage_path ? workspace.assetUrl(match.opponent_logos.storage_path) : ""; return <article key={match.id}><span>{datePart(match.played_at)}<small>{timePart(match.played_at)}</small></span><div className="match-teams"><Crest small/><b>STRIX</b><strong>{match.strix_score} x {match.opponent_score}</strong><Avatar name={match.opponent_name} logo={logo}/><b>{match.opponent_name}</b></div><em className={result.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()}>{result}</em><small>{match.competition_name}</small><small>{match.source === "manual" ? "MANUAL" : "API EA"}</small><div className="match-row-actions"><button title="Ver dados" onClick={() => setDetail(match)}><Icon name="details" size={16}/></button>{canManage && <><button title="Editar" onClick={() => openManual(match)}><Icon name="edit" size={16}/></button><button title="Excluir" onClick={() => void workspace.removeClubMatch(match.id).catch((removeError) => setError(removeError.message))}><Icon name="trash" size={16}/></button></>}</div></article>; }) : <div className="matches-empty">Ainda não há partidas no histórico. Use a busca da EA ou adicione um resultado manual.</div>}</section>{found.length > 0 && <section className="matches-list import-preview"><header><span>DATA</span><span>PARTIDA</span><span>RESULTADO</span><span>COMPETIÇÃO</span><span>SELEÇÃO</span></header>{found.map((match) => <article key={match.id}><span>{match.dateLabel}<small>{match.timeLabel}</small></span><div className="match-teams"><Crest small/><b>STRIX</b><strong>{match.strixScore} x {match.opponentScore}</strong><b>{match.opponent}</b></div><em>{match.strixScore > match.opponentScore ? "VITÓRIA" : match.strixScore < match.opponentScore ? "DERROTA" : "EMPATE"}</em><small>{match.competition}</small><label className="match-select"><input type="checkbox" checked={selected.has(match.id)} onChange={() => setSelected((current) => { const next = new Set(current); next.has(match.id) ? next.delete(match.id) : next.add(match.id); return next; })}/></label></article>)}</section>}{manualOpen && <div className="match-manual-backdrop"><form className="match-manual-modal" onSubmit={saveManual}><header><div><span>REGISTRO DO CLUBE</span><h2>{editing ? "Editar partida" : "Adicionar partida manual"}</h2><p>O resultado entra no histórico e sincroniza em todos os dispositivos.</p></div><button type="button" className="icon-button" onClick={() => setManualOpen(false)}><Icon name="close"/></button></header><div className="manual-form-grid"><label className="manual-full">ADVERSÁRIO<input autoFocus value={manualDraft.opponent} onChange={(event) => setManualDraft((current) => ({...current, opponent:event.target.value}))}/></label><label>DATA<input type="date" value={manualDraft.date} onChange={(event) => setManualDraft((current) => ({...current,date:event.target.value}))}/></label><label>HORA<input type="time" value={manualDraft.time} onChange={(event) => setManualDraft((current) => ({...current,time:event.target.value}))}/></label><label>STRIX<input type="number" min="0" value={manualDraft.strixScore} onChange={(event) => setManualDraft((current) => ({...current, strixScore:event.target.value}))}/></label><label>ADVERSÁRIO<input type="number" min="0" value={manualDraft.opponentScore} onChange={(event) => setManualDraft((current) => ({...current,opponentScore:event.target.value}))}/></label><label className="manual-full">COMPETIÇÃO<input value={manualDraft.competition} onChange={(event) => setManualDraft((current) => ({...current,competition:event.target.value}))}/></label></div><footer><button type="button" className="secondary" onClick={() => setManualOpen(false)}>CANCELAR</button><button className="primary"><Icon name="upload" size={16}/>SALVAR PARTIDA</button></footer></form></div>}{detail && <MatchDetails match={detail} close={() => setDetail(null)}/>}</section>;
+}
+function Command({ close, navigate }) {
+  return (
+    <div className="command-backdrop" onMouseDown={close}>
+      <section
+        className="command"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <div>
+          <Icon name="search" />
+          <input autoFocus placeholder="Buscar ou executar ação..." />
+          <kbd>ESC</kbd>
+        </div>
+        <p>AÇÕES RÁPIDAS</p>
+        {[
+          ["Criar jogo", "agenda", "plus"],
+          ["Abrir escalação", "central", "squad"],
+          ["Adicionar jogador", "elenco", "plus"],
+        ].map(([label, id, icon]) => (
+          <button
+            key={label}
+            onClick={() => {
+              navigate(id);
+              close();
+            }}
+          >
+            <Icon name={icon} />
+            <span>{label}</span>
+            <kbd>↵</kbd>
+          </button>
+        ))}
+      </section>
+    </div>
+  );
+}
+function CurrentGame({ navigate }) {
+  const [revision, setRevision] = useState(0);
+  useEffect(() => {
+    const refresh = () => setRevision((value) => value + 1);
+    window.addEventListener("strix-agenda-updated", refresh);
+    return () => window.removeEventListener("strix-agenda-updated", refresh);
+  }, []);
+  let items = [];
+  try {
+    items = JSON.parse(localStorage.getItem("strix-fc27-agenda") || "[]");
+  } catch {}
+  const item =
+    items
+      .filter(
+        (value) =>
+          !value.cancelled &&
+          value.status !== "CANCELADO" &&
+          value.group === "today",
+      )
+      .sort((left, right) => left.time.localeCompare(right.time))[0] ||
+    items
+      .filter(
+        (value) =>
+          !value.cancelled &&
+          value.status !== "CANCELADO" &&
+          value.group === "next",
+      )
+      .sort((left, right) => left.time.localeCompare(right.time))[0];
+  return (
+    <button
+      className="now-playing"
+      onClick={() => navigate("central")}
+      key={revision}
+    >
+      <Crest small />
+      <div>
+        <small>{item ? "PRÓXIMA PARTIDA" : "AGENDA LIVRE"}</small>
+        <b>
+          {item
+            ? `Strix United vs ${item.opponent}`
+            : "Nenhuma partida programada"}
+        </b>
+      </div>
+      <strong>{item?.time || "—"}</strong>
+      <Icon name="arrow" size={17} />
+    </button>
+  );
+}
+function CurrentGameLive({ navigate, workspace }) {
+  const item = useMemo(() => workspace.agenda
+    .filter((value) => !["cancelled", "completed"].includes(value.status))
+    .sort((left, right) => new Date(left.scheduled_at) - new Date(right.scheduled_at))[0], [workspace.agenda]);
+  return <button className="now-playing" onClick={() => navigate("agenda")}><Crest small/><div><small>{item ? "PRÓXIMA PARTIDA" : "AGENDA LIVRE"}</small><b>{item ? `Strix United vs ${item.opponent_name}` : "Nenhuma partida programada"}</b></div><strong>{item ? timePart(item.scheduled_at) : "—"}</strong><Icon name="arrow" size={17}/></button>;
+}
+function App() {
+  const auth = useTeamAuth();
+  const workspace = useFc27Workspace(auth.client, auth.profile);
+  const [active, setActive] = useState("central"),
+    [compact, setCompact] = useState(false),
+    [mobileOpen, setMobileOpen] = useState(false),
+    [command, setCommand] = useState(false),
+    [player, setPlayer] = useState(null);
+  const navigate = (id) => {
+    setActive(id);
+    setMobileOpen(false);
+  };
+  useEffect(() => {
+    const listener = (event) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setCommand(true);
+      }
+      if (event.key === "Escape") {
+        setCommand(false);
+        setMobileOpen(false);
+      }
+    };
+    const protectImage = (event) => {
+      if (event.target instanceof HTMLImageElement) event.preventDefault();
+    };
+    window.addEventListener("keydown", listener);
+    document.addEventListener("dragstart", protectImage);
+    document.addEventListener("contextmenu", protectImage);
+    return () => {
+      window.removeEventListener("keydown", listener);
+      document.removeEventListener("dragstart", protectImage);
+      document.removeEventListener("contextmenu", protectImage);
+    };
+  }, []);
+  if (!auth.profile)
+    return (
+      <LoginScreen
+        loading={auth.loading}
+        error={auth.error}
+        onLogin={auth.signIn}
+      />
+    );
+  const title = nav.find((item) => item[0] === active)?.[1] || "Central";
+  return (
+    <div className="app-shell">
+      {mobileOpen && (
+        <button
+          className="mobile-scrim"
+          aria-label="Fechar menu"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+      <Sidebar
+        active={active}
+        navigate={navigate}
+        compact={compact}
+        setCompact={setCompact}
+        mobileOpen={mobileOpen}
+        setMobileOpen={setMobileOpen}
+        profile={auth.profile}
+        signOut={auth.signOut}
+      />
+      <main className="workspace">
+        <header className="topbar">
+          <button
+            className="mobile-menu"
+            onClick={() => setMobileOpen(true)}
+            aria-label="Abrir menu"
+          >
+            <Icon name="menu" />
+          </button>
+          <button className="crumb" onClick={() => navigate("central")}>
+            STRIX / <b>{title}</b>
+          </button>
+          <button className="search-button" onClick={() => setCommand(true)}>
+            <Icon name="search" />
+            <span>Buscar no Strix...</span>
+            <kbd>Ctrl K</kbd>
+          </button>
+          <div className="top-actions">
+            <button aria-label="Notificações">
+              <Icon name="bell" />
+            </button>
+            <button className="add-button" onClick={() => navigate("agenda")}>
+              <Icon name="plus" size={16} />
+              NOVO
+            </button>
+          </div>
+        </header>
+        {active === "central" ? (
+          <CentralLive workspace={workspace} navigate={navigate} />
+        ) : active === "agenda" ? (
+          <AgendaLive navigate={navigate} workspace={workspace} />
+        ) : active === "partidas" ? (
+          <PartidasLiveV2 profile={auth.profile} workspace={workspace} />
+        ) : active === "elenco" ? (
+          <SquadPageV3 workspace={workspace} profile={auth.profile} />
+        ) : (
+          <DataPage id={active} workspace={workspace} profile={auth.profile} client={auth.client} />
+        )}
+      </main>
+      <CurrentGameLive navigate={navigate} workspace={workspace} />
+      {command && (
+        <Command close={() => setCommand(false)} navigate={navigate} />
+      )}
+      <Profile player={player} close={() => setPlayer(null)} />
+    </div>
+  );
+}
+createRoot(document.getElementById("root")).render(
+  <StrictMode>
+    <App />
+  </StrictMode>,
+);
