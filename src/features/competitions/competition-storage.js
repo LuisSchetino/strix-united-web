@@ -87,17 +87,58 @@ async function normalizeStandings(client, edition, preview) {
 async function normalizeKnockout(client, edition, preview) {
   if (!preview.knockout?.stages?.length) return;
   const type = (name) => /oitava/i.test(name) ? "round_of_16" : /quarta/i.test(name) ? "quarterfinal" : /semi/i.test(name) ? "semifinal" : /^final/i.test(name) ? "final" : "other";
-  ensure(await client.from("competition_stages").upsert(preview.knockout.stages.map((name, index) => ({ edition_id: edition.id, name, stage_type: type(name), order_index: index + 10, status: "active" })), { onConflict: "edition_id,name" }));
+  const currentType = type(preview.knockout.currentStage || "");
+  const stageNames = preview.knockout.rounds?.length ? preview.knockout.rounds.map((round) => round.name) : preview.knockout.stages;
+  ensure(await client.from("competition_stages").upsert(stageNames.map((name, index) => {
+    const itemType = type(name);
+    const currentOrder = ["round_of_16", "quarterfinal", "semifinal", "final"].indexOf(currentType);
+    const itemOrder = ["round_of_16", "quarterfinal", "semifinal", "final"].indexOf(itemType);
+    return { edition_id: edition.id, name, stage_type: itemType, order_index: index + 10, status: itemType === currentType ? "active" : itemOrder >= 0 && itemOrder < currentOrder ? "completed" : "upcoming" };
+  }), { onConflict: "edition_id,name" }));
   if (preview.knockout.teams?.length) ensure(await client.from("competition_teams").upsert(preview.knockout.teams.map((name) => ({ edition_id: edition.id, name, is_strix: /\bstrix\b/i.test(name), metadata: {} })), { onConflict: "edition_id,normalized_name" }));
 }
 
+async function normalizeFixtures(client, edition, source, preview) {
+  const fixtures = preview.knockout?.fixtures || preview.fixtures || [];
+  if (!fixtures.length) return;
+  const teams = ensure(await client.from("competition_teams").select("*").eq("edition_id", edition.id));
+  const stages = ensure(await client.from("competition_stages").select("*").eq("edition_id", edition.id));
+  const rows = fixtures.map((fixture) => ({
+    edition_id: edition.id,
+    source_id: source.id,
+    stage_id: stages.find((stage) => stage.name === fixture.roundLabel)?.id || null,
+    external_match_id: fixture.externalMatchId,
+    round_label: fixture.roundLabel || null,
+    scheduled_at: fixture.scheduledAt || null,
+    home_team_id: teams.find((team) => normalizeName(team.name) === normalizeName(fixture.homeTeamName))?.id || null,
+    away_team_id: teams.find((team) => normalizeName(team.name) === normalizeName(fixture.awayTeamName))?.id || null,
+    home_team_name: fixture.homeTeamName,
+    away_team_name: fixture.awayTeamName,
+    home_score: fixture.homeScore,
+    away_score: fixture.awayScore,
+    status: fixture.status || "scheduled",
+    metadata: { provider: preview.provider, source: preview.source },
+  }));
+  ensure(await client.from("competition_fixtures").upsert(rows, { onConflict: "edition_id,external_match_id" }));
+}
+
 export async function saveCompetitionPreview(client, profile, preview, palette, accent) {
-  const competition = await upsertCompetition(client, profile, preview, palette, accent);
-  const edition = await upsertEdition(client, profile, competition, preview);
-  const source = await upsertSource(client, profile, edition, preview);
-  await normalizeStandings(client, edition, preview);
-  await normalizeKnockout(client, edition, preview);
-  ensure(await client.from("competition_audit_log").insert({ competition_id: competition.id, edition_id: edition.id, actor_user_id: profile.user_id, action: source.created_at === source.updated_at ? "competition_imported" : "competition_synced", result: { provider: preview.provider, source: preview.source, groups: preview.groups?.length || 0, teams: preview.teamCount || 0 } }));
+  const previews = [preview, ...(preview.relatedPreviews || [])];
+  const identity = previews.find((item) => item.sourceKind === "standings") || preview;
+  const knockout = previews.find((item) => item.sourceKind === "knockout");
+  const composite = knockout ? { ...identity, phase: "knockout", knockout: knockout.knockout, relatedPreviews: preview.relatedPreviews } : identity;
+  const competition = await upsertCompetition(client, profile, identity, palette, accent);
+  const edition = await upsertEdition(client, profile, competition, composite);
+  let source = null;
+  for (const item of previews) {
+    const savedSource = await upsertSource(client, profile, edition, item);
+    source ||= savedSource;
+    await normalizeStandings(client, edition, item);
+    await normalizeKnockout(client, edition, item);
+    await normalizeFixtures(client, edition, savedSource, item);
+  }
+  if (knockout) ensure(await client.from("competition_stages").update({ status: "completed" }).eq("edition_id", edition.id).in("stage_type", ["league", "group"]));
+  ensure(await client.from("competition_audit_log").insert({ competition_id: competition.id, edition_id: edition.id, actor_user_id: profile.user_id, action: source.created_at === source.updated_at ? "competition_imported" : "competition_synced", result: { provider: preview.provider, sources: previews.map((item) => item.source), groups: identity.groups?.length || 0, teams: Math.max(...previews.map((item) => item.teamCount || 0)) } }));
   return { competition, edition, source };
 }
 

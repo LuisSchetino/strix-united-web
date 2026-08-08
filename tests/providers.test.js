@@ -32,9 +32,12 @@ test("detecta múltiplos grupos LB", () => {
 });
 
 test("detecta estágios e times de mata-mata", () => {
-  const html = `<html><body><img src="/copa.png"><h1>COPA YESHUA</h1><div>Quartas de final Semifinais Final</div><table>${"x".repeat(500)}<tr><td><a title="STRIX UNITED">STRIX UNITED</a></td><td><a title="POA CITY FC">POA CITY FC</a></td></tr></table></body></html>`;
+  const html = `<html><body><img src="/copa.png"><h1>COPA YESHUA</h1><table><tr><td>Quartas de final<br>10/08/2026 23:10</td><td>Semifinais</td><td>Final</td></tr>${"x".repeat(500)}<tr><td><a title="STRIX UNITED">STRIX UNITED</a></td><td><a title="POA CITY FC">POA CITY FC</a></td></tr></table></body></html>`;
   const parsed = parseCompetitionHtml(html, "https://ccbclubs.com.br/fifa.php?file=eliminatoria&campeonato=100&grupo=12");
   assert.equal(parsed.phase, "knockout");
   assert.ok(parsed.knockout.stages.some((stage) => /quartas/i.test(stage)));
   assert.equal(parsed.knockout.hasStrix, true);
+  assert.equal(parsed.knockout.currentStage, "Quartas de final");
+  assert.equal(parsed.knockout.fixtures[0].awayTeamName, "POA CITY FC");
+  assert.equal(parsed.knockout.fixtures[0].scheduledAt, "2026-08-10T23:10:00-03:00");
 });

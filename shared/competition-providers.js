@@ -115,7 +115,20 @@ function parseGroups(html, context) {
   return tableBlocks(html).map((block) => parseStandingTable(block, html.slice(Math.max(0, block.index - 2500), block.index), context.url)).filter(Boolean);
 }
 
-function parseKnockout(html) {
+const providerDateTime = (value) => {
+  const match = String(value || "").match(/(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})/);
+  if (!match) return null;
+  return `${match[3]}-${match[2]}-${match[1]}T${match[4]}:${match[5]}:00-03:00`;
+};
+
+const stageType = (value) => /oitava/i.test(value) ? "round_of_16"
+  : /quarta/i.test(value) ? "quarterfinal"
+    : /semi/i.test(value) ? "semifinal"
+      : /^final/i.test(value) ? "final" : "other";
+
+const normalizeFixtureKey = (value) => htmlText(value).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
+function parseKnockout(html, context) {
   const stages = [...html.matchAll(/(?:Oitavas|Quartas|Semifinais?|Final|Terceiro lugar|3º Lugar)(?:\s+de\s+final)?/gi)]
     .map((match) => htmlText(match[0]))
     .filter((value, index, all) => all.findIndex((item) => item.toLowerCase() === value.toLowerCase()) === index);
@@ -123,7 +136,48 @@ function parseKnockout(html) {
     .map((match) => htmlText(match[1] || match[2]))
     .filter((team) => team && !/classifica|regulamento|ranking|goleiro|zagueiro|meia|atacante/i.test(team))
     .filter((team, index, all) => all.findIndex((item) => item.toLowerCase() === team.toLowerCase()) === index);
-  return { stages, teams, hasStrix: teams.some((team) => /\bstrix\b/i.test(team)) };
+  const rounds = [...html.matchAll(/<td\b[^>]*>([\s\S]{0,500}?(?:Oitavas|Quartas|Semifinais?|Final)(?:\s+de\s+final)?[\s\S]{0,180}?)<\/td>/gi)]
+    .map((match) => {
+      const text = htmlText(match[1]);
+      const name = text.match(/(?:Oitavas|Quartas|Semifinais?|Final)(?:\s+de\s+final)?/i)?.[0] || "";
+      return { name, type: stageType(name), scheduledAt: providerDateTime(text) };
+    })
+    .filter((round, index, all) => round.name && all.findIndex((item) => item.name.toLowerCase() === round.name.toLowerCase()) === index);
+  const currentRound = rounds.find((round) => round.scheduledAt)
+    || rounds.find((round) => round.type !== "round_of_16")
+    || rounds[0]
+    || null;
+  const fixtures = currentRound && teams.length >= 2
+    ? Array.from({ length: Math.floor(teams.length / 2) }, (_, index) => {
+      const home = teams[index * 2];
+      const away = teams[index * 2 + 1];
+      return {
+        externalMatchId: `${context.competitionId}:${context.groupId || "main"}:${currentRound.type}:${index}:${normalizeFixtureKey(home)}:${normalizeFixtureKey(away)}`,
+        roundLabel: currentRound.name,
+        scheduledAt: currentRound.scheduledAt,
+        homeTeamName: home,
+        awayTeamName: away,
+        homeScore: null,
+        awayScore: null,
+        status: "scheduled",
+        isStrix: /\bstrix\b/i.test(`${home} ${away}`),
+      };
+    })
+    : [];
+  return { stages, teams, rounds, currentStage: currentRound?.name || null, fixtures, hasStrix: teams.some((team) => /\bstrix\b/i.test(team)) };
+}
+
+function relatedSourceUrls(html, context) {
+  const urls = [...html.matchAll(/href=["']([^"']*fifa\.php\?[^"']*file=(?:classificacao|eliminatoria)[^"']*)["']/gi)]
+    .map((match) => absoluteUrl(context.url, match[1]))
+    .filter(Boolean)
+    .filter((candidate) => {
+      try {
+        const related = validateCompetitionUrl(candidate);
+        return related.provider === context.provider && related.competitionId === context.competitionId && related.url !== context.url;
+      } catch { return false; }
+    });
+  return [...new Set(urls)].slice(0, 8);
 }
 
 export function parseCompetitionHtml(html, rawUrl) {
@@ -131,7 +185,7 @@ export function parseCompetitionHtml(html, rawUrl) {
   if (typeof html !== "string" || html.length < 500) throw new Error("HTML inesperado ou incompleto.");
   const info = hero(html, context);
   const groups = parseGroups(html, context);
-  const knockout = context.kind === "knockout" ? parseKnockout(html) : { stages: [], teams: [], hasStrix: false };
+  const knockout = context.kind === "knockout" ? parseKnockout(html, context) : { stages: [], teams: [], rounds: [], currentStage: null, fixtures: [], hasStrix: false };
   const phase = knockout.stages.length ? "knockout"
     : groups.length > 1 ? "groups"
       : /pontos corridos/i.test(info.type) ? "league" : groups.length ? "standings" : "unknown";
@@ -152,6 +206,7 @@ export function parseCompetitionHtml(html, rawUrl) {
     strixGroup: groups.find((group) => group.isStrixGroup)?.name || null,
     teamCount: new Set(groups.flatMap((group) => group.standings.map((row) => row.team.toLowerCase()))).size || knockout.teams.length,
     knockout,
+    relatedSourceUrls: relatedSourceUrls(html, context),
     fetchedAt: new Date().toISOString(),
   };
 }

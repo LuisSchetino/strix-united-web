@@ -7,6 +7,7 @@ import {
   resolvePlayerAliases,
   resultLabel,
   suggestAgendaMatch,
+  suggestAgendaCandidate,
   suggestAgendaMatches,
   validateImport,
 } from "../src/features/matches/import-core.js";
@@ -55,6 +56,18 @@ test("tolera sufixo FC e timestamp numérico em texto ao sugerir a Agenda", () =
   ]);
   assert.equal(match.date, "2026-08-07T03:08:00.000Z");
   assert.equal(suggestion.id, "agenda-poa");
+});
+
+test("mantém POA CITY como candidato provável mesmo com data diferente", () => {
+  const match = normalizeEaMatch(eaFixture);
+  const candidate = suggestAgendaCandidate(match, [
+    { id: "agenda-poa-old", opponent_name: "POA CITY", scheduled_at: "2026-07-30T21:10:00-03:00", status: "scheduled" },
+    { id: "agenda-unrelated", opponent_name: "CITY LIONS", scheduled_at: "2026-08-07T00:10:00-03:00", status: "scheduled" },
+  ]);
+  assert.equal(candidate.entry.id, "agenda-poa-old");
+  assert.equal(candidate.confidence, "probable");
+  assert.equal(candidate.autoLink, false);
+  assert.match(candidate.reason, /data diferente/i);
 });
 
 test("não sugere o mesmo item da Agenda para duas importações", () => {

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   dedupeImportedMatches,
   normalizeEaMatch,
@@ -9,13 +9,19 @@ import {
   validateImport,
 } from "./import-core.js";
 import "./match-import.css";
+import "./match-fixes.css";
 
 const canManageMatches = (profile) => ["diretoria", "dev"].includes(profile?.access_tier);
 const formatDate = (value) => new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeZone: "America/Sao_Paulo" }).format(new Date(value));
 const formatTime = (value) => new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" }).format(new Date(value));
 
 function TeamMark({ name, url }) {
-  return url ? <img src={url} alt="" /> : <span>{String(name || "?").split(/\s+/).map((word) => word[0]).slice(0, 2).join("")}</span>;
+  const [failed, setFailed] = useState(false);
+  useEffect(() => setFailed(false), [url]);
+  const initials = String(name || "?").split(/\s+/).map((word) => word[0]).slice(0, 2).join("");
+  return <span className={`team-mark${url && !failed ? " has-image" : ""}`} aria-hidden="true">{url && !failed
+    ? <img src={url} alt="" onError={() => setFailed(true)} />
+    : initials}</span>;
 }
 
 function MatchPreview({ match, workspace }) {
@@ -102,7 +108,7 @@ function ResolveStep({ matches, agenda, competitions, players, aliases, patchMat
               const competition = competitions.find((item) => item.id === event.target.value);
               patchMatch(match.id, { competitionId: competition?.id || "", competitionEditionId: competition?.editionId || "", competition: event.target.value === "friendly" ? "Amistoso" : competition?.name || "" });
             }}><option value="">Selecionar</option><option value="friendly">Amistoso</option>{competitions.map((competition) => <option key={competition.id} value={competition.id}>{competition.name}</option>)}</select></label>
-            <label>VINCULAR À AGENDA<select value={match.agendaId || ""} onChange={(event) => patchMatch(match.id, { agendaId: event.target.value, suggestedAgendaId: "" })}><option value="">Sem vínculo</option>{agenda.map((entry) => <option key={entry.id} value={entry.id}>{entry.id === match.suggestedAgendaId ? "SUGERIDO · " : ""}{formatDate(entry.scheduled_at)} · {formatTime(entry.scheduled_at)} · {entry.opponent_name}</option>)}</select>{match.suggestedAgendaId && match.agendaId === match.suggestedAgendaId && <small className="agenda-suggestion-note">Vínculo sugerido por adversário, data e horário.</small>}</label>
+            <label>VINCULAR À AGENDA<select value={match.agendaId || ""} onChange={(event) => patchMatch(match.id, { agendaId: event.target.value })}><option value="">Sem vínculo</option>{agenda.map((entry) => <option key={entry.id} value={entry.id}>{entry.id === match.suggestedAgendaId ? "SUGERIDO · " : ""}{formatDate(entry.scheduled_at)} · {formatTime(entry.scheduled_at)} · {entry.opponent_name}</option>)}</select>{match.suggestedAgendaId && <small className={`agenda-suggestion-note ${match.suggestionConfidence || ""}`}><b>Vínculo sugerido:</b> {match.suggestedAgendaName} — {formatDate(match.suggestedAgendaAt)} · {formatTime(match.suggestedAgendaAt)}<br />{match.suggestionReason}{!match.suggestionAutoLink && " · confirme manualmente"}</small>}</label>
           </div>
           <section className="alias-resolver"><div><small>EA × ELENCO</small><span>Associações anteriores já aparecem selecionadas.</span></div>{(match.performance?.players || []).map((player) => {
             const key = normalizeName(player.eaName);
@@ -145,7 +151,8 @@ function MatchDetails({ match, close }) {
 function MatchHistory({ workspace, canManage, detail, edit, remove }) {
   return <section className="matches-list matches-history progressive-history"><header><span>DATA</span><span>PARTIDA</span><span>RESULTADO</span><span>COMPETIÇÃO</span><span>GESTÃO</span></header>{workspace.matches.length ? workspace.matches.map((match) => {
     const result = Number(match.strix_score) > Number(match.opponent_score) ? "VITÓRIA" : Number(match.strix_score) < Number(match.opponent_score) ? "DERROTA" : "EMPATE";
-    return <article key={match.id}><span>{formatDate(match.played_at)}<small>{formatTime(match.played_at)}</small></span><div className="match-teams"><TeamMark name="STRIX" url="/assets/strix-logo.png"/><b>STRIX</b><strong>{match.strix_score} × {match.opponent_score}</strong><TeamMark name={match.opponent_name}/><b>{match.opponent_name}</b></div><em className={result.toLowerCase()}>{result}</em><small>{match.competition_name || "AMISTOSO"}</small><div className="match-row-actions"><button title="Ver dados" onClick={() => detail(match)}>◎</button>{canManage && <><button title="Editar" onClick={() => edit(match)}>✎</button><button title="Excluir" onClick={() => remove(match.id)}>⌫</button></>}</div></article>;
+    const opponentLogo = match.opponent_logos?.storage_path ? workspace.assetUrl(match.opponent_logos.storage_path) : "";
+    return <article key={match.id}><span>{formatDate(match.played_at)}<small>{formatTime(match.played_at)}</small></span><div className="match-teams"><TeamMark name="STRIX" url="/assets/strix-logo.png"/><b>STRIX</b><strong>{match.strix_score} × {match.opponent_score}</strong><TeamMark name={match.opponent_name} url={opponentLogo}/><b>{match.opponent_name}</b></div><em className={result.toLowerCase()}>{result}</em><small>{match.competition_name || "AMISTOSO"}</small><div className="match-row-actions"><button title="Ver dados" onClick={() => detail(match)}>◎</button>{canManage && <><button title="Editar" onClick={() => edit(match)}>✎</button><button title="Excluir" onClick={() => remove(match.id)}>⌫</button></>}</div></article>;
   }) : <div className="matches-empty">Ainda não há partidas no histórico.</div>}</section>;
 }
 
@@ -183,7 +190,16 @@ export function MatchesPage({ profile, workspace, client }) {
       const agendaSuggestions = suggestAgendaMatches(normalizedBase, workspace.agenda);
       const normalized = normalizedBase.map((match) => {
         const suggestion = agendaSuggestions.get(match.id);
-        return { ...match, agendaId: suggestion?.id || "", suggestedAgendaId: suggestion?.id || "" };
+        return {
+          ...match,
+          agendaId: suggestion?.suggestion?.autoLink ? suggestion.id : "",
+          suggestedAgendaId: suggestion?.id || "",
+          suggestedAgendaName: suggestion?.opponent_name || "",
+          suggestedAgendaAt: suggestion?.scheduled_at || "",
+          suggestionConfidence: suggestion?.suggestion?.confidence || "",
+          suggestionReason: suggestion?.suggestion?.reason || "",
+          suggestionAutoLink: Boolean(suggestion?.suggestion?.autoLink),
+        };
       });
       if (!normalized.length) throw new Error("Nenhuma partida nova foi encontrada para importar.");
       setFound(normalized); setSelected(new Set(normalized.map((match) => match.id))); setAliases(resolvePlayerAliases(normalized, workspace.players, workspace.aliases)); setStep("review");

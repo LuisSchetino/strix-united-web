@@ -515,6 +515,7 @@ function useFc27Workspace(client, profile) {
     competitions: [],
     competitionEditions: [],
     competitionSources: [],
+    competitionFixtures: [],
     schemaPending: false,
     error: "",
   });
@@ -538,12 +539,13 @@ function useFc27Workspace(client, profile) {
       }));
       return;
     }
-    const [competitionsResult, editionsResult, sourcesResult] = await Promise.all([
+    const [competitionsResult, editionsResult, sourcesResult, fixturesResult] = await Promise.all([
       client.from("competitions").select("*").order("updated_at", { ascending: false }),
       client.from("competition_editions").select("*").order("updated_at", { ascending: false }),
       client.from("competition_sources").select("*").order("last_synced_at", { ascending: false }),
+      client.from("competition_fixtures").select("*").order("scheduled_at", { ascending: true }),
     ]);
-    const optionalResults = [competitionsResult, editionsResult, sourcesResult];
+    const optionalResults = [competitionsResult, editionsResult, sourcesResult, fixturesResult];
     const isMissingOptionalSchema = (error) => ["42P01", "PGRST205"].includes(error?.code);
     const optionalFailure = optionalResults.find((result) => result.error && !isMissingOptionalSchema(result.error))?.error;
     setState({
@@ -556,6 +558,7 @@ function useFc27Workspace(client, profile) {
       competitions: competitionsResult.data || [],
       competitionEditions: editionsResult.data || [],
       competitionSources: sourcesResult.data || [],
+      competitionFixtures: fixturesResult.data || [],
       schemaPending: optionalResults.some((result) => isMissingOptionalSchema(result.error)),
       error: optionalFailure?.message || "",
     });
@@ -573,6 +576,7 @@ function useFc27Workspace(client, profile) {
       .on("postgres_changes", { event: "*", schema: "public", table: "competitions" }, refresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "competition_editions" }, refresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "competition_sources" }, refresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "competition_fixtures" }, refresh)
       .subscribe();
     return () => {
       client.removeChannel(channel);

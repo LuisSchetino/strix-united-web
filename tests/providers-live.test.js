@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { parseCompetitionHtml } from "../shared/competition-providers.js";
+import { fetchCompetitionBundle } from "../functions/_lib/competition-providers.js";
 
 const live = process.env.RUN_LIVE_PROVIDER_TESTS === "1";
 const sources = [
@@ -31,3 +32,11 @@ for (const [name, url, kind] of sources) {
     }
   });
 }
+
+test("CCB relaciona classificação e eliminatória da Copa Yeshua", { skip: !live, timeout: 30000 }, async () => {
+  const bundle = await fetchCompetitionBundle("https://ccbclubs.com.br/fifa.php?file=classificacao&campeonato=100");
+  const knockout = bundle.relatedPreviews.find((preview) => preview.sourceKind === "knockout");
+  assert.equal(knockout.externalCompetitionId, bundle.externalCompetitionId);
+  assert.equal(knockout.knockout.currentStage, "Quartas de final");
+  assert.ok(knockout.knockout.fixtures.some((fixture) => fixture.isStrix));
+});

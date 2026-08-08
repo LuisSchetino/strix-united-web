@@ -27,11 +27,18 @@ const workspace = {
   error: "", schemaPending: false,
   players: [{ id: "p1", display_name: "YGO", is_active: true }], aliases: [], logos: [],
   agenda: [{ id: "a1", scheduled_at: now, opponent_name: "POA CITY", status: "scheduled", competition_name: "Copa Yeshua", competition_id: "c1", competition_edition_id: "e1" }, { id: "a2", scheduled_at: new Date("2026-08-07T00:10:00-03:00").toISOString(), opponent_name: "POA CITY", status: "scheduled", competition_name: "Copa Yeshua", competition_id: "c1", competition_edition_id: "e1" }],
-  matches: [{ id: "m1", played_at: now, opponent_name: "POA CITY", strix_score: 3, opponent_score: 1, competition_name: "Copa Yeshua", competition_id: "c1", competition_edition_id: "e1", source: "ea_api", performance: { possession: 57, shots: 12, passes: 88, tackles: 9, players: [{ eaName: "39ygo", rating: 8.7, goalAssists: 2, passes: 31 }] } }],
+  matches: [
+    { id: "m1", played_at: now, opponent_name: "POA CITY", strix_score: 3, opponent_score: 1, competition_name: "Copa Yeshua", competition_id: "c1", competition_edition_id: "e1", source: "ea_api", performance: { possession: 57, shots: 12, passes: 88, tackles: 9, players: [{ eaName: "39ygo", rating: 8.7, goalAssists: 2, passes: 31 }] } },
+    { id: "m2", played_at: now, opponent_name: "SEM ESCUDO", strix_score: 2, opponent_score: 2, competition_name: "Amistoso", source: "local_bridge", performance: {} },
+    { id: "m3", played_at: now, opponent_name: "ESCUDO GRANDE", strix_score: 2, opponent_score: 3, competition_name: "Master League", source: "local_bridge", opponent_logos: { storage_path: "/assets/strix-logo.png" }, performance: {} },
+  ],
   competitions: [{ id: "c1", name: "Copa Yeshua", organization: "CCB", accent_color: "#7f44ff", palette: ["#7f44ff", "#f2b928"], logo_url: "", is_active: true }],
   competitionEditions: [{ id: "e1", competition_id: "c1", label: "2026 · Temporada 6", format: "groups", status: "active", qualification_slots: 4, tie_break_rules: ["points", "goal_difference"] }],
-  competitionSources: [{ id: "s1", edition_id: "e1", source_kind: "standings", source_url: "https://ccbclubs.com.br/fifa.php?file=classificacao&campeonato=100", last_synced_at: now, snapshot }],
-  assetUrl: () => "", refresh: async () => {}, savePlayerAliases: async () => {}, upsertClubMatches: async () => {}, upsertClubMatch: async () => {}, removeClubMatch: async () => {},
+  competitionSources: [{ id: "s1", edition_id: "e1", source_kind: "standings", source_url: "https://ccbclubs.com.br/fifa.php?file=classificacao&campeonato=100", last_synced_at: now, snapshot }, { id: "s2", edition_id: "e1", source_kind: "knockout", source_url: "https://ccbclubs.com.br/fifa.php?file=eliminatoria&campeonato=100&grupo=12", last_synced_at: now, snapshot: { phase: "knockout", knockout: { currentStage: "Quartas de final", rounds: [{ name: "Oitavas de final", scheduledAt: null }, { name: "Quartas de final", scheduledAt: "2026-08-10T23:10:00-03:00" }, { name: "Semifinais", scheduledAt: null }, { name: "Final", scheduledAt: null }] } } }],
+  competitionFixtures: [
+    ["SUMMIT ES", "NEW ERA E - SPORTS", "q1"], ["VIKINGS TEAM", "TRAFEGO DO RJ", "q2"], ["HANNIBALL ESPORTS", "ITUANO FV", "q3"], ["XUMBREGA SC", "STRIX UNITED", "q4"],
+  ].map(([home_team_name, away_team_name, external_match_id]) => ({ edition_id: "e1", external_match_id, round_label: "Quartas de final", scheduled_at: "2026-08-10T23:10:00-03:00", home_team_name, away_team_name, status: "scheduled" })),
+  assetUrl: (path) => path || "", refresh: async () => {}, savePlayerAliases: async () => {}, upsertClubMatches: async () => {}, upsertClubMatch: async () => {}, removeClubMatch: async () => {},
 };
 const emptyQuery = () => { const query = { select:()=>query, order:()=>query, update:()=>query, insert:()=>query, delete:()=>query, eq:()=>query, single:()=>query, then:(resolve)=>resolve({ data:[], error:null }) }; return query; };
 const client = { auth: { getSession: async () => ({ data: { session: { access_token: "visual" } } }) }, from:()=>emptyQuery(), storage:{ from:()=>({ getPublicUrl:(path)=>({ data:{ publicUrl:path } }) }) } };

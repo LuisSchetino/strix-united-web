@@ -151,33 +151,58 @@ const localDay = (value) => new Intl.DateTimeFormat("sv-SE", {
   year: "numeric", month: "2-digit", day: "2-digit", timeZone: "America/Sao_Paulo",
 }).format(new Date(value));
 
-export function suggestAgendaMatch(match, agenda = []) {
+const CLUB_SUFFIXES = new Set([
+  "fc", "fv", "es", "ec", "sc", "afc", "clube", "club", "esports", "esport", "e", "sports",
+]);
+
+export const normalizeClubName = (value) => normalizeName(value)
+  .split(" ")
+  .filter((token) => token && !CLUB_SUFFIXES.has(token))
+  .join(" ");
+
+const clubTokens = (value) => normalizeClubName(value).split(" ").filter(Boolean);
+
+export function suggestAgendaCandidate(match, agenda = []) {
   const matchTime = new Date(match.date).getTime();
-  const normalizedOpponent = normalizeName(match.opponent);
-  const clubSuffixes = new Set(["fc", "fv", "es", "ec", "sc", "afc", "clube", "club", "esports", "e", "sports"]);
-  const meaningfulTokens = (value) => normalizeName(value).split(" ").filter((token) => token && !clubSuffixes.has(token));
-  const opponentTokens = meaningfulTokens(match.opponent);
+  const canonicalOpponent = normalizeClubName(match.opponent);
+  const opponentTokens = clubTokens(match.opponent);
+  if (canonicalOpponent.length < 3) return null;
   const candidates = agenda
     .filter((entry) => !["cancelled", "completed"].includes(entry.status))
     .map((entry) => {
       const agendaTime = new Date(entry.scheduled_at).getTime();
-      const agendaOpponent = normalizeName(entry.opponent_name);
-      const agendaTokens = meaningfulTokens(entry.opponent_name);
-      const commonTokens = opponentTokens.filter((token) => agendaTokens.includes(token)).length;
-      const tokenSimilarity = commonTokens / Math.max(1, new Set([...opponentTokens, ...agendaTokens]).size);
-      let score = 0;
-      if (localDay(match.date) === localDay(entry.scheduled_at)) score += 60;
-      if (normalizedOpponent === agendaOpponent) score += 50;
-      else if (normalizedOpponent.length >= 3 && (normalizedOpponent.includes(agendaOpponent) || agendaOpponent.includes(normalizedOpponent))) score += 30;
-      else if (tokenSimilarity >= .66) score += 35;
-      else if (tokenSimilarity >= .4) score += 18;
+      const canonicalAgenda = normalizeClubName(entry.opponent_name);
+      const agendaTokens = clubTokens(entry.opponent_name);
+      const intersection = opponentTokens.filter((token) => agendaTokens.includes(token));
+      const tokenSimilarity = intersection.length / Math.max(1, new Set([...opponentTokens, ...agendaTokens]).size);
+      const exactName = canonicalOpponent === canonicalAgenda;
+      const safeContainment = Math.min(canonicalOpponent.length, canonicalAgenda.length) >= 5
+        && (canonicalOpponent.includes(canonicalAgenda) || canonicalAgenda.includes(canonicalOpponent));
+      const strongName = exactName || safeContainment || (tokenSimilarity >= .75 && intersection.join("").length >= 5);
+      const possibleName = strongName || (tokenSimilarity >= .5 && intersection.join("").length >= 6);
+      if (!possibleName) return null;
+      const sameDay = localDay(match.date) === localDay(entry.scheduled_at);
       const minutes = Math.abs(matchTime - agendaTime) / 60000;
-      if (minutes <= 30) score += 25;
-      else if (minutes <= 120) score += 12;
-      return { entry, score, minutes };
+      const confidence = strongName && sameDay && minutes <= 180 ? "strong"
+        : strongName ? "probable"
+          : "possible";
+      const score = (exactName ? 100 : strongName ? 82 : 58) + (sameDay ? 18 : 0) + (minutes <= 30 ? 12 : minutes <= 180 ? 5 : 0);
+      const reason = confidence === "strong"
+        ? "Adversário, data e horário compatíveis"
+        : strongName && !sameDay
+          ? "Adversário compatível · data diferente"
+          : strongName
+            ? "Adversário compatível · horário diferente"
+            : "Nome semelhante · confirme antes de vincular";
+      return { entry, confidence, autoLink: confidence === "strong", reason, score, minutes };
     })
+    .filter(Boolean)
     .sort((left, right) => right.score - left.score || left.minutes - right.minutes);
-  return candidates[0]?.score >= 60 ? candidates[0].entry : null;
+  return candidates[0] || null;
+}
+
+export function suggestAgendaMatch(match, agenda = []) {
+  return suggestAgendaCandidate(match, agenda)?.entry || null;
 }
 
 export function suggestAgendaMatches(matches = [], agenda = []) {
@@ -185,9 +210,9 @@ export function suggestAgendaMatches(matches = [], agenda = []) {
   return [...matches]
     .sort((left, right) => new Date(left.date) - new Date(right.date))
     .reduce((suggestions, match) => {
-      const suggestion = suggestAgendaMatch(match, agenda.filter((entry) => !reserved.has(entry.id)));
-      if (suggestion) reserved.add(suggestion.id);
-      suggestions.set(match.id, suggestion || null);
+      const suggestion = suggestAgendaCandidate(match, agenda.filter((entry) => !reserved.has(entry.id)));
+      if (suggestion?.autoLink) reserved.add(suggestion.entry.id);
+      suggestions.set(match.id, suggestion ? { ...suggestion.entry, suggestion } : null);
       return suggestions;
     }, new Map());
 }

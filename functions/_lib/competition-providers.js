@@ -67,3 +67,17 @@ export async function fetchCompetitionPreview(rawUrl, fetchImpl = fetch) {
   }
   throw new Error("provider_redirect_limit");
 }
+
+export async function fetchCompetitionBundle(rawUrl, fetchImpl = fetch) {
+  const primary = await fetchCompetitionPreview(rawUrl, fetchImpl);
+  const related = await Promise.all((primary.relatedSourceUrls || []).map(async (url) => {
+    try { return await fetchCompetitionPreview(url, fetchImpl); } catch { return null; }
+  }));
+  const relatedPreviews = related
+    .filter(Boolean)
+    .filter((preview) => preview.externalCompetitionId === primary.externalCompetitionId)
+    .filter((preview) => preview.sourceKind !== primary.sourceKind)
+    .filter((preview) => preview.sourceKind !== "knockout" || preview.knockout?.hasStrix)
+    .filter((preview, index, all) => all.findIndex((item) => item.sourceKind === preview.sourceKind) === index);
+  return { ...primary, relatedPreviews };
+}

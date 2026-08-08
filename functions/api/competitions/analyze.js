@@ -1,5 +1,5 @@
 import { authenticateDiscordMember, json, requireTier } from "../../_lib/auth.js";
-import { fetchCompetitionPreview } from "../../_lib/competition-providers.js";
+import { fetchCompetitionBundle } from "../../_lib/competition-providers.js";
 
 const messages = {
   provider_timeout: "O provider demorou demais para responder.",
@@ -20,7 +20,7 @@ export async function onRequestPost({ request, env }) {
   try { body = await request.json(); } catch { return json({ error: "invalid_json" }, 400); }
   if (!body?.url || typeof body.url !== "string") return json({ error: "url_required", message: "Informe a URL da competição." }, 422);
   try {
-    const preview = await fetchCompetitionPreview(body.url);
+    const preview = await fetchCompetitionBundle(body.url);
     return json({ preview });
   } catch (error) {
     const message = messages[error.message] || error.message || "Não foi possível analisar a competição.";
