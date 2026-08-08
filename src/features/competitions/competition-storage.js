@@ -28,7 +28,14 @@ async function upsertCompetition(client, profile, preview, palette, accent) {
 async function upsertEdition(client, profile, competition, preview) {
   const current = ensure(await client.from("competition_editions").select("*").eq("competition_id", competition.id).in("status", ["draft", "active"]).order("updated_at", { ascending: false }).limit(1).maybeSingle());
   const format = preview.phase === "groups" ? "groups" : preview.phase === "knockout" ? "knockout" : preview.phase === "league" ? "league" : "unknown";
-  const payload = { format, status: "active", starts_on: parseProviderDate(preview.startsOn), updated_by: profile.user_id };
+  const detectedSlots = Number(preview.qualificationRule?.slots) || null;
+  const payload = {
+    format, status: "active", starts_on: parseProviderDate(preview.startsOn), updated_by: profile.user_id,
+    ...(detectedSlots ? {
+      qualification_slots: detectedSlots,
+      metadata: { ...(current?.metadata || {}), qualificationRule: preview.qualificationRule },
+    } : {}),
+  };
   if (current) return ensure(await client.from("competition_editions").update(payload).eq("id", current.id).select().single());
   return ensure(await client.from("competition_editions").insert({ ...payload, competition_id: competition.id, label: editionLabel(preview), created_by: profile.user_id }).select().single());
 }
@@ -63,7 +70,9 @@ async function normalizeStandings(client, edition, preview) {
   const stageName = preview.groups.length > 1 ? "Fase de grupos" : "Classificação";
   const stageType = preview.groups.length > 1 ? "group" : "league";
   const stage = ensure(await client.from("competition_stages").upsert({ edition_id: edition.id, name: stageName, stage_type: stageType, status: "active", order_index: 0 }, { onConflict: "edition_id,name" }).select().single());
-  const groupRows = preview.groups.map((group, index) => ({ edition_id: edition.id, stage_id: stage.id, name: group.name, external_id: group.name.match(/\d+/)?.[0] || null, is_strix_group: group.isStrixGroup, order_index: index }));
+  const slots = Number(preview.qualificationRule?.slots) || edition.qualification_slots || null;
+  const rule = preview.qualificationRule || (slots ? { slots, kind: "top", source: "edition" } : {});
+  const groupRows = preview.groups.map((group, index) => ({ edition_id: edition.id, stage_id: stage.id, name: group.name, external_id: group.name.match(/\d+/)?.[0] || null, is_strix_group: group.isStrixGroup, order_index: index, qualification_slots: slots, qualification_rule: rule }));
   ensure(await client.from("competition_groups").upsert(groupRows, { onConflict: "edition_id,name" }));
   const groups = ensure(await client.from("competition_groups").select("*").eq("edition_id", edition.id));
   const uniqueTeams = new Map();
@@ -95,12 +104,16 @@ async function normalizeKnockout(client, edition, preview) {
     const itemOrder = ["round_of_16", "quarterfinal", "semifinal", "final"].indexOf(itemType);
     return { edition_id: edition.id, name, stage_type: itemType, order_index: index + 10, status: itemType === currentType ? "active" : itemOrder >= 0 && itemOrder < currentOrder ? "completed" : "upcoming" };
   }), { onConflict: "edition_id,name" }));
-  if (preview.knockout.teams?.length) ensure(await client.from("competition_teams").upsert(preview.knockout.teams.map((name) => ({ edition_id: edition.id, name, is_strix: /\bstrix\b/i.test(name), metadata: {} })), { onConflict: "edition_id,normalized_name" }));
+  if (preview.knockout.teams?.length) ensure(await client.from("competition_teams").upsert(preview.knockout.teams.map((name) => ({ edition_id: edition.id, name, logo_url: preview.knockout.teamEntries?.find((team) => team.name === name)?.logo || null, is_strix: /\bstrix\b/i.test(name), metadata: {} })), { onConflict: "edition_id,normalized_name" }));
 }
 
 async function normalizeFixtures(client, edition, source, preview) {
   const fixtures = preview.knockout?.fixtures || preview.fixtures || [];
   if (!fixtures.length) return;
+  ensure(await client.from("competition_teams").upsert(fixtures.flatMap((fixture) => [
+    { edition_id: edition.id, name: fixture.homeTeamName, logo_url: fixture.homeLogo || null, is_strix: /\bstrix\b/i.test(fixture.homeTeamName), metadata: {} },
+    { edition_id: edition.id, name: fixture.awayTeamName, logo_url: fixture.awayLogo || null, is_strix: /\bstrix\b/i.test(fixture.awayTeamName), metadata: {} },
+  ]), { onConflict: "edition_id,normalized_name" }));
   const teams = ensure(await client.from("competition_teams").select("*").eq("edition_id", edition.id));
   const stages = ensure(await client.from("competition_stages").select("*").eq("edition_id", edition.id));
   const rows = fixtures.map((fixture) => ({
@@ -117,7 +130,16 @@ async function normalizeFixtures(client, edition, source, preview) {
     home_score: fixture.homeScore,
     away_score: fixture.awayScore,
     status: fixture.status || "scheduled",
-    metadata: { provider: preview.provider, source: preview.source },
+    metadata: {
+      provider: preview.provider,
+      organization: preview.organization,
+      source: preview.source,
+      homeLogo: fixture.homeLogo || teams.find((team) => normalizeName(team.name) === normalizeName(fixture.homeTeamName))?.logo_url || "",
+      awayLogo: fixture.awayLogo || teams.find((team) => normalizeName(team.name) === normalizeName(fixture.awayTeamName))?.logo_url || "",
+      bracketPosition: fixture.bracketPosition ?? fixture.metadata?.bracketPosition ?? null,
+      feedsIntoPosition: fixture.feedsIntoPosition ?? fixture.metadata?.feedsIntoPosition ?? null,
+      ...(fixture.metadata || {}),
+    },
   }));
   ensure(await client.from("competition_fixtures").upsert(rows, { onConflict: "edition_id,external_match_id" }));
 }
@@ -126,14 +148,19 @@ export async function saveCompetitionPreview(client, profile, preview, palette, 
   const previews = [preview, ...(preview.relatedPreviews || [])];
   const identity = previews.find((item) => item.sourceKind === "standings") || preview;
   const knockout = previews.find((item) => item.sourceKind === "knockout");
-  const composite = knockout ? { ...identity, phase: "knockout", knockout: knockout.knockout, relatedPreviews: preview.relatedPreviews } : identity;
+  const inferredSlots = !identity.qualificationRule?.slots && knockout?.knockout?.teams?.length
+    ? { slots: knockout.knockout.teams.length, kind: "top", source: "knockout_team_count" }
+    : null;
+  const composite = knockout
+    ? { ...identity, qualificationRule: identity.qualificationRule || inferredSlots, phase: "knockout", knockout: knockout.knockout, relatedPreviews: preview.relatedPreviews }
+    : identity;
   const competition = await upsertCompetition(client, profile, identity, palette, accent);
   const edition = await upsertEdition(client, profile, competition, composite);
   let source = null;
   for (const item of previews) {
     const savedSource = await upsertSource(client, profile, edition, item);
     source ||= savedSource;
-    await normalizeStandings(client, edition, item);
+    await normalizeStandings(client, edition, item.sourceKind === "standings" ? { ...item, qualificationRule: composite.qualificationRule } : item);
     await normalizeKnockout(client, edition, item);
     await normalizeFixtures(client, edition, savedSource, item);
   }

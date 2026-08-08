@@ -121,6 +121,56 @@ const providerDateTime = (value) => {
   return `${match[3]}-${match[2]}-${match[1]}T${match[4]}:${match[5]}:00-03:00`;
 };
 
+function parseQualificationRule(html) {
+  const text = htmlText(html);
+  const patterns = [
+    /classificam(?:-se)?\s+(?:os\s+)?(?:top\s*)?(\d{1,2})\b/i,
+    /(?:os\s+)?(\d{1,2})\s+primeir(?:os|as)\s+(?:se\s+)?classificam/i,
+    /(?:zona\s+de\s+classifica[cç][aã]o|classificat[oó]rios?)\s*[:\-]?\s*(?:top\s*)?(\d{1,2})\b/i,
+  ];
+  const slots = patterns.map((pattern) => Number(text.match(pattern)?.[1])).find((value) => Number.isInteger(value) && value > 0 && value <= 64) || null;
+  return slots ? { slots, kind: "top", source: "provider_explicit" } : null;
+}
+
+function parseFixtureCards(html, context) {
+  const chunks = String(html).split(/<div\b[^>]*class=["'][^"']*\bgame-card\b[^"']*["'][^>]*>/i).slice(1);
+  return chunks.map((chunk, index) => {
+    const card = chunk.split(/<div\b[^>]*class=["'][^"']*\bgame-card\b/i)[0];
+    const teamBlocks = [...card.matchAll(/<div\b[^>]*class=["'][^"']*\bgame-team\b[^"']*["'][^>]*>([\s\S]*?)<\/div>/gi)].map((match) => match[1]).slice(0, 2);
+    if (teamBlocks.length !== 2) return null;
+    const team = (block) => ({
+      name: htmlText(block.replace(/<img\b[^>]*>/gi, "")),
+      logo: absoluteUrl(context.url, block.match(/<img[^>]+src=["']([^"']+)["']/i)?.[1] || ""),
+    });
+    const home = team(teamBlocks[0]);
+    const away = team(teamBlocks[1]);
+    if (!home.name || !away.name) return null;
+    const scoreText = htmlText(card.match(/<div\b[^>]*class=["'][^"']*\bgame-score\b[^"']*["'][^>]*>([\s\S]*?)<\/div>/i)?.[1]);
+    const score = scoreText.match(/(\d+)\s*[xÃ—]\s*(\d+)/i);
+    const text = htmlText(card);
+    const dateTime = text.match(/\d{2}\/\d{2}\/\d{4}\s+\d{2}:\d{2}/)?.[0] || "";
+    const roundLabel = htmlText(card.match(/<div\b[^>]*class=["'][^"']*\bgame-top\b[^"']*["'][^>]*>([\s\S]*?)<\/div>/i)?.[1])
+      .replace(/^.*?\s+-\s+(?=(?:Rodada|Oitavas|Quartas|Semifinal|Final))/i, "");
+    const providerMatchId = card.match(/data-rodada=["'](\d+)["']/i)?.[1] || null;
+    const fallback = `${normalizeFixtureKey(home.name)}:${normalizeFixtureKey(away.name)}:${dateTime || index}`;
+    return {
+      externalMatchId: `${context.provider}:${context.competitionId}:${providerMatchId || fallback}`,
+      roundLabel: roundLabel || null,
+      scheduledAt: providerDateTime(dateTime),
+      homeTeamName: home.name,
+      awayTeamName: away.name,
+      homeLogo: home.logo,
+      awayLogo: away.logo,
+      homeScore: score ? Number(score[1]) : null,
+      awayScore: score ? Number(score[2]) : null,
+      status: score ? "completed" : "scheduled",
+      isStrix: /\bstrix\b/i.test(`${home.name} ${away.name}`),
+      bracketPosition: index,
+      metadata: { providerMatchId, providerCompetitionId: context.competitionId },
+    };
+  }).filter(Boolean);
+}
+
 const stageType = (value) => /oitava/i.test(value) ? "round_of_16"
   : /quarta/i.test(value) ? "quarterfinal"
     : /semi/i.test(value) ? "semifinal"
@@ -132,10 +182,11 @@ function parseKnockout(html, context) {
   const stages = [...html.matchAll(/(?:Oitavas|Quartas|Semifinais?|Final|Terceiro lugar|3º Lugar)(?:\s+de\s+final)?/gi)]
     .map((match) => htmlText(match[0]))
     .filter((value, index, all) => all.findIndex((item) => item.toLowerCase() === value.toLowerCase()) === index);
-  const teams = [...html.matchAll(/<a[^>]+(?:title=["']([^"']+)["'])[^>]*>([\s\S]*?)<\/a>/gi)]
-    .map((match) => htmlText(match[1] || match[2]))
-    .filter((team) => team && !/classifica|regulamento|ranking|goleiro|zagueiro|meia|atacante/i.test(team))
-    .filter((team, index, all) => all.findIndex((item) => item.toLowerCase() === team.toLowerCase()) === index);
+  const teamEntries = [...html.matchAll(/<a[^>]+(?:title=["']([^"']+)["'])[^>]*>([\s\S]*?)<\/a>/gi)]
+    .map((match) => ({ name: htmlText(match[1] || match[2]), logo: absoluteUrl(context.url, match[2]?.match(/<img[^>]+src=["']([^"']+)["']/i)?.[1] || "") }))
+    .filter((team) => team.name && !/classifica|regulamento|ranking|goleiro|zagueiro|meia|atacante/i.test(team.name))
+    .filter((team, index, all) => all.findIndex((item) => item.name.toLowerCase() === team.name.toLowerCase()) === index);
+  const teams = teamEntries.map((team) => team.name);
   const rounds = [...html.matchAll(/<td\b[^>]*>([\s\S]{0,500}?(?:Oitavas|Quartas|Semifinais?|Final)(?:\s+de\s+final)?[\s\S]{0,180}?)<\/td>/gi)]
     .map((match) => {
       const text = htmlText(match[1]);
@@ -147,6 +198,9 @@ function parseKnockout(html, context) {
     || rounds.find((round) => round.type !== "round_of_16")
     || rounds[0]
     || null;
+  const currentRoundIndex = currentRound ? rounds.findIndex((round) => round.name === currentRound.name) : -1;
+  const visibleRounds = currentRoundIndex > 0 ? rounds.slice(currentRoundIndex) : rounds;
+  const visibleStages = visibleRounds.length ? visibleRounds.map((round) => round.name) : stages;
   const fixtures = currentRound && teams.length >= 2
     ? Array.from({ length: Math.floor(teams.length / 2) }, (_, index) => {
       const home = teams[index * 2];
@@ -157,14 +211,19 @@ function parseKnockout(html, context) {
         scheduledAt: currentRound.scheduledAt,
         homeTeamName: home,
         awayTeamName: away,
+        homeLogo: teamEntries.find((team) => team.name === home)?.logo || "",
+        awayLogo: teamEntries.find((team) => team.name === away)?.logo || "",
         homeScore: null,
         awayScore: null,
         status: "scheduled",
         isStrix: /\bstrix\b/i.test(`${home} ${away}`),
+        bracketPosition: index,
+        feedsIntoPosition: Math.floor(index / 2),
+        metadata: { bracketPosition: index, feedsIntoPosition: Math.floor(index / 2) },
       };
     })
     : [];
-  return { stages, teams, rounds, currentStage: currentRound?.name || null, fixtures, hasStrix: teams.some((team) => /\bstrix\b/i.test(team)) };
+  return { stages: visibleStages, teams, teamEntries, rounds: visibleRounds, currentStage: currentRound?.name || null, fixtures, hasStrix: teams.some((team) => /\bstrix\b/i.test(team)) };
 }
 
 function relatedSourceUrls(html, context) {
@@ -177,7 +236,7 @@ function relatedSourceUrls(html, context) {
         return related.provider === context.provider && related.competitionId === context.competitionId && related.url !== context.url;
       } catch { return false; }
     });
-  return [...new Set(urls)].slice(0, 8);
+  return [...new Set(urls)].slice(0, 40);
 }
 
 export function parseCompetitionHtml(html, rawUrl) {
@@ -185,6 +244,8 @@ export function parseCompetitionHtml(html, rawUrl) {
   if (typeof html !== "string" || html.length < 500) throw new Error("HTML inesperado ou incompleto.");
   const info = hero(html, context);
   const groups = parseGroups(html, context);
+  const fixtures = parseFixtureCards(html, context);
+  const qualificationRule = parseQualificationRule(html);
   const knockout = context.kind === "knockout" ? parseKnockout(html, context) : { stages: [], teams: [], rounds: [], currentStage: null, fixtures: [], hasStrix: false };
   const phase = knockout.stages.length ? "knockout"
     : groups.length > 1 ? "groups"
@@ -203,6 +264,8 @@ export function parseCompetitionHtml(html, rawUrl) {
     startsOn: info.startsOn,
     phase,
     groups,
+    fixtures,
+    qualificationRule,
     strixGroup: groups.find((group) => group.isStrixGroup)?.name || null,
     teamCount: new Set(groups.flatMap((group) => group.standings.map((row) => row.team.toLowerCase()))).size || knockout.teams.length,
     knockout,

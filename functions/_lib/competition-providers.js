@@ -70,14 +70,29 @@ export async function fetchCompetitionPreview(rawUrl, fetchImpl = fetch) {
 
 export async function fetchCompetitionBundle(rawUrl, fetchImpl = fetch) {
   const primary = await fetchCompetitionPreview(rawUrl, fetchImpl);
-  const related = await Promise.all((primary.relatedSourceUrls || []).map(async (url) => {
-    try { return await fetchCompetitionPreview(url, fetchImpl); } catch { return null; }
-  }));
+  const urls = primary.relatedSourceUrls || [];
+  const related = [];
+  for (let index = 0; index < urls.length; index += 4) {
+    const batch = await Promise.all(urls.slice(index, index + 4).map(async (url) => {
+      try { return await fetchCompetitionPreview(url, fetchImpl); } catch { return null; }
+    }));
+    related.push(...batch);
+  }
+  const sameKind = related.filter(Boolean)
+    .filter((preview) => preview.externalCompetitionId === primary.externalCompetitionId)
+    .filter((preview) => preview.sourceKind === primary.sourceKind);
+  const mergeByKey = (items, keyOf) => items.filter((item, index, all) => all.findIndex((candidate) => keyOf(candidate) === keyOf(item)) === index);
+  const mergedPrimary = {
+    ...primary,
+    groups: mergeByKey([...(primary.groups || []), ...sameKind.flatMap((preview) => preview.groups || [])], (group) => group.name),
+    fixtures: mergeByKey([...(primary.fixtures || []), ...sameKind.flatMap((preview) => preview.fixtures || [])], (fixture) => fixture.externalMatchId),
+    relatedSourceUrls: mergeByKey([...(primary.relatedSourceUrls || []), ...sameKind.flatMap((preview) => preview.relatedSourceUrls || [])], (url) => url),
+  };
   const relatedPreviews = related
     .filter(Boolean)
     .filter((preview) => preview.externalCompetitionId === primary.externalCompetitionId)
     .filter((preview) => preview.sourceKind !== primary.sourceKind)
     .filter((preview) => preview.sourceKind !== "knockout" || preview.knockout?.hasStrix)
     .filter((preview, index, all) => all.findIndex((item) => item.sourceKind === preview.sourceKind) === index);
-  return { ...primary, relatedPreviews };
+  return { ...mergedPrimary, relatedPreviews };
 }

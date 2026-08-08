@@ -40,3 +40,10 @@ test("CCB relaciona classificação e eliminatória da Copa Yeshua", { skip: !li
   assert.equal(knockout.knockout.currentStage, "Quartas de final");
   assert.ok(knockout.knockout.fixtures.some((fixture) => fixture.isStrix));
 });
+
+test("CCB discovers VPR Elite fixtures across paginated rounds", { skip: !live, timeout: 60000 }, async () => {
+  const bundle = await fetchCompetitionBundle("https://ccbclubs.com.br/fifa.php?file=classificacao&campeonato=106&grupo=2");
+  const strixFixtures = bundle.fixtures.filter((fixture) => fixture.isStrix);
+  assert.ok(strixFixtures.length >= 4);
+  assert.ok(strixFixtures.some((fixture) => fixture.status === "scheduled" && /Tesoura City/i.test(`${fixture.homeTeamName} ${fixture.awayTeamName}`)));
+});

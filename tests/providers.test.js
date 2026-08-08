@@ -41,3 +41,20 @@ test("detecta estágios e times de mata-mata", () => {
   assert.equal(parsed.knockout.fixtures[0].awayTeamName, "POA CITY FC");
   assert.equal(parsed.knockout.fixtures[0].scheduledAt, "2026-08-10T23:10:00-03:00");
 });
+
+test("discovers fixtures in paginated round pages without competition-specific rules", () => {
+  const card = `<div class="glass-dark game-card"><div class="game-top">VPR ELITE - Rodada 4</div><div class="game-main"><div class="game-team">STRIX UNITED<img src="/strix.png"></div><div class="game-score">- x -</div><div class="game-team">Tesoura City<img src="/tesoura.png"></div></div><div class="game-bottom">10/08/2026 23:40 <button data-rodada="13097" data-torneio="106">Jogo</button></div></div>`;
+  const html = `<html><body><h1>VPR ELITE</h1><p>Classificam 8</p><h3>Classificacao - Grupo 2</h3>${standingsRows}${card}${"x".repeat(500)}</body></html>`;
+  const parsed = parseCompetitionHtml(html, "https://ccbclubs.com.br/fifa.php?file=classificacao&campeonato=106&grupo=2&pagina=9");
+  assert.equal(parsed.fixtures.length, 1);
+  assert.equal(parsed.fixtures[0].externalMatchId, "ccb:106:13097");
+  assert.equal(parsed.fixtures[0].awayTeamName, "Tesoura City");
+  assert.equal(parsed.fixtures[0].scheduledAt, "2026-08-10T23:40:00-03:00");
+  assert.equal(parsed.qualificationRule.slots, 8);
+});
+
+test("omits empty round of 16 when the official bracket starts at quarterfinals", () => {
+  const html = `<html><body><h1>COPA</h1><table><tr><td>Oitavas de final</td><td>Quartas de final<br>10/08/2026 23:10</td><td>Semifinais</td><td>Final</td></tr>${"x".repeat(500)}<tr><td><a title="A">A</a></td><td><a title="STRIX UNITED">STRIX UNITED</a></td></tr></table></body></html>`;
+  const parsed = parseCompetitionHtml(html, "https://ccbclubs.com.br/fifa.php?file=eliminatoria&campeonato=100&grupo=12");
+  assert.deepEqual(parsed.knockout.rounds.map((round) => round.type), ["quarterfinal", "semifinal", "final"]);
+});

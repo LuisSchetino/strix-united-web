@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { deriveCompetitionView } from "../src/features/competitions/competition-core.js";
+import { deriveCompetitionView, qualificationState } from "../src/features/competitions/competition-core.js";
 
 test("classificação preservada e mata-mata define a fase atual", () => {
   const sources = [
@@ -18,4 +18,30 @@ test("próximo jogo do provider existe sem qualquer item na Agenda", () => {
   const view = deriveCompetitionView([{ source_kind: "knockout", snapshot: { knockout: { currentStage: "Quartas" } } }], fixtures);
   assert.equal(view.upcoming.length, 1);
   assert.equal(view.strixFixture.away_team_name, "STRIX UNITED");
+});
+
+test("main games view keeps only Strix fixtures", () => {
+  const fixtures = [
+    { external_match_id: "all-a", home_team_name: "A", away_team_name: "B", status: "scheduled" },
+    { external_match_id: "strix", home_team_name: "XUMBREGA", away_team_name: "STRIX UNITED", status: "scheduled" },
+    { external_match_id: "all-b", home_team_name: "C", away_team_name: "D", status: "completed", home_score: 1, away_score: 0 },
+  ];
+  const view = deriveCompetitionView([{ source_kind: "standings", snapshot: { phase: "standings", groups: [] } }], fixtures);
+  assert.deepEqual(view.upcoming.map((fixture) => fixture.external_match_id), ["strix"]);
+  assert.equal(view.providerResults.length, 0);
+  assert.equal(view.allUpcoming.length, 2);
+});
+
+test("shows waiting for knockout only after a group phase has really ended", () => {
+  const source = { source_kind: "standings", snapshot: { phase: "groups", type: "Grupos + Mata-Mata", groups: [] } };
+  const view = deriveCompetitionView([source], [{ home_team_name: "STRIX", away_team_name: "A", status: "completed" }]);
+  assert.equal(view.awaitingKnockout, true);
+  assert.equal(view.currentStage, "Aguardando mata-mata");
+});
+
+test("qualification zone keeps positions 1-8 in and 9-12 out", () => {
+  const rows = Array.from({ length: 12 }, (_, index) => ({ position: index + 1 }));
+  assert.equal(rows.filter((row) => qualificationState(row, 8).inside).length, 8);
+  assert.equal(qualificationState(rows[7], 8).label, "Dentro da zona");
+  assert.match(qualificationState(rows[8], 8).label, /1 posi/);
 });
