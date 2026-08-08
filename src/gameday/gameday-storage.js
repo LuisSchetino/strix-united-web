@@ -1,4 +1,4 @@
-import { safeFileName } from "./defaults.js";
+import { hydrateGameDayProject, safeFileName } from "./defaults.js";
 
 const DRAFT_KEY = "strix-fc27-gameday-draft-v1";
 const BUCKET = "fc27-team-assets";
@@ -6,7 +6,7 @@ const BUCKET = "fc27-team-assets";
 export function loadDraft(fallback) {
   try {
     const saved = JSON.parse(localStorage.getItem(DRAFT_KEY) || "null");
-    return saved?.templateId ? saved : fallback;
+    return saved?.templateId ? hydrateGameDayProject(saved) : fallback;
   } catch {
     return fallback;
   }

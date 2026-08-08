@@ -5,7 +5,7 @@ import {
   normalizeName,
   resolvePlayerAliases,
   resultLabel,
-  suggestAgendaMatch,
+  suggestAgendaMatches,
   validateImport,
 } from "./import-core.js";
 import "./match-import.css";
@@ -71,10 +71,11 @@ function EditMatchModal({ match, workspace, close, save }) {
   );
 }
 
-function ReviewStep({ matches, selected, toggle, edit, next }) {
+function ReviewStep({ matches, selected, toggle, selectAll, clearSelection, edit, next }) {
   return (
     <section className="import-stage">
       <header><div><span>ETAPA 1 · ESCOLHER E REVISAR</span><h2>Partidas encontradas</h2><p>Selecione somente o que deve entrar no histórico.</p></div><b>{selected.size}/{matches.length}</b></header>
+      <div className="match-selection-toolbar" aria-label="Controles de seleção"><button type="button" onClick={selectAll} disabled={selected.size === matches.length}>SELECIONAR TODOS</button><button type="button" onClick={clearSelection} disabled={!selected.size}>LIMPAR SELEÇÃO</button><span>{selected.size ? `${selected.size} pronta${selected.size === 1 ? "" : "s"} para revisar` : "Nenhuma partida selecionada"}</span></div>
       <div className="match-review-list">
         {matches.map((match) => <article key={match.id} className={selected.has(match.id) ? "selected" : ""}>
           <label className="match-review-check"><input type="checkbox" checked={selected.has(match.id)} onChange={() => toggle(match.id)} /><span aria-hidden="true">✓</span></label>
@@ -101,7 +102,7 @@ function ResolveStep({ matches, agenda, competitions, players, aliases, patchMat
               const competition = competitions.find((item) => item.id === event.target.value);
               patchMatch(match.id, { competitionId: competition?.id || "", competitionEditionId: competition?.editionId || "", competition: event.target.value === "friendly" ? "Amistoso" : competition?.name || "" });
             }}><option value="">Selecionar</option><option value="friendly">Amistoso</option>{competitions.map((competition) => <option key={competition.id} value={competition.id}>{competition.name}</option>)}</select></label>
-            <label>VINCULAR À AGENDA<select value={match.agendaId || ""} onChange={(event) => patchMatch(match.id, { agendaId: event.target.value })}><option value="">Sem vínculo</option>{agenda.map((entry) => <option key={entry.id} value={entry.id}>{formatDate(entry.scheduled_at)} · {formatTime(entry.scheduled_at)} · {entry.opponent_name}</option>)}</select></label>
+            <label>VINCULAR À AGENDA<select value={match.agendaId || ""} onChange={(event) => patchMatch(match.id, { agendaId: event.target.value, suggestedAgendaId: "" })}><option value="">Sem vínculo</option>{agenda.map((entry) => <option key={entry.id} value={entry.id}>{entry.id === match.suggestedAgendaId ? "SUGERIDO · " : ""}{formatDate(entry.scheduled_at)} · {formatTime(entry.scheduled_at)} · {entry.opponent_name}</option>)}</select>{match.suggestedAgendaId && match.agendaId === match.suggestedAgendaId && <small className="agenda-suggestion-note">Vínculo sugerido por adversário, data e horário.</small>}</label>
           </div>
           <section className="alias-resolver"><div><small>EA × ELENCO</small><span>Associações anteriores já aparecem selecionadas.</span></div>{(match.performance?.players || []).map((player) => {
             const key = normalizeName(player.eaName);
@@ -178,8 +179,12 @@ export function MatchesPage({ profile, workspace, client }) {
       }
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.message || payload.error || "A fonte não retornou partidas.");
-      const normalized = dedupeImportedMatches((payload.matches || []).map((item, index) => ({ ...normalizeEaMatch(item, index), importSource: source === "computer" ? "local_bridge" : "ea_api" })), workspace.matches)
-        .map((match) => ({ ...match, agendaId: suggestAgendaMatch(match, workspace.agenda)?.id || "" }));
+      const normalizedBase = dedupeImportedMatches((payload.matches || []).map((item, index) => ({ ...normalizeEaMatch(item, index), importSource: source === "computer" ? "local_bridge" : "ea_api" })), workspace.matches);
+      const agendaSuggestions = suggestAgendaMatches(normalizedBase, workspace.agenda);
+      const normalized = normalizedBase.map((match) => {
+        const suggestion = agendaSuggestions.get(match.id);
+        return { ...match, agendaId: suggestion?.id || "", suggestedAgendaId: suggestion?.id || "" };
+      });
       if (!normalized.length) throw new Error("Nenhuma partida nova foi encontrada para importar.");
       setFound(normalized); setSelected(new Set(normalized.map((match) => match.id))); setAliases(resolvePlayerAliases(normalized, workspace.players, workspace.aliases)); setStep("review");
       setMetrics((current) => ({ ...current, totalMs: Math.round(performance.now() - started) }));
@@ -190,7 +195,8 @@ export function MatchesPage({ profile, workspace, client }) {
   const confirm = async () => {
     const validation = validateImport(chosen, aliases);
     if (!validation.valid) return;
-    setSaving(true); setError("");
+    const importedCount = chosen.length;
+    setSaving(true); setError(""); setSuccess("");
     try {
       const aliasRows = Object.entries(aliases).filter(([, playerId]) => playerId).map(([eaName, playerId]) => {
         const rawName = chosen.flatMap((match) => match.performance?.players || []).find((player) => normalizeName(player.eaName) === eaName)?.eaName || eaName;
@@ -198,8 +204,8 @@ export function MatchesPage({ profile, workspace, client }) {
       });
       await workspace.savePlayerAliases(aliasRows, false);
       await workspace.upsertClubMatches(chosen);
-      setFound([]); setSelected(new Set()); setStep("review"); setSuccess(`${chosen.length} partida${chosen.length === 1 ? " importada" : "s importadas"} com sucesso.`);
-    } catch (saveError) { setError(saveError.message || "Não foi possível concluir a importação."); }
+      setFound([]); setSelected(new Set()); setAliases({}); setEditing(null); setStep("review"); setSuccess(`${importedCount} partida${importedCount === 1 ? " importada" : "s importadas"} com sucesso. O histórico foi atualizado abaixo.`);
+    } catch (saveError) { try { await workspace.refresh(); } catch { /* preserve the original import failure */ } setError(saveError.message || "Não foi possível concluir a importação."); }
     finally { setSaving(false); }
   };
   const editExisting = (match) => setEditing({
@@ -226,7 +232,7 @@ export function MatchesPage({ profile, workspace, client }) {
     {metrics && <div className="performance-note" aria-live="polite"><span>Resposta visual: {metrics.feedbackMs ?? "…"} ms</span><span>Consulta: {metrics.totalMs ?? "em andamento"}{metrics.totalMs ? " ms" : ""}</span><span>{metrics.requests} request</span></div>}
     {(error || workspace.error) && <p className="matches-error" role="alert">{error || workspace.error}</p>}
     {success && <p className="matches-success" role="status">{success}</p>}
-    {found.length > 0 && step === "review" && <ReviewStep matches={found} selected={selected} toggle={(id) => setSelected((current) => { const next = new Set(current); next.has(id) ? next.delete(id) : next.add(id); return next; })} edit={setEditing} next={() => setStep("resolve")} />}
+    {found.length > 0 && step === "review" && <ReviewStep matches={found} selected={selected} toggle={(id) => setSelected((current) => { const next = new Set(current); next.has(id) ? next.delete(id) : next.add(id); return next; })} selectAll={() => setSelected(new Set(found.map((match) => match.id)))} clearSelection={() => setSelected(new Set())} edit={setEditing} next={() => setStep("resolve")} />}
     {found.length > 0 && step === "resolve" && <ResolveStep matches={chosen} agenda={workspace.agenda.filter((entry) => !["cancelled", "completed"].includes(entry.status))} competitions={competitionOptions} players={workspace.players} aliases={aliases} patchMatch={patchMatch} patchAlias={(key, value) => setAliases((current) => ({ ...current, [key]: value }))} back={() => setStep("review")} next={() => setStep("summary")} />}
     {found.length > 0 && step === "summary" && <SummaryStep matches={chosen} agenda={workspace.agenda} aliases={aliases} players={workspace.players} validation={validation} back={() => setStep("resolve")} confirm={() => void confirm()} saving={saving} />}
     <MatchHistory workspace={workspace} canManage={canManage} detail={setDetail} edit={editExisting} remove={(id) => void workspace.removeClubMatch(id).catch((removeError) => setError(removeError.message))} />

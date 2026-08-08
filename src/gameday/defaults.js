@@ -12,11 +12,13 @@ export function createDefaultProject() {
     id: null,
     name: "GameDay Strix — Collage 2026",
     templateId: TEMPLATE_ID,
+    mode: "group",
     matchDate: new Date().toISOString().slice(0, 10),
     matchTime: "22:00",
     season: "2026",
     championshipName: "PLATAFORMA CLUBS",
     championshipLogo: "",
+    competitionLogos: [],
     opponentName: "ADVERSÁRIO",
     opponentLogo: "",
     teamLogo: "/assets/strix-logo.png",
@@ -27,6 +29,7 @@ export function createDefaultProject() {
     footerCenter: "2026",
     footerRight: "A UNIÃO FAZ\nA FORÇA",
     slogan: "A UNIÃO FAZ A FORÇA",
+    dailyGames: [],
     players: [
       { ...layer("player-left", 178, 308, 1.05, -2, 20), role: "left", name: "Jogador esquerdo", originalUrl: "", cutoutUrl: "", uniformUrl: "", activeUrl: "", shadow: 36 },
       { ...layer("player-right", 654, 310, 1.08, 2, 21), role: "right", name: "Jogador direito", originalUrl: "", cutoutUrl: "", uniformUrl: "", activeUrl: "", shadow: 34 },
@@ -50,6 +53,8 @@ export function createDefaultProject() {
       timeCard: { ...layer("time-card", 64, 876, 1, -4, 55), visible: true },
       mainLogo: { ...layer("main-logo", 300, 1030, 1, 0, 60), visible: true },
       group: { ...layer("group", 44, 1240, 1, 0, 65), visible: true },
+      dailyGames: { ...layer("daily-games", 70, 1180, 1, 0, 65), visible: true },
+      stamp: { ...layer("stamp", 828, 900, 1, 12, 70), visible: true },
     },
     visualSettings: {
       primaryColor: "#075BFF", secondaryColor: "#003CCF", textureIntensity: 48,
@@ -58,6 +63,27 @@ export function createDefaultProject() {
     },
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
+  };
+}
+
+export function hydrateGameDayProject(value) {
+  const base = createDefaultProject();
+  if (!value || typeof value !== "object") return base;
+  return {
+    ...base,
+    ...value,
+    mode: value.mode === "agenda" ? "agenda" : "group",
+    players: Array.isArray(value.players) && value.players.length ? value.players : base.players,
+    groupTeams: Array.isArray(value.groupTeams) ? value.groupTeams : base.groupTeams,
+    dailyGames: Array.isArray(value.dailyGames) ? value.dailyGames.slice(0, 6) : [],
+    competitionLogos: Array.isArray(value.competitionLogos)
+      ? value.competitionLogos.slice(0, 5)
+      : value.championshipLogo
+        ? [{ id: "legacy-championship", name: value.championshipName || "Campeonato", url: value.championshipLogo }]
+        : [],
+    elements: Object.fromEntries(Object.entries(base.elements).map(([key, fallback]) => [key, { ...fallback, ...(value.elements?.[key] || {}) }])),
+    visualSettings: { ...base.visualSettings, ...(value.visualSettings || {}) },
+    uniform: { ...base.uniform, ...(value.uniform || {}) },
   };
 }
 

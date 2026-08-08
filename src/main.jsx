@@ -743,8 +743,11 @@ function useFc27Workspace(client, profile) {
     removeClubMatch,
     savePlayerAliases,
     upsertClubMatches: async (matches, source = "ea_api") => {
-      await Promise.all(matches.map((match) => upsertClubMatch(match, match.importSource || source, false)));
-      await refresh();
+      try {
+        for (const match of matches) await upsertClubMatch(match, match.importSource || source, false);
+      } finally {
+        await refresh();
+      }
     },
     savePlayer,
     removePlayer,
@@ -1757,6 +1760,7 @@ function AgendaLive({ navigate, workspace }) {
   const [tab, setTab] = useState("today");
   const [modal, setModal] = useState(null);
   const [actions, setActions] = useState(null);
+  const [pendingAction, setPendingAction] = useState(null);
   const [showPresets, setShowPresets] = useState(false);
   const [feedback, setFeedback] = useState("");
   const [presets, setPresets] = useState(() => {
@@ -1819,14 +1823,31 @@ function AgendaLive({ navigate, workspace }) {
             {actions === item.id && <div className="agenda-actions">
               <button onClick={() => { setActions(null); setModal({ entry: item, mode: "edit" }); }}><Icon name="edit" size={15} />Editar partida</button>
               <button onClick={() => { setActions(null); setModal({ entry: item, mode: "swap" }); }}><Icon name="game" size={15} />Trocar adversário</button>
-              <button className="danger" onClick={() => void run(() => workspace.setAgendaStatus(item.id, "cancelled"))}>Cancelar jogo</button>
-              <button className="danger delete" onClick={() => void run(() => workspace.removeAgenda(item.id))}><Icon name="trash" size={15} />Excluir partida</button>
+              <button className="danger" onClick={() => { setActions(null); setPendingAction({ type:"cancel", item }); }}><Icon name="close" size={15} />Cancelar jogo</button>
+              <button className="danger delete" onClick={() => { setActions(null); setPendingAction({ type:"delete", item }); }}><Icon name="trash" size={15} />Excluir partida</button>
             </div>}
           </article>
         )) : <div className="agenda-empty">{workspace.loading ? "Sincronizando agenda..." : "Nenhuma partida programada."}</div>}
       </section>
       {showPresets && <PresetPanel presets={presets} setPresets={setPresets} onClose={() => setShowPresets(false)} />}
       {modal && <AgendaModal entry={modal.entry} mode={modal.mode} presets={presets} onClose={() => setModal(null)} logoForOpponent={(name) => { const logo = matchingLogo(workspace.logos, name); return logo?.storage_path ? workspace.assetUrl(logo.storage_path) : catalogLogo(name); }} onSave={(payload, mode) => void run(async () => { await workspace.saveAgenda(payload, mode, modal.entry?.db); setModal(null); })} />}
+      {pendingAction && <ViewportDialog className="modal-backdrop" onMouseDown={() => setPendingAction(null)}>
+        <article className="agenda-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="agenda-confirm-title" onMouseDown={(event) => event.stopPropagation()}>
+          <header>
+            <div><span>CONFIRMAR AÇÃO</span><h2 id="agenda-confirm-title">{pendingAction.type === "delete" ? "Excluir partida?" : "Cancelar jogo?"}</h2></div>
+            <button type="button" className="modal-close" onClick={() => setPendingAction(null)} aria-label="Fechar"><Icon name="close" /></button>
+          </header>
+          <p>{pendingAction.type === "delete" ? `A partida contra ${pendingAction.item.opponent} será removida da Agenda.` : `A partida contra ${pendingAction.item.opponent} será marcada como cancelada.`}</p>
+          <footer>
+            <button type="button" className="secondary" onClick={() => setPendingAction(null)}>VOLTAR</button>
+            <button type="button" className="agenda-confirm-danger" onClick={() => void run(async () => {
+              if (pendingAction.type === "delete") await workspace.removeAgenda(pendingAction.item.id);
+              else await workspace.setAgendaStatus(pendingAction.item.id, "cancelled");
+              setPendingAction(null);
+            })}>{pendingAction.type === "delete" ? "EXCLUIR PARTIDA" : "CANCELAR JOGO"}</button>
+          </footer>
+        </article>
+      </ViewportDialog>}
     </section>
   );
 }

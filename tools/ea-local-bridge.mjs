@@ -9,6 +9,7 @@ function respond(response, status, body) {
   response.writeHead(status, {
     "access-control-allow-origin": "*",
     "access-control-allow-methods": "GET, OPTIONS",
+    "access-control-allow-private-network": "true",
     "content-type": "application/json; charset=utf-8",
     "cache-control": "no-store",
   });

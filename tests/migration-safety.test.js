@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
 const migrationUrl = new URL("../supabase/migrations/20260808014500_fc27_gameday_competitions_and_history.sql", import.meta.url);
+const competitionRlsFixUrl = new URL("../supabase/migrations/20260808164217_fix_competition_edition_insert_rls.sql", import.meta.url);
 
 test("migration FC27 e aditiva e ativa RLS nos novos dominios", async () => {
   const sql = await readFile(migrationUrl, "utf8");
@@ -15,4 +16,14 @@ test("migration FC27 e aditiva e ativa RLS nos novos dominios", async () => {
   assert.match(sql, /private\.has_minimum_tier\('diretoria'\)/);
   assert.match(sql, /created_by is immutable/);
   assert.doesNotMatch(sql, /grant insert, update, delete on public\.competitions/i);
+});
+
+test("correcao de RLS permite RETURNING somente para edicoes legiveis", async () => {
+  const sql = await readFile(competitionRlsFixUrl, "utf8");
+  assert.doesNotMatch(sql, /\b(drop\s+table|truncate|delete\s+from|alter\s+table)\b/i);
+  assert.match(sql, /drop policy if exists "members read permitted competition editions"/i);
+  assert.match(sql, /for select\s+to authenticated\s+using\s*\(\s*status <> 'historical'/i);
+  assert.match(sql, /private\.has_minimum_tier\('conselho'\)/i);
+  assert.doesNotMatch(sql, /private\.can_read_competition_edition\s*\(\s*id\s*\)/i);
+  assert.doesNotMatch(sql, /for\s+(insert|update|delete)/i);
 });

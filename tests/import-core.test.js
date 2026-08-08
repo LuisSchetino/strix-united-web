@@ -7,6 +7,7 @@ import {
   resolvePlayerAliases,
   resultLabel,
   suggestAgendaMatch,
+  suggestAgendaMatches,
   validateImport,
 } from "../src/features/matches/import-core.js";
 
@@ -45,6 +46,25 @@ test("sugere agenda por dia, horário e adversário sem duplicar", () => {
   ]);
   assert.equal(suggestion.id, "agenda-poa");
   assert.equal(dedupeImportedMatches([match], [{ external_match_id: "poa-0708" }]).length, 0);
+});
+
+test("tolera sufixo FC e timestamp numérico em texto ao sugerir a Agenda", () => {
+  const match = normalizeEaMatch({ ...eaFixture, timestamp: String(eaFixture.timestamp) });
+  const suggestion = suggestAgendaMatch(match, [
+    { id: "agenda-poa", opponent_name: "POA CITY", scheduled_at: "2026-08-07T00:10:00-03:00", status: "scheduled" },
+  ]);
+  assert.equal(match.date, "2026-08-07T03:08:00.000Z");
+  assert.equal(suggestion.id, "agenda-poa");
+});
+
+test("não sugere o mesmo item da Agenda para duas importações", () => {
+  const first = normalizeEaMatch(eaFixture);
+  const second = { ...first, id: "poa-second", date: "2026-08-07T03:20:00.000Z" };
+  const suggestions = suggestAgendaMatches([first, second], [
+    { id: "agenda-poa", opponent_name: "POA CITY", scheduled_at: "2026-08-07T00:10:00-03:00", status: "scheduled" },
+  ]);
+  assert.equal(suggestions.get(first.id)?.id, "agenda-poa");
+  assert.equal(suggestions.get(second.id), null);
 });
 
 test("lembra 39ygo para YGO e não pergunta novamente", () => {

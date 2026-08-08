@@ -46,7 +46,10 @@ const clubGoals = (club) => {
 
 const matchDate = (raw) => {
   const candidate = raw?.timestamp ?? raw?.matchTimestamp ?? raw?.date ?? raw?.time ?? raw?.createdAt;
-  if (typeof candidate === "number") return new Date(candidate < 1e12 ? candidate * 1000 : candidate);
+  if (typeof candidate === "number" || /^\d{10,13}$/.test(String(candidate || ""))) {
+    const numeric = Number(candidate);
+    return new Date(numeric < 1e12 ? numeric * 1000 : numeric);
+  }
   const parsed = candidate ? new Date(candidate) : new Date();
   return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
 };
@@ -151,15 +154,23 @@ const localDay = (value) => new Intl.DateTimeFormat("sv-SE", {
 export function suggestAgendaMatch(match, agenda = []) {
   const matchTime = new Date(match.date).getTime();
   const normalizedOpponent = normalizeName(match.opponent);
+  const clubSuffixes = new Set(["fc", "fv", "es", "ec", "sc", "afc", "clube", "club", "esports", "e", "sports"]);
+  const meaningfulTokens = (value) => normalizeName(value).split(" ").filter((token) => token && !clubSuffixes.has(token));
+  const opponentTokens = meaningfulTokens(match.opponent);
   const candidates = agenda
     .filter((entry) => !["cancelled", "completed"].includes(entry.status))
     .map((entry) => {
       const agendaTime = new Date(entry.scheduled_at).getTime();
       const agendaOpponent = normalizeName(entry.opponent_name);
+      const agendaTokens = meaningfulTokens(entry.opponent_name);
+      const commonTokens = opponentTokens.filter((token) => agendaTokens.includes(token)).length;
+      const tokenSimilarity = commonTokens / Math.max(1, new Set([...opponentTokens, ...agendaTokens]).size);
       let score = 0;
       if (localDay(match.date) === localDay(entry.scheduled_at)) score += 60;
       if (normalizedOpponent === agendaOpponent) score += 50;
       else if (normalizedOpponent.length >= 3 && (normalizedOpponent.includes(agendaOpponent) || agendaOpponent.includes(normalizedOpponent))) score += 30;
+      else if (tokenSimilarity >= .66) score += 35;
+      else if (tokenSimilarity >= .4) score += 18;
       const minutes = Math.abs(matchTime - agendaTime) / 60000;
       if (minutes <= 30) score += 25;
       else if (minutes <= 120) score += 12;
@@ -167,6 +178,18 @@ export function suggestAgendaMatch(match, agenda = []) {
     })
     .sort((left, right) => right.score - left.score || left.minutes - right.minutes);
   return candidates[0]?.score >= 60 ? candidates[0].entry : null;
+}
+
+export function suggestAgendaMatches(matches = [], agenda = []) {
+  const reserved = new Set();
+  return [...matches]
+    .sort((left, right) => new Date(left.date) - new Date(right.date))
+    .reduce((suggestions, match) => {
+      const suggestion = suggestAgendaMatch(match, agenda.filter((entry) => !reserved.has(entry.id)));
+      if (suggestion) reserved.add(suggestion.id);
+      suggestions.set(match.id, suggestion || null);
+      return suggestions;
+    }, new Map());
 }
 
 export function aliasLookup(aliases = []) {
