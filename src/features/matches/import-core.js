@@ -162,7 +162,7 @@ export const normalizeClubName = (value) => normalizeName(value)
 
 const clubTokens = (value) => normalizeClubName(value).split(" ").filter(Boolean);
 
-export function suggestAgendaCandidate(match, agenda = []) {
+function rankAgendaCandidates(match, agenda = []) {
   const matchTime = new Date(match.date).getTime();
   const canonicalOpponent = normalizeClubName(match.opponent);
   const opponentTokens = clubTokens(match.opponent);
@@ -194,11 +194,18 @@ export function suggestAgendaCandidate(match, agenda = []) {
           : strongName
             ? "Adversário compatível · horário diferente"
             : "Nome semelhante · confirme antes de vincular";
-      return { entry, confidence, autoLink: confidence === "strong", reason, score, minutes };
+      return { entry, confidence, autoLink: false, reason, score, minutes };
     })
     .filter(Boolean)
     .sort((left, right) => right.score - left.score || left.minutes - right.minutes);
-  return candidates[0] || null;
+  return candidates;
+}
+
+export function suggestAgendaCandidate(match, agenda = []) {
+  const candidates = rankAgendaCandidates(match, agenda);
+  const relevant = candidates.filter((candidate) => ["strong", "probable"].includes(candidate.confidence));
+  const best = candidates[0] || null;
+  return best ? { ...best, autoLink: relevant.length === 1 && relevant[0] === best } : null;
 }
 
 export function suggestAgendaMatch(match, agenda = []) {

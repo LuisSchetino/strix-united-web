@@ -28,7 +28,7 @@ const workspace = {
   players: [{ id: "p1", display_name: "YGO", is_active: true }], aliases: [], logos: [],
   agenda: [{ id: "a1", scheduled_at: now, opponent_name: "POA CITY", status: "scheduled", competition_name: "Copa Yeshua", competition_id: "c1", competition_edition_id: "e1" }, { id: "a2", scheduled_at: new Date("2026-08-07T00:10:00-03:00").toISOString(), opponent_name: "POA CITY", status: "scheduled", competition_name: "Copa Yeshua", competition_id: "c1", competition_edition_id: "e1" }],
   matches: [
-    { id: "m1", played_at: now, opponent_name: "POA CITY", strix_score: 3, opponent_score: 1, competition_name: "Copa Yeshua", competition_id: "c1", competition_edition_id: "e1", source: "ea_api", performance: { possession: 57, shots: 12, passes: 88, tackles: 9, players: [{ eaName: "39ygo", rating: 8.7, goalAssists: 2, passes: 31 }] } },
+    { id: "m1", played_at: now, opponent_name: "POA CITY", strix_score: 3, opponent_score: 1, competition_name: "Copa Yeshua", competition_id: "c1", competition_edition_id: "e1", source: "ea_api", performance: { possession: 57, shots: 12, passes: "88/102", tackles: 9, goalkeeperSaves: 4, averageRating: 8.4, players: [{ eaName: "39ygo", rating: 8.7, goals: 2, assists: 1, passes: "31/34", passesMade: 31, shots: 4, tackles: 3, saves: 0 }, { eaName: "OBEEN", rating: 8.1, goals: 1, assists: 0, passes: "24/28", passesMade: 24, shots: 2, tackles: 5, saves: 0 }] } },
     { id: "m2", played_at: now, opponent_name: "SEM ESCUDO", strix_score: 2, opponent_score: 2, competition_name: "Amistoso", source: "local_bridge", performance: {} },
     { id: "m3", played_at: now, opponent_name: "ESCUDO GRANDE", strix_score: 2, opponent_score: 3, competition_name: "Master League", source: "local_bridge", opponent_logos: { storage_path: "/assets/strix-logo.png" }, performance: {} },
   ],
@@ -60,7 +60,7 @@ else if (page === "gameday") {
       ["22:10", "TKV", "MASTER LEAGUE"], ["22:40", "RB UNIDOS", "AMISTOSO"],
       ["23:10", "ITUANO FV", "COPA YESHUA"], ["23:40", "POA CITY", "VPR ELITE"],
     ].map(([time, opponent, competition], index) => ({ id: String(index), time, opponent, competition, opponentLogo: "" }));
-    project.elements = { ...project.elements, mainLogo: { ...project.elements.mainLogo, x: 76, y: 135, scale: .42 }, timeCard: { ...project.elements.timeCard, x: 70, y: 1010 }, group: { ...project.elements.group, visible: false }, dailyGames: { ...project.elements.dailyGames, visible: true } };
+    project.elements = { ...project.elements, mainLogo: { ...project.elements.mainLogo, x: 650, y: 1320, scale: .5 }, timeCard: { ...project.elements.timeCard, x: 88, y: 455, scale: 1.08 }, group: { ...project.elements.group, visible: false }, dailyGames: { ...project.elements.dailyGames, x: 88, y: 700, scale: 1, visible: true } };
   }
   content = <main className="visual-gameday"><GameDayCanvas project={project} selectedId="" onSelect={() => {}} onLayerChange={() => {}} exportMode/></main>;
 } else content = <CompetitionsPage profile={profile} workspace={workspace} client={client}/>;

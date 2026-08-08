@@ -7,11 +7,16 @@ test("Game Day mantém os modos e hidrata projetos anteriores", () => {
   assert.equal(project.mode, "group");
   assert.equal(project.elements.dailyGames.id, "daily-games");
   assert.equal(project.elements.stamp.id, "stamp");
+  assert.equal(project.players.length, 0);
 
   const legacy = hydrateGameDayProject({ championshipName: "Liga", championshipLogo: "/liga.png" });
   assert.equal(legacy.competitionLogos.length, 1);
   assert.equal(legacy.competitionLogos[0].url, "/liga.png");
   assert.equal(legacy.mode, "group");
+
+  const legacyWithPlayer = hydrateGameDayProject({ players: [{ id: "player-main", role: "main", activeUrl: "/legacy.png" }] });
+  assert.equal(legacyWithPlayer.players.length, 1);
+  assert.equal(legacyWithPlayer.players[0].activeUrl, "/legacy.png");
 });
 
 test("Game Day limita agenda e logos aos limites visuais", () => {

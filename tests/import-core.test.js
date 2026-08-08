@@ -66,8 +66,17 @@ test("mantém POA CITY como candidato provável mesmo com data diferente", () =>
   ]);
   assert.equal(candidate.entry.id, "agenda-poa-old");
   assert.equal(candidate.confidence, "probable");
-  assert.equal(candidate.autoLink, false);
+  assert.equal(candidate.autoLink, true);
   assert.match(candidate.reason, /data diferente/i);
+});
+
+test("nÃ£o auto-seleciona quando existem dois candidatos provÃ¡veis", () => {
+  const match = normalizeEaMatch(eaFixture);
+  const candidate = suggestAgendaCandidate(match, [
+    { id: "agenda-poa-one", opponent_name: "POA CITY", scheduled_at: "2026-07-30T21:10:00-03:00", status: "scheduled" },
+    { id: "agenda-poa-two", opponent_name: "POA CITY FC", scheduled_at: "2026-08-01T21:10:00-03:00", status: "scheduled" },
+  ]);
+  assert.equal(candidate.autoLink, false);
 });
 
 test("não sugere o mesmo item da Agenda para duas importações", () => {

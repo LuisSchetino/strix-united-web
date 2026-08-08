@@ -6,7 +6,7 @@ test("projeto Game Day nasce pronto para Story e Feed sem perder vinculos", () =
   const project = createDefaultProject();
   assert.equal(project.templateId, "strix-collage-2026");
   assert.equal(project.opponentName, "ADVERSÁRIO");
-  assert.equal(project.players.length, 3);
+  assert.equal(project.players.length, 0);
   assert.equal(project.groupTeams.length, 4);
   assert.ok(project.createdAt);
 });
