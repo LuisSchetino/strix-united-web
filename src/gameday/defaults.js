@@ -17,6 +17,8 @@ export function createDefaultProject() {
     season: "2026",
     championshipName: "PLATAFORMA CLUBS",
     championshipLogo: "",
+    opponentName: "ADVERSÁRIO",
+    opponentLogo: "",
     teamLogo: "/assets/strix-logo.png",
     topTeamName: "STRIX\nUNITED",
     timePrefix: "HOJE ÀS",

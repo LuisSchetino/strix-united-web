@@ -1,0 +1,62 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import {
+  aliasLookup,
+  dedupeImportedMatches,
+  normalizeEaMatch,
+  resolvePlayerAliases,
+  resultLabel,
+  suggestAgendaMatch,
+  validateImport,
+} from "../src/features/matches/import-core.js";
+
+const eaFixture = {
+  matchId: "poa-0708",
+  timestamp: Date.parse("2026-08-07T03:08:00Z") / 1000,
+  clubs: {
+    "15686": { clubId: "15686", name: "STRIX UNITED", goals: 2 },
+    "632": { clubId: "632", name: "POA CITY FC", goals: 3 },
+  },
+  players: {
+    "15686": {
+      one: { playername: "Obenzera", goals: 1, assists: 0, passesmade: 22, passattempts: 27 },
+      two: { playername: "SxntsTheAngel", goals: 1, assists: 0, passesmade: 12, passattempts: 16 },
+      three: { playername: "39ygo", goals: 0, assists: 1, tacklesmade: 4 },
+    },
+  },
+};
+
+test("normaliza STRIX 2 x 3 POA CITY e preserva autores dos gols", () => {
+  const match = normalizeEaMatch(eaFixture);
+  assert.equal(match.opponent, "POA CITY FC");
+  assert.equal(match.strixScore, 2);
+  assert.equal(match.opponentScore, 3);
+  assert.equal(resultLabel(match), "DERROTA");
+  assert.deepEqual(match.goalScorers, ["Obenzera", "SxntsTheAngel"]);
+  assert.equal(match.performance.players.length, 3);
+});
+
+test("sugere agenda por dia, horário e adversário sem duplicar", () => {
+  const match = normalizeEaMatch(eaFixture);
+  const correct = { id: "agenda-poa", opponent_name: "Poa City", scheduled_at: "2026-08-07T00:10:00-03:00", status: "scheduled" };
+  const suggestion = suggestAgendaMatch(match, [
+    { id: "other", opponent_name: "Old Skull", scheduled_at: "2026-08-07T00:10:00-03:00", status: "scheduled" },
+    correct,
+  ]);
+  assert.equal(suggestion.id, "agenda-poa");
+  assert.equal(dedupeImportedMatches([match], [{ external_match_id: "poa-0708" }]).length, 0);
+});
+
+test("lembra 39ygo para YGO e não pergunta novamente", () => {
+  const match = normalizeEaMatch(eaFixture);
+  const players = [{ id: "ygo", display_name: "YGO", is_active: true }];
+  const aliases = [{ ea_name: "39ygo", player_id: "ygo" }];
+  assert.equal(aliasLookup(aliases).get("39ygo"), "ygo");
+  assert.equal(resolvePlayerAliases([match], players, aliases)["39ygo"], "ygo");
+});
+
+test("competição vazia bloqueia e Amistoso é válido", () => {
+  const match = { ...normalizeEaMatch(eaFixture), competition: "", performance: { players: [] } };
+  assert.equal(validateImport([match]).valid, false);
+  assert.equal(validateImport([{ ...match, competition: "Amistoso" }]).valid, true);
+});

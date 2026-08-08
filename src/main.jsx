@@ -15,6 +15,9 @@ import "./partidas.css";
 import "./fc27-data.css";
 import "./fc27-fixes.css";
 import { GameDayEditor } from "./gameday/GameDayEditor.jsx";
+import { MatchesPage } from "./features/matches/MatchesPage.jsx";
+import { CompetitionsPage } from "./features/competitions/CompetitionsPage.jsx";
+import "./features/squad-cards.css";
 
 const icons = {
   menu: "M4 7h16M4 12h16M4 17h16",
@@ -509,6 +512,10 @@ function useFc27Workspace(client, profile) {
     players: [],
     aliases: [],
     matches: [],
+    competitions: [],
+    competitionEditions: [],
+    competitionSources: [],
+    schemaPending: false,
     error: "",
   });
   const assetUrl = (path) =>
@@ -531,6 +538,14 @@ function useFc27Workspace(client, profile) {
       }));
       return;
     }
+    const [competitionsResult, editionsResult, sourcesResult] = await Promise.all([
+      client.from("competitions").select("*").order("updated_at", { ascending: false }),
+      client.from("competition_editions").select("*").order("updated_at", { ascending: false }),
+      client.from("competition_sources").select("*").order("last_synced_at", { ascending: false }),
+    ]);
+    const optionalResults = [competitionsResult, editionsResult, sourcesResult];
+    const isMissingOptionalSchema = (error) => ["42P01", "PGRST205"].includes(error?.code);
+    const optionalFailure = optionalResults.find((result) => result.error && !isMissingOptionalSchema(result.error))?.error;
     setState({
       loading: false,
       agenda: agendaResult.data || [],
@@ -538,7 +553,11 @@ function useFc27Workspace(client, profile) {
       players: playersResult.data || [],
       aliases: aliasesResult.data || [],
       matches: matchesResult.data || [],
-      error: "",
+      competitions: competitionsResult.data || [],
+      competitionEditions: editionsResult.data || [],
+      competitionSources: sourcesResult.data || [],
+      schemaPending: optionalResults.some((result) => isMissingOptionalSchema(result.error)),
+      error: optionalFailure?.message || "",
     });
   };
   useEffect(() => {
@@ -551,6 +570,9 @@ function useFc27Workspace(client, profile) {
       .on("postgres_changes", { event: "*", schema: "public", table: "club_players" }, refresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "club_player_aliases" }, refresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "club_matches" }, refresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "competitions" }, refresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "competition_editions" }, refresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "competition_sources" }, refresh)
       .subscribe();
     return () => {
       client.removeChannel(channel);
@@ -576,17 +598,23 @@ function useFc27Workspace(client, profile) {
     if (error) throw error;
     return data.id;
   };
-  const agendaPayload = async (item, extra = {}) => ({
-    opponent_name: item.opponent.trim(),
-    opponent_logo_id: await resolveLogo(item.opponent, item.logoFile),
-    competition_name: item.competition || "AMISTOSO",
-    scheduled_at: toLocalDateTime(item.date, item.time),
-    status: item.cancelled ? "cancelled" : item.status === "EM BREVE" ? "live" : "scheduled",
-    source: "manual",
-    lineup: item.lineup || [],
-    updated_by: profile.user_id,
-    ...extra,
-  });
+  const agendaPayload = async (item, extra = {}) => {
+    const competition = state.competitions.find((entry) => normalizeTeamName(entry.name) === normalizeTeamName(item.competition));
+    const edition = state.competitionEditions.find((entry) => entry.competition_id === competition?.id && entry.status === "active");
+    return {
+      opponent_name: item.opponent.trim(),
+      opponent_logo_id: await resolveLogo(item.opponent, item.logoFile),
+      competition_name: item.competition || "AMISTOSO",
+      competition_id: competition?.id || null,
+      competition_edition_id: edition?.id || null,
+      scheduled_at: toLocalDateTime(item.date, item.time),
+      status: item.cancelled ? "cancelled" : item.status === "EM BREVE" ? "live" : "scheduled",
+      source: "manual",
+      lineup: item.lineup || [],
+      updated_by: profile.user_id,
+      ...extra,
+    };
+  };
   const saveAgenda = async (payload, mode, existing) => {
     const entries = Array.isArray(payload) ? payload : [payload];
     if (existing) {
@@ -618,7 +646,7 @@ function useFc27Workspace(client, profile) {
     if (error) throw error;
     await refresh();
   };
-  const upsertClubMatch = async (match, source = "manual") => {
+  const upsertClubMatch = async (match, source = "manual", shouldRefresh = true) => {
     const existing = match.dbId
       ? state.matches.find((item) => item.id === match.dbId)
       : state.matches.find((item) => item.external_match_id && item.external_match_id === String(match.id));
@@ -634,6 +662,8 @@ function useFc27Workspace(client, profile) {
       agenda_match_id: match.agendaId || null,
       raw_ea: match.raw || {},
       performance: match.performance || {},
+      competition_id: match.competitionId || null,
+      competition_edition_id: match.competitionEditionId || null,
       updated_by: profile.user_id,
     };
     const result = existing
@@ -647,17 +677,17 @@ function useFc27Workspace(client, profile) {
         .eq("id", match.agendaId);
       if (agendaError) throw agendaError;
     }
-    await refresh();
+    if (shouldRefresh) await refresh();
     return result.data;
   };
-  const savePlayerAliases = async (aliases) => {
+  const savePlayerAliases = async (aliases, shouldRefresh = true) => {
     const rows = aliases
       .filter((item) => item.eaName && item.playerId)
       .map((item) => ({ ea_name: item.eaName.trim(), player_id: item.playerId, created_by: profile.user_id, updated_by: profile.user_id }));
     if (!rows.length) return;
     const { error } = await client.from("club_player_aliases").upsert(rows, { onConflict: "normalized_name" });
     if (error) throw error;
-    await refresh();
+    if (shouldRefresh) await refresh();
   };
   const removeClubMatch = async (id) => {
     const { error } = await client.from("club_matches").delete().eq("id", id);
@@ -677,6 +707,7 @@ function useFc27Workspace(client, profile) {
       avatar_path: avatarPath,
       positions: player.positions || [],
       member_type: player.member_type || "complete",
+      shirt_number: player.shirt_number === "" || player.shirt_number === undefined ? null : Number(player.shirt_number),
       trial_expires_at: player.trial_expires_at || null,
       is_active: player.is_active !== false,
       updated_by: profile.user_id,
@@ -702,6 +733,10 @@ function useFc27Workspace(client, profile) {
     upsertClubMatch,
     removeClubMatch,
     savePlayerAliases,
+    upsertClubMatches: async (matches, source = "ea_api") => {
+      await Promise.all(matches.map((match) => upsertClubMatch(match, match.importSource || source, false)));
+      await refresh();
+    },
     savePlayer,
     removePlayer,
   };
@@ -1825,11 +1860,12 @@ function SquadPageV2({ workspace, profile }) {
 
 function SquadPageV3({ workspace, profile }) {
   const canManage = ["diretoria", "dev"].includes(profile?.access_tier);
-  const emptyDraft = { display_name: "", positions: [], member_type: "elenco", trial_expires_at: "" };
+  const emptyDraft = { display_name: "", positions: [], member_type: "elenco", shirt_number: "", trial_expires_at: "" };
   const [editing, setEditing] = useState(null);
   const [draft, setDraft] = useState(emptyDraft);
   const [photo, setPhoto] = useState(null);
   const [error, setError] = useState("");
+  const [actionMenu, setActionMenu] = useState("");
   const positions = ["GOL", "ZAG", "ALA", "VOL", "MC", "MEI", "ATA"];
   const previewUrl = useMemo(() => photo ? URL.createObjectURL(photo) : "", [photo]);
   const currentAvatar = previewUrl || (editing?.avatar_path ? workspace.assetUrl(editing.avatar_path) : "");
@@ -1854,6 +1890,7 @@ function SquadPageV3({ workspace, profile }) {
       display_name: player.display_name || "",
       positions: player.positions || [],
       member_type: player.member_type || "elenco",
+      shirt_number: player.shirt_number ?? "",
       trial_expires_at: player.trial_expires_at ? String(player.trial_expires_at).slice(0, 10) : "",
     });
     setPhoto(null);
@@ -1890,6 +1927,13 @@ function SquadPageV3({ workspace, profile }) {
     ["attackers", "ATACANTES", "ATA"],
   ];
   const activePlayers = workspace.players.filter((player) => player.is_active);
+  const gamesForPlayer = (player) => {
+    const names = new Set([
+      normalizeTeamName(player.display_name),
+      ...workspace.aliases.filter((alias) => alias.player_id === player.id).map((alias) => normalizeTeamName(alias.ea_name)),
+    ]);
+    return workspace.matches.filter((match) => currentMatchPerformance(match).players?.some((row) => names.has(normalizeTeamName(row.eaName || row.name)))).length;
+  };
 
   return (
     <section className="data-page page-enter squad-page-v3">
@@ -1903,11 +1947,12 @@ function SquadPageV3({ workspace, profile }) {
         return (
           <section className="squad-sector" key={id}>
             <header><div><span>{title}</span><small>{description}</small></div><b>{players.length}</b></header>
-            {players.length ? <div className="squad-list">{players.map((player) => <article key={player.id}>
+            {players.length ? <div className="squad-list squad-compact-list">{players.map((player) => <article className="squad-player-card" key={player.id}>
               <Avatar name={player.display_name} logo={player.avatar_path ? workspace.assetUrl(player.avatar_path) : ""} />
-              <div><b>{player.display_name}</b><small>{player.positions?.join(" · ") || "Posição não definida"}</small></div>
+              <div className="squad-card-identity"><b>{player.display_name}</b><small>{player.positions?.join(" · ") || "Posição não definida"}</small><span>{gamesForPlayer(player)} jogo(s)</span></div>
+              <strong className="squad-shirt-number">{player.shirt_number === null || player.shirt_number === undefined ? "—" : `#${String(player.shirt_number).padStart(2, "0")}`}</strong>
               <em className={`member-tag ${player.member_type || "elenco"}`}>{player.member_type === "teste" ? `TESTE${player.trial_expires_at ? ` · até ${datePart(player.trial_expires_at)}` : ""}` : player.member_type === "complete" ? "COMPLETE" : "ELENCO"}</em>
-              {canManage && <div className="squad-row-actions"><button className="icon-button" aria-label={`Editar ${player.display_name}`} onClick={() => openEdit(player)}><Icon name="edit" size={16} /></button><button className="icon-button danger" aria-label={`Remover ${player.display_name}`} onClick={() => void workspace.removePlayer(player.id).catch((removeError) => setError(removeError.message))}><Icon name="trash" size={16} /></button></div>}
+              {canManage && <div className="squad-context"><button className="squad-more" aria-label={`Ações de ${player.display_name}`} aria-expanded={actionMenu === player.id} onClick={() => setActionMenu((current) => current === player.id ? "" : player.id)}>•••</button>{actionMenu === player.id && <div className="squad-context-menu"><button onClick={() => { setActionMenu(""); openEdit(player); }}><Icon name="edit" size={14} />Editar</button><button className="danger" onClick={() => { setActionMenu(""); void workspace.removePlayer(player.id).catch((removeError) => setError(removeError.message)); }}><Icon name="trash" size={14} />Remover</button></div>}</div>}
             </article>)}</div> : <p className="squad-sector-empty">Nenhum jogador nesta faixa.</p>}
           </section>
         );
@@ -1916,6 +1961,7 @@ function SquadPageV3({ workspace, profile }) {
         <header><div><span>ELENCO · {editing?.id ? "EDITAR PERFIL" : "NOVO PERFIL"}</span><h2>{editing?.id ? "Editar jogador" : "Adicionar jogador"}</h2><p>O preview acompanha a ficha antes de entrar no elenco.</p></div><button type="button" className="icon-button" onClick={close} aria-label="Fechar"><Icon name="close" /></button></header>
         <div className="squad-editor"><section className="manual-form-grid">
           <label className="manual-full">NOME DE EXIBIÇÃO<input autoFocus value={draft.display_name} onChange={(event) => setDraft((current) => ({ ...current, display_name: event.target.value }))} placeholder="Como aparece no time" /></label>
+          <label>NÚMERO<input type="number" min="0" max="99" value={draft.shirt_number} onChange={(event) => setDraft((current) => ({ ...current, shirt_number: event.target.value }))} placeholder="10" /></label>
           <label className="manual-full logo-drop">FOTO DO JOGADOR<input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => setPhoto(event.target.files?.[0] || null)} /><span><Icon name="upload" size={17} />{photo ? photo.name : editing?.avatar_path ? "Trocar foto do computador" : "Enviar foto do computador"}</span></label>
           <fieldset className="position-picker manual-full"><legend>POSIÇÕES EM QUE JOGA</legend>{positions.map((position) => <button type="button" className={draft.positions.includes(position) ? "selected" : ""} key={position} onClick={() => togglePosition(position)}>{position}</button>)}</fieldset>
           <fieldset className="member-picker member-picker-three manual-full"><legend>VÍNCULO COM O TIME</legend>
@@ -1948,7 +1994,7 @@ function StatisticsPage({ workspace }) {
 
 function DataPage({ id, workspace, profile, client }) {
   if (id === "estatisticas") return <StatisticsPage workspace={workspace}/>;
-  if (id === "midia") return <GameDayEditor profile={profile} client={client}/>;
+  if (id === "midia") return <GameDayEditor profile={profile} client={client} workspace={workspace}/>;
   const matches = workspace.matches;
   const agenda = workspace.agenda;
   const completed = matches.length;
@@ -2499,9 +2545,11 @@ function App() {
         ) : active === "agenda" ? (
           <AgendaLive navigate={navigate} workspace={workspace} />
         ) : active === "partidas" ? (
-          <PartidasLiveV2 profile={auth.profile} workspace={workspace} />
+          <MatchesPage profile={auth.profile} workspace={workspace} client={auth.client} />
         ) : active === "elenco" ? (
           <SquadPageV3 workspace={workspace} profile={auth.profile} />
+        ) : active === "campeonatos" ? (
+          <CompetitionsPage profile={auth.profile} workspace={workspace} client={auth.client} />
         ) : (
           <DataPage id={active} workspace={workspace} profile={auth.profile} client={auth.client} />
         )}

@@ -36,4 +36,21 @@ pnpm install
 pnpm dev
 pnpm build
 pnpm check
+pnpm test
 ```
+
+## Módulos FC27
+
+- Partidas: importação EA progressiva, revisão, Agenda, aliases e edição manual em `src/features/matches`.
+- Competições: providers CCB/LB, classificação, mata-mata, cenários e histórico em `src/features/competitions`, `shared/competition-providers.js` e `functions/api/competitions`.
+- Game Day: editor existente integrado à Agenda, adversário e campeonato em `src/gameday`.
+- Persistência nova: migration aditiva `20260808014500_fc27_gameday_competitions_and_history.sql`.
+
+Os testes de integração reais dos providers são opt-in para não depender da internet na suíte comum:
+
+```powershell
+$env:RUN_LIVE_PROVIDER_TESTS='1'
+node --test tests/providers-live.test.js
+```
+
+`visual-test.html` é um fixture local de QA do Vite e não faz parte do entrypoint de produção.
