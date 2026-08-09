@@ -166,8 +166,8 @@ function rankAgendaCandidates(match, agenda = []) {
   const matchTime = new Date(match.date).getTime();
   const canonicalOpponent = normalizeClubName(match.opponent);
   const opponentTokens = clubTokens(match.opponent);
-  if (canonicalOpponent.length < 3) return null;
-  const candidates = agenda
+  if (canonicalOpponent.length < 3) return [];
+  const candidates = (Array.isArray(agenda) ? agenda : [])
     .filter((entry) => !["cancelled", "completed"].includes(entry.status))
     .map((entry) => {
       const agendaTime = new Date(entry.scheduled_at).getTime();
@@ -202,7 +202,7 @@ function rankAgendaCandidates(match, agenda = []) {
 }
 
 export function suggestAgendaCandidate(match, agenda = []) {
-  const candidates = rankAgendaCandidates(match, agenda);
+  const candidates = rankAgendaCandidates(match, agenda) || [];
   const relevant = candidates.filter((candidate) => ["strong", "probable"].includes(candidate.confidence));
   const best = candidates[0] || null;
   return best ? { ...best, autoLink: relevant.length === 1 && relevant[0] === best } : null;
@@ -214,10 +214,10 @@ export function suggestAgendaMatch(match, agenda = []) {
 
 export function suggestAgendaMatches(matches = [], agenda = []) {
   const reserved = new Set();
-  return [...matches]
+  return [...(Array.isArray(matches) ? matches : [])]
     .sort((left, right) => new Date(left.date) - new Date(right.date))
     .reduce((suggestions, match) => {
-      const suggestion = suggestAgendaCandidate(match, agenda.filter((entry) => !reserved.has(entry.id)));
+      const suggestion = suggestAgendaCandidate(match, (Array.isArray(agenda) ? agenda : []).filter((entry) => !reserved.has(entry.id)));
       if (suggestion?.autoLink) reserved.add(suggestion.entry.id);
       suggestions.set(match.id, suggestion ? { ...suggestion.entry, suggestion } : null);
       return suggestions;
@@ -225,14 +225,14 @@ export function suggestAgendaMatches(matches = [], agenda = []) {
 }
 
 export function aliasLookup(aliases = []) {
-  return new Map(aliases.map((alias) => [normalizeName(alias.ea_name), alias.player_id]));
+  return new Map((Array.isArray(aliases) ? aliases : []).map((alias) => [normalizeName(alias.ea_name), alias.player_id]));
 }
 
-export function resolvePlayerAliases(matches, players, aliases) {
+export function resolvePlayerAliases(matches = [], players = [], aliases = []) {
   const remembered = aliasLookup(aliases);
-  const activePlayers = players.filter((player) => player.is_active);
+  const activePlayers = (Array.isArray(players) ? players : []).filter((player) => player?.is_active);
   const result = {};
-  for (const match of matches) {
+  for (const match of Array.isArray(matches) ? matches : []) {
     for (const player of match.performance?.players || []) {
       const key = normalizeName(player.eaName);
       if (!key || key in result) continue;
@@ -246,7 +246,7 @@ export function resolvePlayerAliases(matches, players, aliases) {
 
 export function validateImport(matches, aliasSelections = {}) {
   const pending = [];
-  for (const match of matches) {
+  for (const match of Array.isArray(matches) ? matches : []) {
     if (!String(match.competition || "").trim()) pending.push({ matchId: match.id, type: "competition" });
     for (const player of match.performance?.players || []) {
       const key = normalizeName(player.eaName);
@@ -257,6 +257,6 @@ export function validateImport(matches, aliasSelections = {}) {
 }
 
 export function dedupeImportedMatches(matches, existing = []) {
-  const ids = new Set(existing.map((match) => String(match.external_match_id || "")).filter(Boolean));
-  return matches.filter((match) => !ids.has(String(match.id)));
+  const ids = new Set((Array.isArray(existing) ? existing : []).map((match) => String(match?.external_match_id || "")).filter(Boolean));
+  return (Array.isArray(matches) ? matches : []).filter((match) => match && !ids.has(String(match.id)));
 }

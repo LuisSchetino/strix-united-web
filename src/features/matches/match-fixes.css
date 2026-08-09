@@ -99,3 +99,4 @@
   .match-mobile-card>header button:active{transform:scale(.96)}
   .match-swipe-hint{color:#4e7087;font-size:7px;font-weight:900;letter-spacing:.12em}
 }
+.matches-source-empty{display:grid;gap:4px;padding:18px;border:1px dashed #285873;border-radius:14px;background:#071725;color:#829fb2;text-align:center}.matches-source-empty b{color:#69cfff;font-size:9px;letter-spacing:.12em}.matches-source-empty span{font-size:12px}.resolve-fields select,.alias-resolver select,.match-review-fields input{appearance:auto;background-clip:padding-box;border-radius:10px;box-shadow:inset 0 1px #ffffff08}.resolve-list>article>header{border-radius:16px 16px 0 0}.match-player-performance>header{border-radius:13px 13px 0 0}.import-stage>header:first-child{border-radius:21px 21px 0 0}.import-stage>footer:last-child{border-radius:0 0 21px 21px}

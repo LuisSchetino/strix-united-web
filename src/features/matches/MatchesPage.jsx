@@ -21,6 +21,7 @@ import "./match-fixes.css";
 
 const canManageMatches = (profile) =>
   ["diretoria", "dev"].includes(profile?.access_tier);
+const safeRows = (value) => Array.isArray(value) ? value : [];
 const formatDate = (value) =>
   new Intl.DateTimeFormat("pt-BR", {
     dateStyle: "short",
@@ -708,6 +709,7 @@ function MobileMatchCard({ match, opponentLogo, result, canManage, detail, edit,
 }
 
 function MatchHistory({ workspace, canManage, detail, edit, remove }) {
+  const matches = safeRows(workspace.matches);
   return (
     <section className="matches-list matches-history progressive-history">
       <header>
@@ -717,8 +719,8 @@ function MatchHistory({ workspace, canManage, detail, edit, remove }) {
         <span>COMPETIÇÃO</span>
         <span>GESTÃO</span>
       </header>
-      {workspace.matches.length ? (
-        workspace.matches.map((match) => {
+      {matches.length ? (
+        matches.map((match) => {
           const result =
             Number(match.strix_score) > Number(match.opponent_score)
               ? "VITÓRIA"
@@ -786,15 +788,16 @@ export function MatchesPage({ profile, workspace, client }) {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [metrics, setMetrics] = useState(null);
-  const chosen = found.filter((match) => selected.has(match.id));
+  const [emptySource, setEmptySource] = useState("");
+  const chosen = safeRows(found).filter((match) => selected.has(match.id));
   const competitionOptions = useMemo(
     () =>
-      workspace.competitions
+      safeRows(workspace.competitions)
         .filter((item) => item.is_active)
         .map((item) => ({
           ...item,
           editionId:
-            workspace.competitionEditions.find(
+            safeRows(workspace.competitionEditions).find(
               (edition) =>
                 edition.competition_id === item.id &&
                 edition.status === "active",
@@ -809,6 +812,7 @@ export function MatchesPage({ profile, workspace, client }) {
     setLoadingSource(source);
     setError("");
     setSuccess("");
+    setEmptySource("");
     setMetrics({ feedbackMs: null, totalMs: null, requests: 1 });
     requestAnimationFrame(() =>
       setMetrics((current) => ({
@@ -836,16 +840,19 @@ export function MatchesPage({ profile, workspace, client }) {
         throw new Error(
           payload.message || payload.error || "A fonte não retornou partidas.",
         );
+      const providerMatches = Array.isArray(payload)
+        ? payload
+        : safeRows(payload?.matches ?? payload?.data?.matches);
       const normalizedBase = dedupeImportedMatches(
-        (payload.matches || []).map((item, index) => ({
+        providerMatches.filter((item) => item && typeof item === "object").map((item, index) => ({
           ...normalizeEaMatch(item, index),
           importSource: source === "computer" ? "local_bridge" : "ea_api",
         })),
-        workspace.matches,
+        safeRows(workspace.matches),
       );
       const agendaSuggestions = suggestAgendaMatches(
         normalizedBase,
-        workspace.agenda,
+        safeRows(workspace.agenda),
       );
       const normalized = normalizedBase.map((match) => {
         const suggestion = agendaSuggestions.get(match.id);
@@ -860,12 +867,19 @@ export function MatchesPage({ profile, workspace, client }) {
           suggestionAutoLink: Boolean(suggestion?.suggestion?.autoLink),
         };
       });
-      if (!normalized.length)
-        throw new Error("Nenhuma partida nova foi encontrada para importar.");
+      if (!normalized.length) {
+        setFound([]);
+        setSelected(new Set());
+        setAliases({});
+        setEmptySource(providerMatches.length
+          ? "As partidas retornadas já estão no histórico. Nenhuma importação pendente."
+          : "A ponte respondeu normalmente, mas não há partidas disponíveis neste momento.");
+        return;
+      }
       setFound(normalized);
       setSelected(new Set(normalized.map((match) => match.id)));
       setAliases(
-        resolvePlayerAliases(normalized, workspace.players, workspace.aliases),
+        resolvePlayerAliases(normalized, safeRows(workspace.players), safeRows(workspace.aliases)),
       );
       setStep("review");
       setMetrics((current) => ({
@@ -1021,6 +1035,7 @@ export function MatchesPage({ profile, workspace, client }) {
           {success}
         </p>
       )}
+      {emptySource && <div className="matches-source-empty" role="status"><b>NENHUMA PARTIDA NOVA</b><span>{emptySource}</span></div>}
       {found.length > 0 && step === "review" && (
         <ReviewStep
           matches={found}
@@ -1041,11 +1056,11 @@ export function MatchesPage({ profile, workspace, client }) {
       {found.length > 0 && step === "resolve" && (
         <ResolveStep
           matches={chosen}
-          agenda={workspace.agenda.filter(
+          agenda={safeRows(workspace.agenda).filter(
             (entry) => !["cancelled", "completed"].includes(entry.status),
           )}
           competitions={competitionOptions}
-          players={workspace.players}
+          players={safeRows(workspace.players)}
           aliases={aliases}
           patchMatch={patchMatch}
           patchAlias={(key, value) =>
@@ -1058,9 +1073,9 @@ export function MatchesPage({ profile, workspace, client }) {
       {found.length > 0 && step === "summary" && (
         <SummaryStep
           matches={chosen}
-          agenda={workspace.agenda}
+          agenda={safeRows(workspace.agenda)}
           aliases={aliases}
-          players={workspace.players}
+          players={safeRows(workspace.players)}
           validation={validation}
           back={() => setStep("resolve")}
           confirm={() => void confirm()}

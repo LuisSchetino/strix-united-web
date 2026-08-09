@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { MatchDisplay } from "../../ui/MatchDisplay.jsx";
 import {
   AnimatedNumber,
@@ -10,11 +11,13 @@ import {
 import { normalizeName } from "../matches/import-core.js";
 import {
   aggregateCompetitionHistory,
+  campaignState,
   detectParticipationEnd,
 } from "./history-core.js";
 import { calculateQualificationScenarios } from "./scenario-engine.js";
 import {
   archiveCompetitionEdition,
+  deleteCompetitionEdition,
   saveCompetitionPreview,
 } from "./competition-storage.js";
 import {
@@ -102,8 +105,8 @@ function ImportCompetitionModal({ client, profile, workspace, close }) {
   const relatedKnockout = preview?.relatedPreviews?.find(
     (item) => item.sourceKind === "knockout",
   );
-  return (
-    <div className="competition-modal-layer">
+  return createPortal((
+    <div className="competition-modal-layer" onMouseDown={(event) => event.target === event.currentTarget && close()}>
       <section
         className="competition-import-modal"
         role="dialog"
@@ -216,7 +219,7 @@ function ImportCompetitionModal({ client, profile, workspace, close }) {
         )}
       </section>
     </div>
-  );
+  ), document.body);
 }
 
 function Standings({ groups, accent, slots, canEdit, onSlotsChange }) {
@@ -744,6 +747,9 @@ function HistoryPanel({ editions }) {
                 <dd>{group.goalDifference}</dd>
               </div>
             </dl>
+            <div className="history-evolution" aria-label={`Evolução em ${group.name}`}>
+              {group.editions.map((edition) => <div className={campaignState(edition)} key={edition.id} title={edition.outcome || edition.final_stage || "Participação encerrada"}><i style={{ height: `${Math.max(16, edition.campaignLevel)}%` }}/><span>{edition.label}</span><small>{edition.outcome || edition.final_stage || "Encerrada"}</small></div>)}
+            </div>
           </article>
         ))
       ) : (
@@ -959,8 +965,8 @@ function CompetitionExplorer({
         />
         </div>
       )}
-      {archiveOpen && (
-        <div className="competition-modal-layer">
+      {archiveOpen && createPortal((
+        <div className="competition-modal-layer" onMouseDown={(event) => event.target === event.currentTarget && setArchiveOpen(false)}>
           <section className="archive-preview">
             <span>PREVIEW DO HISTÓRICO</span>
             <h2>
@@ -975,7 +981,7 @@ function CompetitionExplorer({
             </label>
             <p>Jogos, classificação e fontes permanecem vinculados.</p>
             <footer>
-              <button onClick={() => setArchiveOpen(false)}>CANCELAR</button>
+              <button type="button" className="secondary archive-cancel" onClick={() => setArchiveOpen(false)}>CANCELAR</button>
               <button
                 className="primary"
                 onClick={async () => {
@@ -1001,7 +1007,7 @@ function CompetitionExplorer({
             </footer>
           </section>
         </div>
-      )}
+      ), document.body)}
     </section>
   );
 }
@@ -1010,6 +1016,8 @@ export function CompetitionsPage({ profile, workspace, client }) {
   const [viewMode, setViewMode] = useState("active");
   const [selectedEditionId, setSelectedEditionId] = useState("");
   const [modal, setModal] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState(null);
+  const [deleteError, setDeleteError] = useState("");
   const available = useMemo(
     () =>
       workspace.competitionEditions
@@ -1081,13 +1089,8 @@ export function CompetitionsPage({ profile, workspace, client }) {
             aria-label="Selecionar competição"
           >
             {available.map(({ competition, edition }) => (
-              <button
-                key={edition.id}
-                className={selected?.edition.id === edition.id ? "active" : ""}
-                aria-pressed={selected?.edition.id === edition.id}
-                onClick={() => setSelectedEditionId(edition.id)}
-                style={{ "--competition-accent": competition.accent_color }}
-              >
+              <div className="competition-selector-item" key={edition.id} style={{ "--competition-accent": competition.accent_color }}>
+              <button className={selected?.edition.id === edition.id ? "active" : ""} aria-pressed={selected?.edition.id === edition.id} onClick={() => setSelectedEditionId(edition.id)}>
                 {competition.logo_url ? (
                   <img src={competition.logo_url} alt="" />
                 ) : (
@@ -1098,6 +1101,8 @@ export function CompetitionsPage({ profile, workspace, client }) {
                   <small>{edition.label}</small>
                 </div>
               </button>
+              {canDevelop(profile) && <button type="button" className="competition-delete-trigger" aria-label={`Excluir ${competition.name} · ${edition.label}`} title="Excluir competição" onClick={() => { setDeleteError(""); setPendingDelete({ competition, edition }); }}>⌫</button>}
+              </div>
             ))}
           </div>
           {selected && (
@@ -1126,6 +1131,7 @@ export function CompetitionsPage({ profile, workspace, client }) {
           close={() => setModal(false)}
         />
       )}
+      {pendingDelete && createPortal(<div className="competition-modal-layer" onMouseDown={(event) => event.target === event.currentTarget && setPendingDelete(null)}><section className="competition-delete-dialog" role="alertdialog" aria-modal="true"><span>EXCLUSÃO DEFINITIVA</span><h2>Excluir {pendingDelete.competition.name}?</h2><p>A edição <b>{pendingDelete.edition.label}</b> e os dados do provider serão removidos. Partidas e Agenda permanecem, apenas sem o vínculo da competição.</p>{deleteError && <p className="competition-error">{deleteError}</p>}<footer><button type="button" className="secondary" onClick={() => setPendingDelete(null)}>CANCELAR</button><button type="button" className="competition-danger" onClick={async () => { try { await deleteCompetitionEdition(client, profile, pendingDelete.edition); await workspace.refresh(); notify(`${pendingDelete.competition.name} excluída.`); setPendingDelete(null); } catch (cause) { setDeleteError(cause.message); } }}>EXCLUIR COMPETIÇÃO</button></footer></section></div>, document.body)}
     </section>
   );
 }

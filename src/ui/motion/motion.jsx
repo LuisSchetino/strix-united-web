@@ -141,9 +141,10 @@ export function ToastViewport() {
           onClick={() => dismiss(toast.id)}
           key={toast.id}
         >
-          <span aria-hidden="true">{toast.tone === "error" ? "!" : "✓"}</span>
-          <b>{toast.message}</b>
-          <small>DISPENSAR</small>
+          <span aria-hidden="true">{toast.tone === "error" ? "!" : toast.tone === "warning" ? "i" : "✓"}</span>
+          <div><small>{toast.tone === "error" ? "ALGO DEU ERRADO" : toast.tone === "warning" ? "ATENÇÃO" : "TUDO CERTO"}</small><b>{toast.message}</b></div>
+          <em aria-hidden="true">×</em>
+          <i aria-hidden="true" />
         </button>
       ))}
     </div>

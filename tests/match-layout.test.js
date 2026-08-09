@@ -12,7 +12,8 @@ test("escudos do histórico ficam dentro de um container com limites rígidos", 
   ]);
   assert.match(component, /function MatchScoreline/);
   assert.match(component, /<MatchDisplay/);
-  assert.match(matchDisplay, /className=\{`match-display-mark \$\{className\}`\.trim\(\)\}/);
+  assert.match(matchDisplay, /match-display-mark.*has-image.*is-fallback.*is-framed/s);
+  assert.match(matchDisplayCss, /has-image:not\(\.is-framed\).*background:transparent/s);
   assert.match(matchDisplay, /onError=\{\(\) => setFailed\(true\)\}/);
   assert.match(matchDisplayCss, /\.match-display-mark\{[^}]*max-width:34px[^}]*max-height:34px[^}]*overflow:hidden/s);
   assert.match(matchDisplayCss, /\.match-display-mark img\{[^}]*width:100%[^}]*height:100%[^}]*object-fit:contain/s);

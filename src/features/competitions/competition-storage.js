@@ -174,3 +174,16 @@ export async function archiveCompetitionEdition(client, profile, edition, outcom
   ensure(await client.from("competition_audit_log").insert({ competition_id: edition.competition_id, edition_id: edition.id, actor_user_id: profile.user_id, action: "competition_archived", result: { outcome } }));
   return updated;
 }
+
+export async function deleteCompetitionEdition(client, profile, edition) {
+  ensure(await client.from("competition_audit_log").insert({
+    competition_id: edition.competition_id,
+    edition_id: edition.id,
+    actor_user_id: profile.user_id,
+    action: "competition_deleted",
+    result: { label: edition.label, status: edition.status },
+  }));
+  ensure(await client.from("competition_editions").delete().eq("id", edition.id));
+  const remaining = ensure(await client.from("competition_editions").select("id", { count: "exact" }).eq("competition_id", edition.competition_id));
+  if (!remaining?.length) ensure(await client.from("competitions").delete().eq("id", edition.competition_id));
+}

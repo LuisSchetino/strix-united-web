@@ -12,6 +12,8 @@ import "./gameday/gameday-controls.css";
 import "./visual-test.css";
 import { MatchesPage } from "./features/matches/MatchesPage.jsx";
 import { CompetitionsPage } from "./features/competitions/CompetitionsPage.jsx";
+import { LibraryPage } from "./features/library/LibraryPage.jsx";
+import { DeveloperPage } from "./features/developer/DeveloperPage.jsx";
 import { GameDayCanvas } from "./gameday/GameDayCanvas.jsx";
 import { GameDayEditor } from "./gameday/GameDayEditor.jsx";
 import { createDefaultProject } from "./gameday/defaults.js";
@@ -40,14 +42,27 @@ const workspace = {
   ].map(([home_team_name, away_team_name, external_match_id]) => ({ edition_id: "e1", external_match_id, round_label: "Quartas de final", scheduled_at: "2026-08-10T23:10:00-03:00", home_team_name, away_team_name, home_logo: "/assets/strix-logo.png", away_logo: "/assets/strix-logo.png", status: "scheduled" })),
   assetUrl: (path) => path || "", refresh: async () => {}, savePlayerAliases: async () => {}, upsertClubMatches: async () => {}, upsertClubMatch: async () => {}, removeClubMatch: async () => {},
 };
-const emptyQuery = () => { const query = { select:()=>query, order:()=>query, update:()=>query, insert:()=>query, delete:()=>query, eq:()=>query, single:()=>query, then:(resolve)=>resolve({ data:[], error:null }) }; return query; };
-const client = { auth: { getSession: async () => ({ data: { session: { access_token: "visual" } } }) }, from:()=>emptyQuery(), storage:{ from:()=>({ getPublicUrl:(path)=>({ data:{ publicUrl:path } }) }) } };
+const libraryFixtures = [
+  { id: "l1", title: "Saída sob pressão", category: "jogada", description: "Referência curta para a construção do Strix.", source_type: "youtube", source_url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ", published_at: now, tags: ["saída", "pressão"] },
+  { id: "l2", title: "Review da rodada", category: "review", description: "Leitura coletiva dos principais momentos.", source_type: "drive", source_url: "https://drive.google.com/file/d/demo/view", published_at: now, tags: ["review"] },
+];
+const progressFixtures = [{ item_id: "l1", user_id: "visual", viewer_display_name: "Visual QA", progress_percent: 42, last_position_seconds: 134, last_accessed_at: now }];
+const emptyQuery = (data = []) => { const query = { select:()=>query, order:()=>query, update:()=>query, insert:()=>query, delete:()=>query, eq:()=>query, single:()=>query, maybeSingle:()=>query, then:(resolve)=>resolve({ data, error:null }) }; return query; };
+const client = {
+  auth: { getSession: async () => ({ data: { session: { access_token: "visual" } } }) },
+  from: (table) => emptyQuery(table === "library_items" ? libraryFixtures : table === "library_view_progress" ? progressFixtures : []),
+  channel: () => { const channel = { on: () => channel, subscribe: () => channel }; return channel; },
+  removeChannel: () => {},
+  storage: { from: () => ({ getPublicUrl: (path) => ({ data: { publicUrl: path } }) }) },
+};
 const page = new URLSearchParams(location.search).get("screen") || "competitions";
 let content;
 const TestIcon = () => <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M12 5v14" fill="none" stroke="currentColor" strokeWidth="2"/></svg>;
 if (page === "agenda-menu") content = <section className="data-page"><header className="data-page-header"><div><span>AGENDA DE PARTIDAS</span><h1>Próximos jogos.</h1></div></header><section className="agenda-list"><article className="agenda-game"><time>22H10</time><div className="agenda-match"><div className="avatar">PC</div><div><small>STRIX UNITED VS</small><b>POA CITY FC</b></div></div><span className="game-competition">COPA YESHUA</span><em className="soon">EM BREVE</em><button>•••</button><div className="agenda-actions"><button><TestIcon/>Editar partida</button><button><TestIcon/>Trocar adversário</button><button className="danger"><TestIcon/>Cancelar jogo</button><button className="danger delete"><TestIcon/>Excluir partida</button></div></article></section></section>;
 else if (page === "player-modal") content = <div className="match-manual-backdrop"><form className="match-manual-modal squad-modal-v2"><header><div><span>ELENCO · EDITAR PERFIL</span><h2>Editar jogador</h2><p>O preview acompanha a ficha antes de entrar no elenco.</p></div><button type="button" className="icon-button">×</button></header><div className="squad-editor"><section className="manual-form-grid"><label className="manual-full">NOME DE EXIBIÇÃO<input value="YGO" readOnly/></label><label>NÚMERO<input value="10" readOnly/></label><label className="manual-full logo-drop"><span>FOTO DO JOGADOR</span></label><fieldset className="position-picker manual-full"><legend>POSIÇÕES EM QUE JOGA</legend>{["GOL","ZAG","ALA","VOL","MC","MEI","ATA"].map((position)=><button type="button" className={position==="MC"?"selected":""} key={position}>{position}</button>)}</fieldset><fieldset className="member-picker member-picker-three manual-full"><legend>VÍNCULO COM O TIME</legend><button type="button" className="selected"><b>ELENCO</b><small>Jogador do elenco</small></button><button type="button"><b>TESTE</b><small>Em avaliação</small></button><button type="button"><b>COMPLETE</b><small>Fixo no time</small></button></fieldset></section><aside className="squad-preview"><span>PREVIEW DO ELENCO</span><div className="avatar">Y</div><small>MC</small><h3>YGO</h3><p>Jogador do elenco</p></aside></div><footer><button type="button" className="secondary">CANCELAR</button><button className="primary">SALVAR ALTERAÇÕES</button></footer></form></div>;
 else if (page === "matches") content = <MatchesPage profile={profile} workspace={workspace} client={client}/>;
+else if (page === "library") content = <LibraryPage profile={profile} client={client}/>;
+else if (page === "developer") content = <DeveloperPage profile={profile} workspace={{ ...workspace, competitionSyncLogs: [], competitionAuditLogs: [], systemFlags: [{ key: "site_maintenance", label: "Modo manutenção", description: "Pausa o acesso dos demais tiers.", enabled: false }] }} client={client}/>;
 else if (page === "gameday-editor") content = <GameDayEditor profile={profile} workspace={workspace} client={client}/>;
 else if (page === "gameday") {
   const project = createDefaultProject();

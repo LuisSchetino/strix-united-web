@@ -60,3 +60,10 @@ test("provider qualification slots take precedence over the manual fallback", ()
   ], [], { qualification_slots: 6 });
   assert.equal(view.qualificationSlots, 4);
 });
+
+test("edição histórica não mantém fixture futura como próximo jogo", () => {
+  const view = deriveCompetitionView([], [{ external_match_id: "future", status: "scheduled", home_team_name: "STRIX UNITED", away_team_name: "TIME A", scheduled_at: "2026-12-01T22:00:00Z" }], { status: "historical", outcome: "Campeão" });
+  assert.equal(view.upcoming.length, 0);
+  assert.equal(view.strixFixture, null);
+  assert.equal(view.currentStage, "Campeão");
+});

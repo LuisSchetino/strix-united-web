@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import "./match-display.css";
 
-export function TeamMark({ name, url, className = "" }) {
+export function TeamMark({ name, url, className = "", framed = false }) {
   const [failed, setFailed] = useState(false);
   useEffect(() => setFailed(false), [url]);
   const initials = String(name || "?")
@@ -11,7 +11,7 @@ export function TeamMark({ name, url, className = "" }) {
     .slice(0, 2)
     .join("");
   return (
-    <span className={`match-display-mark ${className}`.trim()} aria-hidden="true">
+    <span className={`match-display-mark${url && !failed ? " has-image" : " is-fallback"}${framed ? " is-framed" : ""} ${className}`.trim()} aria-hidden="true">
       {url && !failed ? <img src={url} alt="" onError={() => setFailed(true)} /> : <b>{initials}</b>}
     </span>
   );

@@ -102,3 +102,10 @@ test("competição vazia bloqueia e Amistoso é válido", () => {
   assert.equal(validateImport([match]).valid, false);
   assert.equal(validateImport([{ ...match, competition: "Amistoso" }]).valid, true);
 });
+
+test("payload parcial da ponte não lança erro com listas nulas", () => {
+  assert.doesNotThrow(() => suggestAgendaMatches(null, null));
+  assert.equal(suggestAgendaMatches(null, null).size, 0);
+  assert.deepEqual(resolvePlayerAliases(null, null, null), {});
+  assert.deepEqual(dedupeImportedMatches(null, null), []);
+});

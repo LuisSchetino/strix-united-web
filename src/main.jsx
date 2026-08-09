@@ -17,6 +17,9 @@ import "./fc27-fixes.css";
 import { GameDayEditor } from "./gameday/GameDayEditor.jsx";
 import { MatchesPage } from "./features/matches/MatchesPage.jsx";
 import { CompetitionsPage } from "./features/competitions/CompetitionsPage.jsx";
+import { LibraryPage } from "./features/library/LibraryPage.jsx";
+import { DeveloperPage } from "./features/developer/DeveloperPage.jsx";
+import { aggregatePlayerStatistics, aggregateTeamStatistics } from "./features/statistics/statistics-core.js";
 import { nextAgendaSlot } from "./features/agenda/agenda-slots.js";
 import { notify, RollingLabel, ToastViewport } from "./ui/motion/motion.jsx";
 import "./features/squad-cards.css";
@@ -339,14 +342,15 @@ function rememberLogo(name, logo) {
   catalog[normalizeTeamName(name)] = logo;
   localStorage.setItem(logoCatalogKey, JSON.stringify(catalog));
 }
-function Avatar({ name, logo }) {
+function Avatar({ name, logo, kind = "logo" }) {
   const resolvedLogo = logo || catalogLogo(name);
+  const safeName = String(name || "?");
   return (
-    <span className={`avatar ${resolvedLogo ? "has-logo" : ""}`}>
+    <span className={`avatar ${resolvedLogo ? "has-image" : "is-fallback"} is-${kind}`}>
       {resolvedLogo ? (
-        <img src={resolvedLogo} alt={`Logo ${name}`} />
+        <img src={resolvedLogo} alt={kind === "photo" ? `Foto de ${safeName}` : `Logo ${safeName}`} />
       ) : (
-        name
+        safeName
           .split(" ")
           .map((word) => word[0])
           .slice(0, 2)
@@ -518,6 +522,7 @@ function useFc27Workspace(client, profile) {
     competitionEditions: [],
     competitionSources: [],
     competitionFixtures: [],
+    systemFlags: [],
     schemaPending: false,
     error: "",
   });
@@ -541,13 +546,14 @@ function useFc27Workspace(client, profile) {
       }));
       return;
     }
-    const [competitionsResult, editionsResult, sourcesResult, fixturesResult] = await Promise.all([
+    const [competitionsResult, editionsResult, sourcesResult, fixturesResult, flagsResult] = await Promise.all([
       client.from("competitions").select("*").order("updated_at", { ascending: false }),
       client.from("competition_editions").select("*").order("updated_at", { ascending: false }),
       client.from("competition_sources").select("*").order("last_synced_at", { ascending: false }),
       client.from("competition_fixtures").select("*").order("scheduled_at", { ascending: true }),
+      client.from("system_flags").select("*").order("key"),
     ]);
-    const optionalResults = [competitionsResult, editionsResult, sourcesResult, fixturesResult];
+    const optionalResults = [competitionsResult, editionsResult, sourcesResult, fixturesResult, flagsResult];
     const isMissingOptionalSchema = (error) => ["42P01", "PGRST205"].includes(error?.code);
     const optionalFailure = optionalResults.find((result) => result.error && !isMissingOptionalSchema(result.error))?.error;
     setState({
@@ -561,6 +567,7 @@ function useFc27Workspace(client, profile) {
       competitionEditions: editionsResult.data || [],
       competitionSources: sourcesResult.data || [],
       competitionFixtures: fixturesResult.data || [],
+      systemFlags: flagsResult.data || [],
       schemaPending: optionalResults.some((result) => isMissingOptionalSchema(result.error)),
       error: optionalFailure?.message || "",
     });
@@ -579,6 +586,7 @@ function useFc27Workspace(client, profile) {
       .on("postgres_changes", { event: "*", schema: "public", table: "competition_editions" }, refresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "competition_sources" }, refresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "competition_fixtures" }, refresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "system_flags" }, refresh)
       .subscribe();
     return () => {
       client.removeChannel(channel);
@@ -867,7 +875,7 @@ function Sidebar({
         ))}
       </div>
       <div className="sidebar-user">
-        <Avatar name={profile.display_name} logo={profile.avatar_url} />
+        <Avatar name={profile.display_name} logo={profile.avatar_url} kind="photo" />
         <span>
           <b>{profile.display_name}</b>
           <small>{tierLabel(profile.access_tier)}</small>
@@ -2017,7 +2025,7 @@ function SquadPageV3({ workspace, profile }) {
           <section className="squad-sector" key={id}>
             <header><div><span>{title}</span><small>{description}</small></div><b>{players.length}</b></header>
             {players.length ? <div className="squad-list squad-compact-list">{players.map((player) => <article className="squad-player-card" key={player.id}>
-              <Avatar name={player.display_name} logo={player.avatar_path ? workspace.assetUrl(player.avatar_path) : ""} />
+              <Avatar name={player.display_name} logo={player.avatar_path ? workspace.assetUrl(player.avatar_path) : ""} kind="photo" />
               <div className="squad-card-identity"><b>{player.display_name}</b><small>{player.positions?.join(" · ") || "Posição não definida"}</small><span>{gamesForPlayer(player)} jogo(s)</span></div>
               <strong className="squad-shirt-number">{player.shirt_number === null || player.shirt_number === undefined ? "—" : `#${String(player.shirt_number).padStart(2, "0")}`}</strong>
               <em className={`member-tag ${player.member_type || "elenco"}`}>{player.member_type === "teste" ? `TESTE${player.trial_expires_at ? ` · até ${datePart(player.trial_expires_at)}` : ""}` : player.member_type === "complete" ? "COMPLETE" : "ELENCO"}</em>
@@ -2039,7 +2047,7 @@ function SquadPageV3({ workspace, profile }) {
             <button type="button" className={draft.member_type === "complete" ? "selected" : ""} onClick={() => setDraft((current) => ({ ...current, member_type: "complete", trial_expires_at: "" }))}><b>COMPLETE</b><small>Fixo no time</small></button>
           </fieldset>
           {draft.member_type === "teste" && <label className="manual-full">TESTE ATÉ<input type="date" value={draft.trial_expires_at} onChange={(event) => setDraft((current) => ({ ...current, trial_expires_at: event.target.value }))} /></label>}
-        </section><aside className="squad-preview"><span>PREVIEW DO ELENCO</span><Avatar name={draft.display_name || "?"} logo={currentAvatar} /><small>{draft.positions[0] || "POSIÇÃO"}</small><h3>{draft.display_name || "NOME DO JOGADOR"}</h3><p>{draft.member_type === "teste" ? "Jogador em teste" : draft.member_type === "complete" ? "Jogador completo" : "Jogador do elenco"}</p></aside></div>
+        </section><aside className="squad-preview"><span>PREVIEW DO ELENCO</span><Avatar name={draft.display_name || "?"} logo={currentAvatar} kind="photo" /><small>{draft.positions[0] || "POSIÇÃO"}</small><h3>{draft.display_name || "NOME DO JOGADOR"}</h3><p>{draft.member_type === "teste" ? "Jogador em teste" : draft.member_type === "complete" ? "Jogador completo" : "Jogador do elenco"}</p></aside></div>
         <footer><button type="button" className="secondary" onClick={close}>CANCELAR</button><button className="primary"><Icon name="upload" size={16} />{editing?.id ? "SALVAR ALTERAÇÕES" : "SALVAR JOGADOR"}</button></footer>
       </form></ViewportDialog>}
     </section>
@@ -2047,22 +2055,30 @@ function SquadPageV3({ workspace, profile }) {
 }
 function StatisticsPage({ workspace }) {
   const [tab, setTab] = useState("resumo");
-  const playerMap = workspace.matches.flatMap((match) => currentMatchPerformance(match).players || []).reduce((all, player) => {
-    const key = normalizeTeamName(player.eaName || player.name || player.id) || String(player.id || all.size);
-    const current = all.get(key) || { name: player.name || player.eaName || "Jogador EA", games: 0, goals: 0, assists: 0, passes: 0, passAttempts: 0, shots: 0, tackles: 0, saves: 0, ratingTotal: 0, ratings: 0 };
-    current.games += 1; current.goals += Number(player.goals || 0); current.assists += Number(player.assists || 0); current.passes += Number(player.passes || 0); current.passAttempts += Number(player.passAttempts || 0); current.shots += Number(player.shots || 0); current.tackles += Number(player.tackles || 0); current.saves += Number(player.saves || 0);
-    if (Number.isFinite(Number(player.rating))) { current.ratingTotal += Number(player.rating); current.ratings += 1; }
-    all.set(key, current); return all;
-  }, new Map());
-  const ranking = [...playerMap.values()].map((player) => ({ ...player, passRate: player.passAttempts ? Math.round((player.passes / player.passAttempts) * 100) : 0, averageRating: player.ratings ? (player.ratingTotal / player.ratings).toFixed(1) : "-" })).sort((a, b) => (b.goals + b.assists) - (a.goals + a.assists) || b.passes - a.passes);
+  const [sort, setSort] = useState("averageRating");
+  const matches = (workspace.matches || []).map((match) => ({ ...match, performance: currentMatchPerformance(match) }));
+  const team = aggregateTeamStatistics(matches, workspace.players || []);
+  const ranking = aggregatePlayerStatistics(matches).sort((left, right) => Number(right[sort] || 0) - Number(left[sort] || 0) || right.games - left.games);
   const best = (metric) => [...ranking].sort((a, b) => Number(b[metric] || 0) - Number(a[metric] || 0))[0];
-  const total = (metric) => ranking.reduce((sum, player) => sum + Number(player[metric] || 0), 0);
-  const passRate = total("passAttempts") ? `${Math.round((total("passes") / total("passAttempts")) * 100)}%` : "-";
-  return <section className="data-page page-enter"><header className="data-page-header"><div><span>ESTATÍSTICAS</span><h1>Leitura da temporada.</h1><p>Resumo rápido e detalhes importados da EA, sem dados inventados.</p></div></header><nav className="statistics-tabs" aria-label="Dados estatísticos">{[["resumo", "Resumo"], ["time", "Dados do time"], ["players", "Dados individuais"]].map(([id, label]) => <button type="button" key={id} className={tab === id ? "selected" : ""} onClick={() => setTab(id)}>{label}</button>)}</nav>{tab === "resumo" && <section className="ranking-grid">{[["goal", "MAIS GOLS", best("goals"), "goals"], ["squad", "MAIS ASSISTÊNCIAS", best("assists"), "assists"], ["pass", "MAIS PASSES CERTOS", best("passes"), "passes"], ["stats", "MELHOR % DE PASSES", best("passRate"), "passRate"]].map(([icon, label, player, metric]) => <article key={label}><Icon name={icon} size={18}/><small>{label}</small><b>{player?.name || "Sem dados"}</b><strong>{player ? `${player[metric]}${metric === "passRate" ? "%" : ""}` : "-"}</strong></article>)}</section>}{tab === "time" && <section className="statistics-table"><header><span>MÉTRICA</span><span>VALOR</span><span>LEITURA</span></header>{[["Passes certos", total("passes"), "soma da API"], ["Precisão de passes", passRate, "passes certos / tentados"], ["Chutes", total("shots"), "finalizações"], ["Desarmes", total("tackles"), "ações defensivas"], ["Defesas", total("saves"), "goleiros"]].map(([label, value, note]) => <article key={label}><b>{label}</b><strong>{value}</strong><small>{note}</small></article>)}</section>}{tab === "players" && <section className="statistics-table player-statistics"><header><span>JOGADOR</span><span>NOTA</span><span>G</span><span>A</span><span>PASSES</span><span>%</span><span>CHUTES</span><span>DESARMES</span><span>DEFESAS</span></header>{ranking.length ? ranking.map((player) => <article key={player.name}><b>{player.name}<small>{player.games} jogo(s)</small></b><span>{player.averageRating}</span><span>{player.goals}</span><span>{player.assists}</span><span>{player.passes}/{player.passAttempts || "-"}</span><span>{player.passRate || "-"}{player.passRate ? "%" : ""}</span><span>{player.shots}</span><span>{player.tackles}</span><span>{player.saves}</span></article>) : <p>Importe uma partida com dados individuais para montar os rankings.</p>}</section>}</section>;
+  const metricCards = [
+    ["PARTIDAS", team.games], ["CAMPANHA", `${team.wins}V · ${team.draws}E · ${team.losses}D`],
+    ["APROVEITAMENTO", `${team.efficiency}%`], ["SALDO", team.goalDifference > 0 ? `+${team.goalDifference}` : team.goalDifference],
+    ["MÉDIA GOLS PRÓ", team.averageGoalsFor], ["MÉDIA GOLS CONTRA", team.averageGoalsAgainst],
+    ["NOTA MÉDIA", team.averageRating || "—"], ["ELENCO ATIVO", team.activeSquad],
+  ];
+  const teamRows = [
+    ["Passes certos", team.passesMade, `${team.passesMade}/${team.passAttempts || "—"}`],
+    ["Precisão de passes", team.passAttempts ? `${team.passAccuracy}%` : "—", "certos / tentados"],
+    ["Chutes", team.shots, "finalizações registradas"], ["Desarmes", team.tackles, "ações defensivas"],
+    ["Defesas", team.saves, "goleiros"], ["Formação base", "3-1-4-2", "padrão atual do FC27"],
+  ];
+  return <section className="data-page page-enter statistics-page-v2"><header className="data-page-header"><div><span>ESTATÍSTICAS</span><h1>Leitura da temporada.</h1><p>Campanha e desempenho importados da EA, sem preencher lacunas com dados fictícios.</p></div></header><nav className="statistics-tabs" aria-label="Dados estatísticos">{[["resumo", "Resumo"], ["time", "Dados do time"], ["players", "Dados individuais"]].map(([id, label]) => <button type="button" key={id} className={tab === id ? "selected" : ""} onClick={() => setTab(id)}>{label}</button>)}</nav>{tab === "resumo" && <><section className="statistics-metric-grid">{metricCards.map(([label, value]) => <article key={label}><small>{label}</small><strong>{value}</strong></article>)}</section><section className="ranking-grid">{[["goal", "MAIS GOLS", best("goals"), "goals"], ["squad", "MAIS ASSISTÊNCIAS", best("assists"), "assists"], ["pass", "MAIS PASSES CERTOS", best("passesMade"), "passesMade"], ["stats", "MELHOR NOTA", best("averageRating"), "averageRating"]].map(([icon, label, player, metric]) => <article key={label}><Icon name={icon} size={18}/><small>{label}</small><b>{player?.name || "Sem dados"}</b><strong>{player?.[metric] ?? "—"}</strong></article>)}</section></>}{tab === "time" && <section className="statistics-table"><header><span>MÉTRICA</span><span>VALOR</span><span>LEITURA</span></header>{teamRows.map(([label, value, note]) => <article key={label}><b>{label}</b><strong>{value}</strong><small>{note}</small></article>)}</section>}{tab === "players" && <><div className="statistics-sort"><span>ORDENAR POR</span><select value={sort} onChange={(event) => setSort(event.target.value)}><option value="averageRating">Nota</option><option value="goalAssists">G + A</option><option value="goals">Gols</option><option value="assists">Assistências</option><option value="passesMade">Passes</option><option value="passAccuracy">Precisão</option><option value="tackles">Desarmes</option><option value="shots">Chutes</option></select></div><section className="statistics-table player-statistics"><header><span>JOGADOR</span><span>J</span><span>NOTA</span><span>G+A</span><span>PASSES</span><span>%</span><span>DESARMES</span><span>CHUTES</span><span>DEFESAS</span></header>{ranking.length ? ranking.map((player) => <article key={player.name}><b>{player.name}</b><span data-label="JOGOS">{player.games}</span><span data-label="NOTA">{player.averageRating ?? "—"}</span><span data-label="G+A">{player.goalAssists}</span><span data-label="PASSES">{player.passesMade}/{player.passAttempts || "—"}</span><span data-label="PRECISÃO">{player.passAttempts ? `${player.passAccuracy}%` : "—"}</span><span data-label="DESARMES">{player.tackles}{player.tackleAttempts ? `/${player.tackleAttempts}` : ""}</span><span data-label="CHUTES">{player.shots}</span><span data-label="DEFESAS">{player.saves}</span></article>) : <p>Importe uma partida com dados individuais para montar os rankings.</p>}</section></>}</section>;
 }
 
 function DataPage({ id, workspace, profile, client }) {
   if (id === "estatisticas") return <StatisticsPage workspace={workspace}/>;
+  if (id === "biblioteca") return <LibraryPage client={client} profile={profile}/>;
+  if (id === "desenvolvedor") return <DeveloperPage client={client} profile={profile} workspace={workspace}/>;
   if (id === "midia") return <GameDayEditor profile={profile} client={client} workspace={workspace}/>;
   const matches = workspace.matches;
   const agenda = workspace.agenda;
@@ -2621,6 +2637,9 @@ function WorkspaceSkeleton() {
     </section>
   );
 }
+function MaintenanceScreen({ signOut }) {
+  return <main className="maintenance-screen"><Crest/><span>STRIX UNITED · FC27</span><h1>Voltamos já.</h1><p>O FC27 está em manutenção programada. Nenhum dado foi perdido.</p><button className="secondary" onClick={signOut}>SAIR DA CONTA</button></main>;
+}
 function App() {
   const auth = useTeamAuth();
   const workspace = useFc27Workspace(auth.client, auth.profile);
@@ -2675,6 +2694,9 @@ function App() {
         onLogin={auth.signIn}
       />
     );
+  if (!workspace.loading && auth.profile.access_tier !== "dev" && workspace.systemFlags.some((flag) => flag.key === "site_maintenance" && flag.enabled)) {
+    return <MaintenanceScreen signOut={auth.signOut}/>;
+  }
   const title = nav.find((item) => item[0] === active)?.[1] || "Central";
   return (
     <div className="app-shell">

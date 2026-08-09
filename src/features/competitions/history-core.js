@@ -10,6 +10,14 @@ export const campaignLevel = (edition) => {
   return 20;
 };
 
+export const campaignState = (edition) => {
+  const outcome = String(edition?.outcome || edition?.final_stage || "").toLocaleLowerCase("pt-BR");
+  if (/campe[aã]o/.test(outcome) && !/vice/.test(outcome)) return "champion";
+  if (/vice|final/.test(outcome)) return "finalist";
+  if (/elimin|oitava|quarta|semi/.test(outcome)) return "eliminated";
+  return "ended";
+};
+
 export function aggregateCompetitionHistory(editions = []) {
   const groups = new Map();
   for (const edition of editions) {

@@ -112,6 +112,9 @@ export async function onRequestPost({ request, env }) {
   const client = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
   });
+  const { data: pauseFlag, error: pauseError } = await client.from("system_flags").select("enabled").eq("key", "provider_sync_paused").maybeSingle();
+  if (pauseError && !["42P01", "PGRST205"].includes(pauseError.code)) return response({ error: "sync_flag_unavailable", message: pauseError.message }, 500);
+  if (pauseFlag?.enabled) return response({ ok: true, paused: true, checked: 0, results: [], completedAt: new Date().toISOString() });
   const now = new Date().toISOString();
   const { data: sources = [], error } = await client.from("competition_sources").select("*")
     .eq("source_kind", "standings").lte("next_sync_at", now).order("next_sync_at").limit(6);

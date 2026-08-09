@@ -45,14 +45,17 @@ export function deriveCompetitionView(sources = [], persistedFixtures = [], edit
     away_score: fixture.awayScore,
   }));
   const fixtures = [...persistedFixtures, ...snapshotFixtures].filter((fixture, index, all) => all.findIndex((item) => fixtureKey(item) === fixtureKey(fixture)) === index);
-  const allUpcoming = fixtures.filter((fixture) => !["completed", "cancelled"].includes(fixture.status));
+  const isHistorical = edition?.status === "historical";
+  const allUpcoming = isHistorical ? [] : fixtures.filter((fixture) => !["completed", "cancelled"].includes(fixture.status));
   const allProviderResults = fixtures.filter((fixture) => fixture.status === "completed" || (fixture.home_score != null && fixture.away_score != null));
   const upcoming = allUpcoming.filter(isStrixFixture);
   const providerResults = allProviderResults.filter(isStrixFixture);
   const groupFinished = fixtures.length > 0 && fixtures.every((fixture) => ["completed", "cancelled"].includes(fixture.status));
   const expectsKnockout = /grupo|mata-mata|knockout/i.test(`${standings.type || ""} ${standings.phase || ""}`);
   const awaitingKnockout = !knockoutSource && groupFinished && expectsKnockout;
-  const currentStage = awaitingKnockout
+  const currentStage = isHistorical
+    ? (edition.outcome || (edition.final_stage ? stageLabel(edition.final_stage) : "Participação encerrada"))
+    : awaitingKnockout
     ? "Aguardando mata-mata"
     : stageLabel(knockout.knockout?.currentStage || (knockoutSource ? "knockout" : standings.phase));
   const strixFixture = upcoming.find((fixture) => /\bstrix\b/i.test(`${fixture.home_team_name} ${fixture.away_team_name}`)) || null;
@@ -70,6 +73,7 @@ export function deriveCompetitionView(sources = [], persistedFixtures = [], edit
     providerResults,
     strixFixture,
     awaitingKnockout,
+    isHistorical,
     qualificationSlots: Number(
       standings.qualificationRule?.slots
       || standings.groups?.find((group) => group.isStrixGroup)?.qualificationSlots
