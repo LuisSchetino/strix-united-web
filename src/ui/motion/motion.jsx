@@ -103,11 +103,10 @@ export function MotionBadge({ state, idle = "Atualizar" }) {
     success: "Atualizado ✓",
     error: "Erro",
   };
-  const icons = { loading: "↻", success: "✓", error: "!", idle: "↻" };
   const current = state || "idle";
   return (
     <span className={`motion-state-badge is-${current}`}>
-      <span className="motion-state-content" key={current}><i aria-hidden="true">{icons[current]}</i>{labels[state] || idle}</span>
+      <span className="motion-state-content" key={current}><i aria-hidden="true"/>{labels[state] || idle}</span>
     </span>
   );
 }

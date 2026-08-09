@@ -814,6 +814,7 @@ function CompetitionExplorer({
       setError(cause.message);
       setSyncState("error");
       notify(`Erro ao atualizar ${competition.name}.`, "error");
+      window.setTimeout(() => setSyncState(""), 2600);
     } finally {
       setBusy("");
     }

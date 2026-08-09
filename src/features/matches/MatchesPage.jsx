@@ -16,6 +16,7 @@ import {
   suggestAgendaMatches,
   validateImport,
 } from "./import-core.js";
+import { canonicalPlayerName } from "../statistics/statistics-core.js";
 import "./match-import.css";
 import "./match-fixes.css";
 import "../../partidas.css";
@@ -648,7 +649,7 @@ function MatchDetails({ match, workspace, close }) {
                 <header role="row"><span>JOGADOR</span><span>NOTA</span><span>G</span><span>A</span><span>PASSES</span><span>CHUTES</span><span>DESARMES</span><span>DEFESAS</span></header>
                 {players.map((player, index) => (
                   <article role="row" className={`${Number(player.rating) === bestRating && bestRating > 0 ? "is-best " : ""}${disconnected(player) ? "is-disconnected" : ""}`} key={player.id || player.eaName || index}>
-                    <div><b>{player.name || player.eaName || "Jogador EA"}</b><small>{disconnected(player) && <em className="disconnect-badge">CAIU DA PARTIDA</em>}{!disconnected(player) && Number(player.rating) === bestRating && bestRating > 0 && <em>MELHOR NOTA</em>}{Number(player.goals) === maxGoals && maxGoals > 0 && <em><StatIcon name="goals"/> ARTILHEIRO</em>}{Number(player.assists) === maxAssists && maxAssists > 0 && <em><StatIcon name="assists"/> ASSISTÊNCIA</em>}{Number(player.passesMade) === maxPasses && maxPasses > 0 && <em>MAIS PASSES</em>}</small></div>
+                    <div><b>{canonicalPlayerName(player.name || player.eaName, workspace.players, workspace.aliases)}</b><small>{disconnected(player) && <em className="disconnect-badge">CAIU DA PARTIDA</em>}{!disconnected(player) && Number(player.rating) === bestRating && bestRating > 0 && <em>MELHOR NOTA</em>}{Number(player.goals) === maxGoals && maxGoals > 0 && <em><StatIcon name="goals"/> ARTILHEIRO</em>}{Number(player.assists) === maxAssists && maxAssists > 0 && <em><StatIcon name="assists"/> ASSISTÊNCIA</em>}{Number(player.passesMade) === maxPasses && maxPasses > 0 && <em>MAIS PASSES</em>}</small></div>
                     <strong>{player.rating ?? "—"}</strong><span>{player.goals ?? "—"}</span><span>{player.assists ?? "—"}</span><span>{player.passes ?? "—"}</span><span>{player.shots ?? "—"}</span><span>{player.tackles ?? "—"}</span><span>{player.saves ?? "—"}</span>
                   </article>
                 ))}

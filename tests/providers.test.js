@@ -70,6 +70,21 @@ test("discovers fixtures in paginated round pages without competition-specific r
   assert.equal(parsed.qualificationRule.slots, 8);
 });
 
+test("normalizes LB match-card fixtures and detail identifiers", () => {
+  const card = `<div class="match-card"><div class="match-main"><div class="match-team match-team-home"><a><img src="/fenix.png" alt="Fenix"></a><small>Fenix</small><small class="match-status status-finalizado">Finalizado</small></div><div class="match-score-wrap"><div class="match-score">0 <span>x</span> 6</div></div><div class="match-team match-team-away"><a><img src="/strix.png" alt="STRIX UNITED"></a><small>STRIX UNITED</small></div></div><div class="match-footer"><span class="match-date">20/07/2026 22:10</span><a class="match-details-btn" href="fifa.php?file=jogo&idRodada=15381&torneio=73">Ver detalhes</a></div></div>`;
+  const html = `<html><body><h1>MASTER LEAGUE</h1><h3>Classificacao - Grupo 1</h3>${standingsRows}${card}${"x".repeat(500)}</body></html>`;
+  const parsed = parseCompetitionHtml(html, "https://www.lbesports.com/fifa.php?file=classificacao&campeonato=73&grupo=1");
+  assert.equal(parsed.fixtures.length, 1);
+  assert.equal(parsed.fixtures[0].externalMatchId, "lb_esports:73:15381");
+  assert.equal(parsed.fixtures[0].homeTeamName, "Fenix");
+  assert.equal(parsed.fixtures[0].awayTeamName, "STRIX UNITED");
+  assert.equal(parsed.fixtures[0].awayLogo, "https://www.lbesports.com/strix.png");
+  assert.equal(parsed.fixtures[0].scheduledAt, "2026-07-20T22:10:00-03:00");
+  assert.equal(parsed.fixtures[0].homeScore, 0);
+  assert.equal(parsed.fixtures[0].awayScore, 6);
+  assert.equal(parsed.fixtures[0].status, "completed");
+});
+
 test("omits empty round of 16 when the official bracket starts at quarterfinals", () => {
   const html = `<html><body><h1>COPA</h1><table><tr><td>Oitavas de final</td><td>Quartas de final<br>10/08/2026 23:10</td><td>Semifinais</td><td>Final</td></tr>${"x".repeat(500)}<tr><td><a title="A">A</a></td><td><a title="STRIX UNITED">STRIX UNITED</a></td></tr></table></body></html>`;
   const parsed = parseCompetitionHtml(html, "https://ccbclubs.com.br/fifa.php?file=eliminatoria&campeonato=100&grupo=12");

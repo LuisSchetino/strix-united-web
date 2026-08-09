@@ -16,6 +16,7 @@ import { LibraryPage } from "./features/library/LibraryPage.jsx";
 import { DeveloperPage } from "./features/developer/DeveloperPage.jsx";
 import { StatisticsPage } from "./features/statistics/StatisticsPage.jsx";
 import { AnalysisPage } from "./features/analysis/AnalysisPage.jsx";
+import { RosterTools } from "./features/squad/RosterTools.jsx";
 import { notify, ToastViewport } from "./ui/motion/motion.jsx";
 import { GameDayCanvas } from "./gameday/GameDayCanvas.jsx";
 import { GameDayEditor } from "./gameday/GameDayEditor.jsx";
@@ -30,7 +31,7 @@ const snapshot = { phase: "Fase de grupos", teamCount: 8, strixGroup: "Grupo A",
 ] }] };
 const workspace = {
   error: "", schemaPending: false,
-  players: [{ id: "p1", display_name: "YGO", positions: ["ZAG"], member_type: "elenco", is_active: true }, { id: "p2", display_name: "JOÃO GAMER", positions: ["GOL"], member_type: "complete", is_active: true }], aliases: [{ ea_name: "39ygo", player_id: "p1", club_players: { display_name: "YGO" } }], logos: [],
+  players: [{ id: "p1", display_name: "YGO", positions: ["ZAG"], member_type: "elenco", is_active: true }, { id: "p2", display_name: "JOÃO GAMER", positions: ["GOL"], member_type: "complete", is_active: true }, { id: "p3", display_name: "OBEN", positions: ["MC"], member_type: "elenco", is_active: true }, { id: "p4", display_name: "NUNES", positions: ["MC"], member_type: "elenco", is_active: true }, { id: "p5", display_name: "KESTOL", positions: ["ALA"], member_type: "complete", is_active: true }, { id: "p6", display_name: "CEDRAZ", positions: ["ZAG"], member_type: "elenco", is_active: true }, { id: "p7", display_name: "SANTOZZ", positions: ["ATA"], member_type: "elenco", is_active: true }], aliases: [{ ea_name: "39ygo", player_id: "p1", club_players: { display_name: "YGO" } }, { ea_name: "JOAO", player_id: "p2", club_players: { display_name: "JOÃO GAMER" } }, { ea_name: "OBEEN", player_id: "p3", club_players: { display_name: "OBEN" } }, { ea_name: "NUNES", player_id: "p4", club_players: { display_name: "NUNES" } }, { ea_name: "KESTOL", player_id: "p5", club_players: { display_name: "KESTOL" } }, { ea_name: "CEDRAZ", player_id: "p6", club_players: { display_name: "CEDRAZ" } }, { ea_name: "SANTOZZ", player_id: "p7", club_players: { display_name: "SANTOZZ" } }], logos: [],
   agenda: [{ id: "a1", scheduled_at: now, opponent_name: "POA CITY", status: "scheduled", competition_name: "Copa Yeshua", competition_id: "c1", competition_edition_id: "e1" }, { id: "a2", scheduled_at: new Date("2026-08-07T00:10:00-03:00").toISOString(), opponent_name: "POA CITY", status: "scheduled", competition_name: "Copa Yeshua", competition_id: "c1", competition_edition_id: "e1" }],
   matches: [
     { id: "m1", played_at: now, opponent_name: "POA CITY", strix_score: 3, opponent_score: 1, competition_name: "Copa Yeshua", competition_id: "c1", competition_edition_id: "e1", source: "ea_api", performance: { possession: 57, shots: 12, passes: "88/102", tackles: 9, goalkeeperSaves: 4, averageRating: 8.4, players: [{ eaName: "39ygo", rating: 8.7, goals: 2, assists: 1, passes: "31/34", passesMade: 31, passesAttempts: 34, shots: 4, tackles: 3, saves: 0 }, { eaName: "OBEEN", rating: 8.1, goals: 1, assists: 0, passes: "24/28", passesMade: 24, passesAttempts: 28, shots: 2, tackles: 5, saves: 0 }, { eaName: "NUNES", rating: 7.8, goals: 0, assists: 1, passesMade: 22, passesAttempts: 27, shots: 1, tackles: 2 }, { eaName: "KESTOL", rating: 7.5, goals: 0, assists: 0, passesMade: 19, passesAttempts: 24, shots: 1, tackles: 4 }, { eaName: "CEDRAZ", rating: 7.3, goals: 0, assists: 0, passesMade: 18, passesAttempts: 23, shots: 0, tackles: 5 }, { eaName: "SANTOZZ", rating: 7.2, goals: 0, assists: 0, passesMade: 14, passesAttempts: 20, shots: 3, tackles: 1 }, { eaName: "JOAO", position: "GOL", rating: 7.9, passesMade: 18, passesAttempts: 22, saves: 4 }, { eaName: "Caiu cedo", rating: 3, goals: 0, assists: 0, passes: "0/0", passesMade: 0, shots: 0, tackles: 0, saves: 0 }] } },
@@ -43,7 +44,7 @@ const workspace = {
   competitionFixtures: [
     ["SUMMIT ES", "NEW ERA E - SPORTS", "q1"], ["VIKINGS TEAM", "TRAFEGO DO RJ", "q2"], ["HANNIBALL ESPORTS", "ITUANO FV", "q3"], ["XUMBREGA SC", "STRIX UNITED", "q4"],
   ].map(([home_team_name, away_team_name, external_match_id]) => ({ edition_id: "e1", external_match_id, round_label: "Quartas de final", scheduled_at: "2026-08-10T23:10:00-03:00", home_team_name, away_team_name, home_logo: "/assets/strix-logo.png", away_logo: "/assets/strix-logo.png", status: "scheduled" })),
-  assetUrl: (path) => path || "", refresh: async () => {}, savePlayerAliases: async () => {}, upsertClubMatches: async () => {}, upsertClubMatch: async () => {}, removeClubMatch: async () => {},
+  assetUrl: (path) => path || "", refresh: async () => {}, savePlayerAliases: async () => {}, removePlayerAlias: async () => {}, importLegacyRoster: async (players) => ({ created: players.length, merged: 0, aliases: players.length, conflicts: [] }), upsertClubMatches: async () => {}, upsertClubMatch: async () => {}, removeClubMatch: async () => {},
 };
 const libraryFixtures = [
   { id: "l1", title: "Saída sob pressão", category: "jogada", description: "Referência curta para a construção do Strix.", source_type: "youtube", source_url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ", published_at: now, tags: ["saída", "pressão"] },
@@ -69,6 +70,7 @@ else if (page === "matches") content = <MatchesPage profile={profile} workspace=
 else if (page === "library") content = <LibraryPage profile={profile} client={client}/>;
 else if (page === "statistics") content = <StatisticsPage profile={profile} workspace={workspace} matches={workspace.matches}/>;
 else if (page === "analysis") content = <AnalysisPage profile={profile} workspace={workspace} matches={workspace.matches}/>;
+else if (page === "roster-tools") content = <section className="data-page"><header className="data-page-header"><div><span>ELENCO FC27</span><h1>Ferramentas do elenco.</h1></div><RosterTools workspace={workspace}/></header></section>;
 else if (page === "developer") content = <DeveloperPage profile={profile} workspace={{ ...workspace, competitionSyncLogs: [], competitionAuditLogs: [], systemFlags: [{ key: "site_maintenance", label: "Modo manutenção", description: "Pausa o acesso dos demais tiers.", enabled: false }] }} client={client}/>;
 else if (page === "gameday-editor") content = <GameDayEditor profile={profile} workspace={workspace} client={client}/>;
 else if (page === "gameday") {

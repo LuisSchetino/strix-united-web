@@ -153,25 +153,32 @@ function parseQualificationRule(html, groups = []) {
 }
 
 function parseFixtureCards(html, context) {
-  const chunks = String(html).split(/<div\b[^>]*class=["'][^"']*\bgame-card\b[^"']*["'][^>]*>/i).slice(1);
-  return chunks.map((chunk, index) => {
-    const card = chunk.split(/<div\b[^>]*class=["'][^"']*\bgame-card\b/i)[0];
-    const teamBlocks = [...card.matchAll(/<div\b[^>]*class=["'][^"']*\bgame-team\b[^"']*["'][^>]*>([\s\S]*?)<\/div>/gi)].map((match) => match[1]).slice(0, 2);
+  const source = String(html);
+  const starts = [...source.matchAll(/<div\b[^>]*class=["'][^"']*\b(?:game-card|match-card)\b[^"']*["'][^>]*>/gi)];
+  return starts.map((start, index) => {
+    const card = source.slice(start.index, starts[index + 1]?.index || source.length);
+    const teamBlocks = [...card.matchAll(/<div\b[^>]*class=["'][^"']*\b(?:game-team|match-team)\b[^"']*["'][^>]*>([\s\S]*?)<\/div>/gi)].map((match) => match[1]).slice(0, 2);
     if (teamBlocks.length !== 2) return null;
-    const team = (block) => ({
-      name: htmlText(block.replace(/<img\b[^>]*>/gi, "")),
-      logo: absoluteUrl(context.url, block.match(/<img[^>]+src=["']([^"']+)["']/i)?.[1] || ""),
-    });
+    const team = (block) => {
+      const labelledName = [...block.matchAll(/<(?:strong|small)\b([^>]*)>([\s\S]*?)<\/(?:strong|small)>/gi)]
+        .find((match) => !/\bmatch-status\b/i.test(match[1] || ""));
+      return {
+        name: htmlText(labelledName?.[2] || block.replace(/<img\b[^>]*>/gi, "")),
+        logo: absoluteUrl(context.url, block.match(/<img[^>]+src=["']([^"']+)["']/i)?.[1] || ""),
+      };
+    };
     const home = team(teamBlocks[0]);
     const away = team(teamBlocks[1]);
     if (!home.name || !away.name) return null;
-    const scoreText = htmlText(card.match(/<div\b[^>]*class=["'][^"']*\bgame-score\b[^"']*["'][^>]*>([\s\S]*?)<\/div>/i)?.[1]);
+    const scoreText = htmlText(card.match(/<div\b[^>]*class=["'][^"']*\b(?:game-score|match-score)\b[^"']*["'][^>]*>([\s\S]*?)<\/div>/i)?.[1]);
     const score = scoreText.match(/(\d+)\s*[xÃ—]\s*(\d+)/i);
     const text = htmlText(card);
     const dateTime = text.match(/\d{2}\/\d{2}\/\d{4}\s+\d{2}:\d{2}/)?.[0] || "";
     const roundLabel = htmlText(card.match(/<div\b[^>]*class=["'][^"']*\bgame-top\b[^"']*["'][^>]*>([\s\S]*?)<\/div>/i)?.[1])
       .replace(/^.*?\s+-\s+(?=(?:Rodada|Oitavas|Quartas|Semifinal|Final))/i, "");
-    const providerMatchId = card.match(/data-rodada=["'](\d+)["']/i)?.[1] || null;
+    const providerMatchId = card.match(/data-rodada=["'](\d+)["']/i)?.[1]
+      || card.match(/[?&]idRodada=(\d+)/i)?.[1]
+      || null;
     const fallback = `${normalizeFixtureKey(home.name)}:${normalizeFixtureKey(away.name)}:${dateTime || index}`;
     return {
       externalMatchId: `${context.provider}:${context.competitionId}:${providerMatchId || fallback}`,

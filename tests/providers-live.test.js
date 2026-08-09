@@ -26,7 +26,11 @@ for (const [name, url, kind] of sources) {
       assert.ok(Number(strix.points) >= 0);
       assert.ok(Number(parsed.qualificationRule?.slots) > 0);
       if (name.startsWith("CCB")) assert.match(parsed.name, /COPA YESHUA/i);
-      if (name.startsWith("LB")) assert.ok(parsed.groups.length >= 3);
+      if (name.startsWith("LB")) {
+        assert.ok(parsed.groups.length >= 3);
+        assert.ok(parsed.fixtures.length > 0);
+        assert.ok(parsed.fixtures.some((fixture) => fixture.isStrix));
+      }
     } else {
       assert.ok(parsed.knockout.stages.length > 0);
       assert.equal(parsed.knockout.hasStrix, true);

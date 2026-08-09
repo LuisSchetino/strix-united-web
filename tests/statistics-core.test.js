@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { aggregatePlayerStatistics, aggregateTeamStatistics, buildRanking, uniqueMatches } from "../src/features/statistics/statistics-core.js";
+import { aggregatePlayerStatistics, aggregateTeamStatistics, buildRanking, canonicalPlayerName, uniqueMatches } from "../src/features/statistics/statistics-core.js";
 
 const matches = [{ strix_score: 3, opponent_score: 1, performance: { passes: "80/100", shots: 9, tackles: 5, goalkeeperSaves: 2, averageRating: 7.5, players: [{ eaName: "OBEEN", rating: 8, goals: 1, assists: 2, passesMade: 30, passesAttempts: 40, tackles: 3, shots: 2 }] } }, { strix_score: 1, opponent_score: 1, performance: { passes: "45/60", players: [{ eaName: "OBEEN", rating: 7, passesMade: 20, passesAttempts: 25 }] } }];
 
@@ -48,4 +48,17 @@ test("precisão exige amostra mínima de passes", () => {
     { name: "VOLUME", handle: "volume", passAccuracy: 90, passAttempts: 40, rankingEligible: true },
   ], "passAccuracy");
   assert.deepEqual(ranking.map((player) => player.name), ["VOLUME"]);
+});
+
+test("aliases diferentes consolidam no jogador canônico e respeitam elenco ativo", () => {
+  const aliasedMatches = [{ played_at: "2026-08-01T22:00:00-03:00", opponent_name: "A", performance: { players: [{ eaName: "Obenzera", rating: 8, goals: 1 }] } }, { played_at: "2026-08-02T22:00:00-03:00", opponent_name: "B", performance: { players: [{ eaName: "Obenzeira", rating: 7, assists: 1 }] } }];
+  const roster = [{ id: "oben", display_name: "OBEN", positions: ["MC"], is_active: true }];
+  const aliases = [{ ea_name: "Obenzera", player_id: "oben" }, { ea_name: "Obenzeira", player_id: "oben" }];
+  const result = aggregatePlayerStatistics(aliasedMatches, { players: roster, aliases });
+  assert.equal(result.length, 1);
+  assert.equal(result[0].name, "OBEN");
+  assert.equal(result[0].goalAssists, 2);
+  assert.equal(canonicalPlayerName("obenzeira", roster, aliases), "OBEN");
+  result[0].active = false;
+  assert.equal(buildRanking(result, "goals").length, 0);
 });

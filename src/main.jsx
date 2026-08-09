@@ -25,6 +25,7 @@ const LibraryPage = lazy(() => import("./features/library/LibraryPage.jsx").then
 const DeveloperPage = lazy(() => import("./features/developer/DeveloperPage.jsx").then((module) => ({ default: module.DeveloperPage })));
 const StatisticsPage = lazy(() => import("./features/statistics/StatisticsPage.jsx"));
 const AnalysisPage = lazy(() => import("./features/analysis/AnalysisPage.jsx"));
+const RosterTools = lazy(() => import("./features/squad/RosterTools.jsx").then((module) => ({ default: module.RosterTools })));
 
 const icons = {
   menu: "M4 7h16M4 12h16M4 17h16",
@@ -731,6 +732,68 @@ function useFc27Workspace(client, profile) {
     if (error) throw error;
     await refresh();
   };
+  const importLegacyRoster = async (entries = []) => {
+    const normalize = (value) => String(value || "").toLocaleLowerCase("pt-BR").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+    const { data: remotePlayers, error: playersError } = await client.from("club_players").select("*");
+    if (playersError) throw playersError;
+    const bySource = new Map((remotePlayers || []).filter((player) => player.source_system === "fc26" && player.source_player_id).map((player) => [player.source_player_id, player]));
+    const byName = new Map((remotePlayers || []).map((player) => [normalize(player.display_name), player]));
+    const aliasTargets = [];
+    let created = 0;
+    let merged = 0;
+    for (const entry of entries) {
+      const existing = bySource.get(entry.sourcePlayerId) || byName.get(normalize(entry.displayName));
+      const positions = [...new Set([...(existing?.positions || []), ...(entry.positions || [])])];
+      const payload = {
+        display_name: existing?.display_name || entry.displayName,
+        positions,
+        member_type: existing?.member_type || entry.memberType || "elenco",
+        is_active: true,
+        source_system: "fc26",
+        source_player_id: entry.sourcePlayerId,
+        source_order: entry.sourceOrder,
+        external_avatar_url: existing?.external_avatar_url || entry.externalAvatarUrl || null,
+        updated_by: profile.user_id,
+      };
+      const result = existing
+        ? await client.from("club_players").update(payload).eq("id", existing.id).select().single()
+        : await client.from("club_players").insert({ ...payload, created_by: profile.user_id }).select().single();
+      if (result.error) throw result.error;
+      existing ? merged += 1 : created += 1;
+      bySource.set(entry.sourcePlayerId, result.data);
+      byName.set(normalize(result.data.display_name), result.data);
+      for (const alias of entry.aliases || []) aliasTargets.push({ eaName: alias, playerId: result.data.id });
+    }
+    const { data: remoteAliases, error: aliasesError } = await client.from("club_player_aliases").select("*");
+    if (aliasesError) throw aliasesError;
+    const aliasesByName = new Map((remoteAliases || []).map((alias) => [normalize(alias.ea_name), alias]));
+    const inserts = [];
+    const conflicts = [];
+    for (const target of aliasTargets) {
+      const key = normalize(target.eaName);
+      const existing = aliasesByName.get(key);
+      if (existing && existing.player_id !== target.playerId) {
+        conflicts.push(target.eaName);
+        continue;
+      }
+      if (!existing) {
+        const row = { ea_name: target.eaName, player_id: target.playerId, created_by: profile.user_id, updated_by: profile.user_id };
+        inserts.push(row);
+        aliasesByName.set(key, row);
+      }
+    }
+    if (inserts.length) {
+      const { error: insertAliasesError } = await client.from("club_player_aliases").insert(inserts);
+      if (insertAliasesError) throw insertAliasesError;
+    }
+    await refresh();
+    return { created, merged, aliases: inserts.length, conflicts };
+  };
+  const removePlayerAlias = async (id) => {
+    const { error } = await client.from("club_player_aliases").delete().eq("id", id);
+    if (error) throw error;
+    await refresh();
+  };
   return {
     ...state,
     assetUrl,
@@ -750,6 +813,8 @@ function useFc27Workspace(client, profile) {
     },
     savePlayer,
     removePlayer,
+    importLegacyRoster,
+    removePlayerAlias,
   };
 }
 function LoginScreen({ loading, error, onLogin }) {
@@ -1831,7 +1896,24 @@ function AgendaLive({ navigate, workspace }) {
       <section className="agenda-list" aria-busy={workspace.loading}>
         <div className="agenda-list-heading"><span>HORÁRIO</span><span>PARTIDA</span><span>CAMPEONATO</span><span>STATUS</span></div>
         {visible.length ? visible.map((item) => (
-          <article key={item.id} className={`agenda-game ${item.cancelled ? "is-cancelled" : ""}`}>
+          <article
+            key={item.id}
+            className={`agenda-game ${item.cancelled ? "is-cancelled" : ""}`}
+            role="button"
+            tabIndex={0}
+            aria-label={`Abrir escalação de ${item.opponent}`}
+            onClick={(event) => {
+              if (event.target.closest("button, [role='menu']")) return;
+              setActions(null);
+              setModal({ entry: item, mode: "edit" });
+            }}
+            onKeyDown={(event) => {
+              if (event.target !== event.currentTarget || !["Enter", " "].includes(event.key)) return;
+              event.preventDefault();
+              setActions(null);
+              setModal({ entry: item, mode: "edit" });
+            }}
+          >
             <time>{item.time}</time>
             <div className="agenda-match">
               <Avatar name={item.opponent} logo={item.logo} />
@@ -1839,8 +1921,8 @@ function AgendaLive({ navigate, workspace }) {
             </div>
             <span className="game-competition">{item.competition}</span>
             <em className={item.status === "EM BREVE" ? "soon" : ""}>{item.status}</em>
-            <button data-agenda-menu-trigger aria-haspopup="menu" aria-expanded={actions === item.id} aria-label={`Ações para ${item.opponent}`} onClick={() => setActions(actions === item.id ? null : item.id)}>•••</button>
-            {actions === item.id && <div className="agenda-actions" role="menu" onKeyDown={(event) => {
+            <button data-agenda-menu-trigger aria-haspopup="menu" aria-expanded={actions === item.id} aria-label={`Ações para ${item.opponent}`} onClick={(event) => { event.stopPropagation(); setActions(actions === item.id ? null : item.id); }}>•••</button>
+            {actions === item.id && <div className="agenda-actions" role="menu" onClick={(event) => event.stopPropagation()} onKeyDown={(event) => {
               if (!["ArrowDown", "ArrowUp"].includes(event.key)) return;
               event.preventDefault();
               const buttons = [...event.currentTarget.querySelectorAll("button")];
@@ -2001,7 +2083,7 @@ function SquadPageV3({ workspace, profile }) {
     <section className="data-page page-enter squad-page-v3">
       <header className="data-page-header">
         <div><span>ELENCO DO CLUBE</span><h1>Squad FC 27.</h1><p>Posições e vínculos organizados para escalar sem procurar jogador.</p></div>
-        {canManage && <button className="primary" onClick={openCreate}><Icon name="plus" size={16} />ADICIONAR JOGADOR</button>}
+        {canManage && <div className="squad-header-actions"><Suspense fallback={<span className="roster-tools-loading">CARREGANDO FERRAMENTAS…</span>}><RosterTools workspace={workspace} /></Suspense><button className="primary" onClick={openCreate}><Icon name="plus" size={16} />ADICIONAR JOGADOR</button></div>}
       </header>
       {(workspace.error || error) && <p className="matches-error">{error || workspace.error}</p>}
       {activePlayers.length ? groups.map(([id, title, description]) => {
@@ -2010,7 +2092,7 @@ function SquadPageV3({ workspace, profile }) {
           <section className="squad-sector" key={id}>
             <header><div><span>{title}</span><small>{description}</small></div><b>{players.length}</b></header>
             {players.length ? <div className="squad-list squad-compact-list">{players.map((player) => <article className="squad-player-card" key={player.id}>
-              <Avatar name={player.display_name} logo={player.avatar_path ? workspace.assetUrl(player.avatar_path) : ""} kind="photo" />
+              <Avatar name={player.display_name} logo={player.avatar_path ? workspace.assetUrl(player.avatar_path) : player.external_avatar_url || ""} kind="photo" />
               <div className="squad-card-identity"><b>{player.display_name}</b><small>{player.positions?.join(" · ") || "Posição não definida"}</small><span>{gamesForPlayer(player)} jogo(s)</span></div>
               <strong className="squad-shirt-number">{player.shirt_number === null || player.shirt_number === undefined ? "—" : `#${String(player.shirt_number).padStart(2, "0")}`}</strong>
               <em className={`member-tag ${player.member_type || "elenco"}`}>{player.member_type === "teste" ? `TESTE${player.trial_expires_at ? ` · até ${datePart(player.trial_expires_at)}` : ""}` : player.member_type === "complete" ? "COMPLETE" : "ELENCO"}</em>

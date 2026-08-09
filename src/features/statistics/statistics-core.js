@@ -90,6 +90,7 @@ const isGoalkeeper = (player = {}, rosterPlayer) => {
 const aliasIndex = (players, aliases) => {
   const playersById = new Map(rows(players).map((player) => [player.id, player]));
   const index = new Map();
+  for (const player of rows(players)) index.set(normalized(player.display_name), { roster: player, display: player.display_name });
   for (const alias of rows(aliases)) {
     const roster = playersById.get(alias.player_id);
     index.set(normalized(alias.ea_name), { roster, display: alias.club_players?.display_name || roster?.display_name });
@@ -103,9 +104,10 @@ export function aggregatePlayerStatistics(matches = [], options = {}) {
   for (const match of uniqueMatches(matches)) {
     for (const player of playerRows(match)) {
       const handle = String(player.eaName || player.name || player.id || "Jogador EA").trim();
-      const key = normalized(handle);
-      const linked = aliases.get(key);
-      const current = playerMap.get(key) || { name: linked?.display || handle, handle, positions: rows(linked?.roster?.positions), memberType: linked?.roster?.member_type, games: 0, disconnectedGames: 0, goals: 0, assists: 0, passesMade: 0, passAttempts: 0, shots: 0, tackles: 0, tackleAttempts: 0, saves: 0, goalsAgainst: 0, cleanSheets: 0, ratingTotal: 0, ratings: 0, goalkeeper: false };
+      const rawKey = normalized(handle);
+      const linked = aliases.get(rawKey);
+      const key = linked?.roster?.id ? `player:${linked.roster.id}` : `ea:${rawKey}`;
+      const current = playerMap.get(key) || { name: linked?.display || handle, handle, playerId: linked?.roster?.id || null, active: linked?.roster ? linked.roster.is_active !== false : true, positions: rows(linked?.roster?.positions), memberType: linked?.roster?.member_type, games: 0, disconnectedGames: 0, goals: 0, assists: 0, passesMade: 0, passAttempts: 0, shots: 0, tackles: 0, tackleAttempts: 0, saves: 0, goalsAgainst: 0, cleanSheets: 0, ratingTotal: 0, ratings: 0, goalkeeper: false };
       const disconnected = isDisconnectedPlayer(player);
       current.games += 1;
       current.disconnectedGames += disconnected ? 1 : 0;
@@ -151,6 +153,11 @@ export const rankingCriteria = {
 
 export function buildRanking(players = [], metric, limit) {
   const criterion = rankingCriteria[metric] || ((player) => player.rankingEligible);
-  const ranked = rows(players).filter((player) => !player.goalkeeper && criterion(player)).sort((left, right) => number(right[metric]) - number(left[metric]) || right.games - left.games || left.name.localeCompare(right.name, "pt-BR"));
+  const ranked = rows(players).filter((player) => player.active !== false && !player.goalkeeper && criterion(player)).sort((left, right) => number(right[metric]) - number(left[metric]) || right.games - left.games || left.name.localeCompare(right.name, "pt-BR"));
   return Number.isFinite(limit) ? ranked.slice(0, limit) : ranked;
+}
+
+export function canonicalPlayerName(rawName, players = [], aliases = []) {
+  const { index } = aliasIndex(players, aliases);
+  return index.get(normalized(rawName))?.display || rawName || "Jogador EA";
 }

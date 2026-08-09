@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import {
   IconArrowRight, IconArrowsLeftRight, IconBallFootball, IconChartBar, IconHandStop,
   IconPlayerPlay, IconShieldCheck, IconShoe, IconStar, IconTargetArrow, IconTrophy,
-  IconUsers, IconX,
+  IconScale, IconUsers, IconX,
 } from "@tabler/icons-react";
 import { ClubLogo } from "../../ui/ClubLogo.jsx";
 import { AnimatedNumber, MotionTabs } from "../../ui/motion/motion.jsx";
@@ -12,7 +12,7 @@ import "./statistics.css";
 
 const metricIcons = {
   games: IconPlayerPlay, efficiency: IconTrophy, goalsFor: IconBallFootball, goalsAgainst: IconShieldCheck,
-  cleanSheets: IconShieldCheck, goalDifference: IconArrowsLeftRight, averageGoalsFor: IconTargetArrow,
+  cleanSheets: IconShieldCheck, goalDifference: IconScale, averageGoalsFor: IconTargetArrow,
   averageGoalsAgainst: IconShieldCheck, averageRating: IconStar, passesMade: IconArrowsLeftRight,
   passAccuracy: IconTargetArrow, shots: IconShoe, tackles: IconShieldCheck, saves: IconHandStop,
 };
@@ -34,7 +34,7 @@ function RankingModal({ ranking, metric, title, suffix = "", close }) {
     <section className="statistics-ranking-modal" role="dialog" aria-modal="true" aria-label={`Ranking completo de ${title}`}>
       <header><div><span>ESTATÍSTICAS · FC27</span><h2>Ranking completo</h2><p>{title}</p></div><button type="button" onClick={close} aria-label="Fechar"><IconX/></button></header>
       <div className="statistics-ranking-list">{ranking.map((player, index) => <article className={index < 3 ? `is-top is-top-${index + 1}` : ""} key={player.handle}>
-        <strong>{index + 1}</strong><div><b>{player.name}</b>{player.handle !== player.name && <small>@{player.handle}</small>}<em>{player.positions?.join(" · ") || "EA FC"}{player.memberType ? ` · ${player.memberType}` : ""}</em></div><span>{display(player[metric], suffix)}</span>{index > 0 && leader > Number(player[metric] || 0) && <small>-{Number((leader - Number(player[metric] || 0)).toFixed(1))} do líder</small>}
+        <strong>{index + 1}</strong><div><b>{player.name}</b>{player.handle !== player.name && <small>@{player.handle}</small>}<em>{player.positions?.join(" · ") || "EA FC"}{player.memberType ? ` · ${player.memberType}` : ""}</em></div><div className="statistics-ranking-value"><span>{display(player[metric], suffix)}</span>{index > 0 && leader > Number(player[metric] || 0) && <small>-{Number((leader - Number(player[metric] || 0)).toFixed(1))} do líder</small>}</div>
       </article>)}</div>
     </section>
   </div>, document.body);
@@ -73,7 +73,7 @@ function Summary({ team, players }) {
     ["MAIS PASSES CERTOS", "passesMade", IconArrowsLeftRight], ["PASSES TENTADOS", "passAttempts", IconChartBar],
     ["FINALIZAÇÕES", "shots", IconShoe], ["DESARMES CERTOS", "tackles", IconShieldCheck],
   ];
-  const keepers = players.filter((player) => player.goalkeeper).sort((a, b) => b.games - a.games);
+  const keepers = players.filter((player) => player.active !== false && player.goalkeeper).sort((a, b) => b.games - a.games);
   return <div className="statistics-panel-enter"><section className="statistics-overview-grid">{cards.map(([metric, label, value, suffix, note], index) => <StatCard key={metric} metric={metric} label={label} value={value} suffix={suffix} note={note} index={index}/>)}</section><section className="statistics-section-heading"><div><span>DESTAQUES DA TEMPORADA</span><h2>Quem está produzindo.</h2></div><p>Jogadores desconectados são preservados no histórico, mas não distorcem os rankings.</p></section><section className="statistics-rankings-grid">{rankings.map(([title, metric, Icon, suffix, criterion]) => <RankingCard key={metric} title={title} metric={metric} players={players} icon={Icon} suffix={suffix} criterion={criterion}/>)}</section>{keepers.length > 0 && <section className="statistics-keeper-grid">{keepers.map((player) => <GoalkeeperCard key={player.handle} player={player}/>)}</section>}</div>;
 }
 
@@ -91,8 +91,8 @@ function TeamData({ team }) {
 
 function PlayersData({ players }) {
   const [sort, setSort] = useState("averageRating");
-  const line = players.filter((player) => !player.goalkeeper).sort((a, b) => Number(b[sort] || 0) - Number(a[sort] || 0) || b.games - a.games);
-  const keepers = players.filter((player) => player.goalkeeper);
+  const line = players.filter((player) => player.active !== false && !player.goalkeeper).sort((a, b) => Number(b[sort] || 0) - Number(a[sort] || 0) || b.games - a.games);
+  const keepers = players.filter((player) => player.active !== false && player.goalkeeper);
   return <div className="statistics-panel-enter"><div className="statistics-sort"><span>ORDENAR JOGADORES DE LINHA</span><select value={sort} onChange={(event) => setSort(event.target.value)}><option value="averageRating">Nota</option><option value="goals">Gols</option><option value="assists">Assistências</option><option value="passesMade">Passes certos</option><option value="passAccuracy">Precisão</option><option value="shots">Finalizações</option><option value="tackles">Desarmes</option></select></div><section className="statistics-player-table"><header><span>JOGADOR</span><span>J</span><span>NOTA</span><span>GOLS</span><span>ASSIST.</span><span>PASSES</span><span>PRECISÃO</span><span>CHUTES</span><span>DESARMES</span></header>{line.length ? line.map((player) => <article className={player.disconnected ? "is-disconnected" : ""} key={player.handle}><b>{player.name}<small>{player.handle !== player.name ? `@${player.handle}` : player.positions?.join(" · ")}</small>{player.disconnected && <em>CAIU DA PARTIDA</em>}</b><span data-label="JOGOS">{player.games}</span><span data-label="NOTA">{display(player.averageRating)}</span><span data-label="GOLS">{player.goals}</span><span data-label="ASSIST.">{player.assists}</span><span data-label="PASSES">{player.passesMade}/{player.passAttempts || "—"}</span><span data-label="PRECISÃO">{display(player.passAccuracy, "%")}</span><span data-label="CHUTES">{player.shots}</span><span data-label="DESARMES">{player.tackles}</span></article>) : <p className="statistics-no-data">Importe partidas com dados individuais para montar esta leitura.</p>}</section>{keepers.length > 0 && <><section className="statistics-section-heading"><div><span>LEITURA POR POSIÇÃO</span><h2>Goleiros.</h2></div><p>Métricas específicas, sem priorizar chutes ou desarmes.</p></section><section className="statistics-keeper-grid">{keepers.map((player) => <GoalkeeperCard key={player.handle} player={player}/>)}</section></>}</div>;
 }
 
