@@ -81,7 +81,7 @@ test("command, toast, menu and sheet keep their accessible interaction contracts
   assert.match(main, /addEventListener\("pointerdown", closeMenu\)/);
   assert.match(motion, /setPointerCapture\?\.\(event\.pointerId\)/);
   assert.match(motion, /dy > 84/);
-  assert.match(matches, /className="match-sheet-handle"/);
+  assert.match(matches, /type="button" className="match-sheet-handle"/);
   assert.match(motionCss, /\.motion-toast\{/);
   assert.match(motionCss, /@keyframes motion-menu-in/);
 });

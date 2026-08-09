@@ -169,16 +169,25 @@ export function useSwipeActions(max = 132) {
 
 export function useSheetDismiss(onDismiss) {
   const start = useRef(null);
+  const measure = (event) => {
+    if (!start.current) return false;
+    const dx = event.clientX - start.current.x;
+    const dy = event.clientY - start.current.y;
+    return dy > 84 && Math.abs(dy) > Math.abs(dx) * 1.25;
+  };
   return {
     onPointerDown: (event) => {
       start.current = { x: event.clientX, y: event.clientY };
-      event.currentTarget.setPointerCapture?.(event.pointerId);
+      (event.target.setPointerCapture || event.currentTarget.setPointerCapture)?.call(event.target, event.pointerId);
+    },
+    onPointerMove: (event) => {
+      if (!measure(event)) return;
+      start.current = null;
+      onDismiss();
     },
     onPointerUp: (event) => {
       if (!start.current) return;
-      const dx = event.clientX - start.current.x;
-      const dy = event.clientY - start.current.y;
-      if (dy > 84 && Math.abs(dy) > Math.abs(dx) * 1.25) onDismiss();
+      if (measure(event)) onDismiss();
       start.current = null;
     },
     onPointerCancel: () => {

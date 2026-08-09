@@ -603,7 +603,7 @@ function MatchDetails({ match, workspace, close }) {
         aria-modal="true"
         aria-label="Detalhes da partida"
       >
-        <div className="match-sheet-handle" aria-label="Arraste para fechar" {...sheetDismiss}><i /></div>
+        <button type="button" className="match-sheet-handle" aria-label="Arraste ou toque para fechar" onClick={close} {...sheetDismiss}><i /></button>
         <header className="match-detail-header">
           <div><span>HISTÓRICO DA PARTIDA</span><h2>Resumo do confronto</h2><p>{formatDate(match.played_at)} · {formatTime(match.played_at)} · {match.competition_name || "Amistoso"}</p></div>
           <em className={result.toLowerCase()}>{result}</em>
