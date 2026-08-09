@@ -96,6 +96,7 @@ test("command, toast, menu and sheet keep their accessible interaction contracts
   assert.match(motion, /\* 0\.12/);
   assert.match(motion, /dy > 84/);
   assert.match(matches, /type="button" className="match-sheet-handle"/);
+  assert.match(matches, /event\.target === event\.currentTarget && close\(\)/);
   assert.match(motionCss, /\.motion-toast\{/);
   assert.match(motionCss, /@keyframes motion-menu-in/);
 });

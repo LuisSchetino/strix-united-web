@@ -101,7 +101,11 @@ function EditMatchModal({ match, workspace, close, save }) {
       .filter(Boolean),
   };
   return createPortal((
-    <div className="match-flow-backdrop" role="presentation">
+    <div
+      className="match-flow-backdrop"
+      role="presentation"
+      onMouseDown={(event) => event.target === event.currentTarget && close()}
+    >
       <form
         className="match-review-modal"
         onSubmit={(event) => {
@@ -596,7 +600,11 @@ function MatchDetails({ match, workspace, close }) {
   const maxPasses = max("passesMade");
   const opponentLogo = match.opponent_logos?.storage_path ? workspace.assetUrl(match.opponent_logos.storage_path) : "";
   return createPortal((
-    <div className="match-flow-backdrop" role="presentation">
+    <div
+      className="match-flow-backdrop"
+      role="presentation"
+      onMouseDown={(event) => event.target === event.currentTarget && close()}
+    >
       <section
         className="match-review-modal match-detail-modal"
         role="dialog"
