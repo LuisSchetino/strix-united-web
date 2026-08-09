@@ -1166,7 +1166,7 @@ const lineupSlots = [
   "GOL",
 ];
 const emptyLineup = () => Array(11).fill("");
-function FormationPicker({ lineup, onChange, compact = false }) {
+function FormationPicker({ lineup, onChange, compact = false, readOnly = false }) {
   const [slot, setSlot] = useState(null);
   const choose = (player) => {
     const next = [...lineup];
@@ -1175,14 +1175,16 @@ function FormationPicker({ lineup, onChange, compact = false }) {
     setSlot(null);
   };
   return (
-    <section className={`formation-picker ${compact ? "is-compact" : ""}`}>
+    <section className={`formation-picker ${compact ? "is-compact" : ""} ${readOnly ? "is-read-only" : ""}`}>
       <div className="formation-picker-field">
         {lineupSlots.map((position, index) => (
           <button
             type="button"
             className={`formation-slot slot-${index}`}
             key={`${position}-${index}`}
-            onClick={() => setSlot(index)}
+            onClick={() => !readOnly && setSlot(index)}
+            tabIndex={readOnly ? -1 : 0}
+            aria-disabled={readOnly}
           >
             <i>{lineup[index] ? lineup[index].slice(0, 1) : "+"}</i>
             <b>{lineup[index] || "Livre"}</b>
@@ -1240,6 +1242,7 @@ function AgendaModal({ entry, mode = "new", presets, onClose, onSave, logoForOpp
   const [queuedGames, setQueuedGames] = useState([]);
   const [addFeedback, setAddFeedback] = useState("");
   const swap = mode === "swap";
+  const readOnly = mode === "view";
   useEffect(() => {
     if (!edit)
       localStorage.setItem(agendaDraftKey, JSON.stringify({ ...form, lineup }));
@@ -1320,14 +1323,18 @@ function AgendaModal({ entry, mode = "new", presets, onClose, onSave, logoForOpp
           <div>
             <span>
               {String(gameNumber).padStart(2, "0")} ·{" "}
-              {swap
+              {readOnly
+                ? "VISUALIZAR PARTIDA"
+                : swap
                 ? "TROCAR ADVERSÁRIO"
                 : edit
                   ? "EDITAR PARTIDA"
                   : "NOVA PARTIDA"}
             </span>
             <h2>
-              {swap
+              {readOnly
+                ? "Escalação da partida"
+                : swap
                 ? "Substituir confronto"
                 : edit
                   ? "Ajustar jogo"
@@ -1360,7 +1367,12 @@ function AgendaModal({ entry, mode = "new", presets, onClose, onSave, logoForOpp
             </section>
           )}
           <div className="agenda-modal-body">
-            <div className="agenda-form">
+            {readOnly ? <section className="agenda-view-info" aria-label="Informações da partida">
+              <div><small>ADVERSÁRIO</small><strong>{form.opponent}</strong></div>
+              <div><small>COMPETIÇÃO</small><strong>{form.competition}</strong></div>
+              <div><small>DATA</small><strong>{form.date}</strong></div>
+              <div><small>HORÁRIO</small><strong>{form.time}</strong></div>
+            </section> : <div className="agenda-form">
               {swap && (
                 <div className="swap-origin">
                   <small>CONFRONTO ORIGINAL</small>
@@ -1446,7 +1458,7 @@ function AgendaModal({ entry, mode = "new", presets, onClose, onSave, logoForOpp
                     : "Enviar do computador"}
                 </span>
               </label>
-            </div>
+            </div>}
             <aside className="match-preview">
               <span>PREVIEW DA AGENDA</span>
               <div>
@@ -1469,9 +1481,9 @@ function AgendaModal({ entry, mode = "new", presets, onClose, onSave, logoForOpp
                   3-1-4-2 <small>{lineup.filter(Boolean).length}/11</small>
                 </h3>
               </div>
-              <p>Toque em uma posição e escolha o jogador.</p>
+              <p>{readOnly ? "Escalação definida para este jogo." : "Toque em uma posição e escolha o jogador."}</p>
             </header>
-            <FormationPicker lineup={lineup} onChange={setLineup} />
+            <FormationPicker lineup={lineup} onChange={setLineup} readOnly={readOnly} />
           </section>
           {!edit && (
             <>
@@ -1492,15 +1504,15 @@ function AgendaModal({ entry, mode = "new", presets, onClose, onSave, logoForOpp
           )}
           <footer>
             <button type="button" className="secondary" onClick={onClose}>
-              CANCELAR
+              {readOnly ? "FECHAR" : "CANCELAR"}
             </button>
-            <button className="primary">
+            {!readOnly && <button className="primary">
               <RollingLabel>{swap
                 ? "TROCAR ADVERSÁRIO"
                 : edit
                   ? "SALVAR ALTERAÇÕES"
                   : "ADICIONAR JOGO"}</RollingLabel>
-            </button>
+            </button>}
           </footer>
         </form>
       </article>
@@ -1905,13 +1917,13 @@ function AgendaLive({ navigate, workspace }) {
             onClick={(event) => {
               if (event.target.closest("button, [role='menu']")) return;
               setActions(null);
-              setModal({ entry: item, mode: "edit" });
+              setModal({ entry: item, mode: "view" });
             }}
             onKeyDown={(event) => {
               if (event.target !== event.currentTarget || !["Enter", " "].includes(event.key)) return;
               event.preventDefault();
               setActions(null);
-              setModal({ entry: item, mode: "edit" });
+              setModal({ entry: item, mode: "view" });
             }}
           >
             <time>{item.time}</time>
@@ -2089,9 +2101,9 @@ function SquadPageV3({ workspace, profile }) {
       {activePlayers.length ? groups.map(([id, title, description]) => {
         const players = activePlayers.filter((player) => classify(player) === id);
         return (
-          <section className="squad-sector" key={id}>
+          <section className={`squad-sector ${players.some((player) => player.id === actionMenu) ? "has-open-menu" : ""}`} key={id}>
             <header><div><span>{title}</span><small>{description}</small></div><b>{players.length}</b></header>
-            {players.length ? <div className="squad-list squad-compact-list">{players.map((player) => <article className="squad-player-card" key={player.id}>
+            {players.length ? <div className="squad-list squad-compact-list">{players.map((player) => <article className={`squad-player-card ${actionMenu === player.id ? "has-open-menu" : ""}`} key={player.id}>
               <Avatar name={player.display_name} logo={player.avatar_path ? workspace.assetUrl(player.avatar_path) : player.external_avatar_url || ""} kind="photo" />
               <div className="squad-card-identity"><b>{player.display_name}</b><small>{player.positions?.join(" · ") || "Posição não definida"}</small><span>{gamesForPlayer(player)} jogo(s)</span></div>
               <strong className="squad-shirt-number">{player.shirt_number === null || player.shirt_number === undefined ? "—" : `#${String(player.shirt_number).padStart(2, "0")}`}</strong>
