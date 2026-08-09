@@ -1931,6 +1931,12 @@ function SquadPageV3({ workspace, profile }) {
     setPhoto(null);
     setError("");
   };
+  useEffect(() => {
+    if (editing === null) return undefined;
+    const onKeyDown = (event) => event.key === "Escape" && close();
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [editing]);
   const openCreate = () => {
     setEditing({});
     setDraft(emptyDraft);
