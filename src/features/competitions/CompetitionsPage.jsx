@@ -1,4 +1,12 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { MatchDisplay } from "../../ui/MatchDisplay.jsx";
+import {
+  AnimatedNumber,
+  MotionBadge,
+  MotionTabs,
+  RollingLabel,
+  notify,
+} from "../../ui/motion/motion.jsx";
 import { normalizeName } from "../matches/import-core.js";
 import {
   aggregateCompetitionHistory,
@@ -83,6 +91,7 @@ function ImportCompetitionModal({ client, profile, workspace, close }) {
     try {
       await saveCompetitionPreview(client, profile, preview, palette, accent);
       await workspace.refresh();
+      notify(`${preview.name || "Campeonato"} adicionado.`);
       close();
     } catch (cause) {
       setError(cause.message);
@@ -341,26 +350,6 @@ function Standings({ groups, accent, slots, canEdit, onSlotsChange }) {
   );
 }
 
-function ClubMark({ name, url }) {
-  const [failed, setFailed] = useState(false);
-  useEffect(() => setFailed(false), [url]);
-  return (
-    <span className="competition-club-mark">
-      {url && !failed ? (
-        <img src={url} alt="" onError={() => setFailed(true)} />
-      ) : (
-        <b>
-          {String(name || "?")
-            .split(/\s+/)
-            .map((part) => part[0])
-            .join("")
-            .slice(0, 2)}
-        </b>
-      )}
-    </span>
-  );
-}
-
 const fixtureLogo = (fixture, side) =>
   fixture.metadata?.[`${side}Logo`] ||
   fixture[`${side}_logo`] ||
@@ -368,27 +357,15 @@ const fixtureLogo = (fixture, side) =>
   "";
 
 function FixtureClubs({ fixture }) {
-  return (
-    <div className="fixture-clubs">
-      <div className="fixture-club fixture-club-home">
-        <strong>{fixture.home_team_name}</strong>
-        <ClubMark
-          name={fixture.home_team_name}
-          url={fixtureLogo(fixture, "home")}
-        />
-        <b>{fixture.home_score ?? "—"}</b>
-      </div>
-      <i>×</i>
-      <div className="fixture-club fixture-club-away">
-        <b>{fixture.away_score ?? "—"}</b>
-        <ClubMark
-          name={fixture.away_team_name}
-          url={fixtureLogo(fixture, "away")}
-        />
-        <strong>{fixture.away_team_name}</strong>
-      </div>
-    </div>
-  );
+  return <MatchDisplay
+    className="fixture-clubs"
+    homeName={fixture.home_team_name}
+    homeLogo={fixtureLogo(fixture, "home")}
+    homeScore={fixture.home_score}
+    awayName={fixture.away_team_name}
+    awayLogo={fixtureLogo(fixture, "away")}
+    awayScore={fixture.away_score}
+  />;
 }
 
 const fixtureTitle = (fixture) =>
@@ -486,6 +463,7 @@ function CompetitionGames({ competition, view, workspace, organization }) {
 }
 
 function Knockout({ view, accent }) {
+  const [activeRound, setActiveRound] = useState(0);
   const rounds = view.knockout.knockout?.rounds || [];
   const grouped = rounds.map((round) => ({
     ...round,
@@ -522,6 +500,7 @@ function Knockout({ view, accent }) {
     })
     .filter((round) => round.slots.length);
   const firstRoundSize = bracketRounds[0]?.slots.length || 1;
+  useEffect(() => setActiveRound(0), [view.currentStage]);
   return (
     <section
       className="competition-section knockout-section"
@@ -533,11 +512,17 @@ function Knockout({ view, accent }) {
           <h2>Chaveamento · {view.currentStage}</h2>
         </div>
       </header>
+      <nav className="bracket-round-nav" aria-label="Navegar pelas fases">
+        <button type="button" disabled={activeRound === 0} onClick={() => setActiveRound((value) => Math.max(0, value - 1))}>← FASE ANTERIOR</button>
+        <strong>{bracketRounds[activeRound]?.name}</strong>
+        <button type="button" disabled={activeRound >= bracketRounds.length - 1} onClick={() => setActiveRound((value) => Math.min(bracketRounds.length - 1, value + 1))}>PRÓXIMA →</button>
+      </nav>
       <div className="bracket-scroll">
-        <div className="bracket-grid">
+        <div className="bracket-grid is-drawing">
           {bracketRounds.map((round, roundIndex) => (
             <section
               className={`bracket-round bracket-round-${roundIndex}`}
+              data-mobile-active={roundIndex === activeRound}
               key={round.name}
             >
               <h3>{round.name}</h3>
@@ -609,7 +594,7 @@ function ScenarioPanel({ edition, snapshot, qualificationSlots }) {
       <div className="scenario-metrics">
         <article>
           <small>POSIÇÃO</small>
-          <b>{result.currentPosition}º</b>
+          <b><AnimatedNumber id={`scenario-position-${edition.id}`} value={result.currentPosition} suffix="º" /></b>
         </article>
         <article>
           <small>DISTÂNCIA</small>
@@ -622,11 +607,11 @@ function ScenarioPanel({ edition, snapshot, qualificationSlots }) {
         </article>
         <article>
           <small>JOGOS</small>
-          <b>{result.remainingMatches}</b>
+          <b><AnimatedNumber id={`scenario-games-${edition.id}`} value={result.remainingMatches} /></b>
         </article>
         <article>
           <small>DISPONÍVEIS</small>
-          <b>{result.pointsAvailable} pts</b>
+          <b><AnimatedNumber id={`scenario-points-${edition.id}`} value={result.pointsAvailable} suffix=" pts" /></b>
         </article>
       </div>
     </section>
@@ -704,6 +689,7 @@ function CompetitionExplorer({
   );
   const [tab, setTab] = useState("overview");
   const [busy, setBusy] = useState("");
+  const [syncState, setSyncState] = useState("");
   const [error, setError] = useState("");
   const [archiveOpen, setArchiveOpen] = useState(false);
   const [outcome, setOutcome] = useState(
@@ -722,6 +708,7 @@ function CompetitionExplorer({
     const source = view.standingsSource || sources[0];
     if (!source) return;
     setBusy("Sincronizando");
+    setSyncState("loading");
     setError("");
     try {
       const preview = await analyzeCompetition(client, source.source_url);
@@ -733,8 +720,13 @@ function CompetitionExplorer({
         competition.accent_color,
       );
       await workspace.refresh();
+      setSyncState("success");
+      notify(`${competition.name} atualizada.`);
+      window.setTimeout(() => setSyncState(""), 1800);
     } catch (cause) {
       setError(cause.message);
+      setSyncState("error");
+      notify(`Erro ao atualizar ${competition.name}.`, "error");
     } finally {
       setBusy("");
     }
@@ -788,26 +780,16 @@ function CompetitionExplorer({
           <span>ÚLTIMA ATUALIZAÇÃO</span>
           <b>{dateTime(view.lastSyncedAt)}</b>
           {canDevelop(profile) && sources[0] && (
-            <button disabled={!!busy} onClick={() => void sync()}>
-              {busy || "ATUALIZAR"}
+            <button className="rolling-action" disabled={!!busy} onClick={() => void sync()}>
+              {syncState ? <MotionBadge state={syncState} /> : <RollingLabel>ATUALIZAR</RollingLabel>}
             </button>
           )}
         </aside>
       </header>
       {error && <p className="competition-error">{error}</p>}
-      <nav className="competition-tabs" aria-label="Seções da competição">
-        {tabs.map(([id, label]) => (
-          <button
-            className={tab === id ? "active" : ""}
-            onClick={() => setTab(id)}
-            key={id}
-          >
-            {label}
-          </button>
-        ))}
-      </nav>
+      <MotionTabs className="competition-tabs" label="Seções da competição" items={tabs} active={tab} onChange={setTab} />
       {tab === "overview" && (
-        <>
+        <div className="motion-panel-enter competition-tab-panel" key="overview">
           <section className="competition-overview-grid">
             <article>
               <small>FASE ATUAL</small>
@@ -823,10 +805,10 @@ function CompetitionExplorer({
               {zone && <em className={zone.inside ? "inside" : "outside"}>{zone.label}</em>}
             </article>
             <article>
-              <small>PRÓXIMO CONFRONTO</small>
+              <small>{view.strixFixture ? "FONTE DO CONFRONTO" : "PRÓXIMO CONFRONTO"}</small>
               <b>
                 {view.strixFixture
-                  ? fixtureTitle(view.strixFixture)
+                  ? competition.organization || view.standings.organization || "Provider oficial"
                   : view.awaitingKnockout
                     ? "Aguardando mata-mata"
                     : "A definir"}
@@ -859,9 +841,10 @@ function CompetitionExplorer({
               </button>
             </section>
           )}
-        </>
+        </div>
       )}
       {tab === "standings" && (
+        <div className="motion-panel-enter competition-tab-panel" key="standings">
         <Standings
           groups={view.standings.groups || []}
           accent={competition.accent_color}
@@ -869,24 +852,31 @@ function CompetitionExplorer({
           canEdit={canDevelop(profile)}
           onSlotsChange={(value) => void setQualificationSlots(value)}
         />
+        </div>
       )}
       {tab === "games" && (
+        <div className="motion-panel-enter competition-tab-panel" key="games">
         <CompetitionGames
           competition={competition}
           view={view}
           workspace={workspace}
           organization={competition.organization}
         />
+        </div>
       )}
       {tab === "knockout" && (
+        <div className="motion-panel-enter competition-tab-panel" key="knockout">
         <Knockout view={view} accent={competition.accent_color} />
+        </div>
       )}
       {tab === "scenarios" && (
+        <div className="motion-panel-enter competition-tab-panel" key="scenarios">
         <ScenarioPanel
           edition={edition}
           snapshot={view.standings}
           qualificationSlots={view.qualificationSlots}
         />
+        </div>
       )}
       {archiveOpen && (
         <div className="competition-modal-layer">
@@ -996,20 +986,13 @@ export function CompetitionsPage({ profile, workspace, client }) {
           A estrutura de Competições ainda não está disponível.
         </p>
       )}
-      <nav className="competition-view-tabs">
-        <button
-          className={viewMode === "active" ? "active" : ""}
-          onClick={() => setViewMode("active")}
-        >
-          ATIVAS
-        </button>
-        <button
-          className={viewMode === "historical" ? "active" : ""}
-          onClick={() => setViewMode("historical")}
-        >
-          HISTÓRICO
-        </button>
-      </nav>
+      <MotionTabs
+        className="competition-view-tabs"
+        label="Estado das competições"
+        items={[["active", "ATIVAS"], ["historical", "HISTÓRICO"]]}
+        active={viewMode}
+        onChange={setViewMode}
+      />
       {available.length ? (
         <>
           <div
@@ -1020,6 +1003,7 @@ export function CompetitionsPage({ profile, workspace, client }) {
               <button
                 key={edition.id}
                 className={selected?.edition.id === edition.id ? "active" : ""}
+                aria-pressed={selected?.edition.id === edition.id}
                 onClick={() => setSelectedEditionId(edition.id)}
                 style={{ "--competition-accent": competition.accent_color }}
               >
@@ -1028,7 +1012,7 @@ export function CompetitionsPage({ profile, workspace, client }) {
                 ) : (
                   <span>{competition.name.slice(0, 2)}</span>
                 )}
-                <div>
+                <div className="competition-selector-copy">
                   <b>{competition.name}</b>
                   <small>{edition.label}</small>
                 </div>

@@ -17,6 +17,7 @@ import "./fc27-fixes.css";
 import { GameDayEditor } from "./gameday/GameDayEditor.jsx";
 import { MatchesPage } from "./features/matches/MatchesPage.jsx";
 import { CompetitionsPage } from "./features/competitions/CompetitionsPage.jsx";
+import { notify, RollingLabel, ToastViewport } from "./ui/motion/motion.jsx";
 import "./features/squad-cards.css";
 
 const icons = {
@@ -1773,6 +1774,18 @@ function AgendaLive({ navigate, workspace }) {
     } catch { return []; }
   });
   useEffect(() => localStorage.setItem("strix-fc27-presets", JSON.stringify(presets)), [presets]);
+  useEffect(() => {
+    if (!actions) return undefined;
+    const closeMenu = (event) => {
+      if (event.key === "Escape" || (event.type === "pointerdown" && !event.target.closest(".agenda-actions,[data-agenda-menu-trigger]"))) setActions(null);
+    };
+    window.addEventListener("keydown", closeMenu);
+    document.addEventListener("pointerdown", closeMenu);
+    return () => {
+      window.removeEventListener("keydown", closeMenu);
+      document.removeEventListener("pointerdown", closeMenu);
+    };
+  }, [actions]);
   const items = useMemo(() => workspace.agenda.map((db) => ({
     db,
     id: db.id,
@@ -1794,8 +1807,8 @@ function AgendaLive({ navigate, workspace }) {
   ).sort((left, right) => new Date(left.db.scheduled_at) - new Date(right.db.scheduled_at));
   const run = async (work) => {
     setFeedback("");
-    try { await work(); }
-    catch (error) { setFeedback(error.message || "Não foi possível concluir a alteração."); }
+    try { await work(); notify("Agenda atualizada."); }
+    catch (error) { setFeedback(error.message || "Não foi possível concluir a alteração."); notify("Erro ao atualizar a Agenda.", "error"); }
   };
   return (
     <section className="agenda-page page-enter">
@@ -1823,8 +1836,14 @@ function AgendaLive({ navigate, workspace }) {
             </div>
             <span className="game-competition">{item.competition}</span>
             <em className={item.status === "EM BREVE" ? "soon" : ""}>{item.status}</em>
-            <button aria-label={`Ações para ${item.opponent}`} onClick={() => setActions(actions === item.id ? null : item.id)}>•••</button>
-            {actions === item.id && <div className="agenda-actions">
+            <button data-agenda-menu-trigger aria-haspopup="menu" aria-expanded={actions === item.id} aria-label={`Ações para ${item.opponent}`} onClick={() => setActions(actions === item.id ? null : item.id)}>•••</button>
+            {actions === item.id && <div className="agenda-actions" role="menu" onKeyDown={(event) => {
+              if (!["ArrowDown", "ArrowUp"].includes(event.key)) return;
+              event.preventDefault();
+              const buttons = [...event.currentTarget.querySelectorAll("button")];
+              const index = buttons.indexOf(document.activeElement);
+              buttons[(index + (event.key === "ArrowDown" ? 1 : -1) + buttons.length) % buttons.length]?.focus();
+            }}>
               <button onClick={() => { setActions(null); setModal({ entry: item, mode: "edit" }); }}><Icon name="edit" size={15} />Editar partida</button>
               <button onClick={() => { setActions(null); setModal({ entry: item, mode: "swap" }); }}><Icon name="game" size={15} />Trocar adversário</button>
               <button className="danger" onClick={() => { setActions(null); setPendingAction({ type:"cancel", item }); }}><Icon name="close" size={15} />Cancelar jogo</button>
@@ -2396,36 +2415,93 @@ function PartidasLive({ profile, workspace }) {
   const rows = workspace.matches;
   return <section className="matches-page page-enter"><header className="matches-hero"><div><span>PARTIDAS DO CLUBE</span><h1>Histórico de jogo.</h1><p>Dados oficiais da EA e registros manuais na mesma linha do tempo.</p></div><div className="matches-actions"><button className="secondary" onClick={() => void load("computer")} disabled={Boolean(loadingSource)}><Icon name="game" size={16}/>{loadingSource === "computer" ? "CONSULTANDO SEU PC" : "BUSCAR PELO MEU PC"}</button><button className="secondary" onClick={() => void load("cloud")} disabled={Boolean(loadingSource)}><Icon name="search" size={16}/>{loadingSource === "cloud" ? "CONSULTANDO EA" : "BUSCAR NA EA"}</button>{canManage && <button className="secondary" onClick={() => openManual()}><Icon name="plus" size={16}/>ADICIONAR MANUAL</button>}{found.length > 0 && <button className="primary" onClick={() => void importSelected()}><Icon name="upload" size={16}/>IMPORTAR SELECIONADAS</button>}</div></header>{(error || workspace.error) && <p className="matches-error">{error || workspace.error}</p>}<section className="matches-list"><header><span>DATA</span><span>PARTIDA</span><span>RESULTADO</span><span>COMPETIÇÃO</span><span>ORIGEM</span></header>{rows.length ? rows.map((match) => { const result = match.strix_score > match.opponent_score ? "VITÓRIA" : match.strix_score < match.opponent_score ? "DERROTA" : "EMPATE"; const logo = match.opponent_logos?.storage_path ? workspace.assetUrl(match.opponent_logos.storage_path) : ""; return <article key={match.id}><span>{datePart(match.played_at)}<small>{timePart(match.played_at)}</small></span><div className="match-teams"><Crest small/><b>STRIX</b><strong>{match.strix_score} x {match.opponent_score}</strong><Avatar name={match.opponent_name} logo={logo}/><b>{match.opponent_name}</b></div><em className={result.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()}>{result}</em><small>{match.competition_name}</small><small>{match.source === "manual" ? "MANUAL" : "API EA"}</small><div className="match-row-actions"><button title="Ver dados" onClick={() => setDetail(match)}><Icon name="details" size={16}/></button>{canManage && <><button title="Editar" onClick={() => openManual(match)}><Icon name="edit" size={16}/></button><button title="Excluir" onClick={() => void workspace.removeClubMatch(match.id).catch((removeError) => setError(removeError.message))}><Icon name="trash" size={16}/></button></>}</div></article>; }) : <div className="matches-empty">Ainda não há partidas no histórico. Use a busca da EA ou adicione um resultado manual.</div>}</section>{found.length > 0 && <section className="matches-list import-preview"><header><span>DATA</span><span>PARTIDA</span><span>RESULTADO</span><span>COMPETIÇÃO</span><span>SELEÇÃO</span></header>{found.map((match) => <article key={match.id}><span>{match.dateLabel}<small>{match.timeLabel}</small></span><div className="match-teams"><Crest small/><b>STRIX</b><strong>{match.strixScore} x {match.opponentScore}</strong><b>{match.opponent}</b></div><em>{match.strixScore > match.opponentScore ? "VITÓRIA" : match.strixScore < match.opponentScore ? "DERROTA" : "EMPATE"}</em><small>{match.competition}</small><label className="match-select"><input type="checkbox" checked={selected.has(match.id)} onChange={() => setSelected((current) => { const next = new Set(current); next.has(match.id) ? next.delete(match.id) : next.add(match.id); return next; })}/></label></article>)}</section>}{manualOpen && <div className="match-manual-backdrop"><form className="match-manual-modal" onSubmit={saveManual}><header><div><span>REGISTRO DO CLUBE</span><h2>{editing ? "Editar partida" : "Adicionar partida manual"}</h2><p>O resultado entra no histórico e sincroniza em todos os dispositivos.</p></div><button type="button" className="icon-button" onClick={() => setManualOpen(false)}><Icon name="close"/></button></header><div className="manual-form-grid"><label className="manual-full">ADVERSÁRIO<input autoFocus value={manualDraft.opponent} onChange={(event) => setManualDraft((current) => ({...current, opponent:event.target.value}))}/></label><label>DATA<input type="date" value={manualDraft.date} onChange={(event) => setManualDraft((current) => ({...current,date:event.target.value}))}/></label><label>HORA<input type="time" value={manualDraft.time} onChange={(event) => setManualDraft((current) => ({...current,time:event.target.value}))}/></label><label>STRIX<input type="number" min="0" value={manualDraft.strixScore} onChange={(event) => setManualDraft((current) => ({...current, strixScore:event.target.value}))}/></label><label>ADVERSÁRIO<input type="number" min="0" value={manualDraft.opponentScore} onChange={(event) => setManualDraft((current) => ({...current,opponentScore:event.target.value}))}/></label><label className="manual-full">COMPETIÇÃO<input value={manualDraft.competition} onChange={(event) => setManualDraft((current) => ({...current,competition:event.target.value}))}/></label></div><footer><button type="button" className="secondary" onClick={() => setManualOpen(false)}>CANCELAR</button><button className="primary"><Icon name="upload" size={16}/>SALVAR PARTIDA</button></footer></form></div>}{detail && <MatchDetails match={detail} close={() => setDetail(null)}/>}</section>;
 }
-function Command({ close, navigate }) {
+function Command({ close, navigate, workspace, profile }) {
+  const [query, setQuery] = useState("");
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const list = useMemo(() => {
+    const pages = [["central", "Central do time", "live"], ...nav].map(([id, label, icon]) => ({
+      id: `page-${id}`, label, meta: "Página", icon, run: () => navigate(id),
+    }));
+    const players = workspace.players.map((player) => ({
+      id: `player-${player.id}`, label: player.display_name, meta: "Elenco", icon: "squad", run: () => navigate("elenco"),
+    }));
+    const matches = workspace.matches.map((match) => ({
+      id: `match-${match.id}`, label: match.opponent_name, meta: match.competition_name || "Partida", icon: "game", run: () => navigate("partidas"),
+    }));
+    const agenda = workspace.agenda.map((item) => ({
+      id: `agenda-${item.id}`, label: item.opponent_name, meta: item.competition_name || "Agenda", icon: "calendar", run: () => navigate("agenda"),
+    }));
+    const competitions = workspace.competitions.map((item) => ({
+      id: `competition-${item.id}`, label: item.name, meta: item.organization || "Competição", icon: "trophy", run: () => navigate("campeonatos"),
+    }));
+    const manager = ["diretoria", "dev"].includes(profile?.access_tier)
+      ? [
+          { id: "action-agenda", label: "Nova partida na Agenda", meta: "Ação", icon: "plus", run: () => navigate("agenda") },
+          { id: "action-import", label: "Buscar partidas pelo meu PC", meta: "Ação", icon: "game", run: () => navigate("partidas") },
+          { id: "action-gameday", label: "Abrir Game Day", meta: "Ação", icon: "media", run: () => navigate("midia") },
+        ]
+      : [];
+    const developer = profile?.access_tier === "dev"
+      ? [{ id: "action-competition", label: "Adicionar campeonato", meta: "Ação Dev", icon: "trophy", run: () => navigate("campeonatos") }]
+      : [];
+    const normalized = query.trim().toLocaleLowerCase("pt-BR");
+    return [...manager, ...developer, ...pages, ...players, ...matches, ...agenda, ...competitions]
+      .filter((item) => !normalized || `${item.label} ${item.meta}`.toLocaleLowerCase("pt-BR").includes(normalized))
+      .slice(0, 18);
+  }, [navigate, profile?.access_tier, query, workspace]);
+  useEffect(() => setSelectedIndex(0), [query]);
+  const execute = (item) => {
+    if (!item) return;
+    item.run();
+    close();
+  };
   return (
-    <div className="command-backdrop" onMouseDown={close}>
+    <div className="command-backdrop" onMouseDown={close} role="presentation">
       <section
         className="command"
         onMouseDown={(event) => event.stopPropagation()}
+        onKeyDown={(event) => {
+          if (event.key === "ArrowDown") {
+            event.preventDefault();
+            setSelectedIndex((index) => list.length ? (index + 1) % list.length : 0);
+          } else if (event.key === "ArrowUp") {
+            event.preventDefault();
+            setSelectedIndex((index) => list.length ? (index - 1 + list.length) % list.length : 0);
+          } else if (event.key === "Enter") {
+            event.preventDefault();
+            execute(list[selectedIndex]);
+          } else if (event.key === "Escape") close();
+        }}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Buscar no Strix"
       >
         <div>
           <Icon name="search" />
-          <input autoFocus placeholder="Buscar ou executar ação..." />
+          <input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar páginas, partidas, jogadores…" aria-controls="strix-command-results" aria-activedescendant={list[selectedIndex] ? `command-option-${selectedIndex}` : undefined} />
           <kbd>ESC</kbd>
         </div>
-        <p>AÇÕES RÁPIDAS</p>
-        {[
-          ["Criar jogo", "agenda", "plus"],
-          ["Abrir escalação", "central", "squad"],
-          ["Adicionar jogador", "elenco", "plus"],
-        ].map(([label, id, icon]) => (
+        <p>{query ? "RESULTADOS" : "AÇÕES E NAVEGAÇÃO"}</p>
+        <div className="command-results" id="strix-command-results" role="listbox">
+        {list.map((item, index) => (
           <button
-            key={label}
-            onClick={() => {
-              navigate(id);
-              close();
-            }}
+            className={selectedIndex === index ? "selected" : ""}
+            id={`command-option-${index}`}
+            data-selected={selectedIndex === index}
+            role="option"
+            aria-selected={selectedIndex === index}
+            key={item.id}
+            onMouseEnter={() => setSelectedIndex(index)}
+            onClick={() => execute(item)}
           >
-            <Icon name={icon} />
-            <span>{label}</span>
+            <Icon name={item.icon} />
+            <span><b>{item.label}</b><small>{item.meta}</small></span>
             <kbd>↵</kbd>
           </button>
         ))}
+        {!list.length && <div className="command-empty">Nenhum resultado para “{query}”.</div>}
+        </div>
+        <footer><span><kbd>↑↓</kbd> navegar</span><span><kbd>↵</kbd> abrir</span><span><kbd>esc</kbd> fechar</span></footer>
       </section>
     </div>
   );
@@ -2484,6 +2560,20 @@ function CurrentGameLive({ navigate, workspace }) {
     .sort((left, right) => new Date(left.scheduled_at) - new Date(right.scheduled_at))[0], [workspace.agenda]);
   return <button className="now-playing" onClick={() => navigate("agenda")}><Crest small/><div><small>{item ? "PRÓXIMA PARTIDA" : "AGENDA LIVRE"}</small><b>{item ? `Strix United vs ${item.opponent_name}` : "Nenhuma partida programada"}</b></div><strong>{item ? timePart(item.scheduled_at) : "—"}</strong><Icon name="arrow" size={17}/></button>;
 }
+function WorkspaceSkeleton() {
+  return (
+    <section className="workspace-skeleton" aria-label="Carregando conteúdo" aria-busy="true">
+      <div className="motion-skeleton skeleton-title" />
+      <div className="motion-skeleton skeleton-subtitle" />
+      <div className="skeleton-cards">
+        <div className="motion-skeleton" />
+        <div className="motion-skeleton" />
+        <div className="motion-skeleton" />
+      </div>
+      <div className="motion-skeleton skeleton-table" />
+    </section>
+  );
+}
 function App() {
   const auth = useTeamAuth();
   const workspace = useFc27Workspace(auth.client, auth.profile);
@@ -2491,10 +2581,12 @@ function App() {
     [compact, setCompact] = useState(false),
     [mobileOpen, setMobileOpen] = useState(false),
     [command, setCommand] = useState(false),
+    [createOpen, setCreateOpen] = useState(false),
     [player, setPlayer] = useState(null);
   const navigate = (id) => {
     setActive(id);
     setMobileOpen(false);
+    setCreateOpen(false);
   };
   useEffect(() => {
     const listener = (event) => {
@@ -2505,6 +2597,7 @@ function App() {
       if (event.key === "Escape") {
         setCommand(false);
         setMobileOpen(false);
+        setCreateOpen(false);
       }
     };
     const protectImage = (event) => {
@@ -2519,6 +2612,14 @@ function App() {
       document.removeEventListener("contextmenu", protectImage);
     };
   }, []);
+  useEffect(() => {
+    if (!createOpen) return undefined;
+    const closeCreate = (event) => {
+      if (!event.target.closest(".create-menu,.create-trigger")) setCreateOpen(false);
+    };
+    document.addEventListener("pointerdown", closeCreate);
+    return () => document.removeEventListener("pointerdown", closeCreate);
+  }, [createOpen]);
   if (!auth.profile)
     return (
       <LoginScreen
@@ -2568,13 +2669,21 @@ function App() {
             <button aria-label="Notificações">
               <Icon name="bell" />
             </button>
-            <button className="add-button" onClick={() => navigate("agenda")}>
+            <button className={`add-button create-trigger${createOpen ? " is-open" : ""}`} onClick={() => setCreateOpen((value) => !value)} aria-expanded={createOpen} aria-haspopup="menu">
               <Icon name="plus" size={16} />
-              NOVO
+              <RollingLabel>NOVO</RollingLabel>
             </button>
+            {createOpen && (
+              <div className="create-menu" role="menu">
+                <button role="menuitem" onClick={() => navigate("agenda")}><Icon name="calendar" size={16}/><span><b>Nova partida</b><small>Adicionar à Agenda</small></span></button>
+                <button role="menuitem" onClick={() => navigate("elenco")}><Icon name="squad" size={16}/><span><b>Elenco</b><small>Gerenciar jogadores</small></span></button>
+                {["diretoria", "dev"].includes(auth.profile.access_tier) && <button role="menuitem" onClick={() => navigate("midia")}><Icon name="media" size={16}/><span><b>Game Day</b><small>Abrir editor</small></span></button>}
+                {auth.profile.access_tier === "dev" && <button role="menuitem" onClick={() => navigate("campeonatos")}><Icon name="trophy" size={16}/><span><b>Campeonato</b><small>Adicionar ou sincronizar</small></span></button>}
+              </div>
+            )}
           </div>
         </header>
-        {active === "central" ? (
+        {workspace.loading ? <WorkspaceSkeleton /> : active === "central" ? (
           <CentralLive workspace={workspace} navigate={navigate} />
         ) : active === "agenda" ? (
           <AgendaLive navigate={navigate} workspace={workspace} />
@@ -2590,9 +2699,10 @@ function App() {
       </main>
       <CurrentGameLive navigate={navigate} workspace={workspace} />
       {command && (
-        <Command close={() => setCommand(false)} navigate={navigate} />
+        <Command close={() => setCommand(false)} navigate={navigate} workspace={workspace} profile={auth.profile} />
       )}
       <Profile player={player} close={() => setPlayer(null)} />
+      <ToastViewport />
     </div>
   );
 }

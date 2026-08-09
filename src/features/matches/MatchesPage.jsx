@@ -1,5 +1,12 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
+import { MatchDisplay } from "../../ui/MatchDisplay.jsx";
+import {
+  RollingLabel,
+  notify,
+  useSheetDismiss,
+  useSwipeActions,
+} from "../../ui/motion/motion.jsx";
 import {
   dedupeImportedMatches,
   normalizeEaMatch,
@@ -26,28 +33,6 @@ const formatTime = (value) =>
     timeZone: "America/Sao_Paulo",
   }).format(new Date(value));
 
-function TeamMark({ name, url }) {
-  const [failed, setFailed] = useState(false);
-  useEffect(() => setFailed(false), [url]);
-  const initials = String(name || "?")
-    .split(/\s+/)
-    .map((word) => word[0])
-    .slice(0, 2)
-    .join("");
-  return (
-    <span
-      className={`team-mark${url && !failed ? " has-image" : ""}`}
-      aria-hidden="true"
-    >
-      {url && !failed ? (
-        <img src={url} alt="" onError={() => setFailed(true)} />
-      ) : (
-        initials
-      )}
-    </span>
-  );
-}
-
 function MatchScoreline({
   homeName,
   homeLogo,
@@ -57,21 +42,7 @@ function MatchScoreline({
   awayScore,
   className = "",
 }) {
-  return (
-    <div className={`match-scoreline ${className}`.trim()}>
-      <div className="match-scoreline-home">
-        <b>{homeName}</b>
-        <TeamMark name={homeName} url={homeLogo} />
-        <strong>{homeScore ?? "—"}</strong>
-      </div>
-      <i>×</i>
-      <div className="match-scoreline-away">
-        <strong>{awayScore ?? "—"}</strong>
-        <TeamMark name={awayName} url={awayLogo} />
-        <b>{awayName}</b>
-      </div>
-    </div>
-  );
+  return <MatchDisplay {...{ homeName, homeLogo, homeScore, awayName, awayLogo, awayScore, className }} />;
 }
 
 function MatchPreview({ match, workspace }) {
@@ -246,7 +217,7 @@ function ReviewStep({
   next,
 }) {
   return (
-    <section className="import-stage">
+    <section className="import-stage motion-stack-stage">
       <header>
         <div>
           <span>ETAPA 1 · ESCOLHER E REVISAR</span>
@@ -346,7 +317,7 @@ function ResolveStep({
   next,
 }) {
   return (
-    <section className="import-stage">
+    <section className="import-stage motion-stack-stage">
       <header>
         <div>
           <span>ETAPA 2 · RESOLVER PENDÊNCIAS</span>
@@ -502,7 +473,7 @@ function SummaryStep({
       .map(([name]) => name),
   ).size;
   return (
-    <section className="import-stage import-summary">
+    <section className="import-stage import-summary motion-stack-stage">
       <header>
         <div>
           <span>REVISÃO FINAL</span>
@@ -567,7 +538,7 @@ function SummaryStep({
           disabled={!validation.valid || saving}
           onClick={confirm}
         >
-          {saving ? "IMPORTANDO…" : "CONFIRMAR IMPORTAÇÃO"}
+          <RollingLabel>{saving ? "IMPORTANDO…" : "CONFIRMAR IMPORTAÇÃO"}</RollingLabel>
         </button>
       </footer>
     </section>
@@ -589,6 +560,12 @@ function StatIcon({ name }) {
 }
 
 function MatchDetails({ match, workspace, close }) {
+  const sheetDismiss = useSheetDismiss(close);
+  useEffect(() => {
+    const onKeyDown = (event) => event.key === "Escape" && close();
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [close]);
   const performance = match.performance || {};
   const players = [...(performance.players || [])].sort(
     (left, right) => Number(right.rating || 0) - Number(left.rating || 0),
@@ -626,6 +603,7 @@ function MatchDetails({ match, workspace, close }) {
         aria-modal="true"
         aria-label="Detalhes da partida"
       >
+        <div className="match-sheet-handle" aria-label="Arraste para fechar" {...sheetDismiss}><i /></div>
         <header className="match-detail-header">
           <div><span>HISTÓRICO DA PARTIDA</span><h2>Resumo do confronto</h2><p>{formatDate(match.played_at)} · {formatTime(match.played_at)} · {match.competition_name || "Amistoso"}</p></div>
           <em className={result.toLowerCase()}>{result}</em>
@@ -680,6 +658,46 @@ function MatchDetails({ match, workspace, close }) {
   ), document.body);
 }
 
+function MobileMatchCard({ match, opponentLogo, result, canManage, detail, edit, remove }) {
+  const swipe = useSwipeActions(canManage ? 132 : 0);
+  const confirmRemove = () => {
+    if (window.confirm(`Excluir a partida contra ${match.opponent_name}?`)) remove(match.id);
+  };
+  return (
+    <div className={`match-mobile-swipe${swipe.offset ? " is-open" : ""}`}>
+      {canManage && (
+        <div className="match-mobile-actions" aria-hidden={!swipe.offset}>
+          <button type="button" onClick={() => (swipe.close(), edit(match))}>EDITAR</button>
+          <button type="button" className="danger" onClick={confirmRemove}>EXCLUIR</button>
+        </div>
+      )}
+      <article
+        className="match-mobile-card"
+        style={{ transform: `translateX(${swipe.offset}px)` }}
+        {...swipe.handlers}
+      >
+        <header>
+          <time>{formatDate(match.played_at)} · {formatTime(match.played_at)}</time>
+          <button type="button" onClick={() => detail(match)} aria-label={`Abrir detalhes contra ${match.opponent_name}`}>◎</button>
+        </header>
+        <MatchDisplay
+          homeName="STRIX UNITED"
+          homeLogo="/assets/strix-logo.png"
+          homeScore={match.strix_score}
+          awayName={match.opponent_name}
+          awayLogo={opponentLogo}
+          awayScore={match.opponent_score}
+        />
+        <footer>
+          <em className={result.toLowerCase()}>{result}</em>
+          <span>{match.competition_name || "AMISTOSO"}</span>
+          {canManage && <small>DESLIZE PARA AÇÕES</small>}
+        </footer>
+      </article>
+    </div>
+  );
+}
+
 function MatchHistory({ workspace, canManage, detail, edit, remove }) {
   return (
     <section className="matches-list matches-history progressive-history">
@@ -702,7 +720,8 @@ function MatchHistory({ workspace, canManage, detail, edit, remove }) {
             ? workspace.assetUrl(match.opponent_logos.storage_path)
             : "";
           return (
-            <article key={match.id}>
+            <React.Fragment key={match.id}>
+            <article className="match-history-desktop">
               <span>
                 {formatDate(match.played_at)}
                 <small>{formatTime(match.played_at)}</small>
@@ -719,21 +738,23 @@ function MatchHistory({ workspace, canManage, detail, edit, remove }) {
               <em className={result.toLowerCase()}>{result}</em>
               <small>{match.competition_name || "AMISTOSO"}</small>
               <div className="match-row-actions">
-                <button title="Ver dados" onClick={() => detail(match)}>
+                <button className="motion-tooltip" data-tooltip="Ver dados" aria-label="Ver dados" title="Ver dados" onClick={() => detail(match)}>
                   ◎
                 </button>
                 {canManage && (
                   <>
-                    <button title="Editar" onClick={() => edit(match)}>
+                    <button className="motion-tooltip" data-tooltip="Editar" aria-label="Editar" title="Editar" onClick={() => edit(match)}>
                       ✎
                     </button>
-                    <button title="Excluir" onClick={() => remove(match.id)}>
+                    <button className="motion-tooltip" data-tooltip="Excluir" aria-label="Excluir" title="Excluir" onClick={() => remove(match.id)}>
                       ⌫
                     </button>
                   </>
                 )}
               </div>
             </article>
+            <MobileMatchCard {...{ match, opponentLogo, result, canManage, detail, edit, remove }} />
+            </React.Fragment>
           );
         })
       ) : (
@@ -884,6 +905,7 @@ export function MatchesPage({ profile, workspace, client }) {
       setSuccess(
         `${importedCount} partida${importedCount === 1 ? " importada" : "s importadas"} com sucesso. O histórico foi atualizado abaixo.`,
       );
+      notify(`${importedCount} partida${importedCount === 1 ? " importada" : "s importadas"}.`);
     } catch (saveError) {
       try {
         await workspace.refresh();
@@ -916,6 +938,7 @@ export function MatchesPage({ profile, workspace, client }) {
       await workspace.upsertClubMatch(match, match.importSource || "manual");
       setEditing(null);
       setSuccess("Partida atualizada.");
+      notify("Partida atualizada.");
     } catch (saveError) {
       setError(saveError.message);
     }
