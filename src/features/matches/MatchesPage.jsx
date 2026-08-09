@@ -18,6 +18,7 @@ import {
 } from "./import-core.js";
 import "./match-import.css";
 import "./match-fixes.css";
+import "../../partidas.css";
 
 const canManageMatches = (profile) =>
   ["diretoria", "dev"].includes(profile?.access_tier);

@@ -13,7 +13,7 @@ test("motion system centralizes tokens and honors reduced motion", async () => {
   ]);
   assert.match(css, /--motion-fast:/);
   assert.match(css, /--motion-normal:/);
-  assert.match(css, /prefers-reduced-motion:reduce/);
+  assert.match(css, /prefers-reduced-motion:\s*reduce/);
   assert.match(source, /matchMedia\("\(prefers-reduced-motion: reduce\)"\)/);
   assert.match(main, /ArrowDown/);
   assert.match(source, /scrollIntoView/);
@@ -68,9 +68,9 @@ test("competition mobile selector, sticky standings and round navigation stay bo
 
 test("global mobile shell reserves safe area and prevents global horizontal overflow", async () => {
   const css = await read("src/ui/motion/motion.css");
-  assert.match(css, /overflow-x:clip/);
-  assert.match(css, /padding-bottom:calc\(118px \+ env\(safe-area-inset-bottom\)\)/);
-  assert.match(css, /bottom:calc\(10px \+ env\(safe-area-inset-bottom\)\)/);
+  assert.match(css, /overflow-x:\s*clip/);
+  assert.match(css, /padding-bottom:\s*calc\(118px \+ env\(safe-area-inset-bottom\)\)/);
+  assert.match(css, /bottom:\s*calc\(10px \+ env\(safe-area-inset-bottom\)\)/);
   assert.match(css, /100dvh/);
 });
 
@@ -97,6 +97,6 @@ test("command, toast, menu and sheet keep their accessible interaction contracts
   assert.match(motion, /dy > 84/);
   assert.match(matches, /type="button" className="match-sheet-handle"/);
   assert.match(matches, /event\.target === event\.currentTarget && close\(\)/);
-  assert.match(motionCss, /\.motion-toast\{/);
+  assert.match(motionCss, /\.motion-toast\s*\{/);
   assert.match(motionCss, /@keyframes motion-menu-in/);
 });

@@ -3,18 +3,22 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
 test("escudos do histórico ficam dentro de um container com limites rígidos", async () => {
-  const [component, css, competitionCss, matchDisplay, matchDisplayCss] = await Promise.all([
+  const [component, css, competitionCss, matchDisplay, matchDisplayCss, clubLogo, clubLogoCss] = await Promise.all([
     readFile(new URL("../src/features/matches/MatchesPage.jsx", import.meta.url), "utf8"),
     readFile(new URL("../src/features/matches/match-fixes.css", import.meta.url), "utf8"),
     readFile(new URL("../src/features/competitions/competitions-inline.css", import.meta.url), "utf8"),
     readFile(new URL("../src/ui/MatchDisplay.jsx", import.meta.url), "utf8"),
     readFile(new URL("../src/ui/match-display.css", import.meta.url), "utf8"),
+    readFile(new URL("../src/ui/ClubLogo.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/ui/club-logo.css", import.meta.url), "utf8"),
   ]);
   assert.match(component, /function MatchScoreline/);
   assert.match(component, /<MatchDisplay/);
-  assert.match(matchDisplay, /match-display-mark.*has-image.*is-fallback.*is-framed/s);
+  assert.match(matchDisplay, /<ClubLogo[\s\S]*match-display-mark/);
+  assert.match(clubLogo, /hasAsset.*is-fallback/s);
+  assert.match(clubLogoCss, /has-image\.is-logo.*background:transparent/s);
   assert.match(matchDisplayCss, /has-image:not\(\.is-framed\).*background:transparent/s);
-  assert.match(matchDisplay, /onError=\{\(\) => setFailed\(true\)\}/);
+  assert.match(clubLogo, /onError: \(\) => setFailed\(true\)/);
   assert.match(matchDisplayCss, /\.match-display-mark\{[^}]*max-width:34px[^}]*max-height:34px[^}]*overflow:hidden/s);
   assert.match(matchDisplayCss, /\.match-display-mark img\{[^}]*width:100%[^}]*height:100%[^}]*object-fit:contain/s);
   assert.match(css, /\.progressive-history \.team-mark[^}]*max-width:34px[^}]*max-height:34px[^}]*overflow:hidden/s);

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import "./styles.css";
 import "./fc27-polish.css";
@@ -14,6 +14,9 @@ import { MatchesPage } from "./features/matches/MatchesPage.jsx";
 import { CompetitionsPage } from "./features/competitions/CompetitionsPage.jsx";
 import { LibraryPage } from "./features/library/LibraryPage.jsx";
 import { DeveloperPage } from "./features/developer/DeveloperPage.jsx";
+import { StatisticsPage } from "./features/statistics/StatisticsPage.jsx";
+import { AnalysisPage } from "./features/analysis/AnalysisPage.jsx";
+import { notify, ToastViewport } from "./ui/motion/motion.jsx";
 import { GameDayCanvas } from "./gameday/GameDayCanvas.jsx";
 import { GameDayEditor } from "./gameday/GameDayEditor.jsx";
 import { createDefaultProject } from "./gameday/defaults.js";
@@ -27,10 +30,10 @@ const snapshot = { phase: "Fase de grupos", teamCount: 8, strixGroup: "Grupo A",
 ] }] };
 const workspace = {
   error: "", schemaPending: false,
-  players: [{ id: "p1", display_name: "YGO", is_active: true }], aliases: [], logos: [],
+  players: [{ id: "p1", display_name: "YGO", positions: ["ZAG"], member_type: "elenco", is_active: true }, { id: "p2", display_name: "JOÃO GAMER", positions: ["GOL"], member_type: "complete", is_active: true }], aliases: [{ ea_name: "39ygo", player_id: "p1", club_players: { display_name: "YGO" } }], logos: [],
   agenda: [{ id: "a1", scheduled_at: now, opponent_name: "POA CITY", status: "scheduled", competition_name: "Copa Yeshua", competition_id: "c1", competition_edition_id: "e1" }, { id: "a2", scheduled_at: new Date("2026-08-07T00:10:00-03:00").toISOString(), opponent_name: "POA CITY", status: "scheduled", competition_name: "Copa Yeshua", competition_id: "c1", competition_edition_id: "e1" }],
   matches: [
-    { id: "m1", played_at: now, opponent_name: "POA CITY", strix_score: 3, opponent_score: 1, competition_name: "Copa Yeshua", competition_id: "c1", competition_edition_id: "e1", source: "ea_api", performance: { possession: 57, shots: 12, passes: "88/102", tackles: 9, goalkeeperSaves: 4, averageRating: 8.4, players: [{ eaName: "39ygo", rating: 8.7, goals: 2, assists: 1, passes: "31/34", passesMade: 31, shots: 4, tackles: 3, saves: 0 }, { eaName: "OBEEN", rating: 8.1, goals: 1, assists: 0, passes: "24/28", passesMade: 24, shots: 2, tackles: 5, saves: 0 }, { eaName: "Caiu cedo", rating: 3, goals: 0, assists: 0, passes: "0/0", passesMade: 0, shots: 0, tackles: 0, saves: 0 }] } },
+    { id: "m1", played_at: now, opponent_name: "POA CITY", strix_score: 3, opponent_score: 1, competition_name: "Copa Yeshua", competition_id: "c1", competition_edition_id: "e1", source: "ea_api", performance: { possession: 57, shots: 12, passes: "88/102", tackles: 9, goalkeeperSaves: 4, averageRating: 8.4, players: [{ eaName: "39ygo", rating: 8.7, goals: 2, assists: 1, passes: "31/34", passesMade: 31, passesAttempts: 34, shots: 4, tackles: 3, saves: 0 }, { eaName: "OBEEN", rating: 8.1, goals: 1, assists: 0, passes: "24/28", passesMade: 24, passesAttempts: 28, shots: 2, tackles: 5, saves: 0 }, { eaName: "NUNES", rating: 7.8, goals: 0, assists: 1, passesMade: 22, passesAttempts: 27, shots: 1, tackles: 2 }, { eaName: "KESTOL", rating: 7.5, goals: 0, assists: 0, passesMade: 19, passesAttempts: 24, shots: 1, tackles: 4 }, { eaName: "CEDRAZ", rating: 7.3, goals: 0, assists: 0, passesMade: 18, passesAttempts: 23, shots: 0, tackles: 5 }, { eaName: "SANTOZZ", rating: 7.2, goals: 0, assists: 0, passesMade: 14, passesAttempts: 20, shots: 3, tackles: 1 }, { eaName: "JOAO", position: "GOL", rating: 7.9, passesMade: 18, passesAttempts: 22, saves: 4 }, { eaName: "Caiu cedo", rating: 3, goals: 0, assists: 0, passes: "0/0", passesMade: 0, shots: 0, tackles: 0, saves: 0 }] } },
     { id: "m2", played_at: now, opponent_name: "SEM ESCUDO", strix_score: 2, opponent_score: 2, competition_name: "Amistoso", source: "local_bridge", performance: {} },
     { id: "m3", played_at: now, opponent_name: "ESCUDO GRANDE", strix_score: 2, opponent_score: 3, competition_name: "Master League", source: "local_bridge", opponent_logos: { storage_path: "/assets/strix-logo.png" }, performance: {} },
   ],
@@ -58,10 +61,14 @@ const client = {
 const page = new URLSearchParams(location.search).get("screen") || "competitions";
 let content;
 const TestIcon = () => <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M12 5v14" fill="none" stroke="currentColor" strokeWidth="2"/></svg>;
+function ToastFixture() { useEffect(() => { notify("Agenda sincronizada."); notify("Novo confronto disponível.", "warning"); notify("Importação concluída."); }, []); return <><section className="data-page"><header className="data-page-header"><div><span>MOTION QA</span><h1>Toast stack.</h1></div></header></section><ToastViewport/></>; }
 if (page === "agenda-menu") content = <section className="data-page"><header className="data-page-header"><div><span>AGENDA DE PARTIDAS</span><h1>Próximos jogos.</h1></div></header><section className="agenda-list"><article className="agenda-game"><time>22H10</time><div className="agenda-match"><div className="avatar">PC</div><div><small>STRIX UNITED VS</small><b>POA CITY FC</b></div></div><span className="game-competition">COPA YESHUA</span><em className="soon">EM BREVE</em><button>•••</button><div className="agenda-actions"><button><TestIcon/>Editar partida</button><button><TestIcon/>Trocar adversário</button><button className="danger"><TestIcon/>Cancelar jogo</button><button className="danger delete"><TestIcon/>Excluir partida</button></div></article></section></section>;
+else if (page === "toasts") content = <ToastFixture/>;
 else if (page === "player-modal") content = <div className="match-manual-backdrop"><form className="match-manual-modal squad-modal-v2"><header><div><span>ELENCO · EDITAR PERFIL</span><h2>Editar jogador</h2><p>O preview acompanha a ficha antes de entrar no elenco.</p></div><button type="button" className="icon-button">×</button></header><div className="squad-editor"><section className="manual-form-grid"><label className="manual-full">NOME DE EXIBIÇÃO<input value="YGO" readOnly/></label><label>NÚMERO<input value="10" readOnly/></label><label className="manual-full logo-drop"><span>FOTO DO JOGADOR</span></label><fieldset className="position-picker manual-full"><legend>POSIÇÕES EM QUE JOGA</legend>{["GOL","ZAG","ALA","VOL","MC","MEI","ATA"].map((position)=><button type="button" className={position==="MC"?"selected":""} key={position}>{position}</button>)}</fieldset><fieldset className="member-picker member-picker-three manual-full"><legend>VÍNCULO COM O TIME</legend><button type="button" className="selected"><b>ELENCO</b><small>Jogador do elenco</small></button><button type="button"><b>TESTE</b><small>Em avaliação</small></button><button type="button"><b>COMPLETE</b><small>Fixo no time</small></button></fieldset></section><aside className="squad-preview"><span>PREVIEW DO ELENCO</span><div className="avatar">Y</div><small>MC</small><h3>YGO</h3><p>Jogador do elenco</p></aside></div><footer><button type="button" className="secondary">CANCELAR</button><button className="primary">SALVAR ALTERAÇÕES</button></footer></form></div>;
 else if (page === "matches") content = <MatchesPage profile={profile} workspace={workspace} client={client}/>;
 else if (page === "library") content = <LibraryPage profile={profile} client={client}/>;
+else if (page === "statistics") content = <StatisticsPage profile={profile} workspace={workspace} matches={workspace.matches}/>;
+else if (page === "analysis") content = <AnalysisPage profile={profile} workspace={workspace} matches={workspace.matches}/>;
 else if (page === "developer") content = <DeveloperPage profile={profile} workspace={{ ...workspace, competitionSyncLogs: [], competitionAuditLogs: [], systemFlags: [{ key: "site_maintenance", label: "Modo manutenção", description: "Pausa o acesso dos demais tiers.", enabled: false }] }} client={client}/>;
 else if (page === "gameday-editor") content = <GameDayEditor profile={profile} workspace={workspace} client={client}/>;
 else if (page === "gameday") {

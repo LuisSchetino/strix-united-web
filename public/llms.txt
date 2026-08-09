@@ -1,0 +1,12 @@
+# Strix United FC27
+
+> Site oficial do Strix United para a temporada FC27.
+
+Informações públicas disponíveis:
+- Agenda e próximos jogos do clube
+- Resultados e competições do Strix United
+- Identidade oficial do time
+
+Site: https://strix-united-fc27.pages.dev/
+
+Áreas autenticadas, dados internos, Biblioteca e ferramentas administrativas não são conteúdo público.

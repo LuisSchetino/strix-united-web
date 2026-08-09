@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+
+Sitemap: https://strix-united-fc27.pages.dev/sitemap.xml

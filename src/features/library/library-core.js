@@ -53,3 +53,6 @@ export const tierWeight = (tier) => ({ teste: 10, player: 20, conselho: 30, dire
 
 export const canTrackLibrary = (tier) => tierWeight(tier) >= tierWeight("conselho");
 export const canManageLibrary = (tier) => tierWeight(tier) >= tierWeight("diretoria");
+
+export const libraryThumbnail = (item = {}) => item.thumbnail_url
+  || (item.category === "review" ? "/assets/library-review.svg" : "/assets/library-jogada.svg");

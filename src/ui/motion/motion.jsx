@@ -116,6 +116,28 @@ export function notify(message, tone = "success") {
   window.dispatchEvent(new CustomEvent("strix-toast", { detail: { message, tone } }));
 }
 
+function ToastItem({ toast, depth, dismiss }) {
+  const start = useRef(null);
+  const [drag, setDrag] = useState(0);
+  const pointerUp = (event) => {
+    if (start.current === null) return;
+    const shouldDismiss = Math.abs(drag) > 72;
+    start.current = null;
+    event.currentTarget.releasePointerCapture?.(event.pointerId);
+    if (shouldDismiss) dismiss(toast.id);
+    else setDrag(0);
+  };
+  return <button type="button" className={`motion-toast is-${toast.tone || "success"}${toast.leaving ? " is-leaving" : ""}`}
+    style={{ "--toast-depth": depth, "--toast-stack-y": `${depth * 8}px`, "--toast-fan-y": `${depth * -72}px`, "--toast-scale": 1 - depth * .025, "--toast-drag": `${drag}px`, zIndex: 10 - depth }}
+    onPointerDown={(event) => { start.current = event.clientX; event.currentTarget.setPointerCapture?.(event.pointerId); }}
+    onPointerMove={(event) => { if (start.current !== null) setDrag(event.clientX - start.current); }}
+    onPointerUp={pointerUp} onPointerCancel={() => { start.current = null; setDrag(0); }} onClick={() => Math.abs(drag) < 5 && dismiss(toast.id)}>
+    <span aria-hidden="true">{toast.tone === "error" ? "!" : toast.tone === "warning" ? "i" : "✓"}</span>
+    <div><small>{toast.tone === "error" ? "ALGO DEU ERRADO" : toast.tone === "warning" ? "ATENÇÃO" : "TUDO CERTO"}</small><b>{toast.message}</b></div>
+    <em aria-hidden="true">×</em><i aria-hidden="true" />
+  </button>;
+}
+
 export function ToastViewport() {
   const [toasts, setToasts] = useState([]);
   const dismiss = (id) => {
@@ -134,19 +156,7 @@ export function ToastViewport() {
   }, []);
   return (
     <div className="motion-toast-viewport" aria-live="polite" aria-atomic="false">
-      {toasts.map((toast) => (
-        <button
-          type="button"
-          className={`motion-toast is-${toast.tone || "success"}${toast.leaving ? " is-leaving" : ""}`}
-          onClick={() => dismiss(toast.id)}
-          key={toast.id}
-        >
-          <span aria-hidden="true">{toast.tone === "error" ? "!" : toast.tone === "warning" ? "i" : "✓"}</span>
-          <div><small>{toast.tone === "error" ? "ALGO DEU ERRADO" : toast.tone === "warning" ? "ATENÇÃO" : "TUDO CERTO"}</small><b>{toast.message}</b></div>
-          <em aria-hidden="true">×</em>
-          <i aria-hidden="true" />
-        </button>
-      ))}
+      {[...toasts].reverse().map((toast, depth) => <ToastItem toast={toast} depth={depth} dismiss={dismiss} key={toast.id}/>)}
     </div>
   );
 }

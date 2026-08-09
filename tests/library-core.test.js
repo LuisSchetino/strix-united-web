@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { librarySource, progressPatch, canTrackLibrary } from "../src/features/library/library-core.js";
+import { librarySource, libraryThumbnail, progressPatch, canTrackLibrary } from "../src/features/library/library-core.js";
 
 test("Biblioteca reconhece YouTube, Drive e mídia direta sem inventar tracking", () => {
   assert.equal(librarySource("https://youtu.be/abc123").type, "youtube");
@@ -16,4 +16,10 @@ test("progresso conclui em 90% e nunca regride segundos assistidos", () => {
   assert.ok(patch.completed_at);
   assert.equal(canTrackLibrary("conselho"), true);
   assert.equal(canTrackLibrary("player"), false);
+});
+
+test("thumbnail editorial é usada quando não há imagem manual", () => {
+  assert.equal(libraryThumbnail({ category: "jogada" }), "/assets/library-jogada.svg");
+  assert.equal(libraryThumbnail({ category: "review" }), "/assets/library-review.svg");
+  assert.equal(libraryThumbnail({ category: "review", thumbnail_url: "https://cdn.example/custom.webp" }), "https://cdn.example/custom.webp");
 });

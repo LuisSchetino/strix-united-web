@@ -1,4 +1,4 @@
-import React, { StrictMode, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import React, { StrictMode, Suspense, lazy, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { createRoot } from "react-dom/client";
 import { createPortal } from "react-dom";
@@ -11,18 +11,20 @@ import "./agenda-polish.css";
 import "./formation-picker.css";
 import "./agenda-final.css";
 import "./agenda-sync.css";
-import "./partidas.css";
 import "./fc27-data.css";
 import "./fc27-fixes.css";
-import { GameDayEditor } from "./gameday/GameDayEditor.jsx";
-import { MatchesPage } from "./features/matches/MatchesPage.jsx";
-import { CompetitionsPage } from "./features/competitions/CompetitionsPage.jsx";
-import { LibraryPage } from "./features/library/LibraryPage.jsx";
-import { DeveloperPage } from "./features/developer/DeveloperPage.jsx";
-import { aggregatePlayerStatistics, aggregateTeamStatistics } from "./features/statistics/statistics-core.js";
 import { nextAgendaSlot } from "./features/agenda/agenda-slots.js";
 import { notify, RollingLabel, ToastViewport } from "./ui/motion/motion.jsx";
+import { ClubLogo } from "./ui/ClubLogo.jsx";
 import "./features/squad-cards.css";
+
+const GameDayEditor = lazy(() => import("./gameday/GameDayEditor.jsx").then((module) => ({ default: module.GameDayEditor })));
+const MatchesPage = lazy(() => import("./features/matches/MatchesPage.jsx").then((module) => ({ default: module.MatchesPage })));
+const CompetitionsPage = lazy(() => import("./features/competitions/CompetitionsPage.jsx").then((module) => ({ default: module.CompetitionsPage })));
+const LibraryPage = lazy(() => import("./features/library/LibraryPage.jsx").then((module) => ({ default: module.LibraryPage })));
+const DeveloperPage = lazy(() => import("./features/developer/DeveloperPage.jsx").then((module) => ({ default: module.DeveloperPage })));
+const StatisticsPage = lazy(() => import("./features/statistics/StatisticsPage.jsx"));
+const AnalysisPage = lazy(() => import("./features/analysis/AnalysisPage.jsx"));
 
 const icons = {
   menu: "M4 7h16M4 12h16M4 17h16",
@@ -281,12 +283,8 @@ const legacyExamplePlayers = [
   ["JOÃO", "GOL", 91, 50, 89],
 ];
 const players = [];
-function Crest({ small = false }) {
-  return (
-    <span className={`crest ${small ? "crest-small" : ""}`}>
-      <img src="/assets/strix-logo.png" alt="Strix United" />
-    </span>
-  );
+function Crest({ small = false, priority = false }) {
+  return <ClubLogo name="Strix United" url="/assets/strix-logo.png" priority={priority} sizes={small ? "33px" : "(max-width:580px) 72px, 196px"} className={`crest ${small ? "crest-small" : ""}`}/>;
 }
 const logoCatalogKey = "strix-fc27-logo-catalog";
 let browserSupabase = null;
@@ -344,20 +342,7 @@ function rememberLogo(name, logo) {
 }
 function Avatar({ name, logo, kind = "logo" }) {
   const resolvedLogo = logo || catalogLogo(name);
-  const safeName = String(name || "?");
-  return (
-    <span className={`avatar ${resolvedLogo ? "has-image" : "is-fallback"} is-${kind}`}>
-      {resolvedLogo ? (
-        <img src={resolvedLogo} alt={kind === "photo" ? `Foto de ${safeName}` : `Logo ${safeName}`} />
-      ) : (
-        safeName
-          .split(" ")
-          .map((word) => word[0])
-          .slice(0, 2)
-          .join("")
-      )}
-    </span>
-  );
+  return <ClubLogo name={name} url={resolvedLogo} kind={kind} sizes="75px" className="avatar"/>;
 }
 function tierLabel(tier) {
   return (
@@ -785,7 +770,7 @@ function LoginScreen({ loading, error, onLogin }) {
       <div className="login-stadium login-stadium-left" />
       <div className="login-stadium login-stadium-right" />
       <section className="login-card page-enter" aria-busy={loading}>
-        <Crest />
+        <Crest priority />
         <span>STRIX UNITED · FC 27</span>
         <h1>Seu vestiário começa aqui.</h1>
         <p>
@@ -2053,33 +2038,18 @@ function SquadPageV3({ workspace, profile }) {
     </section>
   );
 }
-function StatisticsPage({ workspace }) {
-  const [tab, setTab] = useState("resumo");
-  const [sort, setSort] = useState("averageRating");
-  const matches = (workspace.matches || []).map((match) => ({ ...match, performance: currentMatchPerformance(match) }));
-  const team = aggregateTeamStatistics(matches, workspace.players || []);
-  const ranking = aggregatePlayerStatistics(matches).sort((left, right) => Number(right[sort] || 0) - Number(left[sort] || 0) || right.games - left.games);
-  const best = (metric) => [...ranking].sort((a, b) => Number(b[metric] || 0) - Number(a[metric] || 0))[0];
-  const metricCards = [
-    ["PARTIDAS", team.games], ["CAMPANHA", `${team.wins}V · ${team.draws}E · ${team.losses}D`],
-    ["APROVEITAMENTO", `${team.efficiency}%`], ["SALDO", team.goalDifference > 0 ? `+${team.goalDifference}` : team.goalDifference],
-    ["MÉDIA GOLS PRÓ", team.averageGoalsFor], ["MÉDIA GOLS CONTRA", team.averageGoalsAgainst],
-    ["NOTA MÉDIA", team.averageRating || "—"], ["ELENCO ATIVO", team.activeSquad],
-  ];
-  const teamRows = [
-    ["Passes certos", team.passesMade, `${team.passesMade}/${team.passAttempts || "—"}`],
-    ["Precisão de passes", team.passAttempts ? `${team.passAccuracy}%` : "—", "certos / tentados"],
-    ["Chutes", team.shots, "finalizações registradas"], ["Desarmes", team.tackles, "ações defensivas"],
-    ["Defesas", team.saves, "goleiros"], ["Formação base", "3-1-4-2", "padrão atual do FC27"],
-  ];
-  return <section className="data-page page-enter statistics-page-v2"><header className="data-page-header"><div><span>ESTATÍSTICAS</span><h1>Leitura da temporada.</h1><p>Campanha e desempenho importados da EA, sem preencher lacunas com dados fictícios.</p></div></header><nav className="statistics-tabs" aria-label="Dados estatísticos">{[["resumo", "Resumo"], ["time", "Dados do time"], ["players", "Dados individuais"]].map(([id, label]) => <button type="button" key={id} className={tab === id ? "selected" : ""} onClick={() => setTab(id)}>{label}</button>)}</nav>{tab === "resumo" && <><section className="statistics-metric-grid">{metricCards.map(([label, value]) => <article key={label}><small>{label}</small><strong>{value}</strong></article>)}</section><section className="ranking-grid">{[["goal", "MAIS GOLS", best("goals"), "goals"], ["squad", "MAIS ASSISTÊNCIAS", best("assists"), "assists"], ["pass", "MAIS PASSES CERTOS", best("passesMade"), "passesMade"], ["stats", "MELHOR NOTA", best("averageRating"), "averageRating"]].map(([icon, label, player, metric]) => <article key={label}><Icon name={icon} size={18}/><small>{label}</small><b>{player?.name || "Sem dados"}</b><strong>{player?.[metric] ?? "—"}</strong></article>)}</section></>}{tab === "time" && <section className="statistics-table"><header><span>MÉTRICA</span><span>VALOR</span><span>LEITURA</span></header>{teamRows.map(([label, value, note]) => <article key={label}><b>{label}</b><strong>{value}</strong><small>{note}</small></article>)}</section>}{tab === "players" && <><div className="statistics-sort"><span>ORDENAR POR</span><select value={sort} onChange={(event) => setSort(event.target.value)}><option value="averageRating">Nota</option><option value="goalAssists">G + A</option><option value="goals">Gols</option><option value="assists">Assistências</option><option value="passesMade">Passes</option><option value="passAccuracy">Precisão</option><option value="tackles">Desarmes</option><option value="shots">Chutes</option></select></div><section className="statistics-table player-statistics"><header><span>JOGADOR</span><span>J</span><span>NOTA</span><span>G+A</span><span>PASSES</span><span>%</span><span>DESARMES</span><span>CHUTES</span><span>DEFESAS</span></header>{ranking.length ? ranking.map((player) => <article key={player.name}><b>{player.name}</b><span data-label="JOGOS">{player.games}</span><span data-label="NOTA">{player.averageRating ?? "—"}</span><span data-label="G+A">{player.goalAssists}</span><span data-label="PASSES">{player.passesMade}/{player.passAttempts || "—"}</span><span data-label="PRECISÃO">{player.passAttempts ? `${player.passAccuracy}%` : "—"}</span><span data-label="DESARMES">{player.tackles}{player.tackleAttempts ? `/${player.tackleAttempts}` : ""}</span><span data-label="CHUTES">{player.shots}</span><span data-label="DEFESAS">{player.saves}</span></article>) : <p>Importe uma partida com dados individuais para montar os rankings.</p>}</section></>}</section>;
+function FeatureBoundary({ children }) {
+  return <Suspense fallback={<WorkspaceSkeleton/>}>{children}</Suspense>;
 }
 
 function DataPage({ id, workspace, profile, client }) {
-  if (id === "estatisticas") return <StatisticsPage workspace={workspace}/>;
-  if (id === "biblioteca") return <LibraryPage client={client} profile={profile}/>;
-  if (id === "desenvolvedor") return <DeveloperPage client={client} profile={profile} workspace={workspace}/>;
-  if (id === "midia") return <GameDayEditor profile={profile} client={client} workspace={workspace}/>;
+  const statisticalMatches = (workspace.matches || []).map((match) => ({ ...match, performance: currentMatchPerformance(match) }));
+  if (id === "estatisticas") return <FeatureBoundary><StatisticsPage workspace={workspace} matches={statisticalMatches}/></FeatureBoundary>;
+  if (id === "analise") return <FeatureBoundary><AnalysisPage workspace={workspace} profile={profile} matches={statisticalMatches}/></FeatureBoundary>;
+  if (id === "biblioteca") return <FeatureBoundary><LibraryPage client={client} profile={profile}/></FeatureBoundary>;
+  if (id === "desenvolvedor" && profile?.access_tier !== "dev") return <section className="placeholder page-enter"><span>ÁREA RESTRITA</span><h1>Desenvolvedor</h1><p>Esta área é exclusiva para Desenvolvimento.</p></section>;
+  if (id === "desenvolvedor") return <FeatureBoundary><DeveloperPage client={client} profile={profile} workspace={workspace}/></FeatureBoundary>;
+  if (id === "midia") return <FeatureBoundary><GameDayEditor profile={profile} client={client} workspace={workspace}/></FeatureBoundary>;
   const matches = workspace.matches;
   const agenda = workspace.agenda;
   const completed = matches.length;
@@ -2095,7 +2065,6 @@ function DataPage({ id, workspace, profile, client }) {
     desenvolvedor: ["DESENVOLVEDOR", "Saúde do sistema.", "Auditoria e diagnósticos ficam disponíveis apenas para Desenvolvimento."],
   };
   const [eyebrow, title, description] = details[id] || ["STRIX FC 27", "Em construção.", ""];
-  if (id === "desenvolvedor" && profile?.access_tier !== "dev") return <section className="placeholder page-enter"><span>ÁREA RESTRITA</span><h1>Desenvolvedor</h1><p>Esta área é exclusiva para Desenvolvimento.</p></section>;
   return <section className="data-page page-enter"><header className="data-page-header"><div><span>{eyebrow}</span><h1>{title}</h1><p>{description}</p></div></header>{id === "campeonatos" ? <section className="data-grid">{agenda.length ? [...new Set(agenda.map((game) => game.competition_name))].map((competition) => <article className="data-card" key={competition}><Icon name="trophy"/><small>COMPETIÇÃO</small><h2>{competition}</h2><p>{agenda.filter((game) => game.competition_name === competition).length} partida(s) na agenda.</p></article>) : <div className="matches-empty">A Agenda ainda não possui campeonatos cadastrados.</div>}</section> : id === "estatisticas" || id === "analise" ? <><section className="data-grid"><article className="data-card"><small>PARTIDAS</small><h2>{completed}</h2><p>Registros no histórico.</p></article><article className="data-card"><small>VITÓRIAS</small><h2>{wins}</h2><p>Resultados positivos.</p></article><article className="data-card"><small>GOLS PRÓ</small><h2>{goalsFor}</h2><p>Produção ofensiva.</p></article><article className="data-card"><small>GOLS CONTRA</small><h2>{goalsAgainst}</h2><p>Leitura defensiva.</p></article></section><section className="analysis-line"><span>LINHA DA TEMPORADA</span><div>{matches.length ? matches.slice(0,10).reverse().map((match) => <i key={match.id} className={match.strix_score > match.opponent_score ? "win" : match.strix_score < match.opponent_score ? "loss" : "draw"}/>) : <p>Importe partidas para montar a leitura.</p>}</div></section></> : <section className="empty-section"><Icon name={id === "biblioteca" ? "library" : id === "midia" ? "media" : "details"} size={28}/><h2>Base pronta para a próxima fase.</h2><p>{description}</p></section>}</section>;
 }
 function Placeholder({ title }) {
@@ -2757,11 +2726,11 @@ function App() {
         ) : active === "agenda" ? (
           <AgendaLive navigate={navigate} workspace={workspace} />
         ) : active === "partidas" ? (
-          <MatchesPage profile={auth.profile} workspace={workspace} client={auth.client} />
+          <FeatureBoundary><MatchesPage profile={auth.profile} workspace={workspace} client={auth.client} /></FeatureBoundary>
         ) : active === "elenco" ? (
           <SquadPageV3 workspace={workspace} profile={auth.profile} />
         ) : active === "campeonatos" ? (
-          <CompetitionsPage profile={auth.profile} workspace={workspace} client={auth.client} />
+          <FeatureBoundary><CompetitionsPage profile={auth.profile} workspace={workspace} client={auth.client} /></FeatureBoundary>
         ) : (
           <DataPage id={active} workspace={workspace} profile={auth.profile} client={auth.client} />
         )}

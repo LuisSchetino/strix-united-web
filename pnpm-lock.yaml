@@ -11,6 +11,9 @@ importers:
       '@supabase/supabase-js':
         specifier: 2.57.0
         version: 2.57.0
+      '@tabler/icons-react':
+        specifier: 3.46.0
+        version: 3.46.0(react@19.1.1)
       html-to-image:
         specifier: 1.11.13
         version: 1.11.13
@@ -448,6 +451,14 @@ packages:
 
   '@supabase/supabase-js@2.57.0':
     resolution: {integrity: sha512-h9ttcL0MY4h+cGqZl95F/RuqccuRBjHU9B7Qqvw0Da+pPK2sUlU1/UdvyqUGj37UsnSphr9pdGfeXjesYkBcyA==}
+
+  '@tabler/icons-react@3.46.0':
+    resolution: {integrity: sha512-CCm7xJWhDT2PH4ZIFkP6AgYKtVhq0gpYkjUN+GVh1AzmIQaa77OW0bQPBPQiTE0PsXMR9oSxFqA3qBglzPyrVQ==}
+    peerDependencies:
+      react: '>= 16'
+
+  '@tabler/icons@3.46.0':
+    resolution: {integrity: sha512-f2RYFl3fzPwj5WO82x6en0dmkjefxEfOm16D1ByM6cj/McNiwOkL4VaPUoP9VVIrXAD9WnTSVFr70px703b//A==}
 
   '@types/babel__core@7.20.5':
     resolution: {integrity: sha512-qoQprZvz5wQFJwMDqeseRXWv3rqMvhgpbXFfVyWhbx9X47POIA6i/+dXefEmZKoAgOaTdaIgNSMqMIU61yRyzA==}
@@ -1019,6 +1030,13 @@ snapshots:
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
+
+  '@tabler/icons-react@3.46.0(react@19.1.1)':
+    dependencies:
+      '@tabler/icons': 3.46.0
+      react: 19.1.1
+
+  '@tabler/icons@3.46.0': {}
 
   '@types/babel__core@7.20.5':
     dependencies:
