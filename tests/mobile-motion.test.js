@@ -75,6 +75,7 @@ test("command, toast, menu and sheet keep their accessible interaction contracts
   ]);
   assert.match(main, /role="dialog"/);
   assert.match(main, /role="listbox"/);
+  assert.match(main, /className="search-button" aria-label="Buscar no Strix"/);
   assert.match(main, /event\.key === "Enter"/);
   assert.match(main, /event\.key === "Escape"/);
   assert.match(main, /<ToastViewport\s*\/>/);

@@ -2660,7 +2660,7 @@ function App() {
           <button className="crumb" onClick={() => navigate("central")}>
             STRIX / <b>{title}</b>
           </button>
-          <button className="search-button" onClick={() => setCommand(true)}>
+          <button className="search-button" aria-label="Buscar no Strix" onClick={() => setCommand(true)}>
             <Icon name="search" />
             <span>Buscar no Strix...</span>
             <kbd>Ctrl K</kbd>
