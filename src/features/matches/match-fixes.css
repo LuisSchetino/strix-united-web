@@ -30,7 +30,7 @@
 .match-player-table>article.is-disconnected>strong{color:#8a969e}
 .match-player-table>article em.disconnect-badge{border:1px solid #5e6b74;background:#202a31;color:#c1c8cd}
 
-@media(max-width:700px){
+@media(max-width:800px){
   .match-scoreline{gap:5px}
   .match-scoreline>div{gap:5px}
   .match-scoreline>div>b{font-size:10px}
@@ -51,7 +51,7 @@
 .match-review-check span:after{content:"";width:11px;height:6px;border:solid #fff;border-width:0 0 2px 2px;rotate:-45deg;scale:0;transition:scale var(--motion-fast) var(--motion-spring)}
 .match-review-check input:checked+span:after{scale:1}
 
-@media(max-width:700px){
+@media(max-width:800px){
   .progressive-matches,.progressive-history{width:100%;max-width:100%;min-width:0}
   .progressive-matches .matches-hero{min-width:0;overflow:hidden}.progressive-matches .matches-hero>div:first-child{min-width:0}.progressive-matches .matches-hero p{max-width:100%;line-height:1.5}.progressive-matches .matches-actions{display:grid;grid-template-columns:1fr 1fr;width:100%;gap:8px}.progressive-matches .matches-actions button{min-width:0;min-height:44px;padding:9px;font-size:9px;white-space:normal;line-height:1.25}
   .progressive-history{overflow:visible}
@@ -72,3 +72,30 @@
   .match-player-table-scroll{overscroll-behavior-x:contain;scrollbar-width:thin}
 }
 @keyframes match-sheet-in{from{opacity:0;transform:translateY(36px)}to{opacity:1;transform:none}}
+
+/* The result belongs to the score, while mobile metadata stays compact. */
+.match-detail-header{grid-template-columns:minmax(0,1fr) auto!important}
+.match-detail-score-shell{position:relative;overflow:hidden;border:1px solid #194765;border-radius:16px;background:radial-gradient(circle at 50% 0,#103a60,#06131f 65%)}
+.match-detail-score-shell .match-detail-score{padding:48px 22px 22px;border:0;border-radius:0;background:transparent}
+.match-result-badge{position:absolute;z-index:2;top:13px;left:50%;translate:-50% 0;padding:6px 10px;border:1px solid currentColor;border-radius:999px;background:#071724e8;font-size:9px;font-style:normal;font-weight:950;letter-spacing:.08em}
+.match-result-badge.vitória{color:#67dfad}.match-result-badge.derrota{color:#ff8293}.match-result-badge.empate{color:#f2cb69}
+
+@media(max-width:800px){
+  .match-detail-score-shell .match-detail-score{padding:44px 15px 15px}
+  .match-mobile-swipe{margin-bottom:10px;border:1px solid #1d4763;background:#123b5c;box-shadow:0 12px 30px #0005;isolation:isolate}
+  .match-mobile-actions{inset:-1px -1px -1px auto;width:149px;grid-template-columns:83px 66px;overflow:hidden;border-radius:0 16px 16px 0;background:#123b5c}
+  .match-mobile-actions button:first-child{padding-left:17px}
+  .match-mobile-actions button{min-width:0;border-radius:0;transition:filter var(--motion-fast),transform var(--motion-fast)}
+  .match-mobile-actions button:active{filter:brightness(1.16)}
+  .match-mobile-card{gap:11px;padding:14px;border:0;border-radius:15px;box-shadow:none;transition:transform var(--motion-normal) var(--motion-spring),filter var(--motion-fast)}
+  .match-mobile-swipe.is-dragging .match-mobile-card{transition:none;filter:brightness(1.035)}
+  .match-mobile-card>header{gap:10px}
+  .match-mobile-card>header>div{display:grid;gap:7px;min-width:0}
+  .match-mobile-card>header p{display:flex;align-items:center;gap:7px;min-width:0;margin:0}
+  .match-mobile-card>header p em{padding:4px 7px;border:1px solid currentColor;border-radius:999px;font-size:8px;font-style:normal;font-weight:950}
+  .match-mobile-card>header p em.vitória{color:#62deb0}.match-mobile-card>header p em.derrota{color:#ff8496}.match-mobile-card>header p em.empate{color:#f3ca6d}
+  .match-mobile-card>header p span{min-width:0;overflow:hidden;color:#9db3c4;font-size:9px;font-weight:850;text-overflow:ellipsis;white-space:nowrap}
+  .match-mobile-card>header button{flex:0 0 36px;transition:transform var(--motion-fast) var(--motion-spring),border-color var(--motion-fast)}
+  .match-mobile-card>header button:active{transform:scale(.96)}
+  .match-swipe-hint{color:#4e7087;font-size:7px;font-weight:900;letter-spacing:.12em}
+}

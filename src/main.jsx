@@ -1,4 +1,4 @@
-import React, { StrictMode, useEffect, useMemo, useState } from "react";
+import React, { StrictMode, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { createRoot } from "react-dom/client";
 import { createPortal } from "react-dom";
@@ -17,6 +17,7 @@ import "./fc27-fixes.css";
 import { GameDayEditor } from "./gameday/GameDayEditor.jsx";
 import { MatchesPage } from "./features/matches/MatchesPage.jsx";
 import { CompetitionsPage } from "./features/competitions/CompetitionsPage.jsx";
+import { nextAgendaSlot } from "./features/agenda/agenda-slots.js";
 import { notify, RollingLabel, ToastViewport } from "./ui/motion/motion.jsx";
 import "./features/squad-cards.css";
 
@@ -1162,7 +1163,7 @@ function FormationPicker({ lineup, onChange, compact = false }) {
     </section>
   );
 }
-function AgendaModal({ entry, mode = "new", presets, onClose, onSave, logoForOpponent = catalogLogo }) {
+function AgendaModal({ entry, mode = "new", presets, onClose, onSave, logoForOpponent = catalogLogo, defaultDate = defaultAgendaForm.date, suggestTimeForDate }) {
   const edit = Boolean(entry);
   const [form, setForm] = useState(() => {
     const saved = entry
@@ -1171,7 +1172,9 @@ function AgendaModal({ entry, mode = "new", presets, onClose, onSave, logoForOpp
           ...defaultAgendaForm,
           ...JSON.parse(localStorage.getItem(agendaDraftKey) || "{}"),
         };
-    return { ...saved, logo: saved.logo || logoForOpponent(saved.opponent) };
+    const date = entry ? saved.date : defaultDate;
+    const time = entry ? saved.time : (suggestTimeForDate?.(date, []) || saved.time);
+    return { ...saved, date, time, logo: saved.logo || logoForOpponent(saved.opponent) };
   });
   const [gameNumber, setGameNumber] = useState(1);
   const [lineup, setLineup] = useState(() => entry?.lineup || emptyLineup());
@@ -1199,6 +1202,9 @@ function AgendaModal({ entry, mode = "new", presets, onClose, onSave, logoForOpp
     setForm((current) => ({
       ...current,
       [name]: value,
+      ...(!edit && name === "date" && suggestTimeForDate
+        ? { time: suggestTimeForDate(value, queuedGames) }
+        : {}),
     }));
     if (name === "presetId") {
       const preset = presets.find((valueItem) => valueItem.id === value);
@@ -1216,17 +1222,16 @@ function AgendaModal({ entry, mode = "new", presets, onClose, onSave, logoForOpp
       setAddFeedback("Informe o adversário antes de adicionar outro jogo.");
       return;
     }
-    setQueuedGames((current) => [
-      ...current,
-      { ...form, lineup: [...lineup], opponent: form.opponent.trim(), logoFile },
-    ]);
+    const queuedGame = { ...form, lineup: [...lineup], opponent: form.opponent.trim(), logoFile };
+    const nextQueue = [...queuedGames, queuedGame];
+    setQueuedGames(nextQueue);
     setGameNumber((value) => value + 1);
     setLineup(emptyLineup());
     setLogoFile(null);
     setForm((current) => ({
       ...defaultAgendaForm,
       date: current.date,
-      time: nextKickoff(current.time),
+      time: suggestTimeForDate?.(current.date, nextQueue) || nextKickoff(current.time),
     }));
     setAddFeedback("Jogo adicionado ao mesmo envio. Preencha o próximo abaixo.");
   };
@@ -1432,11 +1437,11 @@ function AgendaModal({ entry, mode = "new", presets, onClose, onSave, logoForOpp
               CANCELAR
             </button>
             <button className="primary">
-              {swap
+              <RollingLabel>{swap
                 ? "TROCAR ADVERSÁRIO"
                 : edit
                   ? "SALVAR ALTERAÇÕES"
-                  : "ADICIONAR JOGO"}
+                  : "ADICIONAR JOGO"}</RollingLabel>
             </button>
           </footer>
         </form>
@@ -1805,6 +1810,11 @@ function AgendaLive({ navigate, workspace }) {
     ? item.db.scheduled_at.slice(0, 10) <= todayKey
     : item.db.scheduled_at.slice(0, 10) > todayKey
   ).sort((left, right) => new Date(left.db.scheduled_at) - new Date(right.db.scheduled_at));
+  const defaultNewDate = datePart(new Date());
+  const suggestTimeForDate = (date, queued = []) => nextAgendaSlot(
+    [...workspace.agenda, ...queued],
+    date,
+  );
   const run = async (work) => {
     setFeedback("");
     try { await work(); notify("Agenda atualizada."); }
@@ -1853,7 +1863,7 @@ function AgendaLive({ navigate, workspace }) {
         )) : <div className="agenda-empty">{workspace.loading ? "Sincronizando agenda..." : "Nenhuma partida programada."}</div>}
       </section>
       {showPresets && <PresetPanel presets={presets} setPresets={setPresets} onClose={() => setShowPresets(false)} />}
-      {modal && <AgendaModal entry={modal.entry} mode={modal.mode} presets={presets} onClose={() => setModal(null)} logoForOpponent={(name) => { const logo = matchingLogo(workspace.logos, name); return logo?.storage_path ? workspace.assetUrl(logo.storage_path) : catalogLogo(name); }} onSave={(payload, mode) => void run(async () => { await workspace.saveAgenda(payload, mode, modal.entry?.db); setModal(null); })} />}
+      {modal && <AgendaModal entry={modal.entry} mode={modal.mode} presets={presets} defaultDate={defaultNewDate} suggestTimeForDate={suggestTimeForDate} onClose={() => setModal(null)} logoForOpponent={(name) => { const logo = matchingLogo(workspace.logos, name); return logo?.storage_path ? workspace.assetUrl(logo.storage_path) : catalogLogo(name); }} onSave={(payload, mode) => void run(async () => { await workspace.saveAgenda(payload, mode, modal.entry?.db); setModal(null); })} />}
       {pendingAction && <ViewportDialog className="modal-backdrop" onMouseDown={() => setPendingAction(null)}>
         <article className="agenda-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="agenda-confirm-title" onMouseDown={(event) => event.stopPropagation()}>
           <header>
@@ -2424,6 +2434,8 @@ function PartidasLive({ profile, workspace }) {
 function Command({ close, navigate, workspace, profile }) {
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const resultsRef = useRef(null);
+  const [selection, setSelection] = useState({ left: 0, top: 0, width: 0, height: 0, ready: false });
   const list = useMemo(() => {
     const pages = [["central", "Central do time", "live"], ...nav].map(([id, label, icon]) => ({
       id: `page-${id}`, label, meta: "Página", icon, run: () => navigate(id),
@@ -2442,13 +2454,13 @@ function Command({ close, navigate, workspace, profile }) {
     }));
     const manager = ["diretoria", "dev"].includes(profile?.access_tier)
       ? [
-          { id: "action-agenda", label: "Nova partida na Agenda", meta: "Ação", icon: "plus", run: () => navigate("agenda") },
-          { id: "action-import", label: "Buscar partidas pelo meu PC", meta: "Ação", icon: "game", run: () => navigate("partidas") },
-          { id: "action-gameday", label: "Abrir Game Day", meta: "Ação", icon: "media", run: () => navigate("midia") },
+          { id: "action-agenda", kind: "action", label: "Nova partida na Agenda", meta: "Ação", icon: "plus", run: () => navigate("agenda") },
+          { id: "action-import", kind: "action", label: "Buscar partidas pelo meu PC", meta: "Ação", icon: "game", run: () => navigate("partidas") },
+          { id: "action-gameday", kind: "action", label: "Abrir Game Day", meta: "Ação", icon: "media", run: () => navigate("midia") },
         ]
       : [];
     const developer = profile?.access_tier === "dev"
-      ? [{ id: "action-competition", label: "Adicionar campeonato", meta: "Ação Dev", icon: "trophy", run: () => navigate("campeonatos") }]
+      ? [{ id: "action-competition", kind: "action", label: "Adicionar campeonato", meta: "Ação Dev", icon: "trophy", run: () => navigate("campeonatos") }]
       : [];
     const normalized = query.trim().toLocaleLowerCase("pt-BR");
     return [...manager, ...developer, ...pages, ...players, ...matches, ...agenda, ...competitions]
@@ -2456,6 +2468,29 @@ function Command({ close, navigate, workspace, profile }) {
       .slice(0, 18);
   }, [navigate, profile?.access_tier, query, workspace]);
   useEffect(() => setSelectedIndex(0), [query]);
+  useLayoutEffect(() => {
+    const root = resultsRef.current;
+    const button = root?.querySelector(`[data-command-index="${selectedIndex}"]`);
+    if (!root || !button) {
+      setSelection((current) => ({ ...current, ready: false }));
+      return undefined;
+    }
+    const measure = () => {
+      setSelection({
+        left: button.offsetLeft,
+        top: button.offsetTop,
+        width: button.offsetWidth,
+        height: button.offsetHeight,
+        ready: true,
+      });
+      button.scrollIntoView({ block: "nearest", inline: "nearest" });
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(root);
+    observer.observe(button);
+    return () => observer.disconnect();
+  }, [list.length, query, selectedIndex]);
   const execute = (item) => {
     if (!item) return;
     item.run();
@@ -2488,11 +2523,17 @@ function Command({ close, navigate, workspace, profile }) {
           <kbd>ESC</kbd>
         </div>
         <p>{query ? "RESULTADOS" : "AÇÕES E NAVEGAÇÃO"}</p>
-        <div className="command-results" id="strix-command-results" role="listbox">
+        <div ref={resultsRef} className="command-results" id="strix-command-results" role="listbox">
+        <span
+          className={`command-selection-indicator${selection.ready ? " is-ready" : ""}`}
+          style={{ transform: `translate(${selection.left}px,${selection.top}px)`, width: selection.width, height: selection.height }}
+          aria-hidden="true"
+        />
         {list.map((item, index) => (
           <button
-            className={selectedIndex === index ? "selected" : ""}
+            className={`${selectedIndex === index ? "selected " : ""}${item.kind === "action" ? "is-action" : ""}`.trim()}
             id={`command-option-${index}`}
+            data-command-index={index}
             data-selected={selectedIndex === index}
             role="option"
             aria-selected={selectedIndex === index}

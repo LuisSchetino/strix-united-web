@@ -67,3 +67,41 @@ html,body,#root{max-width:100%;overflow-x:clip}.app-shell,.workspace{min-width:0
   .create-menu{position:fixed;left:10px;right:10px;top:auto;bottom:calc(84px + env(safe-area-inset-bottom));width:auto;grid-template-columns:1fr 1fr;transform-origin:bottom right}.create-menu button{min-height:58px}
   .skeleton-cards{grid-template-columns:1fr}.skeleton-cards>div{height:88px}.skeleton-cards>div:nth-child(n+3){display:none}
 }
+
+/* Second-pass polish: adaptive command surface with a shared moving selection. */
+.command{width:min(760px,calc(100vw - 28px))}
+.command-results{position:relative;display:grid!important;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));align-items:stretch;gap:8px;padding:7px 9px 12px!important;border-bottom:0!important;color:inherit!important}
+.command-results button{position:relative;z-index:1;align-items:flex-start;min-width:0;min-height:66px;padding:12px!important;border:1px solid #ffffff0b!important;border-radius:11px;background:transparent!important;transition:border-color var(--motion-fast),transform var(--motion-fast) var(--motion-spring),color var(--motion-fast)}
+.command-results button.is-action{min-height:82px}
+.command-results button:hover,.command-results button:focus-visible{border-color:#3c7ca2!important;transform:translateY(-1px)}
+.command-results button>svg{flex:0 0 19px;margin-top:1px;transition:transform var(--motion-fast) var(--motion-spring),color var(--motion-fast)}
+.command-results button.selected>svg{color:#66d1ff;transform:translateX(2px)}
+.command-results button span{min-width:0;text-align:left}.command-results button b{display:-webkit-box;overflow:hidden;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-height:1.25}.command-results button kbd{align-self:center}
+.command-selection-indicator{position:absolute;z-index:0;left:0;top:0;border:1px solid #3a8cba;border-radius:11px;background:linear-gradient(135deg,#103957,#0b263c);box-shadow:0 10px 24px #0004,inset 0 1px #9be1ff14;opacity:0;pointer-events:none;transition:transform var(--motion-normal) var(--motion-spring),width var(--motion-normal) var(--motion-spring),height var(--motion-normal) var(--motion-spring),opacity var(--motion-fast)}
+.command-selection-indicator.is-ready{opacity:1}
+.command-empty{grid-column:1/-1;animation:motion-panel-enter var(--motion-normal) var(--motion-ease) both}
+
+/* Stateful feedback has an internal transition and a short, visible exit. */
+.motion-state-badge{overflow:hidden;width:98px;min-width:0;transition:width var(--motion-normal) var(--motion-spring),color var(--motion-fast),background var(--motion-fast)}
+.motion-state-badge.is-loading{width:126px}.motion-state-badge.is-success{width:108px}.motion-state-badge.is-error{width:64px}
+.motion-state-content{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;animation:motion-state-swap var(--motion-normal) var(--motion-ease) both}.motion-state-content i{font-size:12px;font-style:normal}.motion-state-badge.is-loading .motion-state-content i{animation:motion-state-spin .8s linear infinite}
+@keyframes motion-state-swap{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+@keyframes motion-state-spin{to{rotate:360deg}}
+.motion-toast{transition:transform var(--motion-normal) var(--motion-spring),opacity var(--motion-fast),margin var(--motion-normal)}
+.motion-toast.is-leaving{opacity:0;transform:translateX(14px) scale(.985);margin-bottom:-58px;pointer-events:none}
+
+@media(min-width:701px) and (prefers-reduced-motion:no-preference){
+  .page-enter>.match-hero,.page-enter>.agenda-hero,.page-enter>.matches-hero,.page-enter>.data-page-header,.page-enter>.competitions-header,.page-enter>.gd-editor-header{animation:motion-section-enter 430ms var(--motion-ease) both}
+  .page-enter>.content-grid,.page-enter>.agenda-tabs,.page-enter>.matches-feedback,.page-enter>.competition-selector,.page-enter>.gd-editor-shell{animation:motion-section-enter 460ms var(--motion-ease) 55ms both}
+  .page-enter>.agenda-list,.page-enter>.progressive-history,.page-enter>.squad-list,.page-enter>.competition-inline{animation:motion-section-enter 500ms var(--motion-ease) 95ms both}
+  .panel,.agenda-game,.data-card,.squad-list>article,.competition-overview-grid>article,.competition-selector>button,.competition-timeline>article,.provider-next-match{transition:transform var(--motion-normal) var(--motion-spring),border-color var(--motion-fast),box-shadow var(--motion-normal),background var(--motion-fast)}
+  .panel:hover,.agenda-game:hover,.data-card:hover,.squad-list>article:hover,.competition-overview-grid>article:hover,.competition-selector>button:hover,.competition-timeline>article:hover,.provider-next-match:hover{transform:translateY(-2px);border-color:#2d6c91;box-shadow:0 14px 32px #0004}
+  .primary:hover,.add-button:hover{transform:translateY(-1px);box-shadow:0 9px 25px #087cd13d}
+  .primary:hover svg,.secondary:hover svg,.panel-heading button:hover svg,.agenda-game>button:hover svg{transform:translateX(2px)}
+}
+@keyframes motion-section-enter{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}
+
+@media(max-width:520px){
+  .command-results{grid-template-columns:1fr}
+  .command-results button,.command-results button.is-action{min-height:64px}
+}

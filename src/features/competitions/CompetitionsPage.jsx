@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { MatchDisplay } from "../../ui/MatchDisplay.jsx";
 import {
   AnimatedNumber,
@@ -462,8 +462,86 @@ function CompetitionGames({ competition, view, workspace, organization }) {
   );
 }
 
+function BracketConnectors({ gridRef, version }) {
+  const [drawing, setDrawing] = useState({ width: 0, height: 0, paths: [] });
+  useEffect(() => {
+    const grid = gridRef.current;
+    if (!grid) return undefined;
+    let frame = 0;
+    let alive = true;
+    const measure = () => {
+      window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(() => {
+        if (!alive || window.matchMedia("(max-width: 800px)").matches) {
+          if (alive) setDrawing({ width: 0, height: 0, paths: [] });
+          return;
+        }
+        const gridRect = grid.getBoundingClientRect();
+        const rounds = [...grid.querySelectorAll("[data-bracket-round]")];
+        const paths = [];
+        for (let roundIndex = 1; roundIndex < rounds.length; roundIndex += 1) {
+          const sources = [...rounds[roundIndex - 1].querySelectorAll(".bracket-slot article")];
+          const targets = [...rounds[roundIndex].querySelectorAll(".bracket-slot article")];
+          targets.forEach((target, targetIndex) => {
+            const sourceCards = sources.slice(targetIndex * 2, targetIndex * 2 + 2);
+            if (!sourceCards.length) return;
+            const targetRect = target.getBoundingClientRect();
+            const endX = targetRect.left - gridRect.left;
+            const targetY = targetRect.top - gridRect.top + targetRect.height / 2;
+            const sourcePoints = sourceCards.map((source) => {
+              const rect = source.getBoundingClientRect();
+              return {
+                x: rect.right - gridRect.left,
+                y: rect.top - gridRect.top + rect.height / 2,
+              };
+            });
+            const startX = Math.max(...sourcePoints.map((point) => point.x));
+            const jointX = startX + Math.max(24, (endX - startX) * 0.52);
+            let path = sourcePoints.map((point) => `M ${point.x} ${point.y} H ${jointX}`).join(" ");
+            const ys = [...sourcePoints.map((point) => point.y), targetY];
+            if (Math.max(...ys) !== Math.min(...ys)) {
+              path += ` M ${jointX} ${Math.min(...ys)} V ${Math.max(...ys)}`;
+            }
+            path += ` M ${jointX} ${targetY} H ${endX}`;
+            paths.push({ key: `${roundIndex}-${targetIndex}`, d: path });
+          });
+        }
+        setDrawing({ width: grid.scrollWidth, height: grid.scrollHeight, paths });
+      });
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(grid);
+    grid.querySelectorAll(".bracket-slot article").forEach((card) => observer.observe(card));
+    window.addEventListener("resize", measure);
+    document.fonts?.ready?.then(measure);
+    return () => {
+      alive = false;
+      window.cancelAnimationFrame(frame);
+      observer.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, [gridRef, version]);
+  if (!drawing.paths.length) return null;
+  return (
+    <svg
+      className="bracket-connectors"
+      viewBox={`0 0 ${drawing.width} ${drawing.height}`}
+      width={drawing.width}
+      height={drawing.height}
+      preserveAspectRatio="none"
+      aria-hidden="true"
+    >
+      {drawing.paths.map((path, index) => (
+        <path key={path.key} d={path.d} pathLength="1" style={{ "--connector-index": index }} />
+      ))}
+    </svg>
+  );
+}
+
 function Knockout({ view, accent }) {
   const [activeRound, setActiveRound] = useState(0);
+  const gridRef = useRef(null);
   const rounds = view.knockout.knockout?.rounds || [];
   const grouped = rounds.map((round) => ({
     ...round,
@@ -518,11 +596,13 @@ function Knockout({ view, accent }) {
         <button type="button" disabled={activeRound >= bracketRounds.length - 1} onClick={() => setActiveRound((value) => Math.min(bracketRounds.length - 1, value + 1))}>PRÓXIMA →</button>
       </nav>
       <div className="bracket-scroll">
-        <div className="bracket-grid is-drawing">
+        <div className="bracket-grid is-drawing has-svg-connectors" ref={gridRef}>
+          <BracketConnectors gridRef={gridRef} version={`${view.currentStage}-${bracketRounds.map((round) => round.slots.length).join("-")}`} />
           {bracketRounds.map((round, roundIndex) => (
             <section
               className={`bracket-round bracket-round-${roundIndex}`}
               data-mobile-active={roundIndex === activeRound}
+              data-bracket-round={roundIndex}
               key={round.name}
             >
               <h3>{round.name}</h3>
@@ -536,7 +616,8 @@ function Knockout({ view, accent }) {
                   return (
                     <div
                       className="bracket-slot"
-                      style={{ gridRow: `${fixtureIndex * rowSpan + 1} / span ${rowSpan}` }}
+                      data-bracket-slot={fixtureIndex}
+                      style={{ gridRow: `${fixtureIndex * rowSpan + 1} / span ${rowSpan}`, "--bracket-card-delay": `${roundIndex * 85 + fixtureIndex * 28}ms` }}
                       key={fixture.external_match_id}
                     >
                       <article
@@ -801,7 +882,7 @@ function CompetitionExplorer({
             </article>
             <article>
               <small>POSIÇÃO</small>
-              <b>{strixStanding ? `${strixStanding.position}º` : "—"}</b>
+              <b>{strixStanding ? <AnimatedNumber id={`overview-position-${edition.id}`} value={strixStanding.position} suffix="º" /> : "—"}</b>
               {zone && <em className={zone.inside ? "inside" : "outside"}>{zone.label}</em>}
             </article>
             <article>

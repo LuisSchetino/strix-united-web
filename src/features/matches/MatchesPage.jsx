@@ -606,21 +606,23 @@ function MatchDetails({ match, workspace, close }) {
         <button type="button" className="match-sheet-handle" aria-label="Arraste ou toque para fechar" onClick={close} {...sheetDismiss}><i /></button>
         <header className="match-detail-header">
           <div><span>HISTÓRICO DA PARTIDA</span><h2>Resumo do confronto</h2><p>{formatDate(match.played_at)} · {formatTime(match.played_at)} · {match.competition_name || "Amistoso"}</p></div>
-          <em className={result.toLowerCase()}>{result}</em>
           <button type="button" onClick={close} aria-label="Fechar">
             ×
           </button>
         </header>
         <div className="match-detail-body">
-          <MatchScoreline
-            className="match-detail-score"
-            homeName="STRIX UNITED"
-            homeLogo="/assets/strix-logo.png"
-            homeScore={match.strix_score}
-            awayName={match.opponent_name}
-            awayLogo={opponentLogo}
-            awayScore={match.opponent_score}
-          />
+          <section className="match-detail-score-shell" aria-label={`Resultado: ${result}`}>
+            <em className={`match-result-badge ${result.toLowerCase()}`}>{result}</em>
+            <MatchScoreline
+              className="match-detail-score"
+              homeName="STRIX UNITED"
+              homeLogo="/assets/strix-logo.png"
+              homeScore={match.strix_score}
+              awayName={match.opponent_name}
+              awayLogo={opponentLogo}
+              awayScore={match.opponent_score}
+            />
+          </section>
           <div className="match-detail-metrics">
             {metrics.map(([label, value, icon]) => (
               <article key={label}>
@@ -664,7 +666,7 @@ function MobileMatchCard({ match, opponentLogo, result, canManage, detail, edit,
     if (window.confirm(`Excluir a partida contra ${match.opponent_name}?`)) remove(match.id);
   };
   return (
-    <div className={`match-mobile-swipe${swipe.offset ? " is-open" : ""}`}>
+    <div className={`match-mobile-swipe${swipe.offset ? " is-open" : ""}${swipe.dragging ? " is-dragging" : ""}`}>
       {canManage && (
         <div className="match-mobile-actions" aria-hidden={!swipe.offset}>
           <button type="button" onClick={() => (swipe.close(), edit(match))}>EDITAR</button>
@@ -677,7 +679,10 @@ function MobileMatchCard({ match, opponentLogo, result, canManage, detail, edit,
         {...swipe.handlers}
       >
         <header>
-          <time>{formatDate(match.played_at)} · {formatTime(match.played_at)}</time>
+          <div>
+            <time>{formatDate(match.played_at)} · {formatTime(match.played_at)}</time>
+            <p><em className={result.toLowerCase()}>{result}</em><span>{match.competition_name || "AMISTOSO"}</span></p>
+          </div>
           <button type="button" onClick={() => detail(match)} aria-label={`Abrir detalhes contra ${match.opponent_name}`}>◎</button>
         </header>
         <MatchDisplay
@@ -688,11 +693,7 @@ function MobileMatchCard({ match, opponentLogo, result, canManage, detail, edit,
           awayLogo={opponentLogo}
           awayScore={match.opponent_score}
         />
-        <footer>
-          <em className={result.toLowerCase()}>{result}</em>
-          <span>{match.competition_name || "AMISTOSO"}</span>
-          {canManage && <small>DESLIZE PARA AÇÕES</small>}
-        </footer>
+        {canManage && <small className="match-swipe-hint">DESLIZE PARA AÇÕES</small>}
       </article>
     </div>
   );

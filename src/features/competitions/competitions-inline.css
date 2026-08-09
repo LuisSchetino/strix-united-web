@@ -97,3 +97,42 @@
   .bracket-round-nav{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:6px;padding:10px;border-bottom:1px solid #ffffff0d;background:#061827}.bracket-round-nav button{min-height:44px;border:0;background:transparent;color:#73bfff;font-size:8px;font-weight:900}.bracket-round-nav button:last-child{text-align:right}.bracket-round-nav button:disabled{opacity:.3}.bracket-round-nav strong{text-align:center;font-size:11px;white-space:nowrap}
   .bracket-scroll{overflow:hidden}.bracket-grid{display:block;width:100%;min-width:0;padding:14px 10px}.bracket-grid .bracket-round{display:none;min-width:0}.bracket-grid .bracket-round[data-mobile-active="true"]{display:block;animation:motion-panel-enter var(--motion-normal) var(--motion-ease) both}.bracket-grid .bracket-round>div.bracket-round-matches{display:grid;grid-template-rows:unset!important;gap:12px}.bracket-grid .bracket-slot{min-width:0;grid-row:auto!important}.bracket-grid .bracket-round:not(:last-child) .bracket-slot:after,.bracket-grid .bracket-round:not(:last-child) .bracket-slot:before,.bracket-grid .bracket-round:not(:first-child) .bracket-slot article:before{content:none}.bracket-grid .bracket-slot .fixture-clubs{min-height:78px;gap:4px}.bracket-grid .bracket-slot .fixture-clubs .match-display-team{gap:3px}.bracket-grid .bracket-slot .fixture-clubs .match-display-name{display:-webkit-box;max-width:none;overflow:hidden;text-overflow:clip;white-space:normal;-webkit-box-orient:vertical;-webkit-line-clamp:3;line-height:1.05;font-size:10px}.bracket-grid .bracket-slot .match-display-mark{flex-basis:30px;width:30px;height:30px;max-width:30px;max-height:30px}.bracket-grid .bracket-slot .match-display-team>strong{font-size:18px}
 }
+
+/* Rendered geometry drives a continuous desktop bracket; mobile keeps round paging. */
+.bracket-grid{position:relative}
+.bracket-grid .bracket-round{position:relative;z-index:1}
+.bracket-connectors{position:absolute;z-index:0;inset:0;display:block;overflow:visible;pointer-events:none}
+.bracket-connectors path{fill:none;stroke:color-mix(in srgb,var(--competition-accent) 66%,#7896aa);stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke;stroke-dasharray:1;stroke-dashoffset:1;animation:bracket-svg-draw 620ms var(--motion-ease) calc(var(--connector-index) * 55ms) forwards}
+@keyframes bracket-svg-draw{to{stroke-dashoffset:0}}
+@keyframes bracket-card-enter{from{opacity:0;transform:translateX(-7px)}to{opacity:1;transform:none}}
+@media(min-width:801px){
+  .bracket-grid{min-width:1150px;gap:82px}
+  .bracket-grid.has-svg-connectors .bracket-slot:before,.bracket-grid.has-svg-connectors .bracket-slot:after,.bracket-grid.has-svg-connectors .bracket-slot article:before,.bracket-grid.has-svg-connectors .bracket-slot article:after{content:none!important}
+  .bracket-grid.is-drawing .bracket-slot article{animation:bracket-card-enter 460ms var(--motion-ease) var(--bracket-card-delay,0ms) both}
+}
+@media(max-width:800px){.bracket-connectors{display:none}}
+
+@media(prefers-reduced-motion:reduce){
+  .bracket-connectors path{stroke-dashoffset:0;animation:none}
+  .bracket-grid.is-drawing .bracket-slot article{animation:none}
+}
+
+/* Mobile standings: the fixed identity block is one solid layer above stats. */
+@media(max-width:700px){
+  .standings-scroll{position:relative;overflow-x:auto;overflow-y:hidden;isolation:isolate;clip-path:inset(0 round 0)}
+  .standings-table{min-width:690px;isolation:isolate}
+  .standings-table>header,.standings-table>article{grid-template-columns:34px 190px 44px repeat(7,38px) 125px;column-gap:0;padding-inline:8px;background:var(--standings-row-bg)!important}
+  .standings-table>header{--standings-row-bg:#051522}
+  .standings-table>article{--standings-row-bg:#061522}
+  .standings-table>article.is-qualification-zone{--standings-row-bg:#082035}
+  .standings-table>article.is-strix{--standings-row-bg:#0b2940}
+  .standings-table>header>*,.standings-table>article>*{position:relative;z-index:0;background:transparent}
+  .standings-table>header>*:nth-child(1),.standings-table>article>*:nth-child(1),
+  .standings-table>header>*:nth-child(2),.standings-table>article>*:nth-child(2),
+  .standings-table>header>*:nth-child(3),.standings-table>article>*:nth-child(3){position:sticky;z-index:6;background:var(--standings-row-bg);background-clip:padding-box}
+  .standings-table>header>*:nth-child(1),.standings-table>article>*:nth-child(1){left:0}
+  .standings-table>header>*:nth-child(2),.standings-table>article>*:nth-child(2){left:34px}
+  .standings-table>header>*:nth-child(3),.standings-table>article>*:nth-child(3){left:224px;box-shadow:10px 0 14px -10px #000}
+  .standings-table>header>*:nth-child(n+4),.standings-table>article>*:nth-child(n+4){z-index:0}
+  .standings-table>article.is-qualification-boundary>*:nth-child(-n+3){border-bottom:2px solid color-mix(in srgb,var(--competition-accent) 70%,#fff)}
+}

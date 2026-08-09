@@ -103,7 +103,13 @@ export function MotionBadge({ state, idle = "Atualizar" }) {
     success: "Atualizado ✓",
     error: "Erro",
   };
-  return <span className={`motion-state-badge is-${state || "idle"}`}>{labels[state] || idle}</span>;
+  const icons = { loading: "↻", success: "✓", error: "!", idle: "↻" };
+  const current = state || "idle";
+  return (
+    <span className={`motion-state-badge is-${current}`}>
+      <span className="motion-state-content" key={current}><i aria-hidden="true">{icons[current]}</i>{labels[state] || idle}</span>
+    </span>
+  );
 }
 
 export function notify(message, tone = "success") {
@@ -112,12 +118,16 @@ export function notify(message, tone = "success") {
 
 export function ToastViewport() {
   const [toasts, setToasts] = useState([]);
+  const dismiss = (id) => {
+    setToasts((current) => current.map((toast) => toast.id === id ? { ...toast, leaving: true } : toast));
+    window.setTimeout(() => setToasts((current) => current.filter((toast) => toast.id !== id)), 180);
+  };
   useEffect(() => {
     const receive = (event) => {
       const id = `${Date.now()}-${Math.random()}`;
       const item = { id, ...event.detail };
       setToasts((current) => [...current.slice(-2), item]);
-      window.setTimeout(() => setToasts((current) => current.filter((toast) => toast.id !== id)), 3600);
+      window.setTimeout(() => dismiss(id), 3600);
     };
     window.addEventListener("strix-toast", receive);
     return () => window.removeEventListener("strix-toast", receive);
@@ -127,8 +137,8 @@ export function ToastViewport() {
       {toasts.map((toast) => (
         <button
           type="button"
-          className={`motion-toast is-${toast.tone || "success"}`}
-          onClick={() => setToasts((current) => current.filter((item) => item.id !== toast.id))}
+          className={`motion-toast is-${toast.tone || "success"}${toast.leaving ? " is-leaving" : ""}`}
+          onClick={() => dismiss(toast.id)}
           key={toast.id}
         >
           <span aria-hidden="true">{toast.tone === "error" ? "!" : "✓"}</span>
@@ -143,28 +153,41 @@ export function ToastViewport() {
 export function useSwipeActions(max = 132) {
   const start = useRef(null);
   const [offset, setOffset] = useState(0);
+  const [dragging, setDragging] = useState(false);
   const handlers = useMemo(() => ({
     onPointerDown: (event) => {
-      start.current = { x: event.clientX, y: event.clientY, offset };
+      if (!max) return;
+      start.current = { x: event.clientX, y: event.clientY, offset, axis: null };
       event.currentTarget.setPointerCapture?.(event.pointerId);
     },
     onPointerMove: (event) => {
       if (!start.current) return;
       const dx = event.clientX - start.current.x;
       const dy = event.clientY - start.current.y;
-      if (Math.abs(dx) < Math.abs(dy) + 7) return;
-      setOffset(Math.max(-max, Math.min(0, start.current.offset + dx)));
+      if (!start.current.axis) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) < 10) return;
+        start.current.axis = Math.abs(dx) > Math.abs(dy) * 1.18 ? "x" : "y";
+      }
+      if (start.current.axis !== "x") return;
+      setDragging(true);
+      const raw = start.current.offset + dx;
+      const resisted = raw < -max
+        ? -max - Math.min(14, (-max - raw) * 0.12)
+        : Math.min(0, raw);
+      setOffset(resisted);
     },
     onPointerUp: () => {
-      setOffset((current) => (current < -max * 0.32 ? -max : 0));
+      setOffset((current) => (current < -max * 0.36 ? -max : 0));
       start.current = null;
+      setDragging(false);
     },
     onPointerCancel: () => {
-      setOffset(0);
+      setOffset(start.current?.offset || 0);
       start.current = null;
+      setDragging(false);
     },
   }), [max, offset]);
-  return { offset, close: () => setOffset(0), handlers };
+  return { offset, dragging, close: () => setOffset(0), handlers };
 }
 
 export function useSheetDismiss(onDismiss) {
