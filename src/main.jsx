@@ -6,6 +6,7 @@ import "./styles.css";
 import "./fc27-polish.css";
 import "./interaction-polish.css";
 import "./field-polish.css";
+import "./partidas.css";
 import "./agenda.css";
 import "./agenda-polish.css";
 import "./formation-picker.css";
