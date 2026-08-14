@@ -1,4 +1,5 @@
 import { normalizeName } from "../matches/import-core.js";
+import { expandKnockoutSlots } from "../../../shared/bracket-slots.js";
 
 const ensure = (result) => {
   if (result.error) throw result.error;
@@ -108,9 +109,12 @@ async function normalizeKnockout(client, edition, preview) {
 }
 
 async function normalizeFixtures(client, edition, source, preview) {
-  const fixtures = preview.knockout?.fixtures || preview.fixtures || [];
+  const fixtures = preview.sourceKind === "knockout"
+    ? expandKnockoutSlots(preview)
+    : (preview.fixtures || []);
   if (!fixtures.length) return;
-  ensure(await client.from("competition_teams").upsert(fixtures.flatMap((fixture) => [
+  const realFixtures = fixtures.filter((fixture) => !fixture.metadata?.placeholder);
+  if (realFixtures.length) ensure(await client.from("competition_teams").upsert(realFixtures.flatMap((fixture) => [
     { edition_id: edition.id, name: fixture.homeTeamName, logo_url: fixture.homeLogo || null, is_strix: /\bstrix\b/i.test(fixture.homeTeamName), metadata: {} },
     { edition_id: edition.id, name: fixture.awayTeamName, logo_url: fixture.awayLogo || null, is_strix: /\bstrix\b/i.test(fixture.awayTeamName), metadata: {} },
   ]), { onConflict: "edition_id,normalized_name" }));
@@ -130,6 +134,10 @@ async function normalizeFixtures(client, edition, source, preview) {
     home_score: fixture.homeScore,
     away_score: fixture.awayScore,
     status: fixture.status || "scheduled",
+    bracket_slot_key: fixture.bracketSlotKey || fixture.metadata?.bracketSlotKey || null,
+    bracket_position: fixture.bracketPosition ?? fixture.metadata?.bracketPosition ?? null,
+    winner_to_slot_key: fixture.winnerToSlotKey || fixture.metadata?.winnerToSlotKey || null,
+    winner_to_slot: fixture.winnerToSlot ?? fixture.metadata?.winnerToSlot ?? null,
     metadata: {
       provider: preview.provider,
       organization: preview.organization,
@@ -141,7 +149,10 @@ async function normalizeFixtures(client, edition, source, preview) {
       ...(fixture.metadata || {}),
     },
   }));
-  ensure(await client.from("competition_fixtures").upsert(rows, { onConflict: "edition_id,external_match_id" }));
+  const bracketRows = rows.filter((fixture) => fixture.bracket_slot_key);
+  const regularRows = rows.filter((fixture) => !fixture.bracket_slot_key);
+  if (bracketRows.length) ensure(await client.from("competition_fixtures").upsert(bracketRows, { onConflict: "edition_id,bracket_slot_key" }));
+  if (regularRows.length) ensure(await client.from("competition_fixtures").upsert(regularRows, { onConflict: "edition_id,external_match_id" }));
 }
 
 export async function saveCompetitionPreview(client, profile, preview, palette, accent) {

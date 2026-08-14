@@ -44,7 +44,9 @@ export function deriveCompetitionView(sources = [], persistedFixtures = [], edit
     home_score: fixture.homeScore,
     away_score: fixture.awayScore,
   }));
-  const fixtures = [...persistedFixtures, ...snapshotFixtures].filter((fixture, index, all) => all.findIndex((item) => fixtureKey(item) === fixtureKey(fixture)) === index);
+  const fixtures = [...persistedFixtures, ...snapshotFixtures]
+    .filter((fixture) => fixture.metadata?.superseded !== true)
+    .filter((fixture, index, all) => all.findIndex((item) => fixtureKey(item) === fixtureKey(fixture)) === index);
   const isHistorical = edition?.status === "historical";
   const allUpcoming = isHistorical ? [] : fixtures.filter((fixture) => !["completed", "cancelled"].includes(fixture.status));
   const allProviderResults = fixtures.filter((fixture) => fixture.status === "completed" || (fixture.home_score != null && fixture.away_score != null));

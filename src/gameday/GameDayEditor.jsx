@@ -685,9 +685,9 @@ export function GameDayEditor({ profile, client, workspace }) {
           entry.competition_name ||
           "AMISTOSO"
         ).toUpperCase(),
-        opponentLogo: entry.opponent_logos?.storage_path
+        opponentLogo: entry.resolved_opponent_logo_url || (entry.opponent_logos?.storage_path
           ? workspace.assetUrl(entry.opponent_logos.storage_path)
-          : "",
+          : ""),
       };
     });
     const logoMap = new Map();
@@ -710,9 +710,9 @@ export function GameDayEditor({ profile, client, workspace }) {
       hour12: false,
       timeZone: "America/Sao_Paulo",
     }).format(date);
-    const logo = item.opponent_logos?.storage_path
+    const logo = item.resolved_opponent_logo_url || (item.opponent_logos?.storage_path
       ? workspace.assetUrl(item.opponent_logos.storage_path)
-      : "";
+      : "");
     commit(
       (current) => ({
         ...current,

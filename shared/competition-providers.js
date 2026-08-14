@@ -1,3 +1,5 @@
+import { stableBracketMatchId } from "./bracket-slots.js";
+
 const PROVIDERS = Object.freeze({
   "ccbclubs.com.br": { id: "ccb", organization: "CCB Clubs" },
   "www.ccbclubs.com.br": { id: "ccb", organization: "CCB Clubs" },
@@ -243,7 +245,13 @@ function parseKnockout(html, context) {
       const home = teams[index * 2];
       const away = teams[index * 2 + 1];
       return {
-        externalMatchId: `${context.competitionId}:${context.groupId || "main"}:${currentRound.type}:${index}:${normalizeFixtureKey(home)}:${normalizeFixtureKey(away)}`,
+        externalMatchId: stableBracketMatchId({
+          provider: context.provider,
+          competitionId: context.competitionId,
+          groupId: context.groupId,
+          roundLabel: currentRound.name,
+          position: index,
+        }),
         roundLabel: currentRound.name,
         scheduledAt: currentRound.scheduledAt,
         homeTeamName: home,

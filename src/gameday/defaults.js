@@ -1,3 +1,5 @@
+import { STRIX_BRAND } from "../brand.js";
+
 export const STORY_SIZE = { width: 1080, height: 1920 };
 export const FEED_SIZE = { width: 1080, height: 1350 };
 export const TEMPLATE_ID = "strix-collage-2026";
@@ -32,7 +34,7 @@ export function createDefaultProject() {
     competitionLogos: [],
     opponentName: "ADVERSÁRIO",
     opponentLogo: "",
-    teamLogo: "/assets/strix-logo.png",
+    teamLogo: STRIX_BRAND.logo,
     topTeamName: "STRIX\nUNITED",
     timePrefix: "HOJE ÀS",
     groupTitle: "NOSSO GRUPO:",
@@ -62,7 +64,7 @@ export function createDefaultProject() {
       {
         id: crypto.randomUUID(),
         name: "STRIX UNITED",
-        logoUrl: "/assets/strix-logo.png",
+        logoUrl: STRIX_BRAND.logo,
       },
       { id: crypto.randomUUID(), name: "CLUBE DO POVO", logoUrl: "" },
       { id: crypto.randomUUID(), name: "CLUBE ARMÊNIO", logoUrl: "" },

@@ -15,9 +15,13 @@ import "./agenda-sync.css";
 import "./fc27-data.css";
 import "./fc27-fixes.css";
 import { nextAgendaSlot } from "./features/agenda/agenda-slots.js";
+import { resolveAgendaTeamIdentity } from "./features/teams/team-identity.js";
 import { notify, RollingLabel, ToastViewport } from "./ui/motion/motion.jsx";
 import { ClubLogo } from "./ui/ClubLogo.jsx";
+import { STRIX_BRAND } from "./brand.js";
+import { RastroSignature } from "./ui/RastroBrand.jsx";
 import "./features/squad-cards.css";
+import "./fc27-brand.css";
 
 const GameDayEditor = lazy(() => import("./gameday/GameDayEditor.jsx").then((module) => ({ default: module.GameDayEditor })));
 const MatchesPage = lazy(() => import("./features/matches/MatchesPage.jsx").then((module) => ({ default: module.MatchesPage })));
@@ -286,7 +290,7 @@ const legacyExamplePlayers = [
 ];
 const players = [];
 function Crest({ small = false, priority = false }) {
-  return <ClubLogo name="Strix United" url="/assets/strix-logo.png" priority={priority} sizes={small ? "33px" : "(max-width:580px) 72px, 196px"} className={`crest ${small ? "crest-small" : ""}`}/>;
+  return <ClubLogo name="Strix United" url={STRIX_BRAND.logo} priority={priority} sizes={small ? "33px" : "(max-width:580px) 72px, 196px"} className={`crest ${small ? "crest-small" : ""}`}/>;
 }
 const logoCatalogKey = "strix-fc27-logo-catalog";
 let browserSupabase = null;
@@ -509,6 +513,7 @@ function useFc27Workspace(client, profile) {
     competitionEditions: [],
     competitionSources: [],
     competitionFixtures: [],
+    competitionTeams: [],
     systemFlags: [],
     schemaPending: false,
     error: "",
@@ -533,19 +538,34 @@ function useFc27Workspace(client, profile) {
       }));
       return;
     }
-    const [competitionsResult, editionsResult, sourcesResult, fixturesResult, flagsResult] = await Promise.all([
+    const [competitionsResult, editionsResult, sourcesResult, fixturesResult, teamsResult, flagsResult] = await Promise.all([
       client.from("competitions").select("*").order("updated_at", { ascending: false }),
       client.from("competition_editions").select("*").order("updated_at", { ascending: false }),
       client.from("competition_sources").select("*").order("last_synced_at", { ascending: false }),
       client.from("competition_fixtures").select("*").order("scheduled_at", { ascending: true }),
+      client.from("competition_teams").select("*").order("name"),
       client.from("system_flags").select("*").order("key"),
     ]);
-    const optionalResults = [competitionsResult, editionsResult, sourcesResult, fixturesResult, flagsResult];
+    const optionalResults = [competitionsResult, editionsResult, sourcesResult, fixturesResult, teamsResult, flagsResult];
     const isMissingOptionalSchema = (error) => ["42P01", "PGRST205"].includes(error?.code);
     const optionalFailure = optionalResults.find((result) => result.error && !isMissingOptionalSchema(result.error))?.error;
     setState({
       loading: false,
-      agenda: agendaResult.data || [],
+      agenda: (agendaResult.data || []).map((match) => {
+        const identity = resolveAgendaTeamIdentity(match, {
+          fixtures: fixturesResult.data || [],
+          teams: teamsResult.data || [],
+          logos: logosResult.data || [],
+        });
+        return {
+          ...match,
+          opponent_team_id: identity.id || match.opponent_team_id || null,
+          opponent_name: identity.name || match.opponent_name,
+          opponent_abbreviation: identity.abbreviation,
+          resolved_opponent_logo_url: identity.logo,
+          identity_source: identity.source,
+        };
+      }),
       logos: logosResult.data || [],
       players: playersResult.data || [],
       aliases: aliasesResult.data || [],
@@ -554,6 +574,7 @@ function useFc27Workspace(client, profile) {
       competitionEditions: editionsResult.data || [],
       competitionSources: sourcesResult.data || [],
       competitionFixtures: fixturesResult.data || [],
+      competitionTeams: teamsResult.data || [],
       systemFlags: flagsResult.data || [],
       schemaPending: optionalResults.some((result) => isMissingOptionalSchema(result.error)),
       error: optionalFailure?.message || "",
@@ -573,6 +594,7 @@ function useFc27Workspace(client, profile) {
       .on("postgres_changes", { event: "*", schema: "public", table: "competition_editions" }, refresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "competition_sources" }, refresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "competition_fixtures" }, refresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "competition_teams" }, refresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "system_flags" }, refresh)
       .subscribe();
     return () => {
@@ -925,6 +947,7 @@ function Sidebar({
           </button>
         ))}
       </div>
+      <RastroSignature compact={compact} />
       <div className="sidebar-user">
         <Avatar name={profile.display_name} logo={profile.avatar_url} kind="photo" />
         <span>
@@ -1107,7 +1130,7 @@ function CentralLive({ workspace, navigate }) {
     .filter((item) => !["cancelled", "completed"].includes(item.status))
     .sort((left, right) => new Date(left.scheduled_at) - new Date(right.scheduled_at)), [workspace.agenda]);
   const next = upcoming[0];
-  const nextLogo = next?.opponent_logos?.storage_path ? workspace.assetUrl(next.opponent_logos.storage_path) : "";
+  const nextLogo = next?.resolved_opponent_logo_url || (next?.opponent_logos?.storage_path ? workspace.assetUrl(next.opponent_logos.storage_path) : "");
   return (
     <section className="page-home page-enter">
       <section className="match-hero">
@@ -1135,7 +1158,7 @@ function CentralLive({ workspace, navigate }) {
   );
 }
 function GameRowLive({ game, index, workspace }) {
-  const logo = game.opponent_logos?.storage_path ? workspace.assetUrl(game.opponent_logos.storage_path) : "";
+  const logo = game.resolved_opponent_logo_url || (game.opponent_logos?.storage_path ? workspace.assetUrl(game.opponent_logos.storage_path) : "");
   return <article className="match-row"><time>{timePart(game.scheduled_at)}</time><Avatar name={game.opponent_name} logo={logo} /><div><span>STRIX UNITED VS</span><b>{game.opponent_name}</b><small>{game.competition_name}</small></div><em>{index === 0 ? "PRÓXIMO" : "HOJE"}</em></article>;
 }
 const defaultAgendaForm = {
@@ -1870,7 +1893,7 @@ function AgendaLive({ navigate, workspace }) {
     opponent: db.opponent_name,
     competition: db.competition_name,
     initials: initialsOf(db.opponent_name),
-    logo: db.opponent_logos?.storage_path ? workspace.assetUrl(db.opponent_logos.storage_path) : "",
+    logo: db.resolved_opponent_logo_url || (db.opponent_logos?.storage_path ? workspace.assetUrl(db.opponent_logos.storage_path) : ""),
     status: db.status === "cancelled" ? "CANCELADO" : db.status === "live" ? "EM BREVE" : db.status === "completed" ? "JOGADO" : "AGENDADO",
     cancelled: db.status === "cancelled",
     previousOpponent: db.previous_opponent_name,

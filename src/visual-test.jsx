@@ -1,5 +1,6 @@
 import React, { useEffect } from "react";
 import { createRoot } from "react-dom/client";
+import { STRIX_BRAND } from "./brand.js";
 import "./styles.css";
 import "./fc27-polish.css";
 import "./partidas.css";
@@ -21,6 +22,7 @@ import { notify, ToastViewport } from "./ui/motion/motion.jsx";
 import { GameDayCanvas } from "./gameday/GameDayCanvas.jsx";
 import { GameDayEditor } from "./gameday/GameDayEditor.jsx";
 import { createDefaultProject } from "./gameday/defaults.js";
+import "./fc27-brand.css";
 
 const now = new Date("2026-08-08T22:10:00-03:00").toISOString();
 const profile = { user_id: "visual", access_tier: "dev", display_name: "Visual QA" };
@@ -36,14 +38,14 @@ const workspace = {
   matches: [
     { id: "m1", played_at: now, opponent_name: "POA CITY", strix_score: 3, opponent_score: 1, competition_name: "Copa Yeshua", competition_id: "c1", competition_edition_id: "e1", source: "ea_api", performance: { possession: 57, shots: 12, passes: "88/102", tackles: 9, goalkeeperSaves: 4, averageRating: 8.4, players: [{ eaName: "39ygo", rating: 8.7, goals: 2, assists: 1, passes: "31/34", passesMade: 31, passesAttempts: 34, shots: 4, tackles: 3, saves: 0 }, { eaName: "OBEEN", rating: 8.1, goals: 1, assists: 0, passes: "24/28", passesMade: 24, passesAttempts: 28, shots: 2, tackles: 5, saves: 0 }, { eaName: "NUNES", rating: 7.8, goals: 0, assists: 1, passesMade: 22, passesAttempts: 27, shots: 1, tackles: 2 }, { eaName: "KESTOL", rating: 7.5, goals: 0, assists: 0, passesMade: 19, passesAttempts: 24, shots: 1, tackles: 4 }, { eaName: "CEDRAZ", rating: 7.3, goals: 0, assists: 0, passesMade: 18, passesAttempts: 23, shots: 0, tackles: 5 }, { eaName: "SANTOZZ", rating: 7.2, goals: 0, assists: 0, passesMade: 14, passesAttempts: 20, shots: 3, tackles: 1 }, { eaName: "JOAO", position: "GOL", rating: 7.9, passesMade: 18, passesAttempts: 22, saves: 4 }, { eaName: "Caiu cedo", rating: 3, goals: 0, assists: 0, passes: "0/0", passesMade: 0, shots: 0, tackles: 0, saves: 0 }] } },
     { id: "m2", played_at: now, opponent_name: "SEM ESCUDO", strix_score: 2, opponent_score: 2, competition_name: "Amistoso", source: "local_bridge", performance: {} },
-    { id: "m3", played_at: now, opponent_name: "ESCUDO GRANDE", strix_score: 2, opponent_score: 3, competition_name: "Master League", source: "local_bridge", opponent_logos: { storage_path: "/assets/strix-logo.png" }, performance: {} },
+    { id: "m3", played_at: now, opponent_name: "ESCUDO GRANDE", strix_score: 2, opponent_score: 3, competition_name: "Master League", source: "local_bridge", opponent_logos: { storage_path: STRIX_BRAND.logo }, performance: {} },
   ],
   competitions: [{ id: "c1", name: "Copa Yeshua", organization: "CCB", accent_color: "#7f44ff", palette: ["#7f44ff", "#f2b928"], logo_url: "", is_active: true }, { id: "c2", name: "7 * SUPERLIGA YESHUA", organization: "CCB", accent_color: "#ff8a30", palette: ["#ff8a30"], logo_url: "", is_active: true }, { id: "c3", name: "VPR ELITE - VYPERIUM", organization: "VPR", accent_color: "#2bb7ff", palette: ["#2bb7ff"], logo_url: "", is_active: true }],
   competitionEditions: [{ id: "e1", competition_id: "c1", label: "2026 · Temporada 6", format: "groups", status: "active", qualification_slots: 4, tie_break_rules: ["points", "goal_difference"] }, { id: "e2", competition_id: "c2", label: "2026 · Edição atual", format: "groups", status: "active", qualification_slots: 8, tie_break_rules: ["points"] }, { id: "e3", competition_id: "c3", label: "2026 · Edição atual", format: "rounds", status: "active", qualification_slots: 4, tie_break_rules: ["points"] }],
   competitionSources: [{ id: "s1", edition_id: "e1", source_kind: "standings", source_url: "https://ccbclubs.com.br/fifa.php?file=classificacao&campeonato=100", last_synced_at: now, snapshot }, { id: "s2", edition_id: "e1", source_kind: "knockout", source_url: "https://ccbclubs.com.br/fifa.php?file=eliminatoria&campeonato=100&grupo=12", last_synced_at: now, snapshot: { phase: "knockout", knockout: { currentStage: "Quartas de final", rounds: [{ name: "Oitavas de final", scheduledAt: null }, { name: "Quartas de final", scheduledAt: "2026-08-10T23:10:00-03:00" }, { name: "Semifinais", scheduledAt: null }, { name: "Final", scheduledAt: null }] } } }],
   competitionFixtures: [
     ["SUMMIT ES", "NEW ERA E - SPORTS", "q1"], ["VIKINGS TEAM", "TRAFEGO DO RJ", "q2"], ["HANNIBALL ESPORTS", "ITUANO FV", "q3"], ["XUMBREGA SC", "STRIX UNITED", "q4"],
-  ].map(([home_team_name, away_team_name, external_match_id]) => ({ edition_id: "e1", external_match_id, round_label: "Quartas de final", scheduled_at: "2026-08-10T23:10:00-03:00", home_team_name, away_team_name, home_logo: "/assets/strix-logo.png", away_logo: "/assets/strix-logo.png", status: "scheduled" })),
+  ].map(([home_team_name, away_team_name, external_match_id]) => ({ edition_id: "e1", external_match_id, round_label: "Quartas de final", scheduled_at: "2026-08-10T23:10:00-03:00", home_team_name, away_team_name, home_logo: STRIX_BRAND.logo, away_logo: STRIX_BRAND.logo, status: "scheduled" })),
   assetUrl: (path) => path || "", refresh: async () => {}, savePlayerAliases: async () => {}, removePlayerAlias: async () => {}, importLegacyRoster: async (players) => ({ created: players.length, merged: 0, aliases: players.length, conflicts: [] }), upsertClubMatches: async () => {}, upsertClubMatch: async () => {}, removeClubMatch: async () => {},
 };
 const libraryFixtures = [
@@ -78,7 +80,7 @@ else if (page === "gameday") {
   Object.assign(project, { opponentName: "POA CITY", matchTime: "22:10", championshipName: "COPA YESHUA", visualSettings: { ...project.visualSettings, showGuides: false } });
   if (new URLSearchParams(location.search).get("mode") === "agenda") {
     project.mode = "agenda";
-    project.competitionLogos = ["YESHUA", "MASTER LEAGUE", "VPR ELITE", "SUPERLIGA", "AMISTOSO"].map((name, index) => ({ id: String(index), name, url: index < 2 ? "/assets/strix-logo.png" : "" }));
+    project.competitionLogos = ["YESHUA", "MASTER LEAGUE", "VPR ELITE", "SUPERLIGA", "AMISTOSO"].map((name, index) => ({ id: String(index), name, url: index < 2 ? STRIX_BRAND.logo : "" }));
     project.dailyGames = [
       ["21:10", "VIBE ES", "AMISTOSO"], ["21:40", "WINNER ELEVENS", "SUPERLIGA YESHUA"],
       ["22:10", "TKV", "MASTER LEAGUE"], ["22:40", "RB UNIDOS", "AMISTOSO"],

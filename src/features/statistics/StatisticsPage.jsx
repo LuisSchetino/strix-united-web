@@ -6,6 +6,7 @@ import {
   IconScale, IconUsers, IconX,
 } from "@tabler/icons-react";
 import { ClubLogo } from "../../ui/ClubLogo.jsx";
+import { STRIX_BRAND } from "../../brand.js";
 import { AnimatedNumber, MotionTabs } from "../../ui/motion/motion.jsx";
 import { aggregatePlayerStatistics, aggregateTeamStatistics, buildRanking } from "./statistics-core.js";
 import "./statistics.css";
@@ -86,7 +87,7 @@ function TeamData({ team }) {
     ["saves", "DEFESAS DO GOLEIRO", team.saves, "", `${team.savesPerGame} por jogo`],
     ["averageRating", "NOTA MÉDIA", team.averageRating, "", "amostra registrada pela EA"],
   ];
-  return <div className="statistics-panel-enter"><section className="statistics-team-identity"><ClubLogo name="Strix United" url="/assets/strix-logo.png" sizes="(max-width:700px) 96px, 150px"/><div><span>DADOS DO TIME</span><h2>STRIX UNITED</h2><p>Club ID · 625257</p></div></section><section className="statistics-team-grid">{cards.map(([metric, label, value, suffix, note, tooltip], index) => <StatCard key={metric} metric={metric} label={label} value={value} suffix={suffix} note={note} tooltip={tooltip} index={index}/>)}</section></div>;
+  return <div className="statistics-panel-enter"><section className="statistics-team-identity"><ClubLogo name="Strix United" url={STRIX_BRAND.logo} sizes="(max-width:700px) 96px, 150px"/><div><span>DADOS DO TIME</span><h2>STRIX UNITED</h2><p>Club ID · 625257</p></div></section><section className="statistics-team-grid">{cards.map(([metric, label, value, suffix, note, tooltip], index) => <StatCard key={metric} metric={metric} label={label} value={value} suffix={suffix} note={note} tooltip={tooltip} index={index}/>)}</section></div>;
 }
 
 function PlayersData({ players }) {

@@ -1,4 +1,5 @@
 import { normalizeName } from "../../src/features/matches/import-core.js";
+import { expandKnockoutSlots } from "../../shared/bracket-slots.js";
 
 const volatileKeys = new Set(["fetchedAt", "security", "relatedSourceUrls"]);
 
@@ -36,6 +37,10 @@ const opponentFor = (fixture) => /\bstrix\b/i.test(fixture.home_team_name)
   ? fixture.away_team_name
   : fixture.home_team_name;
 
+const opponentTeamIdFor = (fixture) => /\bstrix\b/i.test(fixture.home_team_name)
+  ? fixture.away_team_id
+  : fixture.home_team_id;
+
 export function agendaMutationForFixture(current, fixture, { competition, edition, actorUserId, now = new Date() }) {
   const opponentName = opponentFor(fixture);
   const providerStatus = ["cancelled", "live", "completed"].includes(fixture.status)
@@ -43,6 +48,7 @@ export function agendaMutationForFixture(current, fixture, { competition, editio
     : "scheduled";
   const base = {
     opponent_name: opponentName,
+    opponent_team_id: opponentTeamIdFor(fixture) || null,
     competition_name: competition.name,
     competition_id: competition.id,
     competition_edition_id: edition.id,
@@ -62,6 +68,7 @@ export function agendaMutationForFixture(current, fixture, { competition, editio
   };
   const status = current.status === "completed" ? "completed" : providerStatus;
   const changed = current.opponent_name !== opponentName
+    || (current.opponent_team_id || null) !== base.opponent_team_id
     || current.competition_id !== competition.id
     || new Date(current.scheduled_at).getTime() !== new Date(fixture.scheduled_at).getTime()
     || current.status !== status;
@@ -132,10 +139,12 @@ export async function persistCompetitionSync(client, { competition, edition, act
     updated_by: actorUserId,
   }).eq("id", edition.id));
 
-  const fixtureEntries = previews.flatMap((item) => [
-    ...(item.fixtures || []),
-    ...(item.knockout?.fixtures || []),
-  ].map((fixture) => ({ fixture, item })));
+  const fixtureEntries = previews.flatMap((item) => {
+    const fixtures = item.sourceKind === "knockout"
+      ? expandKnockoutSlots(item)
+      : [...(item.fixtures || []), ...(item.knockout?.fixtures || [])];
+    return fixtures.map((fixture) => ({ fixture, item }));
+  });
   if (!fixtureEntries.length) return { sources, fixtures: 0 };
 
   const teamMap = new Map();
@@ -144,7 +153,7 @@ export async function persistCompetitionSync(client, { competition, edition, act
       [fixture.homeTeamName, fixture.homeLogo],
       [fixture.awayTeamName, fixture.awayLogo],
     ]) {
-      if (!name) continue;
+      if (!name || fixture.metadata?.placeholder) continue;
       const key = normalizeName(name);
       const current = teamMap.get(key);
       teamMap.set(key, {
@@ -177,6 +186,10 @@ export async function persistCompetitionSync(client, { competition, edition, act
       home_score: fixture.homeScore,
       away_score: fixture.awayScore,
       status: fixture.status || "scheduled",
+      bracket_slot_key: fixture.bracketSlotKey || fixture.metadata?.bracketSlotKey || null,
+      bracket_position: fixture.bracketPosition ?? fixture.metadata?.bracketPosition ?? null,
+      winner_to_slot_key: fixture.winnerToSlotKey || fixture.metadata?.winnerToSlotKey || null,
+      winner_to_slot: fixture.winnerToSlot ?? fixture.metadata?.winnerToSlot ?? null,
       metadata: {
         provider: item.provider,
         organization: item.organization,
@@ -189,8 +202,12 @@ export async function persistCompetitionSync(client, { competition, edition, act
       },
     };
   });
-  ensureData(await client.from("competition_fixtures")
-    .upsert(fixtureRows, { onConflict: "edition_id,external_match_id" }));
+  const bracketRows = fixtureRows.filter((fixture) => fixture.bracket_slot_key);
+  const regularRows = fixtureRows.filter((fixture) => !fixture.bracket_slot_key);
+  if (bracketRows.length) ensureData(await client.from("competition_fixtures")
+    .upsert(bracketRows, { onConflict: "edition_id,bracket_slot_key" }));
+  if (regularRows.length) ensureData(await client.from("competition_fixtures")
+    .upsert(regularRows, { onConflict: "edition_id,external_match_id" }));
   return { sources, fixtures: fixtureRows.length };
 }
 

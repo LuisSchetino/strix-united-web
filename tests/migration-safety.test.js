@@ -5,6 +5,7 @@ import { readFile } from "node:fs/promises";
 const migrationUrl = new URL("../supabase/migrations/20260808014500_fc27_gameday_competitions_and_history.sql", import.meta.url);
 const competitionRlsFixUrl = new URL("../supabase/migrations/20260808164217_fix_competition_edition_insert_rls.sql", import.meta.url);
 const syncMigrationUrl = new URL("../supabase/migrations/20260808191417_fc27_competition_sync_and_provider_agenda.sql", import.meta.url);
+const identityAndBracketUrl = new URL("../supabase/migrations/20260813103000_fc27_team_identity_and_bracket_slots.sql", import.meta.url);
 
 test("migration FC27 e aditiva e ativa RLS nos novos dominios", async () => {
   const sql = await readFile(migrationUrl, "utf8");
@@ -38,4 +39,14 @@ test("competition sync migration is additive, idempotent and keeps internal Agen
   assert.match(sql, /private\.invoke_fc27_competition_sync/i);
   assert.match(sql, /fc27-competition-sync-15m/i);
   assert.doesNotMatch(sql, /SUPABASE_SERVICE_ROLE_KEY/i);
+});
+
+test("team identity and bracket migration preserves data and protects stable slots", async () => {
+  const sql = await readFile(identityAndBracketUrl, "utf8");
+  assert.doesNotMatch(sql, /\b(drop\s+table|truncate|delete\s+from)\b/i);
+  assert.match(sql, /add column if not exists opponent_team_id uuid/i);
+  assert.match(sql, /add column if not exists bracket_slot_key text/i);
+  assert.match(sql, /unique \(edition_id, bracket_slot_key\)/i);
+  assert.match(sql, /duplicate_bracket_slot/i);
+  assert.match(sql, /opponent_team_id is null/i);
 });

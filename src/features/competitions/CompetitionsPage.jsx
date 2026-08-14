@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { MatchDisplay } from "../../ui/MatchDisplay.jsx";
+import { STRIX_BRAND } from "../../brand.js";
 import {
   AnimatedNumber,
   MotionBadge,
@@ -446,7 +447,7 @@ function CompetitionGames({ competition, view, workspace, organization }) {
                   away_team_name: match.opponent_name,
                   home_score: match.strix_score,
                   away_score: match.opponent_score,
-                  home_logo: "/assets/strix-logo.png",
+                  home_logo: STRIX_BRAND.logo,
                   away_logo: match.opponent_logos?.storage_path
                     ? workspace.assetUrl(match.opponent_logos.storage_path)
                     : "",

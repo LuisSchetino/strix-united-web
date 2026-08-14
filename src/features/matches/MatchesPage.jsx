@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { MatchDisplay } from "../../ui/MatchDisplay.jsx";
+import { STRIX_BRAND } from "../../brand.js";
 import {
   RollingLabel,
   notify,
@@ -58,7 +59,7 @@ function MatchPreview({ match, workspace }) {
       <small>PREVIEW NO FC27</small>
       <MatchScoreline
         homeName="STRIX"
-        homeLogo="/assets/strix-logo.png"
+        homeLogo={STRIX_BRAND.logo}
         homeScore={match.strixScore}
         awayName={match.opponent || "ADVERSÁRIO"}
         awayLogo={logo?.storage_path ? workspace.assetUrl(logo.storage_path) : ""}
@@ -627,7 +628,7 @@ function MatchDetails({ match, workspace, close }) {
             <MatchScoreline
               className="match-detail-score"
               homeName="STRIX UNITED"
-              homeLogo="/assets/strix-logo.png"
+              homeLogo={STRIX_BRAND.logo}
               homeScore={match.strix_score}
               awayName={match.opponent_name}
               awayLogo={opponentLogo}
@@ -698,7 +699,7 @@ function MobileMatchCard({ match, opponentLogo, result, canManage, detail, edit,
         </header>
         <MatchDisplay
           homeName="STRIX UNITED"
-          homeLogo="/assets/strix-logo.png"
+          homeLogo={STRIX_BRAND.logo}
           homeScore={match.strix_score}
           awayName={match.opponent_name}
           awayLogo={opponentLogo}
@@ -742,7 +743,7 @@ function MatchHistory({ workspace, canManage, detail, edit, remove }) {
               <MatchScoreline
                 className="match-teams"
                 homeName="STRIX"
-                homeLogo="/assets/strix-logo.png"
+                homeLogo={STRIX_BRAND.logo}
                 homeScore={match.strix_score}
                 awayName={match.opponent_name}
                 awayLogo={opponentLogo}
