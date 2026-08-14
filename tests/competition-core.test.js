@@ -67,3 +67,18 @@ test("edição histórica não mantém fixture futura como próximo jogo", () =>
   assert.equal(view.strixFixture, null);
   assert.equal(view.currentStage, "Campeão");
 });
+
+test("snapshot and persisted bracket rows share the structural slot identity", () => {
+  const sources = [{
+    source_kind: "knockout",
+    snapshot: { knockout: { currentStage: "Final", fixtures: [
+      { externalMatchId: "ccb:97:bracket:slot:final:0", roundLabel: "Final", bracketPosition: 0, homeTeamName: "Winner Elevens", awayTeamName: "Vikings Team", status: "scheduled" },
+    ] } },
+  }];
+  const persisted = [
+    { external_match_id: "ccb:97:12:slot:final:0", bracket_slot_key: "final:0", round_label: "Final", bracket_position: 0, home_team_name: "Winner Elevens", away_team_name: "Vikings Team", status: "scheduled" },
+  ];
+  const view = deriveCompetitionView(sources, persisted);
+  assert.equal(view.fixtures.length, 1);
+  assert.equal(view.fixtures[0].bracket_slot_key, "final:0");
+});

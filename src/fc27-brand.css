@@ -203,6 +203,10 @@ html .gameday-editor-page .gd-dashed{border-color:#454c54;color:#d6d9dc}html .ga
 .match-hero .smoke{background:radial-gradient(ellipse,#ffffff14 0%,#ffffff08 40%,transparent 70%)!important}
 .match-hero .avatar{border-color:#555c64!important;background:#14171b!important;box-shadow:0 0 24px #ffffff12!important}
 .pitch,.player-dot{border-color:#555c64!important}.player-dot{background:#101318f0!important}.player-dot>b{color:#f5f5f5!important}
+.avatar,.avatar.has-image{border-color:#4a5057!important;background-color:#111419!important;color:#e5e7ea!important}
+.sidebar-signout,.secondary,.preset-trigger{border-color:var(--strix-border-strong)!important;background:#111419!important;color:#d6d9dd!important}
+.agenda-list-heading,.agenda-empty,.squad-sector>header small{color:#8e969f!important;border-color:var(--strix-border)!important}
+.squad-sector>header>b,.member-tag,.member-tag.complete,.member-tag.elenco{border-color:var(--strix-border-strong)!important;color:#b7bdc4!important;background:#111419!important}
 
 @media(max-width:900px){
   .rastro-signature{bottom:88px}

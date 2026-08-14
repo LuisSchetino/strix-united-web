@@ -1,4 +1,5 @@
 import { normalizeName } from "../matches/import-core.js";
+import { bracketRoundKey } from "../../../shared/bracket-slots.js";
 
 const stageLabel = (value) => {
   if (/quarter|quarta/i.test(value || "")) return "Quartas de final";
@@ -9,8 +10,13 @@ const stageLabel = (value) => {
   return value || "Fase não identificada";
 };
 
-const fixtureKey = (fixture) => fixture.external_match_id || fixture.externalMatchId
-  || `${normalizeName(fixture.home_team_name || fixture.homeTeamName)}:${normalizeName(fixture.away_team_name || fixture.awayTeamName)}:${fixture.scheduled_at || fixture.scheduledAt || ""}`;
+const fixtureKey = (fixture) => {
+  const round = fixture.round_label || fixture.roundLabel;
+  const position = fixture.bracket_position ?? fixture.bracketPosition ?? fixture.metadata?.bracketPosition;
+  if (round && position !== null && position !== undefined) return `bracket:${bracketRoundKey(round)}:${Number(position)}`;
+  return fixture.external_match_id || fixture.externalMatchId
+    || `${normalizeName(fixture.home_team_name || fixture.homeTeamName)}:${normalizeName(fixture.away_team_name || fixture.awayTeamName)}:${fixture.scheduled_at || fixture.scheduledAt || ""}`;
+};
 
 const isStrixFixture = (fixture) => /\bstrix\b/i.test(`${fixture.home_team_name || fixture.homeTeamName} ${fixture.away_team_name || fixture.awayTeamName}`);
 
