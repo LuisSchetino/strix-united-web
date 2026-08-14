@@ -589,3 +589,6 @@
 .statistics-stat-card strong,.statistics-team-metric strong,.statistics-ranking-card>ol>li>strong{color:var(--rastro-blue)}
 .statistics-ranking-list article.is-top{background:linear-gradient(90deg,var(--rastro-blue-subtle),#101318)}
 .statistics-ranking-modal{box-shadow:0 28px 90px #000}.statistics-ranking-list article{border-color:var(--strix-border)}
+.statistics-stat-card,.statistics-ranking-card,.statistics-goalkeeper-card,.statistics-team-metric{background:linear-gradient(145deg,#101318,#0b0d10)}
+.statistics-stat-card:after{background:linear-gradient(90deg,transparent,rgba(47,128,255,.3),transparent)}
+.statistics-team-identity{background:radial-gradient(circle at 8% 15%,rgba(47,128,255,.08),transparent 34%),linear-gradient(135deg,#101318,#0b0d10)}

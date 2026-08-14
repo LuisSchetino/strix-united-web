@@ -369,3 +369,4 @@
 .library-card small,.library-player-header span,.library-tracking span{color:#aeb4bb}
 .library-player-loading,.library-player-error{background:radial-gradient(circle at 50% 30%,#252a30,#0b0d10 65%);color:#d6d9dd}
 .library-player-loading i{border-color:#42484f;border-top-color:#f5f5f5}
+.library-toolbar,.library-card,.library-player-shell,.library-player-header,.library-tracking,.library-tracking>article{background:#0b0d10}

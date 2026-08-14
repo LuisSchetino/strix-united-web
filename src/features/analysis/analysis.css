@@ -15,3 +15,5 @@
 .analysis-context span,.analysis-group>header span,.analysis-insights span,.analysis-xray>header span{color:var(--rastro-blue)}
 .analysis-insights p{background:#101318;color:#c2c7cc}.analysis-insights p:before{background:var(--rastro-blue);box-shadow:0 0 12px var(--rastro-blue)}
 .radar-grid,.radar-axis{stroke:rgba(47,128,255,.2)}.analysis-radar text{fill:#9ca6b0}
+.analysis-context,.analysis-group,.analysis-xray,.analysis-radar-legend article{background:linear-gradient(145deg,#101318,#0b0d10)}
+.analysis-insights{background:radial-gradient(circle at 100% 0,rgba(47,128,255,.08),transparent 34%),#0b0d10}
