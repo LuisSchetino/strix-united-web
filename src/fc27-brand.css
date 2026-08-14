@@ -220,3 +220,46 @@ html .gameday-editor-page .gd-dashed{border-color:#454c54;color:#d6d9dc}html .ga
   .statistics-v3:after,.analysis-v2:after{right:8px;top:100px;width:170px;opacity:.025}
   .rastro-watermark{right:8px;top:90px;opacity:.025}.rastro-watermark img{width:150px;height:150px}
 }
+
+/* Final institutional interaction pass: no legacy Strix cyan in operational UI. */
+::selection{background:#d9dde1;color:#08090a}
+:where(input,textarea,select){caret-color:#f5f5f5}
+:where(button,a,input,textarea,select,[tabindex]):focus-visible{
+  outline:2px solid #dfe2e5!important;
+  outline-offset:2px;
+}
+.rastro-signature:not(.is-compact){justify-content:center;text-align:center}
+.motion-tooltip:after,.motion-tooltip:before{border-color:var(--strix-border-strong)!important;background:#111419!important;color:#eef0f2!important}
+.agenda-game[role="button"]:focus-visible{box-shadow:inset 0 0 0 2px #dfe2e5!important;background:#14171b!important}
+.agenda-modal input,.agenda-modal select,.formation-picker-field select,.preset-panel select{
+  accent-color:#f5f5f5;
+  border-color:var(--strix-border-strong)!important;
+  background-color:#111419!important;
+  color:#f5f5f5!important;
+}
+.agenda-modal input:focus,.agenda-modal select:focus,.formation-picker-field select:focus,.preset-panel select:focus{
+  border-color:#dfe2e5!important;
+  box-shadow:0 0 0 3px #ffffff12!important;
+}
+.agenda-modal input[type="date"]::-webkit-calendar-picker-indicator,
+.agenda-modal input[type="time"]::-webkit-calendar-picker-indicator{filter:grayscale(1) brightness(1.7);opacity:.8}
+.agenda-modal .input-icon,.agenda-modal .input-icon svg,.agenda-modal .form-field svg{color:#c7ccd1!important;stroke:currentColor!important}
+.match-preview,.agenda-view-info,.modal-game-queue,.add-game-block,.formation-roster,.formation-picker,.formation-picker-field,.preset-panel{
+  border-color:var(--strix-border)!important;
+  background-color:#0b0d10!important;
+  background-image:none!important;
+  color:var(--strix-text)!important;
+}
+.match-preview>span,.match-preview>div>b,.formation-picker-field>span,.preset-panel>span,.agenda-view-info>span{color:#b7bdc4!important}
+.formation-slot,.formation-roster button,.preset-panel button,.add-game-block button,.modal-game-queue button{
+  border-color:var(--strix-border-strong)!important;
+  background:#111419!important;
+  color:#d8dce0!important;
+  box-shadow:none!important;
+}
+.formation-slot.selected,.formation-roster button.selected,.preset-panel button.selected{
+  border-color:#f2f2f2!important;
+  background:#f2f2f2!important;
+  color:#090a0b!important;
+}
+.swap-origin{border-color:#555c64!important;background:#15191e!important;color:#d8dce0!important}

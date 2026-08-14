@@ -24,3 +24,24 @@
 .analysis-xray{overflow:visible}
 .analysis-xray-filters>.select-control{min-width:0}
 @media(max-width:700px){.analysis-v2>.data-page-header>.rastro-data-signature{align-self:start}.analysis-filters>.select-control{width:100%}}
+
+/* Final analysis pass: no legacy cyan; Rastro blue is restricted to data cues. */
+.analysis-v2>.data-page-header>div>span{color:#c7ccd1!important}
+.analysis-v2>.data-page-header>.rastro-data-signature b,.analysis-insights .rastro-data-signature b{color:var(--rastro-blue)}
+.analysis-filters{padding:4px;border:1px solid var(--strix-border);border-radius:13px;background:#0b0d10!important}
+.analysis-filters>button{border-color:transparent!important;background:transparent!important;color:#9ca3ab!important}
+.analysis-filters>button:hover{background:#171b20!important;color:#fff!important}
+.analysis-filters>button.selected{border-color:#f2f2f2!important;background:#f2f2f2!important;color:#090a0b!important;box-shadow:none!important}
+.analysis-context,.analysis-group,.analysis-insights,.analysis-xray,.analysis-radar-shell,.analysis-radar-legend article{border-color:var(--strix-border)!important;background:#0b0d10!important}
+.analysis-xray>header,.analysis-xray-filters{border-color:var(--strix-border)}
+.analysis-xray>header span,.analysis-xray>header>svg,.analysis-context>svg,.analysis-group>header>svg,.analysis-metric header>svg{color:var(--rastro-blue)!important}
+.analysis-xray-toggle{border-color:var(--strix-border-strong)!important;background:#111419!important}
+.analysis-xray-toggle button{color:#9ca3ab}
+.analysis-xray-toggle button.selected{background:#f2f2f2!important;color:#090a0b!important}
+.analysis-player-picker{border-top:1px solid var(--strix-border)}
+.analysis-player-picker button{border-color:var(--strix-border-strong);background:#111419;color:#9ca3ab;box-shadow:none!important}
+.analysis-player-picker button.selected{border-color:#d8dce0!important;background:#1a1f24!important;color:#fff!important}
+.analysis-player-picker button.selected i{box-shadow:none}
+.radar-grid,.radar-axis{stroke:#ffffff1f!important}.analysis-radar text{fill:#aeb4bb!important}
+.analysis-radar-legend article{box-shadow:inset 0 1px #ffffff05}
+.analysis-empty{border-color:var(--strix-border-strong);color:#8e969f}

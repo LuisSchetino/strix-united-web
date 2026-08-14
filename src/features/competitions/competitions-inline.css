@@ -164,3 +164,33 @@
 .competition-section>header nav button,.standings-tools input,.competition-url-row input,.archive-preview input,.archive-cancel{border-color:var(--strix-border-strong);background:#111419;color:#c8cdd2}
 .standings-table>header,.competition-results time,.competition-results small,.competition-timeline time,.provider-note,.archive-callout p{color:#8e969f}
 .standings-table img,.standings-table article>div:nth-child(2)>i,.form-five i{background:#15181c}
+
+/* Contextual Next Clubs header and a denser, data-faithful history view. */
+.competitions-header{align-items:center;gap:clamp(24px,5vw,72px)}
+.competitions-header-copy{min-width:0;flex:1}
+.competitions-header-actions{display:flex;align-items:center;justify-content:flex-end;gap:12px;flex-wrap:wrap}
+.competitions-header-actions .next-clubs-signature{margin:0}
+.next-clubs-signature{padding:9px 12px;border-color:rgba(199,255,47,.2);background:linear-gradient(145deg,#111419,#0b0d10);box-shadow:inset 0 1px #ffffff08}
+.next-clubs-signature img{width:112px;height:34px;flex-basis:112px;object-fit:contain;object-position:center}
+.next-clubs-signature:before{content:"";width:2px;height:30px;border-radius:2px;background:#c7ff2f;box-shadow:0 0 12px rgba(199,255,47,.18)}
+.history-panel{overflow:visible;background:transparent!important;border:0!important}
+.history-panel>header{margin-bottom:12px;border:1px solid var(--strix-border);border-radius:18px;background:#0b0d10}
+.history-panel>.history-competition-card{display:grid;gap:16px;margin:0 0 12px;padding:20px;border:1px solid var(--strix-border)!important;border-radius:18px;background:linear-gradient(145deg,#101318,#0b0d10)!important;box-shadow:inset 0 1px #ffffff08,0 18px 44px #0004}
+.history-competition-header{display:flex;align-items:center;justify-content:space-between;gap:18px}
+.history-competition-header h3{margin:0 0 5px;font-size:clamp(18px,2vw,24px)}
+.history-competition-header span{color:#8e969f;font-size:10px}
+.history-efficiency{display:grid;justify-items:end;gap:3px;min-width:100px;padding-left:18px;border-left:1px solid var(--strix-border)}
+.history-efficiency small{color:#777f88;font-size:7px;font-weight:900;letter-spacing:.1em}
+.history-efficiency b{color:#f3f4f5;font:900 30px/1 Rajdhani,sans-serif}
+.history-metrics{display:grid!important;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px!important}
+.history-metrics>div{display:grid;gap:5px;padding:11px 12px!important;border:1px solid var(--strix-border);border-radius:10px!important;background:#15191e!important}
+.history-metrics dt{color:#777f88!important;font-size:7px!important;font-weight:900;letter-spacing:.1em}
+.history-metrics dd{margin:0!important;color:#f2f3f4;font:900 19px Rajdhani,sans-serif}
+.history-form-chart{display:flex;height:8px;overflow:hidden;border-radius:999px;background:#252a30}
+.history-form-chart>span{min-width:0}.history-form-chart>.wins,.history-form-legend .wins{background:#58c99a}.history-form-chart>.draws,.history-form-legend .draws{background:#c7a952}.history-form-chart>.losses,.history-form-legend .losses{background:#df6575}
+.history-form-legend{display:flex;align-items:center;gap:16px;flex-wrap:wrap;color:#8e969f;font-size:7px;font-weight:850;letter-spacing:.07em}
+.history-form-legend span{display:flex;align-items:center;gap:6px}.history-form-legend i{width:7px;height:7px;border-radius:50%}
+.history-evolution{height:128px;margin:0;padding:8px 4px;border:0;background:#090b0e;border-radius:12px}
+.history-evolution>div{min-width:96px}.history-evolution i{width:22px;border-radius:6px 6px 2px 2px}
+@media(max-width:800px){.competitions-header{align-items:flex-start}.competitions-header-actions{width:100%;justify-content:space-between}.competitions-header-actions .primary{flex:1}.next-clubs-signature{flex:1}.history-metrics{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:520px){.competitions-header-actions{display:grid;grid-template-columns:1fr}.competitions-header-actions .primary{width:100%}.next-clubs-signature{width:100%}.history-competition-header{align-items:flex-start}.history-efficiency{min-width:82px}.history-metrics{grid-template-columns:repeat(2,1fr)}.history-form-legend{display:grid;grid-template-columns:1fr 1fr}.history-evolution{height:116px}}

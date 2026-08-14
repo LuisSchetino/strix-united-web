@@ -29,6 +29,7 @@ import {
   reconcileCompetitionResults,
 } from "./competition-core.js";
 import { extractPalette } from "./palette-core.js";
+import { sortBracketFixtures } from "../../../shared/bracket-slots.js";
 import "./competitions.css";
 import "./competitions-inline.css";
 
@@ -486,10 +487,13 @@ function BracketConnectors({ gridRef, version }) {
         const rounds = [...grid.querySelectorAll("[data-bracket-round]")];
         const paths = [];
         for (let roundIndex = 1; roundIndex < rounds.length; roundIndex += 1) {
-          const sources = [...rounds[roundIndex - 1].querySelectorAll(".bracket-slot article")];
+          const sourceSlots = [...rounds[roundIndex - 1].querySelectorAll(".bracket-slot")];
           const targets = [...rounds[roundIndex].querySelectorAll(".bracket-slot article")];
           targets.forEach((target, targetIndex) => {
-            const sourceCards = sources.slice(targetIndex * 2, targetIndex * 2 + 2);
+            const routed = sourceSlots.filter((slot) => Number(slot.dataset.feedsIntoPosition) === targetIndex);
+            const sourceCards = (routed.length ? routed : sourceSlots.slice(targetIndex * 2, targetIndex * 2 + 2))
+              .map((slot) => slot.querySelector("article"))
+              .filter(Boolean);
             if (!sourceCards.length) return;
             const targetRect = target.getBoundingClientRect();
             const endX = targetRect.left - gridRect.left;
@@ -551,10 +555,10 @@ function Knockout({ view, accent }) {
   const rounds = view.knockout.knockout?.rounds || [];
   const grouped = rounds.map((round) => ({
     ...round,
-    fixtures: view.fixtures.filter(
+    fixtures: sortBracketFixtures(view.fixtures.filter(
       (fixture) =>
         normalizeName(fixture.round_label) === normalizeName(round.name),
-    ),
+    )),
   }));
   let previousCount = grouped[0]?.fixtures.length || 0;
   const bracketRounds = grouped
@@ -623,6 +627,7 @@ function Knockout({ view, accent }) {
                     <div
                       className="bracket-slot"
                       data-bracket-slot={fixtureIndex}
+                      data-feeds-into-position={fixture.feeds_into_position ?? fixture.feedsIntoPosition ?? fixture.metadata?.feedsIntoPosition ?? Math.floor(fixtureIndex / 2)}
                       style={{ gridRow: `${fixtureIndex * rowSpan + 1} / span ${rowSpan}`, "--bracket-card-delay": `${roundIndex * 85 + fixtureIndex * 28}ms` }}
                       key={fixture.external_match_id}
                     >
@@ -717,8 +722,8 @@ function HistoryPanel({ editions }) {
       </header>
       {groups.length ? (
         groups.map((group) => (
-          <article key={group.competitionId}>
-            <header>
+          <article className="history-competition-card" key={group.competitionId}>
+            <header className="history-competition-header">
               <div>
                 <h3>{group.name}</h3>
                 <span>
@@ -726,9 +731,12 @@ function HistoryPanel({ editions }) {
                   título(s)
                 </span>
               </div>
-              <b>{group.efficiency}%</b>
+              <div className="history-efficiency">
+                <small>APROVEITAMENTO</small>
+                <b>{group.efficiency}%</b>
+              </div>
             </header>
-            <dl>
+            <dl className="history-metrics">
               <div>
                 <dt>J</dt>
                 <dd>{group.games}</dd>
@@ -749,7 +757,21 @@ function HistoryPanel({ editions }) {
                 <dt>SG</dt>
                 <dd>{group.goalDifference}</dd>
               </div>
+              <div>
+                <dt>FINAIS</dt>
+                <dd>{group.finals}</dd>
+              </div>
             </dl>
+            <div className="history-form-chart" role="img" aria-label={`${group.wins} vit\u00f3rias, ${group.draws} empates e ${group.losses} derrotas em ${group.games} jogos`}>
+              <span className="wins" style={{ flexGrow: group.wins || 0 }} />
+              <span className="draws" style={{ flexGrow: group.draws || 0 }} />
+              <span className="losses" style={{ flexGrow: group.losses || 0 }} />
+            </div>
+            <div className="history-form-legend">
+              <span><i className="wins" />{"VIT\u00d3RIAS \u00b7 "}{group.wins}</span>
+              <span><i className="draws" />{"EMPATES \u00b7 "}{group.draws}</span>
+              <span><i className="losses" />{"DERROTAS \u00b7 "}{group.losses}</span>
+            </div>
             <div className="history-evolution" aria-label={`Evolução em ${group.name}`}>
               {group.editions.map((edition) => <div className={campaignState(edition)} key={edition.id} title={edition.outcome || edition.final_stage || "Participação encerrada"}><i style={{ height: `${Math.max(16, edition.campaignLevel)}%` }}/><span>{edition.label}</span><small>{edition.outcome || edition.final_stage || "Encerrada"}</small></div>)}
             </div>
@@ -1065,17 +1087,19 @@ export function CompetitionsPage({ profile, workspace, client }) {
   return (
     <section className="competitions-page page-enter">
       <header className="data-page-header competitions-header">
-        <div>
+        <div className="competitions-header-copy">
           <span>COMPETIÇÕES</span>
           <h1>Competições</h1>
           <p>Temporadas, fases e confrontos oficiais do Strix.</p>
-          <NextClubsSignature />
         </div>
-        {canDevelop(profile) && (
-          <button className="primary" onClick={() => setModal(true)}>
-            + ADICIONAR CAMPEONATO
-          </button>
-        )}
+        <div className="competitions-header-actions">
+          <NextClubsSignature />
+          {canDevelop(profile) && (
+            <button className="primary" onClick={() => setModal(true)}>
+              + ADICIONAR CAMPEONATO
+            </button>
+          )}
+        </div>
       </header>
       {workspace.schemaPending && (
         <p className="competition-warning">

@@ -376,3 +376,13 @@
 .library-grid small{color:#aeb4bb}.library-tags em{background:#171b20;color:#b7bdc4}
 .library-player-dialog,.library-item-modal{border-color:var(--strix-border-strong);background:#0b0d10}
 .library-player-dialog header span,.library-item-modal header span{color:#c7ccd1}
+
+/* Editorial library remains Strix monochrome, including progress and provider states. */
+.library-v2>.data-page-header>div>span,.library-grid small,.library-provider-note,.library-provider-note.is-drive{color:#aeb4bb!important}
+.library-toolbar,.library-grid>article,.library-card,.library-player-shell,.library-player-header,.library-tracking,.library-tracking>article{border-color:var(--strix-border)!important;background:#0b0d10!important}
+.library-cover{background:linear-gradient(145deg,#1a1f24,#0b0d10)!important;box-shadow:inset 0 1px #ffffff08}
+.library-tracking strong{color:#d8dce0!important}
+.library-tracking strong i{background:linear-gradient(90deg,#d8dce0 var(--progress),#2b3036 var(--progress))!important;box-shadow:none!important}
+.library-tracking article small,.library-tracking time{color:#8e969f!important}
+.library-player-loading,.library-player-error{background:radial-gradient(circle at 50% 30%,#252a30,#0b0d10 65%)!important;color:#d8dce0!important}
+.library-player-loading i{border-color:#42484f!important;border-top-color:#f5f5f5!important}

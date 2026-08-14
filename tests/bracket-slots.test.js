@@ -1,6 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { bracketSlotKey, expandKnockoutSlots } from "../shared/bracket-slots.js";
+import {
+  bracketSlotKey,
+  expandKnockoutSlots,
+  reconcileKnockoutRouting,
+  sortBracketFixtures,
+} from "../shared/bracket-slots.js";
 
 const preview = (roundName, teams, rounds = [
   { name: "Quartas de final", scheduledAt: "2026-08-10T23:00:00-03:00" },
@@ -56,4 +61,31 @@ test("winner correction replaces the existing destination slot", () => {
   persisted.set(corrected.bracketSlotKey, corrected);
   assert.equal(persisted.size, 1);
   assert.equal(persisted.get("semifinal:0").homeTeamName, "Time B");
+});
+
+test("provider participants determine the real next branch", () => {
+  const rounds = [{ name: "Quartas de final" }, { name: "Semifinais" }, { name: "Final" }];
+  const fixtures = [
+    { roundLabel: "Quartas de final", bracketPosition: 0, homeTeamName: "A", awayTeamName: "B", homeScore: 2, awayScore: 0 },
+    { roundLabel: "Quartas de final", bracketPosition: 1, homeTeamName: "C", awayTeamName: "D", homeScore: 1, awayScore: 0 },
+    { roundLabel: "Semifinais", bracketPosition: 1, homeTeamName: "A", awayTeamName: "C", homeScore: 0, awayScore: 1 },
+    { roundLabel: "Semifinais", bracketPosition: 0, homeTeamName: "E", awayTeamName: "F", homeScore: 2, awayScore: 1 },
+    { roundLabel: "Final", bracketPosition: 0, homeTeamName: "C", awayTeamName: "E" },
+  ];
+  const routed = reconcileKnockoutRouting(fixtures, rounds);
+  assert.equal(routed[0].feedsIntoPosition, 1);
+  assert.equal(routed[0].winnerToSlot, 1);
+  assert.equal(routed[1].feedsIntoPosition, 1);
+  assert.equal(routed[1].winnerToSlot, 2);
+  assert.equal(routed[2].feedsIntoPosition, 0);
+  assert.equal(routed[2].winnerToSlot, 1);
+});
+
+test("render order follows canonical bracket position instead of query order", () => {
+  const sorted = sortBracketFixtures([
+    { bracket_position: 2, home_team_name: "VANTA", away_team_name: "STRIX" },
+    { bracket_position: 0, home_team_name: "VIKINGS", away_team_name: "NEW ERA" },
+    { bracket_position: 1, home_team_name: "XUMBREGA", away_team_name: "REBIRTH" },
+  ]);
+  assert.deepEqual(sorted.map((fixture) => fixture.bracket_position), [0, 1, 2]);
 });

@@ -618,3 +618,20 @@
 .statistics-ranking-value{align-self:center;justify-items:end;line-height:1.1}
 .statistics-ranking-value>span{color:var(--rastro-blue)}
 @media(max-width:760px){.statistics-v3>.data-page-header>.rastro-data-signature{align-self:start}.statistics-ranking-list{padding-inline:12px}.statistics-ranking-list article{grid-template-columns:34px minmax(0,1fr) minmax(78px,auto);padding-inline:4px}}
+
+/* Final FC27 analytics pass: graphite structure, exact Rastro blue for data only. */
+.statistics-v3>.data-page-header>div>span{color:#c7ccd1!important}
+.statistics-v3>.data-page-header>.rastro-data-signature{color:#8e969f}.statistics-v3>.data-page-header>.rastro-data-signature b{color:var(--rastro-blue)}
+.statistics-sort>.rastro-data-signature,.statistics-sort>div>.rastro-data-signature{display:none!important}
+.statistics-sort>span,.statistics-sort>div>span{color:#aeb4bb!important}
+.statistics-stat-card,.statistics-ranking-card,.statistics-goalkeeper-card,.statistics-team-identity,.statistics-player-table{background:#0b0d10!important;border-color:var(--strix-border)!important}
+.statistics-stat-card:after{background:linear-gradient(90deg,transparent,rgba(47,128,255,.2),transparent)}
+.statistics-team-identity{background:linear-gradient(135deg,#101318,#0b0d10)!important}
+.statistics-ranking-card>button{border-color:var(--strix-border)!important;background:#111419!important;color:#d8dce0!important}
+.statistics-ranking-card>button:hover,.statistics-ranking-card>button:focus-visible{background:#1a1f24!important;color:#fff!important}
+.statistics-ranking-modal,.statistics-ranking-modal>header{border-color:var(--strix-border-strong)!important;background:#0b0d10!important}
+.statistics-ranking-modal>header>div>span{color:#c7ccd1!important}
+.statistics-ranking-list article,.statistics-ranking-list article.is-top{background:#0b0d10!important;border-color:var(--strix-border)!important}
+.statistics-ranking-list article>strong,.statistics-ranking-value>span{color:var(--rastro-blue)!important}
+.statistics-ranking-list article.is-top:before{background:var(--rastro-blue)!important;box-shadow:none}
+@media(max-width:760px){.statistics-player-table>article{background:#0b0d10!important;border-color:var(--strix-border)!important}}

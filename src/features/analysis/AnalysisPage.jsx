@@ -7,7 +7,7 @@ import { buildAnalysis, buildPlayerComparison, comparePeriods, selectAnalysisPer
 import "./analysis.css";
 
 const allowed = new Set(["conselho", "diretoria", "dev"]);
-const radarColors = ["#54d2ff", "#ffca68", "#8d7cff", "#63dfa9"];
+const radarColors = ["#2F80FF", "#ffca68", "#8d7cff", "#63dfa9"];
 const Trend = ({ value }) => value === "up" ? <span className="is-up"><IconArrowUpRight/>MELHORA</span> : value === "down" ? <span className="is-down"><IconArrowDownRight/>QUEDA</span> : <span><IconMinus/>ESTÁVEL</span>;
 
 function Metric({ icon: Icon, label, value, suffix = "", note, tooltip, trend }) {

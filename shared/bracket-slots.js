@@ -47,10 +47,75 @@ const feederPrefix = (roundLabel) => {
   return key === "round_of_16" ? "R16" : key === "quarterfinal" ? "QF" : key === "semifinal" ? "SF" : "FASE";
 };
 
+const normalizedTeam = (value) => String(value || "")
+  .normalize("NFD")
+  .replace(/[\u0300-\u036f]/g, "")
+  .toLocaleLowerCase("pt-BR")
+  .replace(/[^a-z0-9]+/g, " ")
+  .trim();
+
+const fixtureWinner = (fixture) => {
+  const homeScore = fixture?.homeScore ?? fixture?.home_score;
+  const awayScore = fixture?.awayScore ?? fixture?.away_score;
+  if (homeScore == null || awayScore == null
+    || !Number.isFinite(Number(homeScore)) || !Number.isFinite(Number(awayScore))
+    || Number(homeScore) === Number(awayScore)) return "";
+  return normalizedTeam(Number(homeScore) > Number(awayScore)
+    ? fixture.homeTeamName ?? fixture.home_team_name
+    : fixture.awayTeamName ?? fixture.away_team_name);
+};
+
+const fixtureTeams = (fixture) => [
+  fixture?.homeTeamName ?? fixture?.home_team_name,
+  fixture?.awayTeamName ?? fixture?.away_team_name,
+].map(normalizedTeam);
+
+export function reconcileKnockoutRouting(fixtures = [], rounds = []) {
+  const roundKeys = rounds.map((round) => bracketRoundKey(round.name));
+  return fixtures.map((fixture) => {
+    const currentIndex = roundKeys.indexOf(bracketRoundKey(fixture.roundLabel ?? fixture.round_label));
+    const nextRoundKey = roundKeys[currentIndex + 1];
+    if (currentIndex < 0 || !nextRoundKey) return fixture;
+    const winner = fixtureWinner(fixture);
+    const nextFixtures = fixtures.filter((candidate) => bracketRoundKey(candidate.roundLabel ?? candidate.round_label) === nextRoundKey);
+    const actualTarget = winner
+      ? nextFixtures.findIndex((candidate) => fixtureTeams(candidate).includes(winner))
+      : -1;
+    const fallbackTarget = Number(fixture.feedsIntoPosition ?? fixture.metadata?.feedsIntoPosition);
+    const targetPosition = actualTarget >= 0
+      ? Number(nextFixtures[actualTarget].bracketPosition ?? nextFixtures[actualTarget].bracket_position ?? actualTarget)
+      : Number.isFinite(fallbackTarget) ? fallbackTarget : Math.floor(Number(fixture.bracketPosition ?? fixture.bracket_position ?? 0) / 2);
+    const targetFixture = nextFixtures.find((candidate, index) => Number(candidate.bracketPosition ?? candidate.bracket_position ?? index) === targetPosition);
+    const targetTeams = fixtureTeams(targetFixture);
+    const winnerToSlot = winner && targetFixture
+      ? targetTeams.indexOf(winner) + 1
+      : Number(fixture.winnerToSlot ?? fixture.metadata?.winnerToSlot) || null;
+    return {
+      ...fixture,
+      feedsIntoPosition: targetPosition,
+      winnerToSlot,
+      metadata: {
+        ...(fixture.metadata || {}),
+        feedsIntoPosition: targetPosition,
+        winnerToSlot,
+      },
+    };
+  });
+}
+
+export function sortBracketFixtures(fixtures = []) {
+  return [...fixtures].sort((left, right) => {
+    const leftPosition = Number(left.bracket_position ?? left.bracketPosition ?? left.metadata?.bracketPosition);
+    const rightPosition = Number(right.bracket_position ?? right.bracketPosition ?? right.metadata?.bracketPosition);
+    return (Number.isFinite(leftPosition) ? leftPosition : Number.MAX_SAFE_INTEGER)
+      - (Number.isFinite(rightPosition) ? rightPosition : Number.MAX_SAFE_INTEGER);
+  });
+}
+
 export function expandKnockoutSlots(preview) {
   if (preview?.sourceKind !== "knockout") return [];
   const rounds = preview.knockout?.rounds || [];
-  const actual = preview.knockout?.fixtures || [];
+  const actual = reconcileKnockoutRouting(preview.knockout?.fixtures || [], rounds);
   if (!rounds.length || !actual.length) return actual;
   const actualByRound = new Map();
   for (const fixture of actual) {
@@ -68,9 +133,6 @@ export function expandKnockoutSlots(preview) {
     const count = existing.size || (roundIndex ? Math.max(1, Math.ceil(previousCount / 2)) : previousCount);
     previousCount = count;
     return Array.from({ length: count }, (_, position) => {
-      const slotKey = bracketSlotKey(round.name, position);
-      const nextRound = rounds[roundIndex + 1];
-      const winnerToSlotKey = nextRound ? bracketSlotKey(nextRound.name, Math.floor(position / 2)) : null;
       const fixture = existing.get(position) || {
         roundLabel: round.name,
         scheduledAt: round.scheduledAt || null,
@@ -83,6 +145,15 @@ export function expandKnockoutSlots(preview) {
         status: "scheduled",
         placeholder: true,
       };
+      const slotKey = bracketSlotKey(round.name, position);
+      const nextRound = rounds[roundIndex + 1];
+      const feedsIntoPosition = nextRound
+        ? Number(fixture.feedsIntoPosition ?? fixture.metadata?.feedsIntoPosition ?? Math.floor(position / 2))
+        : null;
+      const winnerToSlotKey = nextRound ? bracketSlotKey(nextRound.name, feedsIntoPosition) : null;
+      const winnerToSlot = nextRound
+        ? Number(fixture.winnerToSlot ?? fixture.metadata?.winnerToSlot ?? ((position % 2) + 1))
+        : null;
       return {
         ...fixture,
         externalMatchId: stableBracketMatchId({
@@ -93,17 +164,17 @@ export function expandKnockoutSlots(preview) {
           position,
         }),
         bracketPosition: position,
-        feedsIntoPosition: nextRound ? Math.floor(position / 2) : null,
+        feedsIntoPosition,
         bracketSlotKey: slotKey,
         winnerToSlotKey,
-        winnerToSlot: nextRound ? (position % 2) + 1 : null,
+        winnerToSlot,
         metadata: {
           ...(fixture.metadata || {}),
           bracketPosition: position,
-          feedsIntoPosition: nextRound ? Math.floor(position / 2) : null,
+          feedsIntoPosition,
           bracketSlotKey: slotKey,
           winnerToSlotKey,
-          winnerToSlot: nextRound ? (position % 2) + 1 : null,
+          winnerToSlot,
           placeholder: Boolean(fixture.placeholder),
         },
       };
