@@ -27,12 +27,14 @@ async function upsertCompetition(client, profile, preview, palette, accent) {
   return ensure(await client.from("competitions").insert({ ...payload, created_by: profile.user_id }).select().single());
 }
 
-async function upsertEdition(client, profile, competition, preview) {
-  const current = ensure(await client.from("competition_editions").select("*").eq("competition_id", competition.id).in("status", ["draft", "active"]).order("updated_at", { ascending: false }).limit(1).maybeSingle());
+async function upsertEdition(client, profile, competition, preview, targetEditionId = "") {
+  const current = targetEditionId
+    ? ensure(await client.from("competition_editions").select("*").eq("id", targetEditionId).eq("competition_id", competition.id).maybeSingle())
+    : ensure(await client.from("competition_editions").select("*").eq("competition_id", competition.id).in("status", ["draft", "active"]).order("updated_at", { ascending: false }).limit(1).maybeSingle());
   const format = preview.phase === "groups" ? "groups" : preview.phase === "knockout" ? "knockout" : preview.phase === "league" ? "league" : "unknown";
   const detectedSlots = Number(preview.qualificationRule?.slots) || null;
   const payload = {
-    format, status: "active", starts_on: parseProviderDate(preview.startsOn), updated_by: profile.user_id,
+    format, status: current?.status || "active", starts_on: parseProviderDate(preview.startsOn), updated_by: profile.user_id,
     ...(detectedSlots ? {
       qualification_slots: detectedSlots,
       metadata: { ...(current?.metadata || {}), qualificationRule: preview.qualificationRule },
@@ -165,7 +167,7 @@ async function normalizeFixtures(client, edition, source, preview) {
   if (regularRows.length) ensure(await client.from("competition_fixtures").upsert(regularRows, { onConflict: "edition_id,external_match_id" }));
 }
 
-export async function saveCompetitionPreview(client, profile, preview, palette, accent) {
+export async function saveCompetitionPreview(client, profile, preview, palette, accent, options = {}) {
   const candidates = [preview, ...(preview.relatedPreviews || [])];
   const preferredKnockout = selectPreferredKnockoutPreview(candidates);
   const previews = candidates.filter((item) => item.sourceKind !== "knockout" || item === preferredKnockout);
@@ -178,7 +180,7 @@ export async function saveCompetitionPreview(client, profile, preview, palette, 
     ? { ...identity, qualificationRule: identity.qualificationRule || inferredSlots, phase: "knockout", knockout: knockout.knockout, relatedPreviews: preview.relatedPreviews }
     : identity;
   const competition = await upsertCompetition(client, profile, identity, palette, accent);
-  const edition = await upsertEdition(client, profile, competition, composite);
+  const edition = await upsertEdition(client, profile, competition, composite, options.editionId || "");
   let source = null;
   for (const item of previews) {
     const savedSource = await upsertSource(client, profile, edition, item);

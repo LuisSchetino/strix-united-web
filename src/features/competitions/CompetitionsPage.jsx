@@ -808,6 +808,7 @@ function CompetitionExplorer({
         preview,
         competition.palette,
         competition.accent_color,
+        { editionId: edition.id },
       );
       await workspace.refresh();
       setSyncState("success");
