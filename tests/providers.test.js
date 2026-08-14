@@ -90,3 +90,21 @@ test("omits empty round of 16 when the official bracket starts at quarterfinals"
   const parsed = parseCompetitionHtml(html, "https://ccbclubs.com.br/fifa.php?file=eliminatoria&campeonato=100&grupo=12");
   assert.deepEqual(parsed.knockout.rounds.map((round) => round.type), ["quarterfinal", "semifinal", "final"]);
 });
+
+test("reconciles every populated bracket round and replaces provider placeholders", () => {
+  const team = (name, score, offset = 0) => `<tr>${offset ? `<td colspan="${offset}"></td>` : ""}<td><img alt="${name}" src="/${name}.png"><a title="${name}">${name}</a></td><td>${score ?? "-"}</td></tr>`;
+  const html = `<html><body><h1>SUPERLIGA</h1><table>
+    <tr><td colspan="4">Quartas de final<br>10/08/2026 21:40</td><td colspan="4">Semifinais<br>11/08/2026 21:40</td><td colspan="4">Final<br>13/08/2026 21:40</td></tr>
+    ${team("A", 2)}${team("B", 0)}${team("C", 2)}${team("D", 1)}${team("E", 0)}${team("STRIX UNITED", 2)}${team("G", 0)}${team("H", 3)}
+    ${team("A", 3, 4)}${team("C", 2, 4)}${team("STRIX UNITED", 0, 4)}${team("H", 2, 4)}
+    ${team("H", null, 8)}${team("A", null, 8)}
+  </table>${"x".repeat(500)}</body></html>`;
+  const parsed = parseCompetitionHtml(html, "https://ccbclubs.com.br/fifa.php?file=eliminatoria&campeonato=97&grupo=12");
+  assert.equal(parsed.knockout.currentStage, "Final");
+  assert.equal(parsed.knockout.fixtures.length, 7);
+  assert.deepEqual(parsed.knockout.fixtures.filter((fixture) => fixture.roundLabel === "Semifinais").map((fixture) => [fixture.homeTeamName, fixture.awayTeamName]), [["A", "C"], ["STRIX UNITED", "H"]]);
+  const final = parsed.knockout.fixtures.find((fixture) => fixture.roundLabel === "Final");
+  assert.equal(final.homeTeamName, "H");
+  assert.equal(final.awayTeamName, "A");
+  assert.equal(final.status, "scheduled");
+});

@@ -5,7 +5,7 @@ import { STRIX_BRAND } from "../../brand.js";
 import {
   AnimatedNumber,
   MotionBadge,
-  MotionTabs,
+  SegmentedControl,
   RollingLabel,
   notify,
 } from "../../ui/motion/motion.jsx";
@@ -876,7 +876,7 @@ function CompetitionExplorer({
         </aside>
       </header>
       {error && <p className="competition-error">{error}</p>}
-      <MotionTabs className="competition-tabs" label="Seções da competição" items={tabs} active={tab} onChange={setTab} />
+      <SegmentedControl className="competition-tabs" label="Seções da competição" items={tabs} active={tab} onChange={setTab} />
       {tab === "overview" && (
         <div className="motion-panel-enter competition-tab-panel" key="overview">
           <section className="competition-overview-grid">
@@ -1077,7 +1077,7 @@ export function CompetitionsPage({ profile, workspace, client }) {
           A estrutura de Competições ainda não está disponível.
         </p>
       )}
-      <MotionTabs
+      <SegmentedControl
         className="competition-view-tabs"
         label="Estado das competições"
         items={[["active", "ATIVAS"], ["historical", "HISTÓRICO"]]}

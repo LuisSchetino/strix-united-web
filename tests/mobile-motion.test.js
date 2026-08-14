@@ -54,7 +54,7 @@ test("competition mobile selector, sticky standings and round navigation stay bo
   ]);
   assert.match(source, /bracket-round-nav/);
   assert.match(source, /data-mobile-active/);
-  assert.match(source, /MotionTabs/);
+  assert.match(source, /SegmentedControl/);
   assert.match(css, /scroll-snap-type:x proximity/);
   assert.match(css, /-webkit-line-clamp:2/);
   assert.match(css, /\.standings-table>header>\*:nth-child\(3\)/);

@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { MatchDisplay } from "../../ui/MatchDisplay.jsx";
 import { STRIX_BRAND } from "../../brand.js";
+import { RastroDataSignature, RastroWatermark } from "../../ui/RastroBrand.jsx";
 import {
   RollingLabel,
   notify,
@@ -635,6 +636,9 @@ function MatchDetails({ match, workspace, close }) {
               awayScore={match.opponent_score}
             />
           </section>
+          <section className="match-detail-analytics">
+          <RastroWatermark label="Rastro Match Data" />
+          <RastroDataSignature />
           <div className="match-detail-metrics">
             {metrics.map(([label, value, icon]) => (
               <article key={label}>
@@ -642,6 +646,7 @@ function MatchDetails({ match, workspace, close }) {
               </article>
             ))}
           </div>
+          </section>
           <section className="match-player-performance">
             <header><span>DESEMPENHO INDIVIDUAL</span><h3>Jogadores do Strix</h3></header>
             {players.length ? (

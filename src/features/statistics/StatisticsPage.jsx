@@ -7,7 +7,7 @@ import {
 } from "@tabler/icons-react";
 import { ClubLogo } from "../../ui/ClubLogo.jsx";
 import { STRIX_BRAND } from "../../brand.js";
-import { AnimatedNumber, MotionTabs } from "../../ui/motion/motion.jsx";
+import { AnimatedNumber, SegmentedControl } from "../../ui/motion/motion.jsx";
 import { aggregatePlayerStatistics, aggregateTeamStatistics, buildRanking } from "./statistics-core.js";
 import "./statistics.css";
 
@@ -101,7 +101,7 @@ export function StatisticsPage({ workspace, matches = workspace.matches || [] })
   const [tab, setTab] = useState("summary");
   const team = useMemo(() => aggregateTeamStatistics(matches, workspace.players || []), [matches, workspace.players]);
   const players = useMemo(() => aggregatePlayerStatistics(matches, { players: workspace.players, aliases: workspace.aliases }), [matches, workspace.players, workspace.aliases]);
-  return <section className="data-page page-enter statistics-v3"><header className="data-page-header"><div><span>ESTATÍSTICAS FC27</span><h1>O jogo em perspectiva.</h1><p>Produção, eficiência e contexto calculados apenas com dados reais reconciliados.</p></div></header><MotionTabs className="statistics-tabs-v3" items={[["summary", "RESUMO"], ["team", "DADOS DO TIME"], ["players", "DADOS INDIVIDUAIS"]]} active={tab} onChange={setTab} label="Dados estatísticos"/>{tab === "summary" ? <Summary team={team} players={players}/> : tab === "team" ? <TeamData team={team}/> : <PlayersData players={players}/>}</section>;
+  return <section className="data-page page-enter statistics-v3"><header className="data-page-header"><div><span>ESTATÍSTICAS FC27</span><h1>O jogo em perspectiva.</h1><p>Produção, eficiência e contexto calculados apenas com dados reais reconciliados.</p></div></header><SegmentedControl className="statistics-tabs-v3" items={[["summary", "RESUMO"], ["team", "DADOS DO TIME"], ["players", "DADOS INDIVIDUAIS"]]} active={tab} onChange={setTab} label="Dados estatísticos"/>{tab === "summary" ? <Summary team={team} players={players}/> : tab === "team" ? <TeamData team={team}/> : <PlayersData players={players}/>}</section>;
 }
 
 export default StatisticsPage;

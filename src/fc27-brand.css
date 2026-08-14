@@ -1,6 +1,8 @@
 :root{
   --strix-bg:#050607;
   --strix-surface:#0b0d10;
+  --strix-surface-1:#0b0d10;
+  --strix-surface-2:#101318;
   --strix-surface-raised:#101318;
   --strix-surface-soft:#13171c;
   --strix-border:rgba(255,255,255,.08);
@@ -9,6 +11,8 @@
   --strix-muted:#8e969f;
   --strix-subtle:#606872;
   --rastro-blue:#2f80ff;
+  --rastro-blue-soft:rgba(47,128,255,.16);
+  --rastro-blue-subtle:rgba(47,128,255,.08);
   --strix-blue:#f5f5f5;
   --strix-deep:#15181c;
   --strix-glow:#ffffff1f;
@@ -34,7 +38,9 @@ body{background:var(--strix-bg)}
 .menu-group p{color:#5f6670}
 .menu-group button{color:#9ca3ab}
 .menu-group button:hover{color:#fff;background:#14171b}
-.menu-group button.active{color:#fff;background:linear-gradient(90deg,#252a30,#15181c)!important;box-shadow:inset 3px 0 #f5f5f5!important}
+.menu-group button.active{color:#090a0b!important;background:linear-gradient(135deg,#f4f4f5 0%,#d4d4d8 100%)!important;box-shadow:0 8px 24px #0007!important}
+.menu-group button.active svg{color:#090a0b!important}
+.menu-group button.active:after{display:none!important;content:none!important}
 .sidebar-user{border-color:var(--strix-border);background:#111419;box-shadow:0 10px 28px #0009}
 .sidebar-user small,.crumb{color:#777f88}
 .search-button{border-color:var(--strix-border-strong);background:#111419;color:#868e97;box-shadow:none}
@@ -169,6 +175,34 @@ html .gameday-editor-page .gd-dashed{border-color:#454c54;color:#d6d9dc}html .ga
 .rastro-signature.is-compact span{display:none}
 .rastro-watermark{position:absolute;z-index:-1;right:32px;top:110px;display:grid;justify-items:center;pointer-events:none;opacity:.04;color:var(--rastro-blue)}
 .rastro-watermark img{width:240px;height:240px;object-fit:contain}.rastro-watermark span{font-size:9px;letter-spacing:.16em;text-transform:uppercase}
+.rastro-data-signature{display:flex;align-items:center;gap:7px;color:#7d8793;font-size:8px;letter-spacing:.09em;text-transform:uppercase}
+.rastro-data-signature img{width:22px;height:22px;object-fit:contain}.rastro-data-signature b{color:var(--rastro-blue)}
+
+/* Institutional surfaces are monochrome; semantic success/error/warning colors remain untouched. */
+.squad-player-card,.squad-context-menu,.squad-modal-v2,.squad-preview,.member-picker button,.position-picker button,
+.matches-list,.matches-list article,.match-manual-modal,.matches-source-empty,.import-stage,.match-review-list article,
+.agenda-list,.agenda-game,.agenda-actions,.agenda-modal,.competition-section,.competition-inline-hero,
+.library-card,.library-player-shell,.library-tracking,.formation-picker,.preset-panel{
+  border-color:var(--strix-border)!important;background-color:var(--strix-surface-1)!important;color:var(--strix-text);
+}
+.squad-card-identity>span,.squad-shirt-number,.member-tag,.squad-more,.squad-context-menu button,
+.matches-hero>div>span,.matches-list>header,.matches-list article>small,.match-teams strong,
+.agenda-hero span,.agenda-game time,.competition-header>span,.library-card small{
+  color:#b7bdc4!important;
+}
+.squad-more,.icon-button,.matches-actions .secondary,.match-row-actions button,.agenda-actions button,
+.member-picker button,.position-picker button,.library-card button{
+  border-color:var(--strix-border-strong)!important;background:#111419!important;color:#d8dce0!important;
+}
+.member-picker button.selected,.position-picker button.selected,.filter-row button.selected{
+  border-color:#f2f2f2!important;background:#f2f2f2!important;color:#090a0b!important;box-shadow:none!important;
+}
+.squad-context-menu button:hover,.agenda-actions button:hover,.match-row-actions button:hover{background:#20252b!important}
+.match-hero .hero-meta,.match-hero .stadium-caption i,.match-hero .versus i,.panel-heading span,.panel-heading button{color:#d0d4d8!important}
+.match-hero .stadium-light{background:radial-gradient(ellipse at 50% 0,#ffffff2e,transparent 66%)!important}
+.match-hero .smoke{background:radial-gradient(ellipse,#ffffff14 0%,#ffffff08 40%,transparent 70%)!important}
+.match-hero .avatar{border-color:#555c64!important;background:#14171b!important;box-shadow:0 0 24px #ffffff12!important}
+.pitch,.player-dot{border-color:#555c64!important}.player-dot{background:#101318f0!important}.player-dot>b{color:#f5f5f5!important}
 
 @media(max-width:900px){
   .rastro-signature{bottom:88px}

@@ -1,3 +1,4 @@
+import { parse } from "parse5";
 import { stableBracketMatchId } from "./bracket-slots.js";
 
 const PROVIDERS = Object.freeze({
@@ -207,7 +208,134 @@ const stageType = (value) => /oitava/i.test(value) ? "round_of_16"
 
 const normalizeFixtureKey = (value) => htmlText(value).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
+const nodeAttribute = (node, name) => node?.attrs?.find((attribute) => attribute.name === name)?.value || "";
+const nodeText = (node) => {
+  if (!node) return "";
+  if (node.nodeName === "#text") return node.value || "";
+  return (node.childNodes || []).map(nodeText).join(" ");
+};
+const descendants = (node, predicate, output = []) => {
+  for (const child of node?.childNodes || []) {
+    if (predicate(child)) output.push(child);
+    descendants(child, predicate, output);
+  }
+  return output;
+};
+const nearest = (node, name) => {
+  let current = node?.parentNode;
+  while (current && current.nodeName !== name) current = current.parentNode;
+  return current;
+};
+
+function structuralKnockout(html, context) {
+  const document = parse(html);
+  const tables = descendants(document, (node) => node.nodeName === "table");
+  const table = tables.find((candidate) => {
+    const text = htmlText(nodeText(candidate));
+    return /quartas|semifinais?|final/i.test(text)
+      && descendants(candidate, (node) => node.nodeName === "a" && Boolean(nodeAttribute(node, "title"))).length >= 4;
+  });
+  if (!table) return null;
+
+  const rows = descendants(table, (node) => node.nodeName === "tr" && nearest(node, "table") === table);
+  const grid = [];
+  const cells = [];
+  rows.forEach((row, rowIndex) => {
+    grid[rowIndex] ||= [];
+    const rowCells = (row.childNodes || []).filter((node) => node.nodeName === "td" || node.nodeName === "th");
+    let column = 0;
+    for (const node of rowCells) {
+      while (grid[rowIndex][column]) column += 1;
+      const colspan = Math.max(1, Number(nodeAttribute(node, "colspan")) || 1);
+      const rowspan = Math.max(1, Number(nodeAttribute(node, "rowspan")) || 1);
+      const cell = { node, row: rowIndex, column, colspan, rowspan, text: htmlText(nodeText(node)) };
+      cells.push(cell);
+      for (let y = rowIndex; y < rowIndex + rowspan; y += 1) {
+        grid[y] ||= [];
+        for (let x = column; x < column + colspan; x += 1) grid[y][x] = cell;
+      }
+      column += colspan;
+    }
+  });
+
+  const roundCells = cells
+    .map((cell) => {
+      const name = cell.text.match(/(?:Oitavas|Quartas|Semifinais?|Final)(?:\s+de\s+final)?/i)?.[0] || "";
+      return name ? { name, type: stageType(name), scheduledAt: providerDateTime(cell.text), column: cell.column } : null;
+    })
+    .filter(Boolean)
+    .filter((round, index, all) => all.findIndex((item) => item.type === round.type) === index)
+    .sort((a, b) => a.column - b.column);
+  if (!roundCells.length) return null;
+
+  const parsedRounds = roundCells.map((round) => {
+    const participants = cells
+      .filter((cell) => cell.column === round.column && cell.row > 0)
+      .map((cell) => {
+        const anchors = descendants(cell.node, (node) => node.nodeName === "a");
+        const anchor = anchors.find((node) => nodeAttribute(node, "title")) || anchors[0];
+        const name = htmlText(nodeAttribute(anchor, "title") || nodeText(anchor));
+        if (!name || /classifica|regulamento|ranking|goleiro|zagueiro|meia|atacante/i.test(name)) return null;
+        const images = descendants(cell.node, (node) => node.nodeName === "img");
+        const image = images.find((node) => normalizeFixtureKey(nodeAttribute(node, "alt")) === normalizeFixtureKey(name)) || images[0];
+        const scoreText = grid[cell.row]?.[round.column + 1]?.text || "";
+        const scoreMatch = scoreText.match(/^-?\d+$/) ? Number(scoreText) : null;
+        return { name, logo: absoluteUrl(context.url, nodeAttribute(image, "src")), score: scoreMatch, row: cell.row };
+      })
+      .filter(Boolean)
+      .filter((team, index, all) => all.findIndex((item) => item.row === team.row && normalizeFixtureKey(item.name) === normalizeFixtureKey(team.name)) === index)
+      .sort((a, b) => a.row - b.row);
+    return { ...round, participants };
+  });
+
+  const populatedRounds = parsedRounds.filter((round) => round.participants.length >= 2);
+  if (!populatedRounds.length) return null;
+  const fixtures = populatedRounds.flatMap((round) => Array.from({ length: Math.floor(round.participants.length / 2) }, (_, position) => {
+    const home = round.participants[position * 2];
+    const away = round.participants[position * 2 + 1];
+    const completed = Number.isFinite(home.score) && Number.isFinite(away.score);
+    return {
+      externalMatchId: stableBracketMatchId({
+        provider: context.provider,
+        competitionId: context.competitionId,
+        groupId: "bracket",
+        roundLabel: round.name,
+        position,
+      }),
+      roundLabel: round.name,
+      scheduledAt: round.scheduledAt,
+      homeTeamName: home.name,
+      awayTeamName: away.name,
+      homeLogo: home.logo,
+      awayLogo: away.logo,
+      homeScore: completed ? home.score : null,
+      awayScore: completed ? away.score : null,
+      status: completed ? "completed" : "scheduled",
+      isStrix: /\bstrix\b/i.test(`${home.name} ${away.name}`),
+      bracketPosition: position,
+      feedsIntoPosition: Math.floor(position / 2),
+      metadata: { bracketPosition: position, feedsIntoPosition: Math.floor(position / 2) },
+    };
+  }));
+  const firstPopulatedIndex = parsedRounds.findIndex((round) => round.participants.length >= 2);
+  const rounds = parsedRounds.slice(firstPopulatedIndex).map(({ participants: _participants, column: _column, ...round }) => round);
+  const teamEntries = populatedRounds.flatMap((round) => round.participants)
+    .filter((team, index, all) => all.findIndex((item) => normalizeFixtureKey(item.name) === normalizeFixtureKey(team.name)) === index)
+    .map(({ name, logo }) => ({ name, logo }));
+  return {
+    stages: rounds.map((round) => round.name),
+    teams: teamEntries.map((team) => team.name),
+    teamEntries,
+    rounds,
+    currentStage: populatedRounds.at(-1)?.name || rounds[0]?.name || null,
+    fixtures,
+    hasStrix: teamEntries.some((team) => /\bstrix\b/i.test(team.name)),
+  };
+}
+
 function parseKnockout(html, context) {
+  const structural = structuralKnockout(html, context);
+  if (structural) return structural;
   const stages = [...html.matchAll(/(?:Oitavas|Quartas|Semifinais?|Final|Terceiro lugar|3º Lugar)(?:\s+de\s+final)?/gi)]
     .map((match) => htmlText(match[0]))
     .filter((value, index, all) => all.findIndex((item) => item.toLowerCase() === value.toLowerCase()) === index);

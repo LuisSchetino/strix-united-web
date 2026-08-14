@@ -42,7 +42,8 @@ test("CCB relaciona classificação e eliminatória da Copa Yeshua", { skip: !li
   const bundle = await fetchCompetitionBundle("https://ccbclubs.com.br/fifa.php?file=classificacao&campeonato=100");
   const knockout = bundle.relatedPreviews.find((preview) => preview.sourceKind === "knockout");
   assert.equal(knockout.externalCompetitionId, bundle.externalCompetitionId);
-  assert.equal(knockout.knockout.currentStage, "Quartas de final");
+  assert.ok(knockout.knockout.rounds.some((round) => round.name === knockout.knockout.currentStage));
+  assert.ok(knockout.knockout.fixtures.some((fixture) => fixture.roundLabel === knockout.knockout.currentStage));
   assert.ok(knockout.knockout.fixtures.some((fixture) => fixture.isStrix));
 });
 

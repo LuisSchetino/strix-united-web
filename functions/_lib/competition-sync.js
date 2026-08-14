@@ -1,5 +1,6 @@
 import { normalizeName } from "../../src/features/matches/import-core.js";
 import { expandKnockoutSlots } from "../../shared/bracket-slots.js";
+import { dedupeCompetitionRows, fixtureConflictKey, teamConflictKey } from "../../shared/competition-sync-rows.js";
 
 const volatileKeys = new Set(["fetchedAt", "security", "relatedSourceUrls"]);
 
@@ -165,8 +166,9 @@ export async function persistCompetitionSync(client, { competition, edition, act
       });
     }
   }
+  const uniqueTeams = dedupeCompetitionRows([...teamMap.values()], (row) => teamConflictKey(row, normalizeName));
   ensureData(await client.from("competition_teams")
-    .upsert([...teamMap.values()], { onConflict: "edition_id,normalized_name" }));
+    .upsert(uniqueTeams.rows, { onConflict: "edition_id,normalized_name" }));
   const teams = ensureData(await client.from("competition_teams").select("*").eq("edition_id", edition.id));
   const teamsByName = new Map(teams.map((team) => [normalizeName(team.name), team]));
   const sourcesByUrl = new Map(sources.map((source) => [source.source_url, source]));
@@ -202,13 +204,18 @@ export async function persistCompetitionSync(client, { competition, edition, act
       },
     };
   });
-  const bracketRows = fixtureRows.filter((fixture) => fixture.bracket_slot_key);
-  const regularRows = fixtureRows.filter((fixture) => !fixture.bracket_slot_key);
+  const dedupedFixtures = dedupeCompetitionRows(fixtureRows, fixtureConflictKey);
+  const bracketRows = dedupedFixtures.rows.filter((fixture) => fixture.bracket_slot_key);
+  const regularRows = dedupedFixtures.rows.filter((fixture) => !fixture.bracket_slot_key);
   if (bracketRows.length) ensureData(await client.from("competition_fixtures")
     .upsert(bracketRows, { onConflict: "edition_id,bracket_slot_key" }));
   if (regularRows.length) ensureData(await client.from("competition_fixtures")
     .upsert(regularRows, { onConflict: "edition_id,external_match_id" }));
-  return { sources, fixtures: fixtureRows.length };
+  return {
+    sources,
+    fixtures: dedupedFixtures.rows.length,
+    consolidated: uniqueTeams.collisions.length + dedupedFixtures.collisions.length,
+  };
 }
 
 export async function syncTodayProviderAgenda(client, { competition, edition, actorUserId, fixtures, now = new Date() }) {

@@ -16,7 +16,7 @@ export function useReducedMotion() {
   return reduced;
 }
 
-export function MotionTabs({ items, active, onChange, className = "", label }) {
+export function SegmentedControl({ items, active, onChange, className = "", label }) {
   const rootRef = useRef(null);
   const reduced = useReducedMotion();
   const [indicator, setIndicator] = useState({ left: 0, width: 0, ready: false });
@@ -58,6 +58,10 @@ export function MotionTabs({ items, active, onChange, className = "", label }) {
       })}
     </nav>
   );
+}
+
+export function MotionTabs(props) {
+  return <SegmentedControl {...props} />;
 }
 
 export function AnimatedNumber({ value, id, suffix = "", duration = 650 }) {

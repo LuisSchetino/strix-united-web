@@ -1,5 +1,6 @@
 import { normalizeName } from "../matches/import-core.js";
 import { expandKnockoutSlots } from "../../../shared/bracket-slots.js";
+import { dedupeCompetitionRows, fixtureConflictKey, teamConflictKey } from "../../../shared/competition-sync-rows.js";
 
 const ensure = (result) => {
   if (result.error) throw result.error;
@@ -105,7 +106,11 @@ async function normalizeKnockout(client, edition, preview) {
     const itemOrder = ["round_of_16", "quarterfinal", "semifinal", "final"].indexOf(itemType);
     return { edition_id: edition.id, name, stage_type: itemType, order_index: index + 10, status: itemType === currentType ? "active" : itemOrder >= 0 && itemOrder < currentOrder ? "completed" : "upcoming" };
   }), { onConflict: "edition_id,name" }));
-  if (preview.knockout.teams?.length) ensure(await client.from("competition_teams").upsert(preview.knockout.teams.map((name) => ({ edition_id: edition.id, name, logo_url: preview.knockout.teamEntries?.find((team) => team.name === name)?.logo || null, is_strix: /\bstrix\b/i.test(name), metadata: {} })), { onConflict: "edition_id,normalized_name" }));
+  if (preview.knockout.teams?.length) {
+    const teamRows = preview.knockout.teams.map((name) => ({ edition_id: edition.id, name, logo_url: preview.knockout.teamEntries?.find((team) => team.name === name)?.logo || null, is_strix: /\bstrix\b/i.test(name), metadata: {} }));
+    const unique = dedupeCompetitionRows(teamRows, (row) => teamConflictKey(row, normalizeName));
+    ensure(await client.from("competition_teams").upsert(unique.rows, { onConflict: "edition_id,normalized_name" }));
+  }
 }
 
 async function normalizeFixtures(client, edition, source, preview) {
@@ -114,10 +119,14 @@ async function normalizeFixtures(client, edition, source, preview) {
     : (preview.fixtures || []);
   if (!fixtures.length) return;
   const realFixtures = fixtures.filter((fixture) => !fixture.metadata?.placeholder);
-  if (realFixtures.length) ensure(await client.from("competition_teams").upsert(realFixtures.flatMap((fixture) => [
-    { edition_id: edition.id, name: fixture.homeTeamName, logo_url: fixture.homeLogo || null, is_strix: /\bstrix\b/i.test(fixture.homeTeamName), metadata: {} },
-    { edition_id: edition.id, name: fixture.awayTeamName, logo_url: fixture.awayLogo || null, is_strix: /\bstrix\b/i.test(fixture.awayTeamName), metadata: {} },
-  ]), { onConflict: "edition_id,normalized_name" }));
+  if (realFixtures.length) {
+    const teamRows = realFixtures.flatMap((fixture) => [
+      { edition_id: edition.id, name: fixture.homeTeamName, logo_url: fixture.homeLogo || null, is_strix: /\bstrix\b/i.test(fixture.homeTeamName), metadata: {} },
+      { edition_id: edition.id, name: fixture.awayTeamName, logo_url: fixture.awayLogo || null, is_strix: /\bstrix\b/i.test(fixture.awayTeamName), metadata: {} },
+    ]);
+    const unique = dedupeCompetitionRows(teamRows, (row) => teamConflictKey(row, normalizeName));
+    ensure(await client.from("competition_teams").upsert(unique.rows, { onConflict: "edition_id,normalized_name" }));
+  }
   const teams = ensure(await client.from("competition_teams").select("*").eq("edition_id", edition.id));
   const stages = ensure(await client.from("competition_stages").select("*").eq("edition_id", edition.id));
   const rows = fixtures.map((fixture) => ({
@@ -149,8 +158,9 @@ async function normalizeFixtures(client, edition, source, preview) {
       ...(fixture.metadata || {}),
     },
   }));
-  const bracketRows = rows.filter((fixture) => fixture.bracket_slot_key);
-  const regularRows = rows.filter((fixture) => !fixture.bracket_slot_key);
+  const uniqueRows = dedupeCompetitionRows(rows, fixtureConflictKey).rows;
+  const bracketRows = uniqueRows.filter((fixture) => fixture.bracket_slot_key);
+  const regularRows = uniqueRows.filter((fixture) => !fixture.bracket_slot_key);
   if (bracketRows.length) ensure(await client.from("competition_fixtures").upsert(bracketRows, { onConflict: "edition_id,bracket_slot_key" }));
   if (regularRows.length) ensure(await client.from("competition_fixtures").upsert(regularRows, { onConflict: "edition_id,external_match_id" }));
 }

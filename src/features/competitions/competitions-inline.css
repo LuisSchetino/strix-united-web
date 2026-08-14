@@ -140,3 +140,18 @@
 @media(max-width:700px){.competition-selector-item{min-width:190px}.competition-delete-trigger{opacity:1}.competition-delete-dialog{align-self:end;width:100%;border-radius:19px 19px 0 0}.competition-delete-dialog footer{display:grid;grid-template-columns:1fr 1fr}.history-evolution{margin-inline:0}}
 .competition-selector-item{flex-basis:220px;width:220px;min-width:220px;max-width:220px;scroll-snap-align:start}.competition-section>header:first-child{border-radius:17px 17px 0 0}.competition-section>header+*{border-top-left-radius:0;border-top-right-radius:0}.standings-tools input,.competition-url-row input,.archive-preview input{background-clip:padding-box;box-shadow:inset 0 1px #ffffff08}
 @media(max-width:800px){.competition-selector-item{flex-basis:clamp(180px,62vw,230px);width:clamp(180px,62vw,230px);min-width:clamp(180px,62vw,230px);max-width:clamp(180px,62vw,230px)}}
+
+/* Competitions inherit Strix monochrome; provider accents stay local to sport context. */
+.competitions-page{color:var(--strix-text)}.competitions-header{border-color:var(--strix-border)}
+.competition-view-tabs,.competition-tabs{border-color:var(--strix-border);background:#0b0d10}
+.competition-view-tabs button,.competition-tabs button{color:#8e969f}.competition-view-tabs button.active,.competition-tabs button.active{color:#090a0b}
+.competition-selector-item>button:first-child{border-color:var(--strix-border);background:#0b0d10}
+.competition-selector-item>button:first-child.active{background:linear-gradient(135deg,#1b1f24,#101318);box-shadow:0 10px 28px #0006}
+.competition-inline-hero,.competition-detail-hero,.competition-overview-grid article,.scenario-metrics article,.competition-section,
+.competition-timeline article,.bracket-grid article,.scenario-list article,.history-panel>article,.archive-callout,.competition-delete-dialog{
+  border-color:var(--strix-border);background-color:#0b0d10;
+}
+.competition-section>header,.standings-table>article,.competition-results article{border-color:var(--strix-border)}
+.competition-section>header nav button,.standings-tools input,.competition-url-row input,.archive-preview input,.archive-cancel{border-color:var(--strix-border-strong);background:#111419;color:#c8cdd2}
+.standings-table>header,.competition-results time,.competition-results small,.competition-timeline time,.provider-note,.archive-callout p{color:#8e969f}
+.standings-table img,.standings-table article>div:nth-child(2)>i,.form-five i{background:#15181c}

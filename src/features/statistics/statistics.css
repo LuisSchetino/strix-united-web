@@ -576,3 +576,16 @@
     grid-template-columns: 28px minmax(0, 1fr) minmax(72px, auto);
   }
 }
+
+/* Rastro signs metrics, while all structural surfaces stay graphite. */
+.statistics-v3{--statistics-accent:var(--rastro-blue)}
+.statistics-tabs-v3{border-color:var(--strix-border);background:#0b0d10}
+.statistics-summary-grid article,.statistics-stat-card,.statistics-ranking-card,.statistics-goalkeeper-card,
+.statistics-team-identity,.statistics-player-table,.statistics-ranking-modal,.statistics-ranking-list article{
+  border-color:var(--strix-border);background-color:#0b0d10;
+}
+.statistics-stat-card>span,.statistics-ranking-card>header>span,.statistics-goalkeeper-card>header>span{border-color:var(--rastro-blue-subtle);background:#101318;color:var(--rastro-blue)}
+.statistics-stat-card svg,.statistics-ranking-card svg,.statistics-team-metric svg{color:var(--rastro-blue)}
+.statistics-stat-card strong,.statistics-team-metric strong,.statistics-ranking-card>ol>li>strong{color:var(--rastro-blue)}
+.statistics-ranking-list article.is-top{background:linear-gradient(90deg,var(--rastro-blue-subtle),#101318)}
+.statistics-ranking-modal{box-shadow:0 28px 90px #000}.statistics-ranking-list article{border-color:var(--strix-border)}

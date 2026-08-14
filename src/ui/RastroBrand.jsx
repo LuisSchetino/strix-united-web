@@ -10,6 +10,15 @@ export function RastroSignature({ compact = false }) {
   );
 }
 
+export function RastroDataSignature() {
+  return (
+    <div className="rastro-data-signature" aria-label="Dados e tecnologia por Rastro">
+      <img src={RASTRO_BRAND.logoCompact} alt="" width="256" height="256" loading="lazy" decoding="async" />
+      <span>Powered by <b>Rastro</b></span>
+    </div>
+  );
+}
+
 export function RastroWatermark({ label = "Rastro Data" }) {
   return (
     <div className="rastro-watermark" aria-hidden="true">

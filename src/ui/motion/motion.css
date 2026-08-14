@@ -15,6 +15,12 @@
   overflow-x: auto;
   scroll-behavior: smooth;
   scrollbar-width: none;
+  width: fit-content;
+  max-width: 100%;
+  padding: 4px;
+  border: 1px solid var(--strix-border, rgba(255,255,255,.08));
+  border-radius: 14px;
+  background: var(--strix-surface, #0b0d10);
 }
 .motion-tabs::-webkit-scrollbar {
   display: none;
@@ -26,7 +32,7 @@
   flex: 0 0 auto;
   border: 0;
   background: transparent;
-  color: #7f9bb2;
+  color: var(--strix-muted, #8e969f);
   padding: 0 14px;
   font-size: 10px;
   font-weight: 900;
@@ -34,7 +40,7 @@
   transition: color var(--motion-fast) ease;
 }
 .motion-tabs button.active {
-  color: #fff;
+  color: #08090a;
 }
 .motion-tabs-indicator {
   position: absolute;
@@ -42,14 +48,10 @@
   left: 0;
   top: 4px;
   bottom: 4px;
-  border: 1px solid
-    color-mix(in srgb, var(--competition-accent, #2b8fff) 62%, #fff0);
+  border: 0;
   border-radius: 10px;
-  background: color-mix(
-    in srgb,
-    var(--competition-accent, #168cff) 20%,
-    #071827
-  );
+  background: linear-gradient(135deg, #f4f4f5, #d4d4d8);
+  box-shadow: 0 5px 16px rgba(0,0,0,.28), inset 0 1px rgba(255,255,255,.7);
   opacity: 0;
   transition:
     transform var(--motion-normal) var(--motion-spring),

@@ -33,19 +33,23 @@ export function expandKnockoutSlots(preview) {
   const actualByRound = new Map();
   for (const fixture of actual) {
     const key = bracketRoundKey(fixture.roundLabel);
-    if (!actualByRound.has(key)) actualByRound.set(key, []);
-    actualByRound.get(key).push(fixture);
+    if (!actualByRound.has(key)) actualByRound.set(key, new Map());
+    const position = Number.isInteger(Number(fixture.bracketPosition))
+      ? Number(fixture.bracketPosition)
+      : actualByRound.get(key).size;
+    actualByRound.get(key).set(position, fixture);
   }
-  let previousCount = actual.length;
+  const firstRoundFixtures = actualByRound.get(bracketRoundKey(rounds[0]?.name));
+  let previousCount = firstRoundFixtures?.size || actual.length;
   return rounds.flatMap((round, roundIndex) => {
-    const existing = actualByRound.get(bracketRoundKey(round.name)) || [];
-    const count = existing.length || (roundIndex ? Math.max(1, Math.ceil(previousCount / 2)) : previousCount);
+    const existing = actualByRound.get(bracketRoundKey(round.name)) || new Map();
+    const count = existing.size || (roundIndex ? Math.max(1, Math.ceil(previousCount / 2)) : previousCount);
     previousCount = count;
     return Array.from({ length: count }, (_, position) => {
       const slotKey = bracketSlotKey(round.name, position);
       const nextRound = rounds[roundIndex + 1];
       const winnerToSlotKey = nextRound ? bracketSlotKey(nextRound.name, Math.floor(position / 2)) : null;
-      const fixture = existing[position] || {
+      const fixture = existing.get(position) || {
         roundLabel: round.name,
         scheduledAt: round.scheduledAt || null,
         homeTeamName: `Vencedor ${feederPrefix(rounds[roundIndex - 1]?.name)}${position * 2 + 1}`,
