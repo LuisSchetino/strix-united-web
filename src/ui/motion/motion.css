@@ -41,6 +41,8 @@
 }
 .motion-tabs button.active {
   color: #08090a;
+  background: transparent !important;
+  border-radius: 10px;
 }
 .motion-tabs-indicator {
   position: absolute;
@@ -878,3 +880,14 @@ body,
     min-height: 64px;
   }
 }
+
+/* Shared interaction chrome follows the monochrome Strix layer. */
+.motion-state-badge.is-loading{color:#d8dce0}
+.motion-toast{border-color:var(--strix-border-strong);background:linear-gradient(135deg,#15191ef8,#0b0d10f8);color:#f2f3f4}
+.motion-toast small{color:#aeb4bb}.motion-toast>em{color:#8e969f}
+.motion-skeleton{background:#15191e}.motion-skeleton:after{background:linear-gradient(100deg,transparent 20%,#ffffff12 48%,transparent 76%)}
+.create-menu,.command-selection-indicator{border-color:var(--strix-border-strong);background:linear-gradient(135deg,#171b20,#0d1014);box-shadow:0 22px 60px #000b}
+.create-menu button{color:#d8dce0}.create-menu button:hover,.create-menu button:focus-visible{background:#20252b}
+.command-results button:hover,.command-results button:focus-visible{border-color:#59616a!important}
+.command-results button.selected>svg{color:#f2f3f4}.command-results button.selected small{color:#b7bdc4}
+.agenda-actions button:focus-visible,.gd-layer-controls button:focus-visible,.gd-editor-panel>nav button:focus-visible{outline-color:#dfe2e5}

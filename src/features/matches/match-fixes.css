@@ -111,3 +111,16 @@
 .match-stat-icon{stroke:var(--rastro-blue)}
 .match-player-performance{border-color:var(--strix-border)}.match-player-performance>header{background:#101318}.match-player-performance>header span{color:var(--rastro-blue)}
 .match-player-table>header{background:#0b0d10;color:#8e969f}.match-player-table>article{border-color:var(--strix-border)}.match-player-table>article.is-best{background:linear-gradient(90deg,var(--rastro-blue-subtle),#101318)}.match-player-table>article>strong{color:var(--rastro-blue)}
+.match-player-performance{background:#0b0d10}.match-player-performance>header{background:#101318}
+.match-player-table>article{background:#0b0d10}.match-player-table>article.is-best{background:linear-gradient(90deg,#15191e,#0b0d10)!important}
+.match-player-table>article em{border:1px solid rgba(47,128,255,.2);background:rgba(47,128,255,.1);color:var(--rastro-blue)}
+
+/* Operational match/import UI remains Strix monochrome. */
+.matches-source-empty,.import-stage,.match-review-list article,.resolve-list>article,.import-summary>article,.match-review-modal,.match-live-preview{border-color:var(--strix-border);background:#0b0d10;color:var(--strix-text)}
+.import-stage>header,.resolve-list>article>header,.match-review-modal>header{background:#101318;border-color:var(--strix-border)}
+.match-selection-toolbar button,.match-mini-action,.resolve-fields select,.alias-resolver select,.match-review-fields input{border-color:var(--strix-border-strong);background-color:#111419;color:#d8dce0}
+.match-review-list article.selected{border-color:#59616a;background:#15191e}
+.match-review-check input:checked+span{border-color:#f2f2f2;background:#f2f2f2;color:#090a0b}
+.match-live-preview>small,.match-live-preview footer em,.import-stage>header span,.alias-resolver>div small{color:#b7bdc4}
+.match-live-preview img,.match-live-preview>div>span{background:#15191e}
+@media(max-width:800px){.match-mobile-swipe,.match-mobile-actions{border-color:var(--strix-border);background:#1a1f24}.match-mobile-card{background:#0b0d10}.match-mobile-card>header button{border-color:var(--strix-border-strong);background:#111419;color:#d8dce0}}

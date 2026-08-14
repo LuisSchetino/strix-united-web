@@ -1,5 +1,5 @@
 import { normalizeName } from "../matches/import-core.js";
-import { expandKnockoutSlots } from "../../../shared/bracket-slots.js";
+import { expandKnockoutSlots, selectPreferredKnockoutPreview } from "../../../shared/bracket-slots.js";
 import { dedupeCompetitionRows, fixtureConflictKey, teamConflictKey } from "../../../shared/competition-sync-rows.js";
 
 const ensure = (result) => {
@@ -166,9 +166,11 @@ async function normalizeFixtures(client, edition, source, preview) {
 }
 
 export async function saveCompetitionPreview(client, profile, preview, palette, accent) {
-  const previews = [preview, ...(preview.relatedPreviews || [])];
+  const candidates = [preview, ...(preview.relatedPreviews || [])];
+  const preferredKnockout = selectPreferredKnockoutPreview(candidates);
+  const previews = candidates.filter((item) => item.sourceKind !== "knockout" || item === preferredKnockout);
   const identity = previews.find((item) => item.sourceKind === "standings") || preview;
-  const knockout = previews.find((item) => item.sourceKind === "knockout");
+  const knockout = preferredKnockout;
   const inferredSlots = !identity.qualificationRule?.slots && knockout?.knockout?.teams?.length
     ? { slots: knockout.knockout.teams.length, kind: "top", source: "knockout_team_count" }
     : null;

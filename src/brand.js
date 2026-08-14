@@ -16,3 +16,9 @@ export const RASTRO_BRAND = Object.freeze({
   logo: "/brand/rastro/rastro-mark.png",
   logoCompact: "/brand/rastro/rastro-mark.png",
 });
+
+export const NEXT_CLUBS_BRAND = Object.freeze({
+  name: "Next Clubs",
+  color: "#C7FF2F",
+  logo: "/brand/next-clubs/nextclubs-logo.png",
+});

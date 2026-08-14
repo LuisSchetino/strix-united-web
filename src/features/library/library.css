@@ -370,3 +370,9 @@
 .library-player-loading,.library-player-error{background:radial-gradient(circle at 50% 30%,#252a30,#0b0d10 65%);color:#d6d9dd}
 .library-player-loading i{border-color:#42484f;border-top-color:#f5f5f5}
 .library-toolbar,.library-card,.library-player-shell,.library-player-header,.library-tracking,.library-tracking>article{background:#0b0d10}
+.library-grid>article{border-color:var(--strix-border);background:#0b0d10}
+.library-cover{border-color:var(--strix-border);background:radial-gradient(circle at 30% 20%,#292e34,#101318 70%);color:#d8dce0}
+.library-cover>i{border-color:var(--strix-border-strong);background:#0b0d10dd;color:#f2f3f4}
+.library-grid small{color:#aeb4bb}.library-tags em{background:#171b20;color:#b7bdc4}
+.library-player-dialog,.library-item-modal{border-color:var(--strix-border-strong);background:#0b0d10}
+.library-player-dialog header span,.library-item-modal header span{color:#c7ccd1}

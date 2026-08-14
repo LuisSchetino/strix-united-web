@@ -1,4 +1,5 @@
 import { parseCompetitionHtml, validateCompetitionUrl } from "../../shared/competition-providers.js";
+import { selectPreferredKnockoutPreview } from "../../shared/bracket-slots.js";
 
 const MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
 const MAX_REDIRECTS = 2;
@@ -88,11 +89,15 @@ export async function fetchCompetitionBundle(rawUrl, fetchImpl = fetch) {
     fixtures: mergeByKey([...(primary.fixtures || []), ...sameKind.flatMap((preview) => preview.fixtures || [])], (fixture) => fixture.externalMatchId),
     relatedSourceUrls: mergeByKey([...(primary.relatedSourceUrls || []), ...sameKind.flatMap((preview) => preview.relatedSourceUrls || [])], (url) => url),
   };
-  const relatedPreviews = related
+  const relatedCandidates = related
     .filter(Boolean)
     .filter((preview) => preview.externalCompetitionId === primary.externalCompetitionId)
     .filter((preview) => preview.sourceKind !== primary.sourceKind)
-    .filter((preview) => preview.sourceKind !== "knockout" || preview.knockout?.hasStrix)
+    .filter((preview) => preview.sourceKind !== "knockout" || preview.knockout?.hasStrix);
+  const preferredKnockout = selectPreferredKnockoutPreview(relatedCandidates);
+  const relatedPreviews = relatedCandidates
+    .filter((preview) => preview.sourceKind !== "knockout")
     .filter((preview, index, all) => all.findIndex((item) => item.sourceKind === preview.sourceKind) === index);
+  if (preferredKnockout) relatedPreviews.push(preferredKnockout);
   return { ...mergedPrimary, relatedPreviews };
 }

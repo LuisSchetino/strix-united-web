@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { MatchDisplay } from "../../ui/MatchDisplay.jsx";
+import { NextClubsSignature } from "../../ui/NextClubsBrand.jsx";
 import { STRIX_BRAND } from "../../brand.js";
 import {
   AnimatedNumber,
@@ -13,6 +14,7 @@ import { normalizeName } from "../matches/import-core.js";
 import {
   aggregateCompetitionHistory,
   campaignState,
+  competitionHistoryStats,
   detectParticipationEnd,
 } from "./history-core.js";
 import { calculateQualificationScenarios } from "./scenario-engine.js";
@@ -1054,6 +1056,7 @@ export function CompetitionsPage({ profile, workspace, client }) {
     .filter((edition) => edition.status === "historical")
     .map((edition) => ({
       ...edition,
+      stats: competitionHistoryStats(edition, (workspace.competitionFixtures || []).filter((fixture) => fixture.edition_id === edition.id)),
       competition: workspace.competitions.find(
         (competition) => competition.id === edition.competition_id,
       ),
@@ -1065,6 +1068,7 @@ export function CompetitionsPage({ profile, workspace, client }) {
           <span>COMPETIÇÕES</span>
           <h1>Competições</h1>
           <p>Temporadas, fases e confrontos oficiais do Strix.</p>
+          <NextClubsSignature />
         </div>
         {canDevelop(profile) && (
           <button className="primary" onClick={() => setModal(true)}>

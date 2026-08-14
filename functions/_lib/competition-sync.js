@@ -1,5 +1,5 @@
 import { normalizeName } from "../../src/features/matches/import-core.js";
-import { expandKnockoutSlots } from "../../shared/bracket-slots.js";
+import { expandKnockoutSlots, selectPreferredKnockoutPreview } from "../../shared/bracket-slots.js";
 import { dedupeCompetitionRows, fixtureConflictKey, teamConflictKey } from "../../shared/competition-sync-rows.js";
 
 const volatileKeys = new Set(["fetchedAt", "security", "relatedSourceUrls"]);
@@ -96,10 +96,12 @@ const competitionFormat = (preview, knockout) => {
 };
 
 export async function persistCompetitionSync(client, { competition, edition, actorUserId, preview }) {
-  const previews = [preview, ...(preview.relatedPreviews || [])]
+  const candidates = [preview, ...(preview.relatedPreviews || [])]
     .filter((item, index, all) => item?.source && all.findIndex((candidate) => candidate?.source === item.source) === index);
+  const preferredKnockout = selectPreferredKnockoutPreview(candidates);
+  const previews = candidates.filter((item) => item.sourceKind !== "knockout" || item === preferredKnockout);
   const identity = previews.find((item) => item.sourceKind === "standings") || preview;
-  const knockout = previews.find((item) => item.sourceKind === "knockout");
+  const knockout = preferredKnockout;
   const inferredRule = !identity.qualificationRule?.slots && knockout?.knockout?.teams?.length
     ? { slots: knockout.knockout.teams.length, kind: "top", source: "knockout_team_count" }
     : null;

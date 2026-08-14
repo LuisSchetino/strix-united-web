@@ -16,6 +16,28 @@ export function bracketSlotKey(roundLabel, position) {
   return `${bracketRoundKey(roundLabel)}:${Number(position)}`;
 }
 
+const roundDepth = (label) => ["round_of_16", "quarterfinal", "semifinal", "final"].indexOf(bracketRoundKey(label));
+
+export function knockoutPreviewScore(preview) {
+  if (preview?.sourceKind !== "knockout") return -1;
+  const fixtures = preview.knockout?.fixtures || [];
+  const completed = fixtures.filter((fixture) => fixture.status === "completed" || (fixture.homeScore != null && fixture.awayScore != null)).length;
+  const realParticipants = fixtures.reduce((total, fixture) => total
+    + [fixture.homeTeamName, fixture.awayTeamName].filter((name) => name && !/^vencedor\b/i.test(name)).length, 0);
+  return Math.max(0, roundDepth(preview.knockout?.currentStage)) * 10000
+    + fixtures.length * 100
+    + completed * 10
+    + realParticipants
+    + (preview.knockout?.hasStrix ? 1 : 0);
+}
+
+export function selectPreferredKnockoutPreview(previews = []) {
+  return previews
+    .filter((preview) => preview?.sourceKind === "knockout")
+    .sort((left, right) => knockoutPreviewScore(right) - knockoutPreviewScore(left)
+      || String(right.fetchedAt || "").localeCompare(String(left.fetchedAt || "")))[0] || null;
+}
+
 export function stableBracketMatchId({ provider, competitionId, groupId, roundLabel, position }) {
   return `${provider}:${competitionId}:${groupId || "main"}:slot:${bracketSlotKey(roundLabel, position)}`;
 }

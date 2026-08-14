@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { aggregateCompetitionHistory, detectParticipationEnd } from "../src/features/competitions/history-core.js";
+import { aggregateCompetitionHistory, competitionStatsFromFixtures, detectParticipationEnd } from "../src/features/competitions/history-core.js";
 
 test("agrupa quartas, vice e campeão na mesma competição", () => {
   const result = aggregateCompetitionHistory([
@@ -21,4 +21,15 @@ test("detecta derrota eliminatória e vitória na final", () => {
   assert.match(eliminated.outcome, /quartas/i);
   const champion = detectParticipationEnd({ fixtures: [{ status: "completed", round_label: "Final", home_team_name: "POA", away_team_name: "STRIX UNITED", home_score: 1, away_score: 2 }] });
   assert.equal(champion.outcome, "Campeão");
+});
+
+test("calcula o histórico a partir de fixtures reais sem contar slots duas vezes", () => {
+  const stats = competitionStatsFromFixtures([
+    { external_match_id: "group-1", home_team_name: "STRIX UNITED", away_team_name: "POA", home_score: 2, away_score: 1, status: "completed" },
+    { external_match_id: "group-1", home_team_name: "STRIX UNITED", away_team_name: "POA", home_score: 2, away_score: 1, status: "completed" },
+    { bracket_slot_key: "quarterfinal:0", home_team_name: "TIME B", away_team_name: "STRIX UNITED", home_score: 0, away_score: 0, status: "completed" },
+    { bracket_slot_key: "semifinal:0", home_team_name: "STRIX UNITED", away_team_name: "TIME C", home_score: 1, away_score: 3, status: "completed" },
+    { bracket_slot_key: "final:0", home_team_name: "TIME C", away_team_name: "TIME D", home_score: null, away_score: null, status: "scheduled" },
+  ]);
+  assert.deepEqual(stats, { games: 3, wins: 1, draws: 1, losses: 1, goalsFor: 3, goalsAgainst: 4 });
 });

@@ -7,6 +7,7 @@ const live = process.env.RUN_LIVE_PROVIDER_TESTS === "1";
 const sources = [
   ["CCB classificação", "https://ccbclubs.com.br/fifa.php?file=classificacao&campeonato=100", "standings"],
   ["CCB mata-mata", "https://ccbclubs.com.br/fifa.php?file=eliminatoria&campeonato=100&grupo=12", "knockout"],
+  ["CCB mata-mata Superliga", "https://ccbclubs.com.br/fifa.php?file=eliminatoria&campeonato=97&grupo=12", "knockout"],
   ["LB múltiplos grupos", "https://www.lbesports.com/fifa.php?file=classificacao&campeonato=73&grupo=1", "standings"],
 ];
 
@@ -34,6 +35,8 @@ for (const [name, url, kind] of sources) {
     } else {
       assert.ok(parsed.knockout.stages.length > 0);
       assert.equal(parsed.knockout.hasStrix, true);
+      assert.equal(parsed.knockout.fixtures.length, 7);
+      assert.ok(parsed.knockout.fixtures.some((fixture) => fixture.roundLabel === "Final"));
     }
   });
 }

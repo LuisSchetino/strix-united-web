@@ -10,11 +10,11 @@ export function RastroSignature({ compact = false }) {
   );
 }
 
-export function RastroDataSignature() {
+export function RastroDataSignature({ label = "Powered by" }) {
   return (
     <div className="rastro-data-signature" aria-label="Dados e tecnologia por Rastro">
       <img src={RASTRO_BRAND.logoCompact} alt="" width="256" height="256" loading="lazy" decoding="async" />
-      <span>Powered by <b>Rastro</b></span>
+      <span>{label} <b>Rastro</b></span>
     </div>
   );
 }

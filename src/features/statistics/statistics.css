@@ -592,3 +592,29 @@
 .statistics-stat-card,.statistics-ranking-card,.statistics-goalkeeper-card,.statistics-team-metric{background:linear-gradient(145deg,#101318,#0b0d10)}
 .statistics-stat-card:after{background:linear-gradient(90deg,transparent,rgba(47,128,255,.3),transparent)}
 .statistics-team-identity{background:radial-gradient(circle at 8% 15%,rgba(47,128,255,.08),transparent 34%),linear-gradient(135deg,#101318,#0b0d10)}
+
+/* Analytics keeps Rastro in data accents, never in structural surfaces. */
+.statistics-tabs-v3{padding:5px;border-radius:15px;background:#0b0d10}
+.statistics-tabs-v3 button.active,.statistics-tabs-v3 button[aria-selected="true"]{background:transparent!important}
+.statistics-tabs-v3 .motion-tabs-indicator{inset-block:5px;border-radius:10px}
+.statistics-tabs-v3 button{min-height:40px;border-radius:10px;background:transparent!important}
+.statistics-player-table{background:#0b0d10!important;border-color:var(--strix-border)}
+.statistics-player-table>header,.statistics-player-table>article{background:#0b0d10;border-color:var(--strix-border)}
+.statistics-sort>div:first-child{display:grid;gap:5px}
+.statistics-sort .rastro-data-signature{justify-self:start}
+.statistics-v3>.data-page-header>.rastro-data-signature{align-self:end;margin-bottom:3px}
+.statistics-ranking-modal{border-color:var(--strix-border-strong);background:#0b0d10}
+.statistics-ranking-modal>header{align-items:flex-start;background:#0b0d10f5}
+.statistics-ranking-modal>header .rastro-data-signature{margin-top:10px}
+.statistics-ranking-modal header button{display:grid;place-items:center;width:38px;height:38px;border:1px solid var(--strix-border-strong);border-radius:11px;background:#111419;color:#d8dce0}
+.statistics-ranking-list{padding:10px 18px 18px}
+.statistics-ranking-list article{grid-template-columns:40px minmax(0,1fr) minmax(92px,auto);min-height:68px;padding-inline:8px;background:#0b0d10!important}
+.statistics-ranking-list article>strong{display:grid;place-items:center;width:30px;height:30px;border-radius:9px;background:#15191e;color:var(--rastro-blue);font-size:17px;line-height:1}
+.statistics-ranking-list article.is-top{background:linear-gradient(90deg,#161a1f,#0b0d10 72%)!important}
+.statistics-ranking-list article.is-top:before{background:var(--rastro-blue)}
+.statistics-ranking-list article.is-top-1>strong{background:#2c2718;color:#f0ca65}
+.statistics-ranking-list article.is-top-2>strong{background:#23272c;color:#d7dce1}
+.statistics-ranking-list article.is-top-3>strong{background:#2b211c;color:#d89b73}
+.statistics-ranking-value{align-self:center;justify-items:end;line-height:1.1}
+.statistics-ranking-value>span{color:var(--rastro-blue)}
+@media(max-width:760px){.statistics-v3>.data-page-header>.rastro-data-signature{align-self:start}.statistics-ranking-list{padding-inline:12px}.statistics-ranking-list article{grid-template-columns:34px minmax(0,1fr) minmax(78px,auto);padding-inline:4px}}

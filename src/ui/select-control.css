@@ -1,0 +1,11 @@
+.select-control{position:relative;min-width:176px;color:var(--strix-text)}
+.select-control>button{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:40px;padding:0 12px;border:1px solid var(--strix-border-strong);border-radius:10px;background:#101318;color:#d8dce0;font:850 9px/1 Inter,sans-serif;letter-spacing:.06em;text-align:left;transition:border-color var(--motion-fast),background var(--motion-fast),box-shadow var(--motion-fast)}
+.select-control>button:hover,.select-control>button:focus-visible,.select-control>button[aria-expanded=true]{border-color:#59616a;background:#15191e;outline:0;box-shadow:0 0 0 3px #ffffff0b}
+.select-control>button svg{color:#8e969f;transition:rotate var(--motion-fast)}
+.select-control>button[aria-expanded=true] svg{rotate:180deg}
+.select-control-menu{position:absolute;z-index:90;top:calc(100% + 7px);right:0;display:grid;width:max(100%,220px);max-height:280px;overflow:auto;padding:6px;border:1px solid var(--strix-border-strong);border-radius:12px;background:#0d1014;box-shadow:0 22px 58px #000d;animation:motion-menu-in var(--motion-fast) var(--motion-ease) both}
+.select-control-menu>button{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:38px;padding:0 10px;border:0;border-radius:8px;background:transparent;color:#aeb4bb;font:800 9px/1 Inter,sans-serif;text-align:left}
+.select-control-menu>button:hover,.select-control-menu>button.is-highlighted{background:#1a1f24;color:#fff}
+.select-control-menu>button[aria-selected=true]{color:#fff}
+.select-control-menu>button[aria-selected=true] svg{color:var(--rastro-blue)}
+@media(max-width:700px){.select-control{width:100%}.select-control-menu{left:0;right:auto;width:100%}}

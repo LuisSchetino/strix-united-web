@@ -48,6 +48,45 @@ export function aggregateCompetitionHistory(editions = []) {
   }));
 }
 
+const normalizedTeam = (value) => String(value || "")
+  .normalize("NFD")
+  .replace(/[\u0300-\u036f]/g, "")
+  .toLocaleLowerCase("pt-BR");
+
+export function competitionStatsFromFixtures(fixtures = [], strixName = "STRIX UNITED") {
+  const strix = normalizedTeam(strixName);
+  const unique = new Map();
+  for (const fixture of fixtures) {
+    const key = fixture.bracket_slot_key || fixture.external_match_id || fixture.id;
+    if (!key || unique.has(key)) continue;
+    const homeName = normalizedTeam(fixture.home_team_name || fixture.homeTeamName);
+    const awayName = normalizedTeam(fixture.away_team_name || fixture.awayTeamName);
+    if (!homeName.includes(strix) && !awayName.includes(strix)) continue;
+    const homeScore = fixture.home_score ?? fixture.homeScore;
+    const awayScore = fixture.away_score ?? fixture.awayScore;
+    if (homeScore === null || homeScore === undefined || awayScore === null || awayScore === undefined) continue;
+    unique.set(key, { homeName, awayName, homeScore: Number(homeScore), awayScore: Number(awayScore) });
+  }
+  const stats = { games: 0, wins: 0, draws: 0, losses: 0, goalsFor: 0, goalsAgainst: 0 };
+  for (const fixture of unique.values()) {
+    const isHome = fixture.homeName.includes(strix);
+    const goalsFor = isHome ? fixture.homeScore : fixture.awayScore;
+    const goalsAgainst = isHome ? fixture.awayScore : fixture.homeScore;
+    stats.games += 1;
+    stats.goalsFor += goalsFor;
+    stats.goalsAgainst += goalsAgainst;
+    if (goalsFor > goalsAgainst) stats.wins += 1;
+    else if (goalsFor < goalsAgainst) stats.losses += 1;
+    else stats.draws += 1;
+  }
+  return stats;
+}
+
+export function competitionHistoryStats(edition, fixtures = []) {
+  const stored = edition?.stats || edition?.metadata?.stats || {};
+  return Number(stored.games) > 0 ? stored : competitionStatsFromFixtures(fixtures);
+}
+
 export function detectParticipationEnd({ edition, fixtures = [], strixName = "STRIX UNITED" }) {
   const normalized = (value) => String(value || "").toLowerCase();
   const strix = normalized(strixName);

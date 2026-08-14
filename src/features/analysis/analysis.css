@@ -17,3 +17,10 @@
 .radar-grid,.radar-axis{stroke:rgba(47,128,255,.2)}.analysis-radar text{fill:#9ca6b0}
 .analysis-context,.analysis-group,.analysis-xray,.analysis-radar-legend article{background:linear-gradient(145deg,#101318,#0b0d10)}
 .analysis-insights{background:radial-gradient(circle at 100% 0,rgba(47,128,255,.08),transparent 34%),#0b0d10}
+.analysis-v2>.data-page-header>.rastro-data-signature{align-self:end;margin-bottom:3px}
+.analysis-insights header .rastro-data-signature{margin-top:8px}
+.analysis-filters{align-items:center}
+.analysis-filters>.select-control{min-width:190px}
+.analysis-xray{overflow:visible}
+.analysis-xray-filters>.select-control{min-width:0}
+@media(max-width:700px){.analysis-v2>.data-page-header>.rastro-data-signature{align-self:start}.analysis-filters>.select-control{width:100%}}

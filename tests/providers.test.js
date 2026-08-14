@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { parseCompetitionHtml, validateCompetitionUrl } from "../shared/competition-providers.js";
+import { selectPreferredKnockoutPreview } from "../shared/bracket-slots.js";
 
 const standingsRows = `
 <table><thead><tr><th>#</th><th>Time</th><th>P</th><th>J</th><th>V</th><th>E</th><th>D</th><th>GP</th><th>GS</th><th>SG</th></tr></thead><tbody>
@@ -107,4 +108,10 @@ test("reconciles every populated bracket round and replaces provider placeholder
   assert.equal(final.homeTeamName, "H");
   assert.equal(final.awayTeamName, "A");
   assert.equal(final.status, "scheduled");
+});
+
+test("seleciona a árvore eliminatória mais completa sem depender da competição", () => {
+  const quarterfinal = { sourceKind: "knockout", source: "qf", fetchedAt: "2026-08-13T20:00:00Z", knockout: { currentStage: "Quartas de final", hasStrix: true, fixtures: Array.from({ length: 4 }, (_, index) => ({ roundLabel: "Quartas de final", bracketPosition: index, homeTeamName: `A${index}`, awayTeamName: `B${index}`, status: "completed", homeScore: 1, awayScore: 0 })) } };
+  const final = { sourceKind: "knockout", source: "final", fetchedAt: "2026-08-13T19:00:00Z", knockout: { currentStage: "Final", hasStrix: true, fixtures: [...quarterfinal.knockout.fixtures, { roundLabel: "Semifinais", homeTeamName: "A0", awayTeamName: "A1", status: "completed", homeScore: 2, awayScore: 1 }, { roundLabel: "Semifinais", homeTeamName: "A2", awayTeamName: "STRIX UNITED", status: "completed", homeScore: 0, awayScore: 2 }, { roundLabel: "Final", homeTeamName: "A0", awayTeamName: "STRIX UNITED", status: "scheduled", homeScore: null, awayScore: null }] } };
+  assert.equal(selectPreferredKnockoutPreview([quarterfinal, final]), final);
 });

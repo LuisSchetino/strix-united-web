@@ -129,7 +129,7 @@ body{background:var(--strix-bg)}
   box-shadow:inset 0 0 82px #000,0 22px 46px #0008!important;
 }
 .competition-view-tabs,.competition-tabs{border-color:var(--strix-border);background:#0b0d10}
-.competition-view-tabs button.active,.competition-tabs button.active{background:#f2f2f2!important;color:#090a0b!important}
+.competition-view-tabs button.active,.competition-tabs button.active{background:transparent!important;color:#090a0b!important}
 .competition-card-grid>button,.competition-detail-hero,.competition-inline-hero{background-color:#0b0d10!important}
 .standings-table>article,.competition-results article{border-color:var(--strix-border)}
 .bracket-grid article{background:#101318;border-color:var(--strix-border-strong)}
@@ -143,7 +143,7 @@ body{background:var(--strix-bg)}
 }
 .statistics-tabs-v3,.analysis-filters{border-color:var(--strix-border)!important;background:#0a0c0f!important}
 .statistics-tabs-v3 button.active,.statistics-tabs-v3 button[aria-selected="true"],.analysis-filters button.selected{
-  background:#f2f2f2!important;color:#090a0b!important;
+  background:transparent!important;color:#090a0b!important;
 }
 .statistics-ranking-modal{border-color:var(--strix-border-strong)!important;background:#0b0d10!important}
 .statistics-ranking-list article{border-color:var(--strix-border)!important;background:#101318!important}
@@ -207,6 +207,10 @@ html .gameday-editor-page .gd-dashed{border-color:#454c54;color:#d6d9dc}html .ga
 .sidebar-signout,.secondary,.preset-trigger{border-color:var(--strix-border-strong)!important;background:#111419!important;color:#d6d9dd!important}
 .agenda-list-heading,.agenda-empty,.squad-sector>header small{color:#8e969f!important;border-color:var(--strix-border)!important}
 .squad-sector>header>b,.member-tag,.member-tag.complete,.member-tag.elenco{border-color:var(--strix-border-strong)!important;color:#b7bdc4!important;background:#111419!important}
+.squad-preview{border-color:var(--strix-border)!important;background:#0b0d10!important;box-shadow:inset 1px 0 var(--strix-border)}
+.squad-preview>span,.squad-preview small{color:#b7bdc4!important}.squad-preview .avatar{box-shadow:0 14px 36px #0008}
+.match-row-actions button{border-color:var(--strix-border-strong)!important;background:#111419!important;color:#d8dce0!important}
+.match-row-actions button:hover,.match-row-actions button:focus-visible{border-color:#59616a!important;background:#1a1f24!important;color:#fff!important}
 
 @media(max-width:900px){
   .rastro-signature{bottom:88px}
