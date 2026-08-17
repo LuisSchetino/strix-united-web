@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: strix-fc27-ea-sync
+    env: node
+    plan: free
+    rootDir: services/ea-sync
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: EA_SYNC_API_TOKEN
+        generateValue: true

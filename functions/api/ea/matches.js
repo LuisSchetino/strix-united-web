@@ -1,13 +1,7 @@
 import { authenticateDiscordMember, json, requireTier } from "../../_lib/auth.js";
-import { createEaMatchLoader, EaFetchError } from "../../../shared/ea-fetch.js";
 import { normalizeEaMatches, suggestAgendaMatches } from "../../../src/features/matches/import-core.js";
 
 const EA_CLUB_ID = "15686";
-const MATCH_TYPES = ["friendlyMatch", "leagueMatch", "playoffMatch"];
-const BASE_URL = "https://proclubs.ea.com/api/fc/clubs/matches";
-const loaders = new Map(MATCH_TYPES.map((matchType) => [matchType, createEaMatchLoader({
-  url: `${BASE_URL}?platform=common-gen5&clubIds=${EA_CLUB_ID}&matchType=${matchType}&maxResultCount=10`,
-})]));
 
 const serviceHeaders = (env) => ({
   apikey: env.SUPABASE_SERVICE_ROLE_KEY,
@@ -15,10 +9,41 @@ const serviceHeaders = (env) => ({
   "content-type": "application/json",
 });
 
-async function fetchAllMatches() {
-  const results = await Promise.all(MATCH_TYPES.map(async (matchType) => ({ matchType, result: await loaders.get(matchType)() })));
-  const raw = results.flatMap(({ matchType, result }) => result.matches.map((match) => ({ ...match, _fc27MatchType: matchType })));
-  return { raw, durationMs: Math.max(...results.map(({ result }) => result.durationMs), 0), cached: results.every(({ result }) => result.cached) };
+async function fetchAllMatches(env) {
+  if (!env.EA_SYNC_API_URL || !env.EA_SYNC_API_TOKEN) {
+    const error = new Error("EA Sync API is not configured.");
+    error.code = "ea_sync_not_configured";
+    throw error;
+  }
+  const base = new URL(env.EA_SYNC_API_URL);
+  if (base.protocol !== "https:") throw new Error("EA Sync API must use HTTPS.");
+  const url = new URL("/v1/matches", base);
+  url.searchParams.set("clubId", EA_CLUB_ID);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 25_000);
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        accept: "application/json",
+        authorization: `Bearer ${env.EA_SYNC_API_TOKEN}`,
+      },
+      cache: "no-store",
+      signal: controller.signal,
+    });
+    const text = await response.text();
+    let payload;
+    try { payload = JSON.parse(text); } catch { payload = null; }
+    if (!response.ok || !payload?.ok || payload.club_id !== EA_CLUB_ID || !Array.isArray(payload.matches)) {
+      const error = new Error(payload?.message || `EA Sync API respondeu HTTP ${response.status}.`);
+      error.status = response.status || 502;
+      error.code = payload?.error || "ea_sync_invalid_response";
+      throw error;
+    }
+    return { raw: payload.matches, durationMs: Number(payload.duration_ms || 0), cached: Boolean(payload.cached) };
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 async function supabaseJson(env, path, init = {}) {
@@ -53,12 +78,13 @@ function withAgendaSuggestions(matches, agenda) {
 
 function eaError(error) {
   if (error?.name === "AbortError") return json({ error: "ea_timeout", message: "A EA excedeu o tempo limite de 10 segundos." }, 504);
-  if (error instanceof EaFetchError) {
-    const status = error.status === 403 || error.status === 429 ? error.status : 502;
+  if (error?.code?.startsWith?.("ea_")) {
+    const status = error.status === 429 ? 429 : 502;
     const messages = {
-      ea_forbidden: "A EA recusou a consulta do servidor.",
       ea_rate_limited: "A EA limitou temporariamente as consultas. Tente novamente em instantes.",
       ea_invalid_payload: "A EA respondeu com conteúdo inválido em vez de JSON.",
+      ea_sync_not_configured: "O serviço de sincronização da EA não está configurado.",
+      ea_sync_invalid_response: "O serviço de sincronização respondeu com conteúdo inválido.",
     };
     return json({ error: error.code, message: messages[error.code] || error.message }, status);
   }
@@ -78,7 +104,7 @@ export async function onRequestGet({ request, env }) {
   const session = await authorize(request, env);
   if (session.error) return session.error;
   try {
-    const result = await fetchAllMatches();
+    const result = await fetchAllMatches(env);
     return json({ matches: result.raw, fetched_at: new Date().toISOString(), club_id: EA_CLUB_ID, duration_ms: result.durationMs, cached: result.cached });
   } catch (error) { return eaError(error); }
 }
@@ -88,7 +114,7 @@ export async function onRequestPost({ request, env }) {
   if (session.error) return session.error;
   const startedAt = Date.now();
   try {
-    const result = await fetchAllMatches();
+    const result = await fetchAllMatches(env);
     const normalized = normalizeEaMatches(result.raw, EA_CLUB_ID);
     const matches = withAgendaSuggestions(normalized, await loadAgenda(env));
     const report = await supabaseJson(env, "/rest/v1/rpc/sync_fc27_ea_matches", {

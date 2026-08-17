@@ -1,0 +1,14 @@
+{
+  "name": "strix-fc27-ea-sync",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test",
+    "check": "node --check server.js && node --check ea-client.js"
+  }
+}
