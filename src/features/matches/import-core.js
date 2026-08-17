@@ -117,9 +117,10 @@ export function eaPerformance(raw, strix, clubId = EA_CLUB_ID) {
 
 export function normalizeEaMatch(raw, index = 0, clubId = EA_CLUB_ID) {
   const clubs = asClubEntries(raw);
-  const strix = clubs.find((club) => String(club?.clubId || club?.id || club?._clubKey) === clubId)
-    || clubs[0]
-    || {};
+  // EA does not guarantee array order. Club identity is the only safe anchor;
+  // silently treating clubs[0] as Strix can invert score and player data.
+  const strix = clubs.find((club) => String(club?.clubId || club?.id || club?._clubKey) === String(clubId));
+  if (!strix) return null;
   const opponent = clubs.find((club) => club !== strix) || {};
   const date = matchDate(raw);
   const performance = eaPerformance(raw, strix, clubId);
@@ -139,6 +140,26 @@ export function normalizeEaMatch(raw, index = 0, clubId = EA_CLUB_ID) {
     goalScorers,
     raw,
   };
+}
+
+const matchCompleteness = (match) => {
+  const performance = match?.performance || {};
+  return Number(Boolean(match?.opponent && match.opponent !== "Adversário EA")) * 8
+    + Number(Boolean(match?.date)) * 4
+    + Number(Boolean(match?.raw)) * 2
+    + (Array.isArray(performance.players) ? performance.players.length : 0)
+    + Object.values(performance).filter((value) => value !== null && value !== undefined && value !== "").length;
+};
+
+export function normalizeEaMatches(rows = [], clubId = EA_CLUB_ID) {
+  const unique = new Map();
+  for (const [index, raw] of (Array.isArray(rows) ? rows : []).entries()) {
+    const match = normalizeEaMatch(raw, index, clubId);
+    if (!match) continue;
+    const previous = unique.get(match.id);
+    if (!previous || matchCompleteness(match) >= matchCompleteness(previous)) unique.set(match.id, match);
+  }
+  return [...unique.values()].sort((left, right) => new Date(right.date) - new Date(left.date));
 }
 
 export const resultLabel = (match) => Number(match.strixScore) > Number(match.opponentScore)

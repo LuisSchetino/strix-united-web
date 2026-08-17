@@ -710,19 +710,11 @@ function ScenarioPanel({ edition, snapshot, qualificationSlots }) {
   );
 }
 
-function HistoryPanel({ editions }) {
-  const groups = aggregateCompetitionHistory(editions);
+function HistoryCompetitionCard({ group }) {
+  const [selectedId, setSelectedId] = useState(group.editions.at(-1)?.id || "");
+  const selected = group.editions.find((edition) => edition.id === selectedId) || group.editions.at(-1);
   return (
-    <section className="competition-section history-panel">
-      <header>
-        <div>
-          <span>HISTÓRICO</span>
-          <h2>Evolução do Strix</h2>
-        </div>
-      </header>
-      {groups.length ? (
-        groups.map((group) => (
-          <article className="history-competition-card" key={group.competitionId}>
+          <article className="history-competition-card">
             <header className="history-competition-header">
               <div>
                 <h3>{group.name}</h3>
@@ -772,11 +764,26 @@ function HistoryPanel({ editions }) {
               <span><i className="draws" />{"EMPATES \u00b7 "}{group.draws}</span>
               <span><i className="losses" />{"DERROTAS \u00b7 "}{group.losses}</span>
             </div>
-            <div className="history-evolution" aria-label={`Evolução em ${group.name}`}>
-              {group.editions.map((edition) => <div className={campaignState(edition)} key={edition.id} title={edition.outcome || edition.final_stage || "Participação encerrada"}><i style={{ height: `${Math.max(16, edition.campaignLevel)}%` }}/><span>{edition.label}</span><small>{edition.outcome || edition.final_stage || "Encerrada"}</small></div>)}
+            <div className="history-evolution" aria-label={`Edições de ${group.name}`}>
+              {group.editions.map((edition) => <button type="button" className={`${campaignState(edition)} ${selected?.id === edition.id ? "selected" : ""}`} key={edition.id} onClick={() => setSelectedId(edition.id)} aria-pressed={selected?.id === edition.id}><i/><span>{edition.label}</span><small>{edition.outcome || edition.final_stage || "Encerrada"}</small></button>)}
             </div>
+            {selected && <section className="history-edition-summary" aria-live="polite"><div><small>EDIÇÃO SELECIONADA</small><b>{selected.label}</b></div><strong>{selected.outcome || selected.final_stage || "Participação encerrada"}</strong><span>Nível da campanha · {selected.campaignLevel}%</span></section>}
           </article>
-        ))
+  );
+}
+
+function HistoryPanel({ editions }) {
+  const groups = aggregateCompetitionHistory(editions);
+  return (
+    <section className="competition-section history-panel">
+      <header>
+        <div>
+          <span>HISTÓRICO</span>
+          <h2>Evolução do Strix</h2>
+        </div>
+      </header>
+      {groups.length ? (
+        groups.map((group) => <HistoryCompetitionCard group={group} key={group.competitionId} />)
       ) : (
         <p className="competition-empty">
           Nenhuma edição foi enviada ao histórico.

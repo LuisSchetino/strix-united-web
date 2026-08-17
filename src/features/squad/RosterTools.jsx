@@ -1,7 +1,6 @@
-import React, { useMemo, useState } from "react";
-import { IconArrowMerge, IconCheck, IconLink, IconTrash, IconUpload, IconX } from "@tabler/icons-react";
+import React, { useState } from "react";
+import { IconLink, IconTrash, IconX } from "@tabler/icons-react";
 import { notify } from "../../ui/motion/motion.jsx";
-import { fc26Roster, normalizeRosterName, previewFc26Roster } from "./fc26-roster.js";
 import "./roster-tools.css";
 
 function ToolsDialog({ title, eyebrow, close, children, footer }) {
@@ -12,33 +11,6 @@ function ToolsDialog({ title, eyebrow, close, children, footer }) {
       {footer && <footer>{footer}</footer>}
     </section>
   </div>;
-}
-
-function ImportRoster({ workspace, close }) {
-  const preview = useMemo(() => previewFc26Roster(workspace.players || []), [workspace.players]);
-  const [selected, setSelected] = useState(() => new Set(fc26Roster.map((player) => player.sourcePlayerId)));
-  const [busy, setBusy] = useState(false);
-  const [result, setResult] = useState(null);
-  const confirm = async () => {
-    setBusy(true);
-    try {
-      const imported = await workspace.importLegacyRoster(fc26Roster.filter((player) => selected.has(player.sourcePlayerId)));
-      setResult(imported);
-      notify(`${imported.created} jogador(es) criado(s) · ${imported.merged} conciliado(s).`, "success");
-    } catch (error) {
-      notify(error.message || "Não foi possível importar o elenco.", "error");
-    } finally { setBusy(false); }
-  };
-  return <ToolsDialog title="Importar elenco do FC26" eyebrow="ELENCO · MIGRAÇÃO SEGURA" close={close} footer={<><button type="button" className="secondary" onClick={close}>FECHAR</button><button type="button" className="primary" disabled={busy || !selected.size || result} onClick={confirm}>{busy ? "CONCILIANDO…" : result ? "IMPORTAÇÃO CONCLUÍDA" : `IMPORTAR ${selected.size} JOGADORES`}</button></>}>
-    <p className="roster-tools-intro">A prévia usa o elenco ativo publicado no FC26. Correspondências pelo identificador ou nome são conciliadas; nada é apagado.</p>
-    <div className="roster-import-summary"><span><b>{preview.filter((item) => item.action === "create").length}</b> novos</span><span><b>{preview.filter((item) => item.action === "merge").length}</b> merges</span><span><b>{selected.size}</b> selecionados</span></div>
-    {result && <div className="roster-import-result"><IconCheck/><div><b>Importação idempotente concluída</b><span>{result.aliases} aliases criados{result.conflicts.length ? ` · ${result.conflicts.length} conflito(s) preservado(s)` : " · sem conflitos"}.</span></div></div>}
-    <div className="roster-import-list">{preview.map((player) => <label key={player.sourcePlayerId}>
-      <input type="checkbox" checked={selected.has(player.sourcePlayerId)} disabled={Boolean(result)} onChange={() => setSelected((current) => { const next = new Set(current); next.has(player.sourcePlayerId) ? next.delete(player.sourcePlayerId) : next.add(player.sourcePlayerId); return next; })}/>
-      <span><b>{player.displayName}</b><small>{player.positions.join(" · ")} · {player.memberType}</small></span>
-      <em className={player.action}>{player.action === "merge" ? <><IconArrowMerge size={14}/>CONCILIAR</> : <><IconUpload size={14}/>CRIAR</>}</em>
-    </label>)}</div>
-  </ToolsDialog>;
 }
 
 function AliasManager({ workspace, close }) {
@@ -66,7 +38,5 @@ function AliasManager({ workspace, close }) {
 
 export function RosterTools({ workspace }) {
   const [modal, setModal] = useState("");
-  return <><div className="roster-tools-actions"><button type="button" className="secondary" onClick={() => setModal("import")}><IconUpload size={16}/>IMPORTAR FC26</button><button type="button" className="secondary" onClick={() => setModal("aliases")}><IconLink size={16}/>ALIASES</button></div>{modal === "import" && <ImportRoster workspace={workspace} close={() => setModal("")}/>} {modal === "aliases" && <AliasManager workspace={workspace} close={() => setModal("")}/>}</>;
+  return <><div className="roster-tools-actions"><button type="button" className="secondary" onClick={() => setModal("aliases")}><IconLink size={16}/>ALIASES</button></div>{modal === "aliases" && <AliasManager workspace={workspace} close={() => setModal("")}/>}</>;
 }
-
-export { normalizeRosterName };

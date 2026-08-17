@@ -814,10 +814,10 @@ export function MatchesPage({ profile, workspace, client }) {
     [workspace.competitions, workspace.competitionEditions],
   );
 
-  const load = async (source) => {
+  const load = async () => {
     if (!canManage || loadingSource) return;
     const started = performance.now();
-    setLoadingSource(source);
+    setLoadingSource("ea");
     setError("");
     setSuccess("");
     setEmptySource("");
@@ -829,67 +829,28 @@ export function MatchesPage({ profile, workspace, client }) {
       })),
     );
     try {
-      let response;
-      if (source === "computer")
-        response = await fetch("http://127.0.0.1:8789/api/ea/matches", {
-          cache: "no-store",
-        });
-      else {
-        const { data } = await client.auth.getSession();
-        response = await fetch("/api/ea/matches", {
-          headers: {
-            authorization: `Bearer ${data.session?.access_token || ""}`,
-          },
-          cache: "no-store",
-        });
-      }
+      const { data } = await client.auth.getSession();
+      const response = await fetch("/api/ea/matches", {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${data.session?.access_token || ""}`,
+          "content-type": "application/json",
+        },
+        cache: "no-store",
+      });
       const payload = await response.json();
       if (!response.ok)
         throw new Error(
           payload.message || payload.error || "A fonte não retornou partidas.",
         );
-      const providerMatches = Array.isArray(payload)
-        ? payload
-        : safeRows(payload?.matches ?? payload?.data?.matches);
-      const normalizedBase = dedupeImportedMatches(
-        providerMatches.filter((item) => item && typeof item === "object").map((item, index) => ({
-          ...normalizeEaMatch(item, index),
-          importSource: source === "computer" ? "local_bridge" : "ea_api",
-        })),
-        safeRows(workspace.matches),
-      );
-      const agendaSuggestions = suggestAgendaMatches(
-        normalizedBase,
-        safeRows(workspace.agenda),
-      );
-      const normalized = normalizedBase.map((match) => {
-        const suggestion = agendaSuggestions.get(match.id);
-        return {
-          ...match,
-          agendaId: suggestion?.suggestion?.autoLink ? suggestion.id : "",
-          suggestedAgendaId: suggestion?.id || "",
-          suggestedAgendaName: suggestion?.opponent_name || "",
-          suggestedAgendaAt: suggestion?.scheduled_at || "",
-          suggestionConfidence: suggestion?.suggestion?.confidence || "",
-          suggestionReason: suggestion?.suggestion?.reason || "",
-          suggestionAutoLink: Boolean(suggestion?.suggestion?.autoLink),
-        };
-      });
-      if (!normalized.length) {
-        setFound([]);
-        setSelected(new Set());
-        setAliases({});
-        setEmptySource(providerMatches.length
-          ? "As partidas retornadas já estão no histórico. Nenhuma importação pendente."
-          : "A ponte respondeu normalmente, mas não há partidas disponíveis neste momento.");
-        return;
-      }
-      setFound(normalized);
-      setSelected(new Set(normalized.map((match) => match.id)));
-      setAliases(
-        resolvePlayerAliases(normalized, safeRows(workspace.players), safeRows(workspace.aliases)),
-      );
-      setStep("review");
+      await workspace.refresh();
+      const changed = Number(payload.inserted || 0) + Number(payload.updated || 0);
+      setFound([]);
+      setSelected(new Set());
+      setAliases({});
+      setEmptySource(changed ? "" : "A EA respondeu normalmente; o histórico já estava atualizado.");
+      setSuccess(`${payload.inserted || 0} nova(s), ${payload.updated || 0} atualizada(s) e ${payload.skipped || 0} ignorada(s).`);
+      notify("Jogos da EA atualizados.");
       setMetrics((current) => ({
         ...current,
         totalMs: Math.round(performance.now() - started),
@@ -1003,19 +964,10 @@ export function MatchesPage({ profile, workspace, client }) {
           <div className="matches-actions">
             <button
               className="secondary"
-              onClick={() => void load("computer")}
+              onClick={() => void load()}
               disabled={Boolean(loadingSource)}
             >
-              {loadingSource === "computer"
-                ? "CONSULTANDO SEU PC…"
-                : "BUSCAR PELO MEU PC"}
-            </button>
-            <button
-              className="secondary"
-              onClick={() => void load("cloud")}
-              disabled={Boolean(loadingSource)}
-            >
-              {loadingSource === "cloud" ? "CONSULTANDO EA…" : "BUSCAR NA EA"}
+              {loadingSource === "ea" ? "SINCRONIZANDO EA…" : "ATUALIZAR JOGOS DA EA"}
             </button>
             <button className="secondary" onClick={addManual}>
               ADICIONAR MANUAL

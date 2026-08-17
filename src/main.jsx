@@ -1190,14 +1190,25 @@ const lineupSlots = [
   "GOL",
 ];
 const emptyLineup = () => Array(11).fill("");
-function FormationPicker({ lineup, onChange, compact = false, readOnly = false }) {
+function FormationPicker({ lineup, onChange, compact = false, readOnly = false, roster = [], assetUrl = (value) => value || "" }) {
   const [slot, setSlot] = useState(null);
   const choose = (player) => {
     const next = [...lineup];
-    next[slot] = player[0];
+    next[slot] = player?.display_name || "";
     onChange(next);
     setSlot(null);
   };
+  const activeRoster = (Array.isArray(roster) ? roster : []).filter((player) => player?.is_active);
+  const desiredPosition = slot === null ? "" : lineupSlots[slot];
+  const natural = activeRoster.filter((player) => (player.positions || []).includes(desiredPosition));
+  const improvised = activeRoster.filter((player) => !(player.positions || []).includes(desiredPosition));
+  const playerButton = (player) => (
+    <button type="button" key={player.id || player.display_name} onClick={() => choose(player)}>
+      <b>{player.member_type === "teste" ? "TESTE" : "ELENCO"}</b>
+      <Avatar name={player.display_name} logo={player.avatar_path ? assetUrl(player.avatar_path) : player.external_avatar_url || ""} />
+      <span>{player.display_name}<small>{(player.positions || []).join(" · ") || "SEM POSIÇÃO"}</small></span>
+    </button>
+  );
   return (
     <section className={`formation-picker ${compact ? "is-compact" : ""} ${readOnly ? "is-read-only" : ""}`}>
       <div className="formation-picker-field">
@@ -1228,26 +1239,20 @@ function FormationPicker({ lineup, onChange, compact = false, readOnly = false }
               <Icon name="close" size={16} />
             </button>
           </header>
-          {players.map((player) => (
-            <button
-              type="button"
-              key={player[0]}
-              onClick={() => choose(player)}
-            >
-              <b>{player[2]}</b>
-              <Avatar name={player[0]} />
-              <span>
-                {player[0]}
-                <small>{player[1]}</small>
-              </span>
-            </button>
-          ))}
+          <section className="formation-roster-group">
+            <h4>NATURAIS · {desiredPosition}</h4>
+            {natural.length ? natural.map(playerButton) : <p>Nenhum jogador ativo nesta posição.</p>}
+          </section>
+          <section className="formation-roster-group is-improvised">
+            <h4>IMPROVISADOS</h4>
+            {improvised.map(playerButton)}
+          </section>
         </div>
       )}
     </section>
   );
 }
-function AgendaModal({ entry, mode = "new", presets, onClose, onSave, logoForOpponent = catalogLogo, defaultDate = defaultAgendaForm.date, suggestTimeForDate }) {
+function AgendaModal({ entry, mode = "new", presets, roster = [], assetUrl, onClose, onSave, logoForOpponent = catalogLogo, defaultDate = defaultAgendaForm.date, suggestTimeForDate }) {
   const edit = Boolean(entry);
   const [form, setForm] = useState(() => {
     const saved = entry
@@ -1507,7 +1512,7 @@ function AgendaModal({ entry, mode = "new", presets, onClose, onSave, logoForOpp
               </div>
               <p>{readOnly ? "Escalação definida para este jogo." : "Toque em uma posição e escolha o jogador."}</p>
             </header>
-            <FormationPicker lineup={lineup} onChange={setLineup} readOnly={readOnly} />
+            <FormationPicker lineup={lineup} onChange={setLineup} readOnly={readOnly} roster={roster} assetUrl={assetUrl} />
           </section>
           {!edit && (
             <>
@@ -1543,24 +1548,33 @@ function AgendaModal({ entry, mode = "new", presets, onClose, onSave, logoForOpp
     </ViewportDialog>
   );
 }
-function PresetPanel({ presets, setPresets, onClose }) {
+function PresetPanel({ presets, setPresets, roster = [], assetUrl, onClose }) {
   const [name, setName] = useState("");
   const [duration, setDuration] = useState("1");
   const [lineup, setLineup] = useState(emptyLineup());
+  const [editingId, setEditingId] = useState("");
+  const [pendingDelete, setPendingDelete] = useState(null);
   const add = (event) => {
     event.preventDefault();
     if (!name.trim()) return;
-    setPresets((current) => [
-      ...current,
-      {
+    const payload = {
         id: crypto.randomUUID(),
         name: name.trim(),
-        lineup,
+        lineup: [...lineup],
         expiresAt: Date.now() + Number(duration) * 86400000,
-      },
-    ]);
+      };
+    setPresets((current) => editingId
+      ? current.map((preset) => preset.id === editingId ? { ...preset, ...payload, id: preset.id } : preset)
+      : [...current, payload]);
     setName("");
     setLineup(emptyLineup());
+    setEditingId("");
+  };
+  const editPreset = (preset) => {
+    setEditingId(preset.id);
+    setName(preset.name);
+    setLineup([...(preset.lineup || emptyLineup())]);
+    setDuration(String(Math.max(1, Math.ceil((preset.expiresAt - Date.now()) / 86400000))));
   };
   return (
     <ViewportDialog className="modal-backdrop">
@@ -1583,7 +1597,7 @@ function PresetPanel({ presets, setPresets, onClose }) {
             <Icon name="close" />
           </button>
         </header>
-        <FormationPicker compact lineup={lineup} onChange={setLineup} />
+        <FormationPicker compact lineup={lineup} onChange={setLineup} roster={roster} assetUrl={assetUrl} />
         <form onSubmit={add}>
           <input
             value={name}
@@ -1598,23 +1612,28 @@ function PresetPanel({ presets, setPresets, onClose }) {
             <option value="3">3 dias</option>
             <option value="5">5 dias</option>
           </select>
-          <button className="primary">SALVAR PREDEFINIÇÃO</button>
+          <button className="primary">{editingId ? "ATUALIZAR PREDEFINIÇÃO" : "SALVAR PREDEFINIÇÃO"}</button>
         </form>
         <div>
           {presets.length ? (
             presets.map((preset) => (
-              <span key={preset.id}>
-                <b>{preset.name}</b>
-                <small>
+              <article className="preset-saved-item" key={preset.id}>
+                <span><b>{preset.name}</b><small>
                   {preset.lineup?.filter(Boolean).length || 0}/11 · ativa até{" "}
                   {new Date(preset.expiresAt).toLocaleDateString("pt-BR")}
-                </small>
-              </span>
+                </small></span>
+                <button type="button" onClick={() => editPreset(preset)} aria-label={`Editar ${preset.name}`}><Icon name="edit" size={14}/></button>
+                <button type="button" onClick={() => setPendingDelete(preset)} aria-label={`Excluir ${preset.name}`}><Icon name="trash" size={14}/></button>
+              </article>
             ))
           ) : (
             <p>Nenhuma predefinição ativa.</p>
           )}
         </div>
+        {pendingDelete && <div className="preset-confirm" role="alertdialog" aria-modal="true" aria-label="Confirmar exclusão">
+          <p>Excluir a predefinição <b>{pendingDelete.name}</b>? Jogos já criados não serão alterados.</p>
+          <div><button type="button" className="secondary" onClick={() => setPendingDelete(null)}>VOLTAR</button><button type="button" className="agenda-confirm-danger" onClick={() => { setPresets((current) => current.filter((preset) => preset.id !== pendingDelete.id)); if (editingId === pendingDelete.id) { setEditingId(""); setName(""); setLineup(emptyLineup()); } setPendingDelete(null); }}>EXCLUIR</button></div>
+        </div>}
       </section>
     </ViewportDialog>
   );
@@ -1973,8 +1992,8 @@ function AgendaLive({ navigate, workspace }) {
           </article>
         )) : <div className="agenda-empty">{workspace.loading ? "Sincronizando agenda..." : "Nenhuma partida programada."}</div>}
       </section>
-      {showPresets && <PresetPanel presets={presets} setPresets={setPresets} onClose={() => setShowPresets(false)} />}
-      {modal && <AgendaModal entry={modal.entry} mode={modal.mode} presets={presets} defaultDate={defaultNewDate} suggestTimeForDate={suggestTimeForDate} onClose={() => setModal(null)} logoForOpponent={(name) => { const logo = matchingLogo(workspace.logos, name); return logo?.storage_path ? workspace.assetUrl(logo.storage_path) : catalogLogo(name); }} onSave={(payload, mode) => void run(async () => { await workspace.saveAgenda(payload, mode, modal.entry?.db); setModal(null); })} />}
+      {showPresets && <PresetPanel presets={presets} setPresets={setPresets} roster={workspace.players} assetUrl={workspace.assetUrl} onClose={() => setShowPresets(false)} />}
+      {modal && <AgendaModal entry={modal.entry} mode={modal.mode} presets={presets} roster={workspace.players} assetUrl={workspace.assetUrl} defaultDate={defaultNewDate} suggestTimeForDate={suggestTimeForDate} onClose={() => setModal(null)} logoForOpponent={(name) => { const logo = matchingLogo(workspace.logos, name); return logo?.storage_path ? workspace.assetUrl(logo.storage_path) : catalogLogo(name); }} onSave={(payload, mode) => void run(async () => { await workspace.saveAgenda(payload, mode, modal.entry?.db); setModal(null); })} />}
       {pendingAction && <ViewportDialog className="modal-backdrop" onMouseDown={() => setPendingAction(null)}>
         <article className="agenda-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="agenda-confirm-title" onMouseDown={(event) => event.stopPropagation()}>
           <header>
@@ -2042,7 +2061,7 @@ function SquadPageV3({ workspace, profile }) {
   const [actionMenu, setActionMenu] = useState("");
   const positions = ["GOL", "ZAG", "ALA", "VOL", "MC", "MEI", "ATA"];
   const previewUrl = useMemo(() => photo ? URL.createObjectURL(photo) : "", [photo]);
-  const currentAvatar = previewUrl || (editing?.avatar_path ? workspace.assetUrl(editing.avatar_path) : "");
+  const currentAvatar = previewUrl || (editing?.avatar_path ? workspace.assetUrl(editing.avatar_path) : editing?.external_avatar_url || "");
 
   useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
 

@@ -4,6 +4,7 @@ import {
   aliasLookup,
   dedupeImportedMatches,
   normalizeEaMatch,
+  normalizeEaMatches,
   resolvePlayerAliases,
   resultLabel,
   suggestAgendaMatch,
@@ -36,6 +37,23 @@ test("normaliza STRIX 2 x 3 POA CITY e preserva autores dos gols", () => {
   assert.equal(resultLabel(match), "DERROTA");
   assert.deepEqual(match.goalScorers, ["Obenzera", "SxntsTheAngel"]);
   assert.equal(match.performance.players.length, 3);
+});
+
+test("EA identifica o Strix pelo clubId e deduplica o mesmo match entre tipos", () => {
+  assert.equal(normalizeEaMatch({ matchId: "bad", clubs: { "999": { clubId: "999", name: "Outro", goals: 2 } } }), null);
+  const base = {
+    matchId: "stable-1",
+    timestamp: 1786924800,
+    clubs: {
+      "999": { clubId: "999", name: "Rival", goals: 1 },
+      "15686": { clubId: "15686", name: "Strix United", goals: 3 },
+    },
+  };
+  const rows = normalizeEaMatches([base, { ...base, players: { "15686": [{ playerId: "p1", playername: "Oben" }] } }]);
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].strixScore, 3);
+  assert.equal(rows[0].opponent, "Rival");
+  assert.equal(rows[0].performance.players.length, 1);
 });
 
 test("sugere agenda por dia, horário e adversário sem duplicar", () => {

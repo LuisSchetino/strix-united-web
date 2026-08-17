@@ -3,6 +3,9 @@ dist/
 .env
 .env.*
 .wrangler/
+.wrangler-config/
+.pnpm-store/
+.npm-cache/
 supabase/.branches/
 supabase/.temp/
 coverage/
