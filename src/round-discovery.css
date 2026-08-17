@@ -10,7 +10,7 @@
 
 .formation-slot i.has-player-photo{width:24px!important;height:24px!important;aspect-ratio:1;overflow:hidden;padding:0;border-radius:50%;background:#111419}
 .formation-slot i.has-player-photo .avatar{width:100%!important;height:100%!important;border:0!important;border-radius:50%!important}
-.formation-slot i.has-player-photo .avatar img,.formation-roster-group .avatar img{width:100%;height:100%;object-fit:cover!important;object-position:center;border-radius:50%}
+.formation-slot i.has-player-photo .avatar img,.formation-roster-group .avatar img{width:100%!important;height:100%!important;object-fit:cover!important;object-position:center;border-radius:50%}
 .formation-roster-group .avatar{overflow:hidden!important;aspect-ratio:1;border-radius:50%!important;flex-shrink:0}
 .formation-roster-group.is-improvised{margin-top:3px;padding:10px 7px 4px;border:1px solid #ffffff0a;border-radius:9px;background:#080a0c}.formation-roster-group.is-improvised h4{color:#7f8790}.formation-roster-group.is-improvised>button{border-color:#282d32;background:#0d1013;color:#c2c7cc}
 
