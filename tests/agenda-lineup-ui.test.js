@@ -18,9 +18,11 @@ test("predefinições editam em lugar e excluem com confirmação própria", asy
   assert.doesNotMatch(source.slice(source.indexOf("function PresetPanel"), source.indexOf("function Agenda(")), /window\.confirm/);
 });
 
-test("fluxo ativo de partidas oferece somente sincronização EA server-side", async () => {
+test("fluxo ativo separa descoberta EA da publicação explícita", async () => {
   const source = await readFile(new URL("../src/features/matches/MatchesPage.jsx", import.meta.url), "utf8");
+  assert.match(source, /method: "GET"/);
   assert.match(source, /method: "POST"/);
-  assert.match(source, /ATUALIZAR JOGOS DA EA/);
+  assert.match(source, /BUSCAR NA EA/);
+  assert.match(source, /PUBLICAR JOGO/);
   assert.doesNotMatch(source, /BUSCAR PELO MEU PC|127\.0\.0\.1:8789/);
 });

@@ -135,6 +135,7 @@ export function normalizeEaMatch(raw, index = 0, clubId = EA_CLUB_ID) {
     strixScore: clubGoals(strix),
     opponentScore: clubGoals(opponent),
     competition: "Amistoso",
+    matchType: raw?._fc27MatchType || raw?.matchType || "friendlyMatch",
     agendaId: "",
     performance,
     goalScorers,

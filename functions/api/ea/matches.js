@@ -68,6 +68,15 @@ async function loadAgenda(env) {
   return await supabaseJson(env, "/rest/v1/agenda_matches?select=id,opponent_name,scheduled_at,status&status=in.(scheduled,live)&order=scheduled_at.asc", { method: "GET" }) || [];
 }
 
+async function loadImportedMatchIds(env) {
+  const rows = await supabaseJson(
+    env,
+    "/rest/v1/club_matches?select=external_match_id&external_match_id=not.is.null",
+    { method: "GET" },
+  ) || [];
+  return new Set(rows.map((row) => String(row.external_match_id || "")).filter(Boolean));
+}
+
 function withAgendaSuggestions(matches, agenda) {
   const suggestions = suggestAgendaMatches(matches, agenda);
   return matches.map((match) => {
@@ -105,7 +114,23 @@ export async function onRequestGet({ request, env }) {
   if (session.error) return session.error;
   try {
     const result = await fetchAllMatches(env);
-    return json({ matches: result.raw, fetched_at: new Date().toISOString(), club_id: EA_CLUB_ID, duration_ms: result.durationMs, cached: result.cached });
+    const normalized = normalizeEaMatches(result.raw, EA_CLUB_ID);
+    const [agenda, importedIds] = await Promise.all([
+      loadAgenda(env),
+      loadImportedMatchIds(env),
+    ]);
+    const matches = withAgendaSuggestions(normalized, agenda).map((match) => ({
+      ...match,
+      alreadyImported: importedIds.has(String(match.id)),
+    }));
+    return json({
+      ok: true,
+      matches,
+      fetched_at: new Date().toISOString(),
+      club_id: EA_CLUB_ID,
+      duration_ms: result.durationMs,
+      cached: result.cached,
+    });
   } catch (error) { return eaError(error); }
 }
 
@@ -114,17 +139,22 @@ export async function onRequestPost({ request, env }) {
   if (session.error) return session.error;
   const startedAt = Date.now();
   try {
-    const result = await fetchAllMatches(env);
-    const normalized = normalizeEaMatches(result.raw, EA_CLUB_ID);
-    const matches = withAgendaSuggestions(normalized, await loadAgenda(env));
+    const body = await request.json().catch(() => null);
+    const submitted = Array.isArray(body?.matches) ? body.matches : [];
+    const matches = [...new Map(submitted
+      .filter((match) => match && String(match.id || "").trim())
+      .map((match) => [String(match.id), match])).values()];
+    if (!matches.length || matches.length > 10) {
+      return json({ error: "invalid_publish_payload", message: "Selecione de 1 a 10 partidas revisadas para publicar." }, 400);
+    }
     const report = await supabaseJson(env, "/rest/v1/rpc/sync_fc27_ea_matches", {
       method: "POST",
       body: JSON.stringify({ p_matches: matches, p_actor: session.user.id }),
     });
-    console.log(JSON.stringify({ event: "fc27_ea_sync", club_id: EA_CLUB_ID, fetched: result.raw.length, normalized: matches.length, inserted: report?.inserted || 0, updated: report?.updated || 0, skipped: report?.skipped || 0, duration_ms: Date.now() - startedAt }));
-    return json({ ok: true, club_id: EA_CLUB_ID, fetched_at: new Date().toISOString(), duration_ms: Date.now() - startedAt, fetched: result.raw.length, normalized: matches.length, ...report });
+    console.log(JSON.stringify({ event: "fc27_ea_publish", club_id: EA_CLUB_ID, selected: matches.length, inserted: report?.inserted || 0, updated: report?.updated || 0, skipped: report?.skipped || 0, duration_ms: Date.now() - startedAt }));
+    return json({ ok: true, club_id: EA_CLUB_ID, published_at: new Date().toISOString(), duration_ms: Date.now() - startedAt, selected: matches.length, ...report });
   } catch (error) {
-    console.error(JSON.stringify({ event: "fc27_ea_sync_error", club_id: EA_CLUB_ID, message: error?.message, duration_ms: Date.now() - startedAt }));
+    console.error(JSON.stringify({ event: "fc27_ea_publish_error", club_id: EA_CLUB_ID, message: error?.message, duration_ms: Date.now() - startedAt }));
     return eaError(error);
   }
 }

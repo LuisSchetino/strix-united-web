@@ -26,6 +26,7 @@ import "../../partidas.css";
 const canManageMatches = (profile) =>
   ["diretoria", "dev"].includes(profile?.access_tier);
 const safeRows = (value) => Array.isArray(value) ? value : [];
+const matchTypeLabel = (value) => ({ friendlyMatch: "AMISTOSO EA", leagueMatch: "LIGA EA", playoffMatch: "PLAYOFF EA" })[value] || String(value || "PARTIDA EA").toUpperCase();
 const formatDate = (value) =>
   new Intl.DateTimeFormat("pt-BR", {
     dateStyle: "short",
@@ -265,12 +266,13 @@ function ReviewStep({
         {matches.map((match) => (
           <article
             key={match.id}
-            className={selected.has(match.id) ? "selected" : ""}
+            className={`${selected.has(match.id) ? "selected" : ""} ${match.alreadyImported ? "is-imported" : ""}`}
           >
             <label className="match-review-check">
               <input
                 type="checkbox"
                 checked={selected.has(match.id)}
+                disabled={match.alreadyImported}
                 onChange={() => toggle(match.id)}
               />
               <span aria-hidden="true">✓</span>
@@ -286,13 +288,14 @@ function ReviewStep({
               </strong>
               <b>{match.opponent}</b>
               <em className={resultLabel(match).toLowerCase()}>
-                {resultLabel(match)}
+                {match.alreadyImported ? "JÁ IMPORTADO" : resultLabel(match)}
               </em>
             </div>
             <p>
               {match.goalScorers?.length
                 ? `Gols: ${match.goalScorers.join(", ")}`
                 : "Gols do Strix não identificados"}
+              <small>{matchTypeLabel(match.matchType)}</small>
             </p>
             <button
               type="button"
@@ -440,6 +443,10 @@ function ResolveStep({
                           </option>
                         ))}
                     </select>
+                    <span className="player-event-fields">
+                      <span>GOLS<input aria-label={`Gols de ${player.eaName}`} type="number" min="0" value={Number(player.goals || 0)} onChange={(event) => patchMatch(match.id, { performance: { ...match.performance, players: match.performance.players.map((row) => row.id === player.id ? { ...row, goals: Number(event.target.value) } : row) } })} /></span>
+                      <span>ASSIST.<input aria-label={`Assistências de ${player.eaName}`} type="number" min="0" value={Number(player.assists || 0)} onChange={(event) => patchMatch(match.id, { performance: { ...match.performance, players: match.performance.players.map((row) => row.id === player.id ? { ...row, assists: Number(event.target.value) } : row) } })} /></span>
+                    </span>
                   </label>
                 );
               })}
@@ -547,7 +554,7 @@ function SummaryStep({
           disabled={!validation.valid || saving}
           onClick={confirm}
         >
-          <RollingLabel>{saving ? "IMPORTANDO…" : "CONFIRMAR IMPORTAÇÃO"}</RollingLabel>
+          <RollingLabel>{saving ? "PUBLICANDO…" : matches.length === 1 ? "PUBLICAR JOGO" : "PUBLICAR JOGOS"}</RollingLabel>
         </button>
       </footer>
     </section>
@@ -831,10 +838,9 @@ export function MatchesPage({ profile, workspace, client }) {
     try {
       const { data } = await client.auth.getSession();
       const response = await fetch("/api/ea/matches", {
-        method: "POST",
+        method: "GET",
         headers: {
           authorization: `Bearer ${data.session?.access_token || ""}`,
-          "content-type": "application/json",
         },
         cache: "no-store",
       });
@@ -843,14 +849,14 @@ export function MatchesPage({ profile, workspace, client }) {
         throw new Error(
           payload.message || payload.error || "A fonte não retornou partidas.",
         );
-      await workspace.refresh();
-      const changed = Number(payload.inserted || 0) + Number(payload.updated || 0);
-      setFound([]);
+      const candidates = safeRows(payload.matches);
+      setFound(candidates);
       setSelected(new Set());
-      setAliases({});
-      setEmptySource(changed ? "" : "A EA respondeu normalmente; o histórico já estava atualizado.");
-      setSuccess(`${payload.inserted || 0} nova(s), ${payload.updated || 0} atualizada(s) e ${payload.skipped || 0} ignorada(s).`);
-      notify("Jogos da EA atualizados.");
+      setAliases(resolvePlayerAliases(candidates, workspace.players, workspace.aliases));
+      setStep("review");
+      setEmptySource(candidates.length ? "" : "A EA respondeu normalmente, mas não retornou partidas recentes.");
+      setSuccess(candidates.length ? `${candidates.length} partida${candidates.length === 1 ? " encontrada" : "s encontradas"}. Nenhuma alteração foi feita no histórico.` : "");
+      notify(candidates.length ? "Partidas disponíveis para revisão." : "Nenhuma partida encontrada.");
       setMetrics((current) => ({
         ...current,
         totalMs: Math.round(performance.now() - started),
@@ -894,16 +900,27 @@ export function MatchesPage({ profile, workspace, client }) {
           return { eaName: rawName, playerId };
         });
       await workspace.savePlayerAliases(aliasRows, false);
-      await workspace.upsertClubMatches(chosen);
+      const { data } = await client.auth.getSession();
+      const response = await fetch("/api/ea/matches", {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${data.session?.access_token || ""}`,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ matches: chosen }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.message || payload.error || "Não foi possível publicar a partida.");
+      await workspace.refresh();
       setFound([]);
       setSelected(new Set());
       setAliases({});
       setEditing(null);
       setStep("review");
       setSuccess(
-        `${importedCount} partida${importedCount === 1 ? " importada" : "s importadas"} com sucesso. O histórico foi atualizado abaixo.`,
+        `${importedCount} partida${importedCount === 1 ? " publicada" : "s publicadas"} com sucesso. O histórico foi atualizado abaixo.`,
       );
-      notify(`${importedCount} partida${importedCount === 1 ? " importada" : "s importadas"}.`);
+      notify(`${importedCount} partida${importedCount === 1 ? " publicada" : "s publicadas"}.`);
     } catch (saveError) {
       try {
         await workspace.refresh();
@@ -973,7 +990,7 @@ export function MatchesPage({ profile, workspace, client }) {
               onClick={() => void load()}
               disabled={Boolean(loadingSource)}
             >
-              {loadingSource === "ea" ? "SINCRONIZANDO EA…" : "ATUALIZAR JOGOS DA EA"}
+              {loadingSource === "ea" ? "BUSCANDO NA EA…" : "BUSCAR NA EA"}
             </button>
             <button className="secondary" onClick={addManual}>
               ADICIONAR MANUAL
@@ -1014,7 +1031,7 @@ export function MatchesPage({ profile, workspace, client }) {
               return next;
             })
           }
-          selectAll={() => setSelected(new Set(found.map((match) => match.id)))}
+          selectAll={() => setSelected(new Set(found.filter((match) => !match.alreadyImported).map((match) => match.id)))}
           clearSelection={() => setSelected(new Set())}
           edit={setEditing}
           next={() => setStep("resolve")}

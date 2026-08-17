@@ -368,6 +368,8 @@ function LibraryItemModal({ client, profile, close, refresh }) {
 
 export function LibraryPage({ client, profile }) {
   const [tab, setTab] = useState("plays");
+  const [playFilter, setPlayFilter] = useState("all");
+  const [filterOpen, setFilterOpen] = useState(false);
   const [items, setItems] = useState([]);
   const [progress, setProgress] = useState([]);
   const [selected, setSelected] = useState(null);
@@ -450,9 +452,22 @@ export function LibraryPage({ client, profile }) {
     ["reviews", "REVIEWS"],
     ...(canTrack ? [["tracking", "ACOMPANHAMENTO"]] : []),
   ];
+  const playFilters = [
+    ["all", "Todas"],
+    ["saida de bola", "Saída de bola"],
+    ["pressao", "Pressão"],
+    ["defesa", "Defesa"],
+    ["movimentacao", "Movimentação"],
+  ];
+  const normalizeFilter = (value) => String(value || "").toLocaleLowerCase("pt-BR").normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
   const visibleItems = items.filter((item) =>
     tab === "plays"
-      ? item.category === "jogada"
+      ? item.category === "jogada" && (playFilter === "all" || (() => {
+          const tags = asArray(item.tags).map(normalizeFilter);
+          return playFilter === "saida de bola"
+            ? tags.some((tag) => tag === "saida" || tag === "saida de bola")
+            : tags.includes(playFilter);
+        })())
       : tab === "reviews"
         ? item.category === "review"
         : true,
@@ -492,6 +507,16 @@ export function LibraryPage({ client, profile }) {
       {loading ? (
         <div className="library-empty">Carregando Biblioteca…</div>
       ) : tab !== "tracking" ? (
+        <>
+        {tab === "plays" && <div className="library-play-filter">
+          <span>FILTRAR JOGADAS</span>
+          <button type="button" aria-haspopup="listbox" aria-expanded={filterOpen} onClick={() => setFilterOpen((value) => !value)}>
+            {playFilters.find(([value]) => value === playFilter)?.[1]} <i aria-hidden="true">⌄</i>
+          </button>
+          {filterOpen && <div className="library-play-filter-menu" role="listbox" aria-label="Categoria da jogada">
+            {playFilters.map(([value, label]) => <button type="button" role="option" aria-selected={playFilter === value} className={playFilter === value ? "selected" : ""} key={value} onClick={() => { setPlayFilter(value); setFilterOpen(false); }}>{label}</button>)}
+          </div>}
+        </div>}
         <section className="library-grid">
           {visibleItems.length ? (
             visibleItems.map((item) => {
@@ -539,6 +564,7 @@ export function LibraryPage({ client, profile }) {
             </div>
           )}
         </section>
+        </>
       ) : (
         <section className="library-tracking">
           <header>

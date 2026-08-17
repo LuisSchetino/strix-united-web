@@ -23,6 +23,7 @@ import { GameDayCanvas } from "./gameday/GameDayCanvas.jsx";
 import { GameDayEditor } from "./gameday/GameDayEditor.jsx";
 import { createDefaultProject } from "./gameday/defaults.js";
 import "./fc27-brand.css";
+import "./round-discovery.css";
 
 const now = new Date("2026-08-08T22:10:00-03:00").toISOString();
 const profile = { user_id: "visual", access_tier: "dev", display_name: "Visual QA" };

@@ -15,6 +15,7 @@ import "./agenda-sync.css";
 import "./fc27-data.css";
 import "./fc27-fixes.css";
 import { nextAgendaSlot } from "./features/agenda/agenda-slots.js";
+import { activeAgendaMatches, nextAgendaMatches } from "./features/agenda/agenda-time.js";
 import { resolveAgendaTeamIdentity } from "./features/teams/team-identity.js";
 import { notify, RollingLabel, ToastViewport } from "./ui/motion/motion.jsx";
 import { ClubLogo } from "./ui/ClubLogo.jsx";
@@ -22,6 +23,7 @@ import { STRIX_BRAND } from "./brand.js";
 import { RastroSignature } from "./ui/RastroBrand.jsx";
 import "./features/squad-cards.css";
 import "./fc27-brand.css";
+import "./round-discovery.css";
 
 const GameDayEditor = lazy(() => import("./gameday/GameDayEditor.jsx").then((module) => ({ default: module.GameDayEditor })));
 const MatchesPage = lazy(() => import("./features/matches/MatchesPage.jsx").then((module) => ({ default: module.MatchesPage })));
@@ -86,6 +88,11 @@ function Icon({ name, size = 20 }) {
 // Dialogs must live at the document root. Several pages animate their content,
 // which otherwise turns a fixed backdrop into a clipped child of that page.
 function ViewportDialog({ className = "modal-backdrop", children, ...props }) {
+  useLayoutEffect(() => {
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = previous; };
+  }, []);
   return createPortal(
     <div className={className} {...props}>{children}</div>,
     document.body,
@@ -1126,9 +1133,7 @@ function Central({ openPlayer }) {
 }
 const agendaDraftKey = "strix-fc27-agenda-draft";
 function CentralLive({ workspace, navigate }) {
-  const upcoming = useMemo(() => workspace.agenda
-    .filter((item) => !["cancelled", "completed"].includes(item.status))
-    .sort((left, right) => new Date(left.scheduled_at) - new Date(right.scheduled_at)), [workspace.agenda]);
+  const upcoming = useMemo(() => nextAgendaMatches(workspace.agenda), [workspace.agenda]);
   const next = upcoming[0];
   const nextLogo = next?.resolved_opponent_logo_url || (next?.opponent_logos?.storage_path ? workspace.assetUrl(next.opponent_logos.storage_path) : "");
   return (
@@ -1147,7 +1152,7 @@ function CentralLive({ workspace, navigate }) {
       <div className="content-grid">
         <section className="panel schedule">
           <header className="panel-heading"><div><span>AGENDA DA NOITE</span><h2>Próximas partidas</h2></div><button onClick={() => navigate("agenda")}>Ver agenda <Icon name="arrow" size={15} /></button></header>
-          {upcoming.length ? upcoming.slice(0, 5).map((game, index) => <GameRowLive key={game.id} game={game} index={index} workspace={workspace} />) : <div className="agenda-empty">Nenhuma partida programada.</div>}
+          {upcoming.length ? <div className="upcoming-games-track">{upcoming.slice(0, 5).map((game, index) => <GameRowLive key={game.id} game={game} index={index} workspace={workspace} />)}</div> : <div className="agenda-empty">Nenhuma partida atual ou futura programada.</div>}
         </section>
         <section className="panel form-panel">
           <header className="panel-heading"><div><span>FORMAÇÃO PROVÁVEL</span><h2>3-1-4-2</h2></div><button onClick={() => navigate("agenda")}>Editar</button></header>
@@ -1159,7 +1164,12 @@ function CentralLive({ workspace, navigate }) {
 }
 function GameRowLive({ game, index, workspace }) {
   const logo = game.resolved_opponent_logo_url || (game.opponent_logos?.storage_path ? workspace.assetUrl(game.opponent_logos.storage_path) : "");
-  return <article className="match-row"><time>{timePart(game.scheduled_at)}</time><Avatar name={game.opponent_name} logo={logo} /><div><span>STRIX UNITED VS</span><b>{game.opponent_name}</b><small>{game.competition_name}</small></div><em>{index === 0 ? "PRÓXIMO" : "HOJE"}</em></article>;
+  const status = game.temporal_status === "today" ? "HOJE" : index === 0 ? "PRÓXIMO" : "AGENDADO";
+  return <article className="upcoming-game-card">
+    <header><span>{game.round_label || game.competition_name || "PARTIDA"}</span><time>{datePart(game.scheduled_at)} · {timePart(game.scheduled_at)}</time></header>
+    <div className="upcoming-game-versus"><div><b>STRIX UNITED</b><Crest /></div><i>×</i><div><Avatar name={game.opponent_name} logo={logo} /><b>{game.opponent_name}</b></div></div>
+    <footer><span>{game.competition_name || "AMISTOSO"}</span><em>{status}</em></footer>
+  </article>;
 }
 const defaultAgendaForm = {
   opponent: "",
@@ -1202,17 +1212,21 @@ function FormationPicker({ lineup, onChange, compact = false, readOnly = false, 
   const desiredPosition = slot === null ? "" : lineupSlots[slot];
   const natural = activeRoster.filter((player) => (player.positions || []).includes(desiredPosition));
   const improvised = activeRoster.filter((player) => !(player.positions || []).includes(desiredPosition));
+  const avatarFor = (player) => player?.avatar_path ? assetUrl(player.avatar_path) : player?.external_avatar_url || "";
+  const lineupPlayer = (name) => activeRoster.find((player) => normalizeTeamName(player.display_name) === normalizeTeamName(name));
   const playerButton = (player) => (
     <button type="button" key={player.id || player.display_name} onClick={() => choose(player)}>
       <b>{player.member_type === "teste" ? "TESTE" : "ELENCO"}</b>
-      <Avatar name={player.display_name} logo={player.avatar_path ? assetUrl(player.avatar_path) : player.external_avatar_url || ""} />
+      <Avatar name={player.display_name} logo={avatarFor(player)} kind="photo" />
       <span>{player.display_name}<small>{(player.positions || []).join(" · ") || "SEM POSIÇÃO"}</small></span>
     </button>
   );
   return (
     <section className={`formation-picker ${compact ? "is-compact" : ""} ${readOnly ? "is-read-only" : ""}`}>
       <div className="formation-picker-field">
-        {lineupSlots.map((position, index) => (
+        {lineupSlots.map((position, index) => {
+          const player = lineupPlayer(lineup[index]);
+          return (
           <button
             type="button"
             className={`formation-slot slot-${index}`}
@@ -1221,11 +1235,12 @@ function FormationPicker({ lineup, onChange, compact = false, readOnly = false, 
             tabIndex={readOnly ? -1 : 0}
             aria-disabled={readOnly}
           >
-            <i>{lineup[index] ? lineup[index].slice(0, 1) : "+"}</i>
+            <i className={player ? "has-player-photo" : ""}>{lineup[index] ? <Avatar name={lineup[index]} logo={avatarFor(player)} kind="photo" /> : "+"}</i>
             <b>{lineup[index] || "Livre"}</b>
             <small>{position}</small>
           </button>
-        ))}
+          );
+        })}
       </div>
       {slot !== null && (
         <div
@@ -1380,6 +1395,7 @@ function AgendaModal({ entry, mode = "new", presets, roster = [], assetUrl, onCl
           </button>
         </header>
         <form onSubmit={(event) => submit(event)}>
+          <div className="agenda-modal-scroll">
           {!edit && queuedGames.length > 0 && (
             <section className="modal-game-queue" aria-label="Jogos adicionados neste envio">
               {queuedGames.map((game, index) => (
@@ -1531,6 +1547,7 @@ function AgendaModal({ entry, mode = "new", presets, roster = [], assetUrl, onCl
               )}
             </>
           )}
+          </div>
           <footer>
             <button type="button" className="secondary" onClick={onClose}>
               {readOnly ? "FECHAR" : "CANCELAR"}
@@ -1904,7 +1921,7 @@ function AgendaLive({ navigate, workspace }) {
       document.removeEventListener("pointerdown", closeMenu);
     };
   }, [actions]);
-  const items = useMemo(() => workspace.agenda.map((db) => ({
+  const items = useMemo(() => activeAgendaMatches(workspace.agenda).map((db) => ({
     db,
     id: db.id,
     date: datePart(db.scheduled_at),
@@ -1913,15 +1930,14 @@ function AgendaLive({ navigate, workspace }) {
     competition: db.competition_name,
     initials: initialsOf(db.opponent_name),
     logo: db.resolved_opponent_logo_url || (db.opponent_logos?.storage_path ? workspace.assetUrl(db.opponent_logos.storage_path) : ""),
-    status: db.status === "cancelled" ? "CANCELADO" : db.status === "live" ? "EM BREVE" : db.status === "completed" ? "JOGADO" : "AGENDADO",
+    status: db.status === "cancelled" ? "CANCELADO" : db.status === "live" ? "EM BREVE" : db.status === "completed" ? "JOGADO" : db.temporal_status === "overdue" ? "ATRASADO" : db.temporal_status === "today" ? "HOJE" : "AGENDADO",
     cancelled: db.status === "cancelled",
     previousOpponent: db.previous_opponent_name,
     lineup: db.lineup || [],
   })), [workspace.agenda, workspace.logos]);
-  const todayKey = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
   const visible = items.filter((item) => tab === "today"
-    ? item.db.scheduled_at.slice(0, 10) <= todayKey
-    : item.db.scheduled_at.slice(0, 10) > todayKey
+    ? ["today", "overdue"].includes(item.db.temporal_status)
+    : item.db.temporal_status === "upcoming"
   ).sort((left, right) => new Date(left.db.scheduled_at) - new Date(right.db.scheduled_at));
   const defaultNewDate = datePart(new Date());
   const suggestTimeForDate = (date, queued = []) => nextAgendaSlot(
@@ -1943,7 +1959,7 @@ function AgendaLive({ navigate, workspace }) {
         </div>
       </header>
       <nav className="agenda-tabs">
-        <button className={tab === "today" ? "selected" : ""} onClick={() => setTab("today")}>Hoje <b>{items.filter((item) => item.db.scheduled_at.slice(0, 10) <= todayKey).length}</b></button>
+        <button className={tab === "today" ? "selected" : ""} onClick={() => setTab("today")}>Hoje <b>{items.filter((item) => ["today", "overdue"].includes(item.db.temporal_status)).length}</b></button>
         <button className={tab === "next" ? "selected" : ""} onClick={() => setTab("next")}>Próximos</button>
         <button onClick={() => navigate("partidas")}>Concluídos <Icon name="arrow" size={13} /></button>
       </nav>
