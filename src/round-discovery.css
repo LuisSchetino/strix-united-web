@@ -14,7 +14,7 @@
 .formation-roster-group .avatar{overflow:hidden!important;aspect-ratio:1;border-radius:50%!important;flex-shrink:0}
 .formation-roster-group.is-improvised{margin-top:3px;padding:10px 7px 4px;border:1px solid #ffffff0a;border-radius:9px;background:#080a0c}.formation-roster-group.is-improvised h4{color:#7f8790}.formation-roster-group.is-improvised>button{border-color:#282d32;background:#0d1013;color:#c2c7cc}
 
-.agenda-modal{overflow:hidden!important;border-color:var(--strix-border-strong)!important;background:#0b0d10!important}.agenda-modal>header{flex:0 0 auto;border-color:var(--strix-border)!important;background:#101318}
+.agenda-modal{max-height:calc(100dvh - 116px)!important;overflow:hidden!important;border-color:var(--strix-border-strong)!important;background:#0b0d10!important}.agenda-modal>header{flex:0 0 auto;border-color:var(--strix-border)!important;background:#101318}
 .agenda-modal>form{display:flex!important;flex:1 1 auto!important;min-height:0!important;overflow:hidden!important}.agenda-modal-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable}
 .agenda-modal>form>footer{position:static!important;z-index:3;flex:0 0 auto!important;margin:0!important;border-top:1px solid var(--strix-border)!important;border-bottom:0!important;background:#0b0d10!important}.agenda-modal-body,.modal-lineup,.modal-game-queue{background-color:#0b0d10;border-color:var(--strix-border)!important}
 
