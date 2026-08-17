@@ -821,7 +821,7 @@ export function MatchesPage({ profile, workspace, client }) {
     setError("");
     setSuccess("");
     setEmptySource("");
-    setMetrics({ feedbackMs: null, totalMs: null, requests: 1 });
+    setMetrics({ feedbackMs: null, totalMs: null, requests: 1, status: "loading" });
     requestAnimationFrame(() =>
       setMetrics((current) => ({
         ...current,
@@ -854,11 +854,17 @@ export function MatchesPage({ profile, workspace, client }) {
       setMetrics((current) => ({
         ...current,
         totalMs: Math.round(performance.now() - started),
+        status: "success",
       }));
     } catch (requestError) {
       setError(
         requestError.message || "Não foi possível consultar as partidas.",
       );
+      setMetrics((current) => ({
+        ...current,
+        totalMs: Math.round(performance.now() - started),
+        status: "error",
+      }));
     } finally {
       setLoadingSource("");
     }
@@ -979,8 +985,9 @@ export function MatchesPage({ profile, workspace, client }) {
         <div className="performance-note" aria-live="polite">
           <span>Resposta visual: {metrics.feedbackMs ?? "…"} ms</span>
           <span>
-            Consulta: {metrics.totalMs ?? "em andamento"}
-            {metrics.totalMs ? " ms" : ""}
+            Consulta: {metrics.status === "error" ? "falhou em " : ""}
+            {metrics.totalMs ?? "em andamento"}
+            {metrics.totalMs !== null ? " ms" : ""}
           </span>
           <span>{metrics.requests} request</span>
         </div>
