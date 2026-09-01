@@ -16,7 +16,8 @@ import "./fc27-data.css";
 import "./fc27-fixes.css";
 import { nextAgendaSlot } from "./features/agenda/agenda-slots.js";
 import { activeAgendaMatches, nextAgendaMatches } from "./features/agenda/agenda-time.js";
-import { resolveAgendaTeamIdentity } from "./features/teams/team-identity.js";
+import { agendaStandingComparison } from "./features/agenda/agenda-standings.js";
+import { resolveAgendaTeamIdentity, resolveTeamIdentity } from "./features/teams/team-identity.js";
 import { notify, RollingLabel, ToastViewport } from "./ui/motion/motion.jsx";
 import { ClubLogo } from "./ui/ClubLogo.jsx";
 import { STRIX_BRAND } from "./brand.js";
@@ -556,13 +557,36 @@ function useFc27Workspace(client, profile) {
     const optionalResults = [competitionsResult, editionsResult, sourcesResult, fixturesResult, teamsResult, flagsResult];
     const isMissingOptionalSchema = (error) => ["42P01", "PGRST205"].includes(error?.code);
     const optionalFailure = optionalResults.find((result) => result.error && !isMissingOptionalSchema(result.error))?.error;
+    const publicLogos = (logosResult.data || []).map((logo) => ({
+      ...logo,
+      public_url: logo.storage_path ? assetUrl(logo.storage_path) : "",
+    }));
+    const historyIdentities = (matchesResult.data || []).map((match) => ({
+      name: match.opponent_name,
+      logo: match.opponent_logos?.storage_path ? assetUrl(match.opponent_logos.storage_path) : "",
+    }));
+    const resolvedMatches = (matchesResult.data || []).map((match) => {
+      const identity = resolveTeamIdentity({
+        name: match.opponent_name,
+        directLogo: match.opponent_logos?.storage_path ? assetUrl(match.opponent_logos.storage_path) : "",
+        teams: teamsResult.data || [],
+        logos: publicLogos,
+        history: historyIdentities,
+      });
+      return {
+        ...match,
+        resolved_opponent_logo_url: identity.logo,
+        identity_source: identity.source,
+      };
+    });
     setState({
       loading: false,
       agenda: (agendaResult.data || []).map((match) => {
         const identity = resolveAgendaTeamIdentity(match, {
           fixtures: fixturesResult.data || [],
           teams: teamsResult.data || [],
-          logos: logosResult.data || [],
+          logos: publicLogos,
+          history: historyIdentities,
         });
         return {
           ...match,
@@ -576,7 +600,7 @@ function useFc27Workspace(client, profile) {
       logos: logosResult.data || [],
       players: playersResult.data || [],
       aliases: aliasesResult.data || [],
-      matches: matchesResult.data || [],
+      matches: resolvedMatches,
       competitions: competitionsResult.data || [],
       competitionEditions: editionsResult.data || [],
       competitionSources: sourcesResult.data || [],
@@ -1168,7 +1192,7 @@ function GameRowLive({ game, index, workspace }) {
   return <article className="upcoming-game-card">
     <header><span>{game.round_label || game.competition_name || "PARTIDA"}</span><time>{datePart(game.scheduled_at)} · {timePart(game.scheduled_at)}</time></header>
     <div className="upcoming-game-versus"><div><b>STRIX UNITED</b><Crest /></div><i>×</i><div><Avatar name={game.opponent_name} logo={logo} /><b>{game.opponent_name}</b></div></div>
-    <footer><span>{game.competition_name || "AMISTOSO"}</span><em>{status}</em></footer>
+    <footer><em>{status}</em></footer>
   </article>;
 }
 const defaultAgendaForm = {
@@ -1267,7 +1291,17 @@ function FormationPicker({ lineup, onChange, compact = false, readOnly = false, 
     </section>
   );
 }
-function AgendaModal({ entry, mode = "new", presets, roster = [], assetUrl, onClose, onSave, logoForOpponent = catalogLogo, defaultDate = defaultAgendaForm.date, suggestTimeForDate }) {
+function StandingTeam({ row, label }) {
+  const metrics = [
+    ["J", row.played], ["PTS", row.points], ["V", row.wins], ["E", row.draws], ["D", row.losses],
+    ["GP", row.goalsFor], ["GC", row.goalsAgainst], ["SG", row.goalDifference],
+  ].filter(([, value]) => value !== null && value !== undefined);
+  return <article className="agenda-standing-team">
+    <strong>{row.position ? `${row.position}º` : "—"}</strong>
+    <div><small>{label}</small><b>{row.team}</b><dl>{metrics.map(([key, value]) => <div key={key}><dt>{key}</dt><dd>{key === "SG" && Number(value) > 0 ? `+${value}` : value}</dd></div>)}</dl></div>
+  </article>;
+}
+function AgendaModal({ entry, mode = "new", presets, roster = [], assetUrl, standings, onClose, onSave, logoForOpponent = catalogLogo, defaultDate = defaultAgendaForm.date, suggestTimeForDate }) {
   const edit = Boolean(entry);
   const [form, setForm] = useState(() => {
     const saved = entry
@@ -1412,11 +1446,10 @@ function AgendaModal({ entry, mode = "new", presets, roster = [], assetUrl, onCl
             </section>
           )}
           <div className="agenda-modal-body">
-            {readOnly ? <section className="agenda-view-info" aria-label="Informações da partida">
-              <div><small>ADVERSÁRIO</small><strong>{form.opponent}</strong></div>
-              <div><small>COMPETIÇÃO</small><strong>{form.competition}</strong></div>
-              <div><small>DATA</small><strong>{form.date}</strong></div>
-              <div><small>HORÁRIO</small><strong>{form.time}</strong></div>
+            {readOnly ? <section className="agenda-view-matchup" aria-label="Confronto da partida">
+              <div className="agenda-view-clubs"><div><Crest /><b>STRIX UNITED</b></div><strong>VS</strong><div><Avatar name={form.opponent || "?"} logo={form.logo} /><b>{form.opponent}</b></div></div>
+              <time>{form.date} · {form.time}</time>
+              <small>{form.competition}</small>
             </section> : <div className="agenda-form">
               {swap && (
                 <div className="swap-origin">
@@ -1504,19 +1537,12 @@ function AgendaModal({ entry, mode = "new", presets, roster = [], assetUrl, onCl
                 </span>
               </label>
             </div>}
-            <aside className="match-preview">
-              <span>PREVIEW DA AGENDA</span>
-              <div>
-                <Crest />
-                <b>VS</b>
-                <Avatar name={form.opponent || "?"} logo={form.logo} />
-              </div>
-              <strong>{form.opponent || "ADVERSÁRIO"}</strong>
-              <small>
-                {form.date} · {form.time}
-              </small>
-              <em>{form.competition}</em>
-            </aside>
+            {readOnly ? <aside className="agenda-standing-compare">
+              <header><span>CLASSIFICAÇÃO</span><small>{standings?.competition || form.competition}</small></header>
+              {standings?.available ? <div><StandingTeam row={standings.strix} label="STRIX"/><StandingTeam row={standings.opponent} label="ADVERSÁRIO"/></div> : <p>Sem classificação disponível para esta partida.</p>}
+            </aside> : <aside className="match-preview">
+              <span>PREVIEW DA AGENDA</span><div><Crest /><b>VS</b><Avatar name={form.opponent || "?"} logo={form.logo} /></div><strong>{form.opponent || "ADVERSÁRIO"}</strong><small>{form.date} · {form.time}</small><em>{form.competition}</em>
+            </aside>}
           </div>
           <section className="modal-lineup">
             <header>
@@ -2009,7 +2035,7 @@ function AgendaLive({ navigate, workspace }) {
         )) : <div className="agenda-empty">{workspace.loading ? "Sincronizando agenda..." : "Nenhuma partida programada."}</div>}
       </section>
       {showPresets && <PresetPanel presets={presets} setPresets={setPresets} roster={workspace.players} assetUrl={workspace.assetUrl} onClose={() => setShowPresets(false)} />}
-      {modal && <AgendaModal entry={modal.entry} mode={modal.mode} presets={presets} roster={workspace.players} assetUrl={workspace.assetUrl} defaultDate={defaultNewDate} suggestTimeForDate={suggestTimeForDate} onClose={() => setModal(null)} logoForOpponent={(name) => { const logo = matchingLogo(workspace.logos, name); return logo?.storage_path ? workspace.assetUrl(logo.storage_path) : catalogLogo(name); }} onSave={(payload, mode) => void run(async () => { await workspace.saveAgenda(payload, mode, modal.entry?.db); setModal(null); })} />}
+      {modal && <AgendaModal entry={modal.entry} mode={modal.mode} presets={presets} roster={workspace.players} assetUrl={workspace.assetUrl} standings={agendaStandingComparison(modal.entry?.db, workspace.competitionSources, workspace.competitionTeams)} defaultDate={defaultNewDate} suggestTimeForDate={suggestTimeForDate} onClose={() => setModal(null)} logoForOpponent={(name) => { const logo = matchingLogo(workspace.logos, name); return logo?.storage_path ? workspace.assetUrl(logo.storage_path) : catalogLogo(name); }} onSave={(payload, mode) => void run(async () => { await workspace.saveAgenda(payload, mode, modal.entry?.db); setModal(null); })} />}
       {pendingAction && <ViewportDialog className="modal-backdrop" onMouseDown={() => setPendingAction(null)}>
         <article className="agenda-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="agenda-confirm-title" onMouseDown={(event) => event.stopPropagation()}>
           <header>

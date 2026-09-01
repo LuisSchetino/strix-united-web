@@ -275,7 +275,7 @@ function ReviewStep({
                 disabled={match.alreadyImported}
                 onChange={() => toggle(match.id)}
               />
-              <span aria-hidden="true">✓</span>
+              <span aria-hidden="true" />
             </label>
             <time>
               {match.dateLabel}
@@ -317,7 +317,7 @@ function ReviewStep({
   );
 }
 
-function ResolveStep({
+export function ResolveStep({
   matches,
   agenda,
   competitions,
@@ -424,30 +424,22 @@ function ResolveStep({
                 <small>EA × ELENCO</small>
                 <span>Associações anteriores já aparecem selecionadas.</span>
               </div>
+              <div className="alias-resolver-columns" aria-hidden="true"><span>JOGADOR EA</span><span>ELENCO</span><span>G</span><span>A</span></div>
               {(match.performance?.players || []).map((player) => {
                 const key = normalizeName(player.eaName);
                 return (
-                  <label key={`${match.id}-${key}`}>
+                  <div className="alias-player-row" key={`${match.id}-${key}`}>
                     <b>{player.eaName}</b>
-                    <span>→</span>
-                    <select
-                      value={aliases[key] ?? ""}
-                      onChange={(event) => patchAlias(key, event.target.value)}
-                    >
-                      <option value="">Fora do elenco</option>
-                      {players
-                        .filter((item) => item.is_active)
-                        .map((item) => (
-                          <option key={item.id} value={item.id}>
-                            {item.display_name}
-                          </option>
-                        ))}
-                    </select>
+                    <span className="alias-player-arrow" aria-hidden="true">→</span>
+                    <label className="alias-player-select"><select aria-label={`Jogador do elenco para ${player.eaName}`} value={aliases[key] ?? ""} onChange={(event) => patchAlias(key, event.target.value)}>
+                        <option value="">Fora do elenco</option>
+                        {players.filter((item) => item.is_active).map((item) => <option key={item.id} value={item.id}>{item.display_name}</option>)}
+                      </select></label>
                     <span className="player-event-fields">
-                      <span>GOLS<input aria-label={`Gols de ${player.eaName}`} type="number" min="0" value={Number(player.goals || 0)} onChange={(event) => patchMatch(match.id, { performance: { ...match.performance, players: match.performance.players.map((row) => row.id === player.id ? { ...row, goals: Number(event.target.value) } : row) } })} /></span>
-                      <span>ASSIST.<input aria-label={`Assistências de ${player.eaName}`} type="number" min="0" value={Number(player.assists || 0)} onChange={(event) => patchMatch(match.id, { performance: { ...match.performance, players: match.performance.players.map((row) => row.id === player.id ? { ...row, assists: Number(event.target.value) } : row) } })} /></span>
+                      <label><input aria-label={`Gols de ${player.eaName}`} type="number" min="0" max="99" inputMode="numeric" value={Number(player.goals || 0)} onChange={(event) => patchMatch(match.id, { performance: { ...match.performance, players: match.performance.players.map((row) => row.id === player.id ? { ...row, goals: Number(event.target.value) } : row) } })} /></label>
+                      <label><input aria-label={`Assistências de ${player.eaName}`} type="number" min="0" max="99" inputMode="numeric" value={Number(player.assists || 0)} onChange={(event) => patchMatch(match.id, { performance: { ...match.performance, players: match.performance.players.map((row) => row.id === player.id ? { ...row, assists: Number(event.target.value) } : row) } })} /></label>
                     </span>
-                  </label>
+                  </div>
                 );
               })}
             </section>
@@ -610,7 +602,7 @@ function MatchDetails({ match, workspace, close }) {
   const maxGoals = max("goals");
   const maxAssists = max("assists");
   const maxPasses = max("passesMade");
-  const opponentLogo = match.opponent_logos?.storage_path ? workspace.assetUrl(match.opponent_logos.storage_path) : "";
+  const opponentLogo = match.resolved_opponent_logo_url || (match.opponent_logos?.storage_path ? workspace.assetUrl(match.opponent_logos.storage_path) : "");
   return createPortal((
     <div
       className="match-flow-backdrop"
@@ -742,9 +734,9 @@ function MatchHistory({ workspace, canManage, detail, edit, remove }) {
               : Number(match.strix_score) < Number(match.opponent_score)
                 ? "DERROTA"
                 : "EMPATE";
-          const opponentLogo = match.opponent_logos?.storage_path
+          const opponentLogo = match.resolved_opponent_logo_url || (match.opponent_logos?.storage_path
             ? workspace.assetUrl(match.opponent_logos.storage_path)
-            : "";
+            : "");
           return (
             <React.Fragment key={match.id}>
             <article className="match-history-desktop">

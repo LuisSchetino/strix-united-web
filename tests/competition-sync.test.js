@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { agendaMutationForFixture, competitionFingerprint, nextSyncAt, persistCompetitionSync, saoPauloDay } from "../functions/_lib/competition-sync.js";
+import { agendaMutationForFixture, competitionFingerprint, nextSyncAt, persistCompetitionSync, saoPauloDay, selectProviderAgendaFixtures } from "../functions/_lib/competition-sync.js";
 
 const context = {
   competition: { id: "competition", name: "VPR ELITE" },
@@ -34,6 +34,17 @@ test("timezone and cadence prefer game day without browser polling", () => {
   assert.equal(saoPauloDay("2026-08-11T02:30:00Z"), "2026-08-10");
   const next = nextSyncAt([{ home_team_name: "STRIX", away_team_name: "POA", scheduled_at: "2026-08-10T18:00:00Z", status: "scheduled" }], new Date("2026-08-10T17:00:00Z"));
   assert.equal(next, "2026-08-10T17:15:00.000Z");
+});
+
+test("provider Agenda imports all upcoming Strix fixtures and preserves linked results", () => {
+  const fixtures = [
+    { id: "ctx", home_team_name: "CTX", away_team_name: "STRIX UNITED", scheduled_at: "2026-09-02T02:10:00Z", status: "scheduled" },
+    { id: "genius", home_team_name: "STRIX UNITED", away_team_name: "GENIUS ESPORTS", scheduled_at: "2026-09-04T00:40:00Z", status: "scheduled" },
+    { id: "old", home_team_name: "STRIX UNITED", away_team_name: "OLD", scheduled_at: "2026-08-20T00:40:00Z", status: "scheduled" },
+    { id: "linked", agenda_match_id: "agenda", home_team_name: "STRIX UNITED", away_team_name: "LINKED", scheduled_at: "2026-08-20T00:40:00Z", status: "completed" },
+    { id: "other", home_team_name: "A", away_team_name: "B", scheduled_at: "2026-09-04T00:40:00Z", status: "scheduled" },
+  ];
+  assert.deepEqual(selectProviderAgendaFixtures(fixtures, new Date("2026-09-01T20:00:00-03:00")).map((fixture) => fixture.id), ["ctx", "genius", "linked"]);
 });
 
 test("automatic sync persists a provider snapshot in bounded bulk requests", async () => {

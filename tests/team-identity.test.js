@@ -29,3 +29,35 @@ test("normalization removes only known sports suffixes", () => {
   assert.equal(normalizeTeamIdentityName("  POA City FC  "), "poa city");
   assert.equal(normalizeTeamIdentityName("Sport Club Recife"), "sport club recife");
 });
+
+test("safe global CCB identity reuses a logo shared across editions", () => {
+  const teams = [
+    { id: "genius-a", edition_id: "a", name: "Genius Esports", logo_url: "https://ccb.test/genius.png", metadata: {} },
+    { id: "genius-b", edition_id: "b", name: "GENIUS ESPORTS", logo_url: "https://ccb.test/genius.png", metadata: {} },
+  ];
+  const identity = resolveTeamIdentity({ name: "Genius Esports", teams });
+  assert.equal(identity.logo, "https://ccb.test/genius.png");
+  assert.equal(identity.source, "global_name");
+});
+
+test("global name fallback refuses conflicting crests", () => {
+  const teams = [
+    { id: "same-a", edition_id: "a", name: "United FC", logo_url: "https://ccb.test/a.png", metadata: {} },
+    { id: "same-b", edition_id: "b", name: "United FC", logo_url: "https://ccb.test/b.png", metadata: {} },
+  ];
+  const identity = resolveTeamIdentity({ name: "United FC", teams });
+  assert.equal(identity.logo, "");
+  assert.equal(identity.source, "fallback");
+});
+
+test("history logo is used only when previous records agree", () => {
+  const identity = resolveTeamIdentity({
+    name: "Time Histórico",
+    history: [
+      { name: "TIME HISTORICO", logo: "https://assets.test/history.png" },
+      { name: "Time Histórico FC", logo: "https://assets.test/history.png" },
+    ],
+  });
+  assert.equal(identity.logo, "https://assets.test/history.png");
+  assert.equal(identity.source, "history");
+});

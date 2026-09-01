@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { fetchCompetitionBundle } from "../../_lib/competition-providers.js";
-import { competitionFingerprint, countFixtureChanges, nextSyncAt, persistCompetitionSync, syncTodayProviderAgenda } from "../../_lib/competition-sync.js";
+import { competitionFingerprint, countFixtureChanges, nextSyncAt, persistCompetitionSync, syncProviderAgenda } from "../../_lib/competition-sync.js";
 
 const response = (body, status = 200) => new Response(JSON.stringify(body), {
   status,
@@ -36,6 +36,9 @@ async function syncSource(client, source, edition, competition) {
     const preview = await fetchCompetitionBundle(source.source_url);
     const fingerprint = await competitionFingerprint(preview);
     if (fingerprint === source.content_fingerprint) {
+      const agendaChanges = await syncProviderAgenda(client, {
+        competition, edition, actorUserId: actor, fixtures: before, now: startedAt,
+      });
       const { error } = await client.from("competition_sources").update({
         last_checked_at: startedAt.toISOString(),
         next_sync_at: nextSyncAt(before, startedAt),
@@ -44,14 +47,14 @@ async function syncSource(client, source, edition, competition) {
         sync_error: null,
       }).eq("id", source.id);
       if (error) throw error;
-      return { status: "unchanged", sourceId: source.id };
+      return { status: "unchanged", sourceId: source.id, agenda: agendaChanges };
     }
 
     await persistCompetitionSync(client, { competition, edition, actorUserId: actor, preview });
     const { data: after = [], error: afterError } = await client.from("competition_fixtures").select("*").eq("edition_id", edition.id);
     if (afterError) throw afterError;
     const fixtureChanges = countFixtureChanges(before, after);
-    const agendaChanges = await syncTodayProviderAgenda(client, {
+    const agendaChanges = await syncProviderAgenda(client, {
       competition, edition, actorUserId: actor, fixtures: after, now: startedAt,
     });
     const { error: stateError } = await client.from("competition_sources").update({
@@ -117,16 +120,29 @@ export async function onRequestPost({ request, env }) {
   if (pauseFlag?.enabled) return response({ ok: true, paused: true, checked: 0, results: [], completedAt: new Date().toISOString() });
   const now = new Date().toISOString();
   const { data: sources = [], error } = await client.from("competition_sources").select("*")
-    .eq("source_kind", "standings").lte("next_sync_at", now).order("next_sync_at").limit(6);
+    .eq("source_kind", "standings").lte("next_sync_at", now).order("next_sync_at").limit(12);
   if (error) return response({ error: "sync_state_unavailable", message: error.message }, 500);
+  const editionIds = [...new Set(sources.map((source) => source.edition_id).filter(Boolean))];
+  const { data: editions = [], error: editionError } = editionIds.length
+    ? await client.from("competition_editions").select("*").in("id", editionIds).eq("status", "active")
+    : { data: [], error: null };
+  if (editionError) return response({ error: "edition_lookup_failed", message: editionError.message }, 500);
+  const competitionIds = [...new Set(editions.map((edition) => edition.competition_id).filter(Boolean))];
+  const { data: competitions = [], error: competitionError } = competitionIds.length
+    ? await client.from("competitions").select("*").in("id", competitionIds).eq("is_active", true)
+    : { data: [], error: null };
+  if (competitionError) return response({ error: "competition_lookup_failed", message: competitionError.message }, 500);
+  const editionById = new Map(editions.map((edition) => [edition.id, edition]));
+  const competitionById = new Map(competitions.map((competition) => [competition.id, competition]));
+  // Provider discovery can fan out across several official pages. Keeping each
+  // invocation to one active source stays below the Pages subrequest ceiling;
+  // the database claim and next_sync_at cursor fairly drain the remaining queue.
+  const activeSources = sources.map((source) => {
+    const edition = editionById.get(source.edition_id);
+    return { source, edition, competition: edition && competitionById.get(edition.competition_id) };
+  }).filter(({ edition, competition }) => edition && competition).slice(0, 1);
   const results = [];
-  for (const source of sources) {
-    const { data: edition, error: editionError } = await client.from("competition_editions").select("*").eq("id", source.edition_id).eq("status", "active").maybeSingle();
-    if (editionError) return response({ error: "edition_lookup_failed", message: editionError.message }, 500);
-    if (!edition) continue;
-    const { data: competition, error: competitionError } = await client.from("competitions").select("*").eq("id", edition.competition_id).eq("is_active", true).maybeSingle();
-    if (competitionError) return response({ error: "competition_lookup_failed", message: competitionError.message }, 500);
-    if (!competition) continue;
+  for (const { source, edition, competition } of activeSources) {
     results.push(await syncSource(client, source, edition, competition));
   }
   return response({ ok: true, checked: results.length, results, completedAt: new Date().toISOString() });

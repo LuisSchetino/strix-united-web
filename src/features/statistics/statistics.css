@@ -172,7 +172,7 @@
   border: 0;
 }
 .statistics-ranking-card li > em {
-  color: #56caff;
+  color: var(--rastro-blue);
   font: 800 13px Rajdhani;
   font-style: normal;
 }

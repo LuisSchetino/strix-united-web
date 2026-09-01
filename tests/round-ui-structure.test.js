@@ -1,0 +1,18 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+
+test("EA review uses one custom selection mark and compact G/A rows", async () => {
+  const source = await readFile(new URL("../src/features/matches/MatchesPage.jsx", import.meta.url), "utf8");
+  const css = await readFile(new URL("../src/round-discovery.css", import.meta.url), "utf8");
+  assert.doesNotMatch(source, /<span aria-hidden="true">✓<\/span>/);
+  assert.match(source, /className="alias-player-row"/);
+  assert.match(source, /max="99" inputMode="numeric"/);
+  assert.match(css, /grid-template-columns:42px 42px/);
+});
+
+test("Agenda header and rows share one structural grid", async () => {
+  const css = await readFile(new URL("../src/round-discovery.css", import.meta.url), "utf8");
+  assert.match(css, /--agenda-grid:/);
+  assert.match(css, /\.agenda-list-heading,.agenda-game\{grid-template-columns:var\(--agenda-grid\)!important\}/);
+});

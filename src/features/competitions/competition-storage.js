@@ -1,6 +1,7 @@
 import { normalizeName } from "../matches/import-core.js";
 import { expandKnockoutSlots, selectPreferredKnockoutPreview } from "../../../shared/bracket-slots.js";
 import { dedupeCompetitionRows, fixtureConflictKey, teamConflictKey } from "../../../shared/competition-sync-rows.js";
+import { syncProviderAgenda } from "../../../shared/provider-agenda.js";
 
 const ensure = (result) => {
   if (result.error) throw result.error;
@@ -189,6 +190,13 @@ export async function saveCompetitionPreview(client, profile, preview, palette, 
     await normalizeKnockout(client, edition, item);
     await normalizeFixtures(client, edition, savedSource, item);
   }
+  const fixtures = ensure(await client.from("competition_fixtures").select("*").eq("edition_id", edition.id));
+  await syncProviderAgenda(client, {
+    competition,
+    edition,
+    actorUserId: profile.user_id,
+    fixtures,
+  });
   if (knockout) ensure(await client.from("competition_stages").update({ status: "completed" }).eq("edition_id", edition.id).in("stage_type", ["league", "group"]));
   ensure(await client.from("competition_audit_log").insert({ competition_id: competition.id, edition_id: edition.id, actor_user_id: profile.user_id, action: source.created_at === source.updated_at ? "competition_imported" : "competition_synced", result: { provider: preview.provider, sources: previews.map((item) => item.source), groups: identity.groups?.length || 0, teams: Math.max(...previews.map((item) => item.teamCount || 0)) } }));
   return { competition, edition, source };

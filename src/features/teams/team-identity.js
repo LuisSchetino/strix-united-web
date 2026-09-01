@@ -19,7 +19,20 @@ const teamAliases = (team) => [
   team?.metadata?.abbreviation,
 ].filter(Boolean);
 
-export function resolveTeamIdentity({ teamId, editionId, name, teams = [], logos = [] } = {}) {
+const uniqueLogo = (rows, readLogo) => {
+  const urls = [...new Set(rows.map(readLogo).filter(Boolean))];
+  return urls.length === 1 ? urls[0] : "";
+};
+
+export function resolveTeamIdentity({
+  teamId,
+  editionId,
+  name,
+  directLogo = "",
+  teams = [],
+  logos = [],
+  history = [],
+} = {}) {
   const byId = teamId ? teams.find((team) => team.id === teamId) : null;
   const normalized = normalizeTeamIdentityName(name);
   const pool = editionId ? teams.filter((team) => team.edition_id === editionId) : teams;
@@ -29,21 +42,54 @@ export function resolveTeamIdentity({ teamId, editionId, name, teams = [], logos
   const alias = normalized
     ? pool.filter((team) => teamAliases(team).some((candidate) => normalizeTeamIdentityName(candidate) === normalized))
     : [];
-  const team = byId || (exact.length === 1 ? exact[0] : null) || (alias.length === 1 ? alias[0] : null);
+  const scopedTeam = (exact.length === 1 ? exact[0] : null) || (alias.length === 1 ? alias[0] : null);
+  const globalExact = normalized
+    ? teams.filter((team) => normalizeTeamIdentityName(team.name) === normalized)
+    : [];
+  const globalAlias = normalized
+    ? teams.filter((team) => teamAliases(team).some((candidate) => normalizeTeamIdentityName(candidate) === normalized))
+    : [];
+  const globalCandidates = globalExact.length ? globalExact : globalAlias;
+  const sharedGlobalLogo = uniqueLogo(globalCandidates, (team) => team.logo_url);
+  const globalTeam = globalCandidates.length === 1 || sharedGlobalLogo ? globalCandidates[0] : null;
+  const team = byId || scopedTeam || globalTeam;
   const catalog = normalized
     ? logos.filter((logo) => normalizeTeamIdentityName(logo.canonical_name) === normalized)
     : [];
-  const logo = team?.logo_url || (catalog.length === 1 ? catalog[0].public_url || "" : "") || "";
+  const historical = normalized
+    ? history.filter((item) => normalizeTeamIdentityName(item.name || item.opponent_name) === normalized)
+    : [];
+  const historicalLogo = uniqueLogo(historical, (item) => item.logo || item.resolved_opponent_logo_url || item.public_url);
+  const logo = directLogo
+    || byId?.logo_url
+    || scopedTeam?.logo_url
+    || sharedGlobalLogo
+    || historicalLogo
+    || (catalog.length === 1 ? catalog[0].public_url || "" : "")
+    || "";
+  const source = directLogo
+    ? "direct"
+    : byId
+      ? "team_id"
+      : scopedTeam
+        ? (exact.length === 1 ? "edition_name" : "alias")
+        : sharedGlobalLogo
+          ? "global_name"
+          : historicalLogo
+            ? "history"
+            : catalog.length === 1
+              ? "logo_catalog"
+              : "fallback";
   return {
     id: team?.id || teamId || null,
     name: team?.name || name || "Adversário",
     abbreviation: team?.metadata?.abbreviation || team?.metadata?.short_name || "",
     logo,
-    source: byId ? "team_id" : team ? (exact.length === 1 ? "edition_name" : "alias") : catalog.length === 1 ? "logo_catalog" : "fallback",
+    source,
   };
 }
 
-export function resolveFixtureOpponentIdentity(fixture, { teams = [], logos = [] } = {}) {
+export function resolveFixtureOpponentIdentity(fixture, { teams = [], logos = [], history = [] } = {}) {
   if (!fixture) return resolveTeamIdentity({ teams, logos });
   const home = teams.find((team) => team.id === fixture.home_team_id);
   const away = teams.find((team) => team.id === fixture.away_team_id);
@@ -57,19 +103,26 @@ export function resolveFixtureOpponentIdentity(fixture, { teams = [], logos = []
     name: opponent.name,
     teams,
     logos,
+    history,
   });
 }
 
-export function resolveAgendaTeamIdentity(agendaMatch, { fixtures = [], teams = [], logos = [] } = {}) {
+export function resolveAgendaTeamIdentity(agendaMatch, { fixtures = [], teams = [], logos = [], history = [] } = {}) {
+  const directLogo = agendaMatch?.opponent_logos?.public_url || agendaMatch?.opponent_logos?.logo || "";
   const fixture = agendaMatch?.source_fixture_id
     ? fixtures.find((item) => item.id === agendaMatch.source_fixture_id)
     : null;
-  if (fixture) return resolveFixtureOpponentIdentity(fixture, { teams, logos });
+  if (fixture) {
+    const resolved = resolveFixtureOpponentIdentity(fixture, { teams, logos, history });
+    return directLogo ? { ...resolved, logo: directLogo, source: "direct" } : resolved;
+  }
   return resolveTeamIdentity({
     teamId: agendaMatch?.opponent_team_id,
     editionId: agendaMatch?.competition_edition_id,
     name: agendaMatch?.opponent_name,
+    directLogo,
     teams,
     logos,
+    history,
   });
 }

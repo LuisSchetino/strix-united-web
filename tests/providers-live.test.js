@@ -54,5 +54,6 @@ test("CCB discovers VPR Elite fixtures across paginated rounds", { skip: !live, 
   const bundle = await fetchCompetitionBundle("https://ccbclubs.com.br/fifa.php?file=classificacao&campeonato=106&grupo=2");
   const strixFixtures = bundle.fixtures.filter((fixture) => fixture.isStrix);
   assert.ok(strixFixtures.length >= 4);
-  assert.ok(strixFixtures.some((fixture) => fixture.status === "scheduled" && /Tesoura City/i.test(`${fixture.homeTeamName} ${fixture.awayTeamName}`)));
+  assert.ok(strixFixtures.every((fixture) => fixture.externalMatchId));
+  assert.equal(new Set(strixFixtures.map((fixture) => fixture.externalMatchId)).size, strixFixtures.length);
 });
