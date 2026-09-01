@@ -15,7 +15,7 @@ import "./agenda-sync.css";
 import "./fc27-data.css";
 import "./fc27-fixes.css";
 import { nextAgendaSlot } from "./features/agenda/agenda-slots.js";
-import { activeAgendaMatches, nextAgendaMatches } from "./features/agenda/agenda-time.js";
+import { activeAgendaMatches, nextAgendaMatches, todayAgendaMatches } from "./features/agenda/agenda-time.js";
 import { agendaStandingComparison } from "./features/agenda/agenda-standings.js";
 import { resolveAgendaTeamIdentity, resolveTeamIdentity } from "./features/teams/team-identity.js";
 import { notify, RollingLabel, ToastViewport } from "./ui/motion/motion.jsx";
@@ -1103,12 +1103,12 @@ function Central({ openPlayer }) {
           <i>AO VIVO EM BREVE</i>
         </div>
       </section>
-      <div className="content-grid">
+      <div className="content-grid central-agenda-grid">
         <section className="panel schedule">
           <header className="panel-heading">
             <div>
               <span>AGENDA DA NOITE</span>
-              <h2>Próximas partidas</h2>
+              <h2>Jogos de hoje</h2>
             </div>
             <button>
               Ver agenda <Icon name="arrow" size={15} />
@@ -1118,39 +1118,6 @@ function Central({ openPlayer }) {
             <GameRow key={game[1]} game={game} index={index} />
           ))}
         </section>
-        <section className="panel form-panel">
-          <header className="panel-heading">
-            <div>
-              <span>FORMAÇÃO PROVÁVEL</span>
-              <h2>3-1-4-2</h2>
-            </div>
-            <button>Editar</button>
-          </header>
-          <div className="pitch">
-            <div className="field-markings" aria-hidden="true">
-              <i className="field-outline" />
-              <i className="field-midline" />
-              <i className="field-circle" />
-              <i className="field-box field-box-top" />
-              <i className="field-box field-box-bottom" />
-              <i className="field-goal field-goal-top" />
-              <i className="field-goal field-goal-bottom" />
-            </div>
-            {players.map((player) => (
-              <button
-                key={player[0]}
-                onClick={() => openPlayer(player)}
-                style={{ "--x": player[3], "--y": player[4] }}
-                className="player-dot"
-              >
-                <b>{player[2]}</b>
-                <Avatar name={player[0]} />
-                <span>{player[0]}</span>
-                <small>{player[1]}</small>
-              </button>
-            ))}
-          </div>
-        </section>
       </div>
     </section>
   );
@@ -1158,6 +1125,7 @@ function Central({ openPlayer }) {
 const agendaDraftKey = "strix-fc27-agenda-draft";
 function CentralLive({ workspace, navigate }) {
   const upcoming = useMemo(() => nextAgendaMatches(workspace.agenda), [workspace.agenda]);
+  const tonight = useMemo(() => todayAgendaMatches(workspace.agenda), [workspace.agenda]);
   const next = upcoming[0];
   const nextLogo = next?.resolved_opponent_logo_url || (next?.opponent_logos?.storage_path ? workspace.assetUrl(next.opponent_logos.storage_path) : "");
   return (
@@ -1173,14 +1141,10 @@ function CentralLive({ workspace, navigate }) {
         <div className="hero-actions"><button className="primary" onClick={() => navigate("agenda")}><Icon name="squad" size={17} />ABRIR ESCALAÇÃO</button><button className="secondary" onClick={() => navigate("agenda")}>DETALHES DA PARTIDA <Icon name="arrow" size={16} /></button></div>
         <div className="stadium-caption"><span>ARENA STRIX · SÃO PAULO</span><i>{next?.status === "live" ? "AO VIVO" : "PRÓXIMA PARTIDA"}</i></div>
       </section>
-      <div className="content-grid">
+      <div className="content-grid central-agenda-grid">
         <section className="panel schedule">
-          <header className="panel-heading"><div><span>AGENDA DA NOITE</span><h2>Próximas partidas</h2></div><button onClick={() => navigate("agenda")}>Ver agenda <Icon name="arrow" size={15} /></button></header>
-          {upcoming.length ? <div className="upcoming-games-track">{upcoming.slice(0, 5).map((game, index) => <GameRowLive key={game.id} game={game} index={index} workspace={workspace} />)}</div> : <div className="agenda-empty">Nenhuma partida atual ou futura programada.</div>}
-        </section>
-        <section className="panel form-panel">
-          <header className="panel-heading"><div><span>FORMAÇÃO PROVÁVEL</span><h2>3-1-4-2</h2></div><button onClick={() => navigate("agenda")}>Editar</button></header>
-          <div className="pitch empty-pitch"><span>Adicione uma partida e monte a escalação.</span></div>
+          <header className="panel-heading"><div><span>AGENDA DA NOITE</span><h2>Jogos de hoje</h2></div><button onClick={() => navigate("agenda")}>Ver agenda <Icon name="arrow" size={15} /></button></header>
+          {tonight.length ? <div className="upcoming-games-track central-night-list">{tonight.map((game, index) => <GameRowLive key={game.id} game={game} index={index} workspace={workspace} />)}</div> : <div className="agenda-empty">Nenhuma partida programada para hoje.</div>}
         </section>
       </div>
     </section>
@@ -1961,8 +1925,12 @@ function AgendaLive({ navigate, workspace }) {
     previousOpponent: db.previous_opponent_name,
     lineup: db.lineup || [],
   })), [workspace.agenda, workspace.logos]);
+  const todayIds = useMemo(
+    () => new Set(todayAgendaMatches(workspace.agenda).map((match) => match.id)),
+    [workspace.agenda],
+  );
   const visible = items.filter((item) => tab === "today"
-    ? ["today", "overdue"].includes(item.db.temporal_status)
+    ? todayIds.has(item.id)
     : item.db.temporal_status === "upcoming"
   ).sort((left, right) => new Date(left.db.scheduled_at) - new Date(right.db.scheduled_at));
   const defaultNewDate = datePart(new Date());
@@ -1985,13 +1953,13 @@ function AgendaLive({ navigate, workspace }) {
         </div>
       </header>
       <nav className="agenda-tabs">
-        <button className={tab === "today" ? "selected" : ""} onClick={() => setTab("today")}>Hoje <b>{items.filter((item) => ["today", "overdue"].includes(item.db.temporal_status)).length}</b></button>
+        <button className={tab === "today" ? "selected" : ""} onClick={() => setTab("today")}>Hoje <b>{todayIds.size}</b></button>
         <button className={tab === "next" ? "selected" : ""} onClick={() => setTab("next")}>Próximos</button>
         <button onClick={() => navigate("partidas")}>Concluídos <Icon name="arrow" size={13} /></button>
       </nav>
       {(workspace.error || feedback) && <p className="matches-error">{feedback || workspace.error}</p>}
       <section className="agenda-list" aria-busy={workspace.loading}>
-        <div className="agenda-list-heading"><span>HORÁRIO</span><span>PARTIDA</span><span>CAMPEONATO</span><span>STATUS</span></div>
+        <div className="agenda-list-heading"><span>{tab === "next" ? "DATA · HORÁRIO" : "HORÁRIO"}</span><span>PARTIDA</span><span>CAMPEONATO</span><span>STATUS</span></div>
         {visible.length ? visible.map((item) => (
           <article
             key={item.id}
@@ -2011,7 +1979,7 @@ function AgendaLive({ navigate, workspace }) {
               setModal({ entry: item, mode: "view" });
             }}
           >
-            <time>{item.time}</time>
+            <time className={tab === "next" ? "future-kickoff" : ""}>{tab === "next" && <span>{item.date}</span>}<b>{item.time}</b></time>
             <div className="agenda-match">
               <Avatar name={item.opponent} logo={item.logo} />
               <div>{item.previousOpponent && <small className="replaced-opponent"><s>{item.previousOpponent}</s> → TROCADO</small>}<small>STRIX UNITED VS</small><b>{item.opponent}</b></div>

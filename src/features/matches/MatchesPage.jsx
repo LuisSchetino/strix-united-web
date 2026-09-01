@@ -424,7 +424,7 @@ export function ResolveStep({
                 <small>EA × ELENCO</small>
                 <span>Associações anteriores já aparecem selecionadas.</span>
               </div>
-              <div className="alias-resolver-columns" aria-hidden="true"><span>JOGADOR EA</span><span>ELENCO</span><span>G</span><span>A</span></div>
+              <div className="alias-resolver-columns" aria-hidden="true"><span>JOGADOR EA</span><span /><span>ELENCO</span><span>G</span><span>A</span></div>
               {(match.performance?.players || []).map((player) => {
                 const key = normalizeName(player.eaName);
                 return (

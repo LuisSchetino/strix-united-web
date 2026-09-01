@@ -7,8 +7,11 @@ test("EA review uses one custom selection mark and compact G/A rows", async () =
   const css = await readFile(new URL("../src/round-discovery.css", import.meta.url), "utf8");
   assert.doesNotMatch(source, /<span aria-hidden="true">✓<\/span>/);
   assert.match(source, /className="alias-player-row"/);
+  assert.match(source, /<span>JOGADOR EA<\/span><span \/><span>ELENCO<\/span><span>G<\/span><span>A<\/span>/);
   assert.match(source, /max="99" inputMode="numeric"/);
   assert.match(css, /grid-template-columns:42px 42px/);
+  assert.match(css, /--alias-grid:/);
+  assert.match(css, /grid-template-columns:var\(--alias-grid\)/);
 });
 
 test("Agenda header and rows share one structural grid", async () => {

@@ -25,3 +25,10 @@ export function activeAgendaMatches(matches = [], now = new Date()) {
 export function nextAgendaMatches(matches = [], now = new Date()) {
   return activeAgendaMatches(matches, now).filter((match) => match.temporal_status !== "overdue");
 }
+
+export function todayAgendaMatches(matches = [], now = new Date()) {
+  const today = saoPauloDay(now);
+  return activeAgendaMatches(matches, now).filter(
+    (match) => saoPauloDay(match.scheduled_at) === today,
+  );
+}
