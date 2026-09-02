@@ -35,11 +35,11 @@ const routeLoaders = {
   analise: () => import("./features/analysis/AnalysisPage.jsx"),
   biblioteca: () => import("./features/library/LibraryPage.jsx").then((module) => ({ default: module.LibraryPage })),
   desenvolvedor: () => import("./features/developer/DeveloperPage.jsx").then((module) => ({ default: module.DeveloperPage })),
-  midia: () => import("./gameday/GameDayEditor.jsx").then((module) => ({ default: module.GameDayEditor })),
+  midia: () => import("./features/media/MediaPage.jsx").then((module) => ({ default: module.MediaPage })),
   elencoTools: () => import("./features/squad/RosterTools.jsx").then((module) => ({ default: module.RosterTools })),
 };
 const preloadRoute = (id) => routeLoaders[id]?.();
-const GameDayEditor = lazy(routeLoaders.midia);
+const MediaPage = lazy(routeLoaders.midia);
 const MatchesPage = lazy(routeLoaders.partidas);
 const CompetitionsPage = lazy(routeLoaders.campeonatos);
 const LibraryPage = lazy(routeLoaders.biblioteca);
@@ -2223,7 +2223,7 @@ function DataPage({ id, workspace, profile, client }) {
   if (id === "biblioteca") return <FeatureBoundary type="library"><LibraryPage client={client} profile={profile}/></FeatureBoundary>;
   if (id === "desenvolvedor" && profile?.access_tier !== "dev") return <section className="placeholder page-enter"><span>ÁREA RESTRITA</span><h1>Desenvolvedor</h1><p>Esta área é exclusiva para Desenvolvimento.</p></section>;
   if (id === "desenvolvedor") return <FeatureBoundary><DeveloperPage client={client} profile={profile} workspace={workspace}/></FeatureBoundary>;
-  if (id === "midia") return <FeatureBoundary><GameDayEditor profile={profile} client={client} workspace={workspace}/></FeatureBoundary>;
+  if (id === "midia") return <FeatureBoundary><MediaPage profile={profile} client={client} workspace={workspace}/></FeatureBoundary>;
   const matches = workspace.matches;
   const agenda = workspace.agenda;
   const completed = matches.length;

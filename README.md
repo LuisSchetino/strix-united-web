@@ -44,6 +44,7 @@ pnpm test
 - Partidas: importação EA progressiva, revisão, Agenda, aliases e edição manual em `src/features/matches`.
 - Competições: providers CCB/LB, classificação, mata-mata, cenários e histórico em `src/features/competitions`, `shared/competition-providers.js` e `functions/api/competitions`.
 - Game Day: editor existente integrado à Agenda, adversário e campeonato em `src/gameday`.
+- Mídia: gerador automático da Agenda do Dia (MP4 Story 9:16 e Feed 4:5) em `src/features/media`. O encode H.264 acontece no navegador; o EA Sync permanece isolado.
 - Persistência nova: migration aditiva `20260808014500_fc27_gameday_competitions_and_history.sql`.
 
 Os testes de integração reais dos providers são opt-in para não depender da internet na suíte comum:

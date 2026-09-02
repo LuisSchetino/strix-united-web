@@ -1,0 +1,59 @@
+.media-page{display:grid;gap:18px}
+.media-tabs{width:max-content;max-width:100%}
+.media-forbidden,.media-empty{
+  display:grid;gap:10px;padding:28px 24px;border:1px solid var(--strix-border);border-radius:18px;background:#0b0d10
+}
+.media-forbidden span,.media-empty span,.media-hero span,.media-preview-card>header span,.media-cache article small{
+  color:#aeb4bb;font-size:10px;font-weight:900;letter-spacing:.14em
+}
+.media-forbidden h1,.media-empty h1{margin:0;font-size:28px}
+.media-forbidden p,.media-empty p{margin:0;color:#8e969f;max-width:52ch}
+.media-hero{
+  display:flex;justify-content:space-between;gap:18px;align-items:flex-end;padding:22px 24px;
+  border:1px solid var(--strix-border);border-radius:18px;background:#0b0d10
+}
+.media-hero h1{margin:6px 0 8px;font-size:34px;line-height:1}
+.media-hero p{margin:0;color:#8e969f;max-width:56ch}
+.media-hero-meta{display:grid;gap:6px;justify-items:end;color:#d8dce0;font-weight:800}
+.media-hero-meta b{font-size:28px}
+.media-layout{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(280px,.85fr);gap:16px}
+.media-preview-card,.media-side{
+  display:grid;align-content:start;gap:14px;padding:18px;border:1px solid var(--strix-border);border-radius:18px;background:#0b0d10
+}
+.media-preview-frame{
+  overflow:hidden;display:grid;place-items:center;min-height:420px;border:1px solid var(--strix-border-strong);
+  border-radius:16px;background:#050607
+}
+.media-preview-frame canvas{display:block;width:min(100%,320px);height:auto;background:#050607}
+.media-preview-frame.is-feed canvas{width:min(100%,280px)}
+.media-preview-frame.is-empty{color:#8e969f;text-align:center;padding:32px}
+.media-actions,.media-inline-actions{display:flex;flex-wrap:wrap;gap:8px}
+.media-progress{display:grid;gap:8px}
+.media-progress b{font-size:13px}
+.media-progress i{
+  display:block;height:4px;border-radius:99px;background:#1b2026;overflow:hidden
+}
+.media-progress i em{display:block;height:100%;background:#efece6;transform-origin:left center}
+.media-error{margin:0;padding:12px;border:1px solid #7e3d4b;border-radius:10px;background:#251016;color:#ffbdc6}
+.media-side h2{margin:0;font-size:20px}
+.media-cache{display:grid;gap:10px}
+.media-cache article{
+  display:grid;gap:8px;padding:14px;border:1px solid var(--strix-border);border-radius:14px;background:#111419
+}
+.media-cache article.stale{border-color:#5d5340}
+.media-cache p{margin:0;color:#8e969f}
+.media-changed{margin:0;color:#e6c37a;font-size:12px}
+.media-viewer{
+  position:fixed;inset:0;z-index:80;display:grid;place-items:center;padding:24px;background:#050607d8
+}
+.media-viewer section{
+  display:grid;gap:14px;width:min(420px,100%);padding:18px;border:1px solid var(--strix-border);border-radius:18px;background:#0b0d10
+}
+.media-viewer video{width:100%;border-radius:12px;background:#000}
+.media-gameday{min-height:40vh}
+@media(max-width:900px){
+  .media-hero{align-items:start;flex-direction:column}
+  .media-hero-meta{justify-items:start}
+  .media-layout{grid-template-columns:1fr}
+  .media-preview-frame{min-height:360px}
+}

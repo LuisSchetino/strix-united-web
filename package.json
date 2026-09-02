@@ -7,13 +7,14 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "check": "node --check functions/_lib/auth.js && node --check functions/_lib/competition-providers.js && node --check functions/_lib/competition-sync.js && node --check functions/api/internal/competition-sync.js && node --check functions/api/internal/health.js && node --check functions/api/auth/session.js && node --check functions/api/ea/matches.js && node --check functions/api/competitions/analyze.js && node --check functions/api/competitions/asset.js && node --check tools/ea-local-bridge.mjs && node --check shared/competition-providers.js && node --check shared/ea-fetch.js && node --check services/ea-sync/server.js && node --check services/ea-sync/ea-client.js",
+    "check": "node --check functions/_lib/auth.js && node --check functions/_lib/competition-providers.js && node --check functions/_lib/competition-sync.js && node --check functions/api/internal/competition-sync.js && node --check functions/api/internal/health.js && node --check functions/api/auth/session.js && node --check functions/api/ea/matches.js && node --check functions/api/competitions/analyze.js && node --check functions/api/competitions/asset.js && node --check tools/ea-local-bridge.mjs && node --check shared/competition-providers.js && node --check shared/ea-fetch.js && node --check services/ea-sync/server.js && node --check services/ea-sync/ea-client.js && node --check src/features/media/agenda-media-core.js && node --check src/features/media/agenda-timeline.js && node --check src/features/media/agenda-paint.js && node --check src/features/media/media-assets.js && node --check src/features/media/encode-mp4.js && node --check src/features/media/media-jobs.js",
     "test": "node --test"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.57.0",
     "@tabler/icons-react": "3.46.0",
     "html-to-image": "1.11.13",
+    "mp4-muxer": "5.2.2",
     "parse5": "8.0.0",
     "react": "19.1.1",
     "react-dom": "19.1.1"
