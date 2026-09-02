@@ -1,7 +1,7 @@
 import { saoPauloDay, todayAgendaMatches } from "../agenda/agenda-time.js";
 
 export const AGENDA_TEMPLATE_ID = "agenda-day";
-export const AGENDA_TEMPLATE_VERSION = "agenda-day-v2";
+export const AGENDA_TEMPLATE_VERSION = "agenda-day-v3";
 export const AGENDA_FPS = 30;
 
 export const MEDIA_FORMATS = Object.freeze({
@@ -114,28 +114,28 @@ export function agendaFileName({ day, format } = {}) {
 
 export function introDuration(matchCount) {
   if (matchCount <= 0) return 0;
-  return matchCount >= 6 ? 1.95 : 2.25;
+  return matchCount >= 6 ? 1.95 : 2.2;
 }
 
 export function beatDuration(matchCount) {
   if (matchCount <= 0) return 0;
-  if (matchCount === 1) return 4.8;
-  if (matchCount === 2) return 2.45;
-  if (matchCount === 3) return 2.05;
-  if (matchCount === 4) return 1.72;
-  return 1.48;
+  if (matchCount === 1) return 5.0;
+  if (matchCount === 2) return 2.35;
+  if (matchCount === 3) return 2.15;
+  if (matchCount === 4) return 1.9;
+  return 1.55;
 }
 
 export function finaleDuration(matchCount) {
   if (matchCount <= 0) return 0;
-  if (matchCount === 1) return 3.4;
-  if (matchCount >= 5) return 3.55;
-  return 3.85;
+  if (matchCount === 1) return 3.8;
+  if (matchCount >= 5) return 3.8;
+  return 4.25;
 }
 
 export function lockupDuration(matchCount) {
   if (matchCount <= 0) return 0;
-  return matchCount >= 5 ? 1.55 : 1.75;
+  return matchCount >= 5 ? 1.65 : 1.85;
 }
 
 export function agendaDurationSeconds(matchCount) {

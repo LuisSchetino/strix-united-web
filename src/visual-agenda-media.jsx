@@ -65,12 +65,12 @@ function App() {
 
   const marks = assets ? [
     { time: 0.5, label: "0.5s" },
-    { time: 1.0, label: "1.0s" },
-    { time: 2.0, label: "2.0s" },
-    { time: 3.5, label: "3.5s" },
-    { time: 5.0, label: "5.0s" },
+    { time: 1.2, label: "1.2s" },
+    { time: 2.5, label: "2.5s" },
+    { time: 4.5, label: "4.5s" },
     { time: 6.5, label: "6.5s" },
-    { time: 8.0, label: "8.0s" },
+    { time: 8.5, label: "8.5s" },
+    { time: 10.5, label: "10.5s" },
     { time: Math.max(0, timeline.duration - 0.05), label: "último" },
   ] : [];
 

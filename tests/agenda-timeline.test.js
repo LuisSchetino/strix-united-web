@@ -43,6 +43,9 @@ function mockContext() {
     scale() {},
     drawImage() { calls.push("drawImage"); },
     measureText(text) { return { width: String(text).length * 12 }; },
+    createLinearGradient() {
+      return { addColorStop() {} };
+    },
     createRadialGradient() {
       return { addColorStop() {} };
     },
@@ -77,10 +80,11 @@ test("timeline adapta beats e nunca sai da safe area do Instagram", () => {
   assert.ok(one.duration - one.finaleStart >= 3.2);
   assert.ok(typeScale("story").title >= 110);
   assert.ok(typeScale("story").kickoff >= 110);
-  const left = logoDrawRect({ bitmap: { width: 512, height: 400 } }, 276);
-  const right = logoDrawRect({ bitmap: { width: 200, height: 200 } }, 276);
-  assert.ok(Math.max(left.dw, left.dh) <= 276.01);
-  assert.ok(Math.max(right.dw, right.dh) <= 276.01);
+  const box = typeScale("story").logoMatch;
+  const left = logoDrawRect({ bitmap: { width: 512, height: 400 } }, box);
+  const right = logoDrawRect({ bitmap: { width: 200, height: 200 } }, box);
+  assert.ok(Math.max(left.dw, left.dh) <= box + 0.01);
+  assert.ok(Math.max(right.dw, right.dh) <= box + 0.01);
   assert.equal(Math.max(left.dw, left.dh).toFixed(1), Math.max(right.dw, right.dh).toFixed(1));
 });
 
@@ -96,8 +100,11 @@ test("easing premium não é linear e o painter cobre intro, jogo e finale", () 
   paintAgendaFrame(ctx, { timeline, time: 0.8, assets, dayLabel: "02 SET 2026" });
   paintAgendaFrame(ctx, { timeline, time: timeline.introEnd + 0.6, assets, dayLabel: "02 SET 2026" });
   paintAgendaFrame(ctx, { timeline, time: timeline.finaleStart + 0.8, assets, dayLabel: "02 SET 2026" });
+  paintAgendaFrame(ctx, { timeline, time: timeline.lockupStart + 0.6, assets, dayLabel: "02 SET 2026" });
   const texts = ctx.calls.filter((call) => Array.isArray(call) && call[0] === "fillText").map((call) => call[1]);
-  assert.ok(texts.includes("AGENDA DO DIA"));
+  assert.ok(texts.includes("AGENDA"));
+  assert.ok(texts.includes("DO DIA"));
+  assert.ok(texts.includes("AGENDA COMPLETA"));
   assert.ok(texts.includes("STRIX UNITED"));
   assert.ok(texts.includes("MATCHDAY"));
   assert.ok(texts.some((text) => String(text).includes("WINNER")));
