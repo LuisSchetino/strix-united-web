@@ -1,7 +1,7 @@
 import { saoPauloDay, todayAgendaMatches } from "../agenda/agenda-time.js";
 
 export const AGENDA_TEMPLATE_ID = "agenda-day";
-export const AGENDA_TEMPLATE_VERSION = "agenda-day-v1";
+export const AGENDA_TEMPLATE_VERSION = "agenda-day-v2";
 export const AGENDA_FPS = 30;
 
 export const MEDIA_FORMATS = Object.freeze({
@@ -112,24 +112,33 @@ export function agendaFileName({ day, format } = {}) {
   return `strix-agenda-${safeDay}-${spec.suffix}.mp4`;
 }
 
+export function introDuration(matchCount) {
+  if (matchCount <= 0) return 0;
+  return matchCount >= 6 ? 1.95 : 2.25;
+}
+
 export function beatDuration(matchCount) {
   if (matchCount <= 0) return 0;
-  if (matchCount === 1) return 5.2;
-  if (matchCount === 2) return 2.6;
-  if (matchCount === 3) return 2.2;
-  if (matchCount === 4) return 1.7;
-  return 1.35;
+  if (matchCount === 1) return 4.8;
+  if (matchCount === 2) return 2.45;
+  if (matchCount === 3) return 2.05;
+  if (matchCount === 4) return 1.72;
+  return 1.48;
 }
 
 export function finaleDuration(matchCount) {
   if (matchCount <= 0) return 0;
-  if (matchCount === 1) return 2.1;
-  if (matchCount >= 5) return 2.55;
-  return 2.3;
+  if (matchCount === 1) return 3.4;
+  if (matchCount >= 5) return 3.55;
+  return 3.85;
+}
+
+export function lockupDuration(matchCount) {
+  if (matchCount <= 0) return 0;
+  return matchCount >= 5 ? 1.55 : 1.75;
 }
 
 export function agendaDurationSeconds(matchCount) {
   if (matchCount <= 0) return 0;
-  const intro = 1.5;
-  return Number((intro + matchCount * beatDuration(matchCount) + finaleDuration(matchCount)).toFixed(3));
+  return Number((introDuration(matchCount) + matchCount * beatDuration(matchCount) + finaleDuration(matchCount)).toFixed(3));
 }

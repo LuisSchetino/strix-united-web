@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { buildAgendaTimeline, easeOutExpo, sceneAt } from "../src/features/media/agenda-timeline.js";
-import { measureSafeZones, paintAgendaFrame } from "../src/features/media/agenda-paint.js";
+import { logoDrawRect, measureSafeZones, paintAgendaFrame, typeScale } from "../src/features/media/agenda-paint.js";
 
 function matches(count) {
   return Array.from({ length: count }, (_, index) => ({
@@ -73,6 +73,15 @@ test("timeline adapta beats e nunca sai da safe area do Instagram", () => {
   assert.equal(one.totalFrames, Math.round(one.duration * one.fps));
   assert.equal(sceneAt(one, 0.2).type, "intro");
   assert.equal(sceneAt(one, one.finaleStart + 0.1).type, "finale");
+  assert.ok(one.introEnd >= 2);
+  assert.ok(one.duration - one.finaleStart >= 3.2);
+  assert.ok(typeScale("story").title >= 110);
+  assert.ok(typeScale("story").kickoff >= 110);
+  const left = logoDrawRect({ bitmap: { width: 512, height: 400 } }, 276);
+  const right = logoDrawRect({ bitmap: { width: 200, height: 200 } }, 276);
+  assert.ok(Math.max(left.dw, left.dh) <= 276.01);
+  assert.ok(Math.max(right.dw, right.dh) <= 276.01);
+  assert.equal(Math.max(left.dw, left.dh).toFixed(1), Math.max(right.dw, right.dh).toFixed(1));
 });
 
 test("easing premium não é linear e o painter cobre intro, jogo e finale", () => {

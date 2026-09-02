@@ -64,12 +64,14 @@ function App() {
   }, []);
 
   const marks = assets ? [
-    { time: 0.15, label: "início" },
-    { time: 0.9, label: "título" },
-    { time: timeline.introEnd + 0.7, label: "jogo 1" },
-    { time: timeline.introEnd + 2.9, label: "transição" },
-    { time: timeline.finaleStart + 0.6, label: "finale" },
-    { time: Math.max(0, timeline.duration - 0.2), label: "final" },
+    { time: 0.5, label: "0.5s" },
+    { time: 1.0, label: "1.0s" },
+    { time: 2.0, label: "2.0s" },
+    { time: 3.5, label: "3.5s" },
+    { time: 5.0, label: "5.0s" },
+    { time: 6.5, label: "6.5s" },
+    { time: 8.0, label: "8.0s" },
+    { time: Math.max(0, timeline.duration - 0.05), label: "último" },
   ] : [];
 
   return (
@@ -78,7 +80,7 @@ function App() {
       <p>{status}</p>
       {error && <p style={{ color: "#ffbdc6" }}>{error}</p>}
       {assets && <FrameStrip timeline={timeline} assets={assets} marks={marks} />}
-      {videoUrl && <video src={videoUrl} controls autoPlay loop muted playsInline style={{ width: 320, marginTop: 24, background: "#000" }} />}
+      {videoUrl && <video src={videoUrl} controls autoPlay muted playsInline style={{ width: 360, marginTop: 24, background: "#000" }} />}
     </main>
   );
 }

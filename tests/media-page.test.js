@@ -24,6 +24,15 @@ test("Mídia vira gerador automático da Agenda do Dia sem misturar EA Sync", as
   assert.match(assets, /createImageBitmap/);
 });
 
+test("logos do painter não usam círculo cinza e compartilham a mesma caixa óptica", async () => {
+  const paint = await read("src/features/media/agenda-paint.js");
+  assert.match(paint, /logoDrawRect/);
+  assert.match(paint, /measureOpaqueBounds/);
+  assert.match(paint, /paintAmbient/);
+  assert.doesNotMatch(paint, /fillStyle = GRAPHITE/);
+  assert.doesNotMatch(paint, /ctx\.arc\(0, 0, half/);
+});
+
 test("encode usa H.264 e nunca troca logo depois que o render começa", async () => {
   const encode = await read("src/features/media/encode-mp4.js");
   const assets = await read("src/features/media/media-assets.js");
