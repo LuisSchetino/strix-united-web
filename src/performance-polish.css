@@ -36,6 +36,7 @@
 @keyframes performance-rise{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
 
 @media(max-width:760px){
+  .agenda-game{grid-template-columns:64px minmax(0,1fr) 48px!important}
   .agenda-game-open{grid-column:1/3;grid-template-columns:subgrid}
   .agenda-game>[data-agenda-menu-trigger]{grid-column:3;min-width:46px;min-height:46px}
   .agenda-actions{position:fixed!important;z-index:70!important;left:12px!important;right:12px!important;top:auto!important;bottom:max(12px,env(safe-area-inset-bottom))!important;transform:none!important;min-width:0;padding:10px;border-radius:14px}

@@ -20,6 +20,7 @@ test("agenda mobile exposes sibling controls and a direct edit path", async () =
   assert.match(source, /EDITAR ESCALAÇÃO/);
   assert.match(source, /onEdit=\{modal\.entry/);
   assert.match(css, /\.agenda-game-open\{grid-column:1\/5/);
+  assert.match(css, /\.agenda-game\{grid-template-columns:64px minmax\(0,1fr\) 48px!important\}/);
   assert.match(css, /min-height:46px/);
   assert.match(css, /100dvh/);
   assert.match(css, /env\(safe-area-inset-bottom\)/);
