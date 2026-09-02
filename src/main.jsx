@@ -2832,10 +2832,10 @@ function App() {
       for (const id of ["estatisticas", "campeonatos", "analise"]) void preloadRoute(id);
     };
     if (typeof window.requestIdleCallback === "function") {
-      const idleId = window.requestIdleCallback(warm, { timeout: 1400 });
+      const idleId = window.requestIdleCallback(warm, { timeout: 500 });
       return () => window.cancelIdleCallback(idleId);
     }
-    const timer = setTimeout(warm, 350);
+    const timer = setTimeout(warm, 180);
     return () => clearTimeout(timer);
   }, [active, workspace.loading]);
   useEffect(() => {

@@ -1,5 +1,5 @@
 :root{--next-clubs-accent:#c7ff2f}
-.page-enter{animation-duration:180ms!important}
+.page-enter{animation-duration:160ms!important}
 
 /* Agenda rows keep the primary action and the actions menu as sibling controls. */
 .agenda-game-open{grid-column:1/5;display:grid;grid-template-columns:subgrid;align-items:center;gap:inherit;min-width:0;width:100%;padding:0;border:0;background:transparent;color:inherit;text-align:left;cursor:pointer}
@@ -28,9 +28,9 @@
 
 /* Fast, informative entrance motion. */
 @media(min-width:701px) and (prefers-reduced-motion:no-preference){
-  .page-enter>.match-hero,.page-enter>.agenda-hero,.page-enter>.matches-hero,.page-enter>.data-page-header,.page-enter>.competitions-header,.page-enter>.gd-editor-header{animation-duration:180ms!important}
-  .page-enter>.content-grid,.page-enter>.agenda-tabs,.page-enter>.matches-feedback,.page-enter>.competition-selector,.page-enter>.gd-editor-shell{animation-duration:200ms!important;animation-delay:24ms!important}
-  .page-enter>.agenda-list,.page-enter>.progressive-history,.page-enter>.squad-list,.page-enter>.competition-inline{animation-duration:220ms!important;animation-delay:36ms!important}
+  .page-enter>.match-hero,.page-enter>.agenda-hero,.page-enter>.matches-hero,.page-enter>.data-page-header,.page-enter>.competitions-header,.page-enter>.gd-editor-header{animation-duration:160ms!important}
+  .page-enter>.content-grid,.page-enter>.agenda-tabs,.page-enter>.matches-feedback,.page-enter>.competition-selector,.page-enter>.gd-editor-shell{animation-duration:175ms!important;animation-delay:12ms!important}
+  .page-enter>.agenda-list,.page-enter>.progressive-history,.page-enter>.squad-list,.page-enter>.competition-inline{animation-duration:190ms!important;animation-delay:24ms!important}
   .agenda-standing-compare>header{animation:performance-rise 180ms ease both}.agenda-standing-compare .agenda-standing-team{animation:performance-rise 190ms ease both}.agenda-standing-compare .agenda-standing-team:nth-child(1){animation-delay:24ms}.agenda-standing-compare .agenda-standing-team:nth-child(2){animation-delay:48ms}
   .central-night-list>.upcoming-game-card,.agenda-list>.agenda-game{animation:performance-rise 190ms ease both}.central-night-list>.upcoming-game-card:nth-child(2),.agenda-list>.agenda-game:nth-child(3){animation-delay:28ms}.central-night-list>.upcoming-game-card:nth-child(3),.agenda-list>.agenda-game:nth-child(4){animation-delay:56ms}
 }
