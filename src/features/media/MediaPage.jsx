@@ -9,7 +9,7 @@ import {
   formatAgendaDay,
 } from "./agenda-media-core.js";
 import { buildAgendaTimeline } from "./agenda-timeline.js";
-import { paintAgendaFrame } from "./agenda-paint.js";
+import { agendaFrameTime, renderAgendaFrame } from "./agenda-frame.js";
 import { loadAgendaAssets } from "./media-assets.js";
 import {
   downloadBlob,
@@ -31,8 +31,8 @@ function PreviewCanvas({ timeline, assets, dayLabel, format }) {
     let frame = 0;
     let raf = 0;
     const tick = () => {
-      const time = (frame / timeline.fps) % timeline.duration;
-      paintAgendaFrame(ctx, { timeline, time, assets, dayLabel });
+      const timeSec = agendaFrameTime(frame % timeline.totalFrames, timeline);
+      renderAgendaFrame(ctx, { timeline, timeSec, assets, dayLabel });
       frame += 1;
       raf = requestAnimationFrame(tick);
     };

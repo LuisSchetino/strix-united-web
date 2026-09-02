@@ -85,10 +85,11 @@ test("fingerprint muda quando horário, adversário, logo ou jogo mudam", async 
 
 test("duração respira no opening e no finale sem estourar o formato social", () => {
   assert.equal(agendaDurationSeconds(0), 0);
-  assert.ok(agendaDurationSeconds(1) >= 10 && agendaDurationSeconds(1) <= 16);
-  assert.ok(agendaDurationSeconds(3) >= 11 && agendaDurationSeconds(3) <= 16);
-  assert.ok(agendaDurationSeconds(5) >= 12 && agendaDurationSeconds(5) <= 17);
-  assert.ok(agendaDurationSeconds(7) <= 17);
+  assert.ok(agendaDurationSeconds(1) >= 11 && agendaDurationSeconds(1) <= 14);
+  assert.ok(agendaDurationSeconds(3) >= 15 && agendaDurationSeconds(3) <= 17);
+  assert.ok(agendaDurationSeconds(5) >= 18 && agendaDurationSeconds(5) <= 21);
+  assert.ok(agendaDurationSeconds(6) >= 20 && agendaDurationSeconds(6) <= 24);
+  assert.ok(agendaDurationSeconds(7) <= 24);
   assert.equal(agendaFileName({ day: "2026-09-02", format: "story" }), "strix-agenda-2026-09-02-story.mp4");
   assert.equal(agendaFileName({ day: "2026-09-02", format: "feed" }), "strix-agenda-2026-09-02-feed.mp4");
 });

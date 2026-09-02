@@ -59,8 +59,13 @@ test("timeline adapta beats e nunca sai da safe area do Instagram", () => {
   const feed = buildAgendaTimeline(matches(3), { format: "feed" });
   assert.equal(one.scenes.filter((scene) => scene.type === "match").length, 1);
   assert.equal(five.scenes.filter((scene) => scene.type === "match").length, 5);
+  const seven = buildAgendaTimeline(matches(7), { format: "story" });
   assert.ok(one.scenes.find((scene) => scene.type === "match").end - one.scenes.find((scene) => scene.type === "match").start > 4);
-  assert.ok(five.scenes.find((scene) => scene.type === "match").end - five.scenes.find((scene) => scene.type === "match").start < 2);
+  const fiveBeat = five.scenes.find((scene) => scene.type === "match").end - five.scenes.find((scene) => scene.type === "match").start;
+  const sevenBeat = seven.scenes.find((scene) => scene.type === "match").end - seven.scenes.find((scene) => scene.type === "match").start;
+  assert.ok(fiveBeat >= 2.4 && fiveBeat < 2.7);
+  assert.ok(sevenBeat >= 2.1 && sevenBeat <= 2.3);
+  assert.equal(one.scenes.filter((scene) => scene.type === "lockup").length, 1);
   assert.deepEqual(measureSafeZones(one), {
     format: "story",
     width: 1080,
@@ -76,6 +81,7 @@ test("timeline adapta beats e nunca sai da safe area do Instagram", () => {
   assert.equal(one.totalFrames, Math.round(one.duration * one.fps));
   assert.equal(sceneAt(one, 0.2).type, "intro");
   assert.equal(sceneAt(one, one.finaleStart + 0.1).type, "finale");
+  assert.equal(sceneAt(one, one.lockupStart + 0.1).type, "lockup");
   assert.ok(one.introEnd >= 2);
   assert.ok(one.duration - one.finaleStart >= 3.2);
   assert.ok(typeScale("story").title >= 110);

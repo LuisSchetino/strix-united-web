@@ -1,5 +1,5 @@
 import { Muxer, ArrayBufferTarget } from "mp4-muxer";
-import { paintAgendaFrame } from "./agenda-paint.js";
+import { agendaFrameTime, renderAgendaFrame } from "./agenda-frame.js";
 
 const CODEC_CANDIDATES = [
   { codec: "avc1.640028", bitrate: 12_000_000 },
@@ -7,11 +7,24 @@ const CODEC_CANDIDATES = [
   { codec: "avc1.42001E", bitrate: 8_000_000 },
 ];
 
-function yieldFrame() {
+function waitEncoderDrain(encoder, limit = 4) {
+  if (encoder.encodeQueueSize < limit) return Promise.resolve();
   return new Promise((resolve) => {
-    if (typeof requestAnimationFrame === "function") requestAnimationFrame(() => resolve());
-    else setTimeout(resolve, 0);
+    const onDequeue = () => {
+      if (encoder.encodeQueueSize < limit) {
+        encoder.removeEventListener("dequeue", onDequeue);
+        resolve();
+      }
+    };
+    encoder.addEventListener("dequeue", onDequeue);
   });
+}
+
+async function snapshotCanvas(canvas) {
+  if (typeof createImageBitmap === "function") {
+    return createImageBitmap(canvas);
+  }
+  return canvas;
 }
 
 async function pickVideoConfig(width, height, fps) {
@@ -53,11 +66,11 @@ export async function encodeAgendaMp4({
   if (!canEncodeMp4()) {
     throw new Error("Este navegador não consegue gerar MP4 H.264. Use Chrome ou Edge atualizado.");
   }
-  const { width, height, fps, totalFrames, duration } = timeline;
+  const { width, height, fps, totalFrames } = timeline;
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
-  const ctx = canvas.getContext("2d", { alpha: false, desynchronized: true });
+  const ctx = canvas.getContext("2d", { alpha: false, willReadFrequently: true });
   if (!ctx) throw new Error("Canvas 2D indisponível para o render.");
 
   const config = await pickVideoConfig(width, height, fps);
@@ -80,27 +93,32 @@ export async function encodeAgendaMp4({
   encoder.configure(config);
 
   const frameDuration = 1_000_000 / fps;
+  const keyInterval = Math.max(15, Math.round(fps / 2));
   for (let index = 0; index < totalFrames; index += 1) {
     if (signal?.aborted) {
       encoder.close();
       throw new DOMException("Render cancelado.", "AbortError");
     }
     if (encoderError) throw encoderError;
-    const time = Math.min(duration, index / fps);
-    paintAgendaFrame(ctx, { timeline, time, assets, dayLabel });
-    const frame = new VideoFrame(canvas, {
+    await waitEncoderDrain(encoder);
+    const timeSec = agendaFrameTime(index, timeline);
+    renderAgendaFrame(ctx, { timeline, timeSec, assets, dayLabel });
+    const bitmap = await snapshotCanvas(canvas);
+    const frame = new VideoFrame(bitmap, {
       timestamp: Math.round(index * frameDuration),
       duration: Math.round(frameDuration),
     });
-    encoder.encode(frame, { keyFrame: index % fps === 0 });
+    encoder.encode(frame, { keyFrame: index % keyInterval === 0 });
     frame.close();
+    if (bitmap.close) bitmap.close();
     onProgress?.({
       stage: "rendering",
       frame: index + 1,
       totalFrames,
       ratio: (index + 1) / totalFrames,
+      timeSec,
     });
-    if (index % 2 === 0) await yieldFrame();
+    if (index % 12 === 0) await new Promise((resolve) => setTimeout(resolve, 0));
   }
 
   onProgress?.({ stage: "encoding", frame: totalFrames, totalFrames, ratio: 1 });

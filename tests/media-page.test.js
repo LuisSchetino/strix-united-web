@@ -35,10 +35,18 @@ test("logos do painter não usam círculo cinza e compartilham a mesma caixa óp
 
 test("encode usa H.264 e nunca troca logo depois que o render começa", async () => {
   const encode = await read("src/features/media/encode-mp4.js");
+  const page = await read("src/features/media/MediaPage.jsx");
   const assets = await read("src/features/media/media-assets.js");
   assert.match(encode, /VideoEncoder/);
   assert.match(encode, /avc1/);
   assert.match(encode, /mp4-muxer/);
+  assert.match(encode, /createImageBitmap/);
+  assert.match(encode, /renderAgendaFrame/);
+  assert.match(encode, /agendaFrameTime/);
+  assert.match(encode, /encodeQueueSize/);
+  assert.doesNotMatch(encode, /desynchronized/);
+  assert.match(page, /renderAgendaFrame/);
+  assert.match(page, /agendaFrameTime/);
   assert.match(assets, /loadAgendaAssets/);
   assert.doesNotMatch(encode, /html-to-image/);
 });

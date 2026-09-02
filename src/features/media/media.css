@@ -24,8 +24,8 @@
   overflow:hidden;display:grid;place-items:center;min-height:420px;border:1px solid var(--strix-border-strong);
   border-radius:16px;background:#050607
 }
-.media-preview-frame canvas{display:block;width:min(100%,320px);height:auto;background:#050607}
-.media-preview-frame.is-feed canvas{width:min(100%,280px)}
+.media-preview-frame canvas{display:block;width:min(100%,320px);aspect-ratio:9/16;height:auto;background:#050607}
+.media-preview-frame.is-feed canvas{width:min(100%,280px);aspect-ratio:4/5}
 .media-preview-frame.is-empty{color:#8e969f;text-align:center;padding:32px}
 .media-actions,.media-inline-actions{display:flex;flex-wrap:wrap;gap:8px}
 .media-progress{display:grid;gap:8px}

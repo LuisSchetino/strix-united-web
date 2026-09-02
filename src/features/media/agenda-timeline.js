@@ -90,13 +90,20 @@ export function buildAgendaTimeline(matches = [], { format = "story" } = {}) {
   scenes.push(...matchScenes);
 
   const finaleStart = introEnd + count * beat;
+  const lockupStart = finaleStart + finale;
   scenes.push({
     id: "finale",
     type: "finale",
     start: finaleStart,
-    end: duration,
+    end: lockupStart,
     hold: finale,
-    lockupStart: duration - lockup,
+    lockupStart,
+  });
+  scenes.push({
+    id: "lockup",
+    type: "lockup",
+    start: lockupStart,
+    end: duration,
   });
 
   return {
@@ -108,7 +115,7 @@ export function buildAgendaTimeline(matches = [], { format = "story" } = {}) {
     totalFrames: Math.max(1, Math.round(duration * fps)),
     introEnd,
     finaleStart,
-    lockupStart: duration - lockup,
+    lockupStart,
     safe: safeArea(spec.id),
     scenes,
     matches,
