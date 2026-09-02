@@ -39,6 +39,7 @@ test("route preloading and faithful skeleton variants are wired without a new qu
   assert.match(source, /FeatureBoundary type="analysis"/);
   assert.match(css, /\.skeleton-metrics/);
   assert.match(css, /\.skeleton-table-row/);
+  assert.match(css, /\.page-enter\{animation-duration:180ms!important\}/);
   assert.match(css, /prefers-reduced-motion:reduce/);
   assert.doesNotMatch(pkg, /react-query|tanstack|framer-motion/);
 });

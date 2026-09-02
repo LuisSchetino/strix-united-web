@@ -1,4 +1,5 @@
 :root{--next-clubs-accent:#c7ff2f}
+.page-enter{animation-duration:180ms!important}
 
 /* Agenda rows keep the primary action and the actions menu as sibling controls. */
 .agenda-game-open{grid-column:1/5;display:grid;grid-template-columns:subgrid;align-items:center;gap:inherit;min-width:0;width:100%;padding:0;border:0;background:transparent;color:inherit;text-align:left;cursor:pointer}
