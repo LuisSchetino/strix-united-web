@@ -1,6 +1,10 @@
-.club-logo{position:relative;display:grid;place-items:center;flex:0 0 auto;overflow:hidden}
+.club-logo{position:relative;display:grid;place-items:center;flex:0 0 auto;overflow:hidden;aspect-ratio:1;contain:layout paint}
 .club-logo picture{display:contents}
-.club-logo img{display:block;width:100%;height:100%;object-fit:contain}
+.club-logo img{display:block;width:100%;height:100%;object-fit:contain;opacity:1;transition:opacity 160ms ease}
+.club-logo.is-loading img{opacity:0}
+.club-logo-placeholder{position:absolute;inset:0;display:grid!important;place-items:center;width:100%!important;height:100%!important;border-radius:inherit;background:#15191e;color:#8f969e;font:900 .62em/1 Inter,system-ui,sans-serif!important;animation:club-logo-pulse 1.2s ease-in-out infinite}
 .club-logo.has-image.is-logo{border-color:transparent!important;border-radius:0!important;background:transparent!important;box-shadow:none!important}
 .club-logo.has-image.is-logo img{border-radius:0!important;background:transparent!important}
 .club-logo.is-fallback b{display:grid;place-items:center;width:100%;height:100%;font:900 .72em/1 Inter,system-ui,sans-serif;letter-spacing:.02em}
+@keyframes club-logo-pulse{50%{opacity:.62}}
+@media(prefers-reduced-motion:reduce){.club-logo img{transition:none}.club-logo-placeholder{animation:none}}

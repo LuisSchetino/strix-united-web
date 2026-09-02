@@ -15,25 +15,38 @@ import "./agenda-sync.css";
 import "./fc27-data.css";
 import "./fc27-fixes.css";
 import { nextAgendaSlot } from "./features/agenda/agenda-slots.js";
-import { activeAgendaMatches, nextAgendaMatches, todayAgendaMatches } from "./features/agenda/agenda-time.js";
+import { activeAgendaMatches, agendaHeroSelection, nextAgendaMatches, todayAgendaMatches } from "./features/agenda/agenda-time.js";
 import { agendaStandingComparison } from "./features/agenda/agenda-standings.js";
 import { resolveAgendaTeamIdentity, resolveTeamIdentity } from "./features/teams/team-identity.js";
 import { notify, RollingLabel, ToastViewport } from "./ui/motion/motion.jsx";
 import { ClubLogo } from "./ui/ClubLogo.jsx";
+import { preloadClubLogos } from "./ui/provider-assets.js";
 import { STRIX_BRAND } from "./brand.js";
 import { RastroSignature } from "./ui/RastroBrand.jsx";
 import "./features/squad-cards.css";
 import "./fc27-brand.css";
 import "./round-discovery.css";
+import "./performance-polish.css";
 
-const GameDayEditor = lazy(() => import("./gameday/GameDayEditor.jsx").then((module) => ({ default: module.GameDayEditor })));
-const MatchesPage = lazy(() => import("./features/matches/MatchesPage.jsx").then((module) => ({ default: module.MatchesPage })));
-const CompetitionsPage = lazy(() => import("./features/competitions/CompetitionsPage.jsx").then((module) => ({ default: module.CompetitionsPage })));
-const LibraryPage = lazy(() => import("./features/library/LibraryPage.jsx").then((module) => ({ default: module.LibraryPage })));
-const DeveloperPage = lazy(() => import("./features/developer/DeveloperPage.jsx").then((module) => ({ default: module.DeveloperPage })));
-const StatisticsPage = lazy(() => import("./features/statistics/StatisticsPage.jsx"));
-const AnalysisPage = lazy(() => import("./features/analysis/AnalysisPage.jsx"));
-const RosterTools = lazy(() => import("./features/squad/RosterTools.jsx").then((module) => ({ default: module.RosterTools })));
+const routeLoaders = {
+  partidas: () => import("./features/matches/MatchesPage.jsx").then((module) => ({ default: module.MatchesPage })),
+  campeonatos: () => import("./features/competitions/CompetitionsPage.jsx").then((module) => ({ default: module.CompetitionsPage })),
+  estatisticas: () => import("./features/statistics/StatisticsPage.jsx"),
+  analise: () => import("./features/analysis/AnalysisPage.jsx"),
+  biblioteca: () => import("./features/library/LibraryPage.jsx").then((module) => ({ default: module.LibraryPage })),
+  desenvolvedor: () => import("./features/developer/DeveloperPage.jsx").then((module) => ({ default: module.DeveloperPage })),
+  midia: () => import("./gameday/GameDayEditor.jsx").then((module) => ({ default: module.GameDayEditor })),
+  elencoTools: () => import("./features/squad/RosterTools.jsx").then((module) => ({ default: module.RosterTools })),
+};
+const preloadRoute = (id) => routeLoaders[id]?.();
+const GameDayEditor = lazy(routeLoaders.midia);
+const MatchesPage = lazy(routeLoaders.partidas);
+const CompetitionsPage = lazy(routeLoaders.campeonatos);
+const LibraryPage = lazy(routeLoaders.biblioteca);
+const DeveloperPage = lazy(routeLoaders.desenvolvedor);
+const StatisticsPage = lazy(routeLoaders.estatisticas);
+const AnalysisPage = lazy(routeLoaders.analise);
+const RosterTools = lazy(routeLoaders.elencoTools);
 
 const icons = {
   menu: "M4 7h16M4 12h16M4 17h16",
@@ -354,9 +367,9 @@ function rememberLogo(name, logo) {
   catalog[normalizeTeamName(name)] = logo;
   localStorage.setItem(logoCatalogKey, JSON.stringify(catalog));
 }
-function Avatar({ name, logo, kind = "logo" }) {
+function Avatar({ name, logo, kind = "logo", priority = false }) {
   const resolvedLogo = logo || catalogLogo(name);
-  return <ClubLogo name={name} url={resolvedLogo} kind={kind} sizes="75px" className="avatar"/>;
+  return <ClubLogo name={name} url={resolvedLogo} kind={kind} priority={priority} sizes="75px" className="avatar"/>;
 }
 function tierLabel(tier) {
   return (
@@ -526,16 +539,30 @@ function useFc27Workspace(client, profile) {
     schemaPending: false,
     error: "",
   });
+  const refreshInFlight = useRef(null);
+  const refreshQueued = useRef(false);
+  const realtimeRefreshTimer = useRef(null);
   const assetUrl = (path) =>
     path ? client?.storage.from("fc27-team-assets").getPublicUrl(path).data.publicUrl || "" : "";
   const refresh = async () => {
     if (!client || !profile?.user_id) return;
-    const [agendaResult, logosResult, playersResult, aliasesResult, matchesResult] = await Promise.all([
+    if (refreshInFlight.current) {
+      refreshQueued.current = true;
+      return refreshInFlight.current;
+    }
+    const task = (async () => {
+    const [agendaResult, logosResult, playersResult, aliasesResult, matchesResult, competitionsResult, editionsResult, sourcesResult, fixturesResult, teamsResult, flagsResult] = await Promise.all([
       client.from("agenda_matches").select("*, opponent_logos!agenda_matches_opponent_logo_id_fkey(*)").order("scheduled_at", { ascending: true }),
       client.from("opponent_logos").select("*").order("canonical_name"),
       client.from("club_players").select("*").order("display_name"),
       client.from("club_player_aliases").select("*, club_players(display_name)").order("ea_name"),
       client.from("club_matches").select("*, opponent_logos(*), agenda_matches(id, opponent_name, scheduled_at)").order("played_at", { ascending: false }),
+      client.from("competitions").select("*").order("updated_at", { ascending: false }),
+      client.from("competition_editions").select("*").order("updated_at", { ascending: false }),
+      client.from("competition_sources").select("*").order("last_synced_at", { ascending: false }),
+      client.from("competition_fixtures").select("*").order("scheduled_at", { ascending: true }),
+      client.from("competition_teams").select("*").order("name"),
+      client.from("system_flags").select("*").order("key"),
     ]);
     const failure = [agendaResult, logosResult, playersResult, aliasesResult, matchesResult].find((result) => result.error)?.error;
     if (failure) {
@@ -546,14 +573,6 @@ function useFc27Workspace(client, profile) {
       }));
       return;
     }
-    const [competitionsResult, editionsResult, sourcesResult, fixturesResult, teamsResult, flagsResult] = await Promise.all([
-      client.from("competitions").select("*").order("updated_at", { ascending: false }),
-      client.from("competition_editions").select("*").order("updated_at", { ascending: false }),
-      client.from("competition_sources").select("*").order("last_synced_at", { ascending: false }),
-      client.from("competition_fixtures").select("*").order("scheduled_at", { ascending: true }),
-      client.from("competition_teams").select("*").order("name"),
-      client.from("system_flags").select("*").order("key"),
-    ]);
     const optionalResults = [competitionsResult, editionsResult, sourcesResult, fixturesResult, teamsResult, flagsResult];
     const isMissingOptionalSchema = (error) => ["42P01", "PGRST205"].includes(error?.code);
     const optionalFailure = optionalResults.find((result) => result.error && !isMissingOptionalSchema(result.error))?.error;
@@ -610,25 +629,40 @@ function useFc27Workspace(client, profile) {
       schemaPending: optionalResults.some((result) => isMissingOptionalSchema(result.error)),
       error: optionalFailure?.message || "",
     });
+    })();
+    refreshInFlight.current = task;
+    try { await task; }
+    finally {
+      if (refreshInFlight.current === task) refreshInFlight.current = null;
+      if (refreshQueued.current) {
+        refreshQueued.current = false;
+        void refresh();
+      }
+    }
+  };
+  const scheduleRealtimeRefresh = () => {
+    clearTimeout(realtimeRefreshTimer.current);
+    realtimeRefreshTimer.current = setTimeout(() => { void refresh(); }, 120);
   };
   useEffect(() => {
     if (!client || !profile?.user_id) return undefined;
     void refresh();
     const channel = client
       .channel("fc27-team-data")
-      .on("postgres_changes", { event: "*", schema: "public", table: "agenda_matches" }, refresh)
-      .on("postgres_changes", { event: "*", schema: "public", table: "opponent_logos" }, refresh)
-      .on("postgres_changes", { event: "*", schema: "public", table: "club_players" }, refresh)
-      .on("postgres_changes", { event: "*", schema: "public", table: "club_player_aliases" }, refresh)
-      .on("postgres_changes", { event: "*", schema: "public", table: "club_matches" }, refresh)
-      .on("postgres_changes", { event: "*", schema: "public", table: "competitions" }, refresh)
-      .on("postgres_changes", { event: "*", schema: "public", table: "competition_editions" }, refresh)
-      .on("postgres_changes", { event: "*", schema: "public", table: "competition_sources" }, refresh)
-      .on("postgres_changes", { event: "*", schema: "public", table: "competition_fixtures" }, refresh)
-      .on("postgres_changes", { event: "*", schema: "public", table: "competition_teams" }, refresh)
-      .on("postgres_changes", { event: "*", schema: "public", table: "system_flags" }, refresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "agenda_matches" }, scheduleRealtimeRefresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "opponent_logos" }, scheduleRealtimeRefresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "club_players" }, scheduleRealtimeRefresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "club_player_aliases" }, scheduleRealtimeRefresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "club_matches" }, scheduleRealtimeRefresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "competitions" }, scheduleRealtimeRefresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "competition_editions" }, scheduleRealtimeRefresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "competition_sources" }, scheduleRealtimeRefresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "competition_fixtures" }, scheduleRealtimeRefresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "competition_teams" }, scheduleRealtimeRefresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "system_flags" }, scheduleRealtimeRefresh)
       .subscribe();
     return () => {
+      clearTimeout(realtimeRefreshTimer.current);
       client.removeChannel(channel);
     };
   }, [client, profile?.user_id]);
@@ -929,6 +963,7 @@ function Sidebar({
   profile,
   signOut,
 }) {
+  const warmRoute = (id) => () => { void preloadRoute(id); };
   return (
     <aside
       className={`sidebar ${compact ? "is-compact" : ""} ${mobileOpen ? "mobile-open" : ""}`}
@@ -972,6 +1007,9 @@ function Sidebar({
             key={id}
             className={active === id ? "active" : ""}
             onClick={() => navigate(id)}
+            onPointerEnter={warmRoute(id)}
+            onFocus={warmRoute(id)}
+            onTouchStart={warmRoute(id)}
           >
             <Icon name={icon} />
             <span>{label}</span>
@@ -1124,22 +1162,22 @@ function Central({ openPlayer }) {
 }
 const agendaDraftKey = "strix-fc27-agenda-draft";
 function CentralLive({ workspace, navigate }) {
-  const upcoming = useMemo(() => nextAgendaMatches(workspace.agenda), [workspace.agenda]);
   const tonight = useMemo(() => todayAgendaMatches(workspace.agenda), [workspace.agenda]);
-  const next = upcoming[0];
-  const nextLogo = next?.resolved_opponent_logo_url || (next?.opponent_logos?.storage_path ? workspace.assetUrl(next.opponent_logos.storage_path) : "");
+  const hero = useMemo(() => agendaHeroSelection(workspace.agenda), [workspace.agenda]);
+  const heroMatch = hero.match;
+  const nextLogo = heroMatch?.resolved_opponent_logo_url || (heroMatch?.opponent_logos?.storage_path ? workspace.assetUrl(heroMatch.opponent_logos.storage_path) : "");
   return (
     <section className="page-home page-enter">
       <section className="match-hero">
         <div className="stadium-light stadium-left" /><div className="stadium-light stadium-right" /><div className="smoke smoke-a" /><div className="smoke smoke-b" />
-        <div className="hero-meta"><span>TRANSMISSÃO · NOITE DE JOGO</span><b>{next ? `${datePart(next.scheduled_at)} · ${timePart(next.scheduled_at)}` : "AGENDA LIVRE"}</b></div>
+        <div className="hero-meta"><span>{heroMatch ? (hero.isToday ? "TRANSMISSÃO · NOITE DE JOGO" : "PRÓXIMA PARTIDA") : "AGENDA LIVRE"}</span><b>{heroMatch ? `${datePart(heroMatch.scheduled_at)} · ${timePart(heroMatch.scheduled_at)}` : "SEM COMPROMISSO"}</b></div>
         <div className="hero-teams">
           <div><Crest /><strong>STRIX UNITED</strong></div>
-          <div className="versus"><small>{next?.competition_name || "SEM PARTIDA"}</small><b>VS</b><i>{next ? timePart(next.scheduled_at) : "—"}</i></div>
-          <div><Avatar name={next?.opponent_name || "?"} logo={nextLogo} /><strong>{next?.opponent_name || "AGUARDANDO ADVERSÁRIO"}</strong></div>
+          <div className="versus"><small>{heroMatch?.competition_name || "SEM PARTIDA"}</small><b>VS</b><i>{heroMatch ? timePart(heroMatch.scheduled_at) : "—"}</i></div>
+          <div><Avatar name={heroMatch?.opponent_name || "?"} logo={nextLogo} priority /><strong>{heroMatch?.opponent_name || "AGUARDANDO ADVERSÁRIO"}</strong></div>
         </div>
         <div className="hero-actions"><button className="primary" onClick={() => navigate("agenda")}><Icon name="squad" size={17} />ABRIR ESCALAÇÃO</button><button className="secondary" onClick={() => navigate("agenda")}>DETALHES DA PARTIDA <Icon name="arrow" size={16} /></button></div>
-        <div className="stadium-caption"><span>ARENA STRIX · SÃO PAULO</span><i>{next?.status === "live" ? "AO VIVO" : "PRÓXIMA PARTIDA"}</i></div>
+        <div className="stadium-caption"><span>ARENA STRIX · SÃO PAULO</span><i>{heroMatch?.status === "live" && hero.isToday ? "AO VIVO" : hero.isToday ? "HOJE" : heroMatch ? "PRÓXIMO COMPROMISSO" : "AGENDA LIVRE"}</i></div>
       </section>
       <div className="content-grid central-agenda-grid">
         <section className="panel schedule">
@@ -1260,12 +1298,12 @@ function StandingTeam({ row, label }) {
     ["J", row.played], ["PTS", row.points], ["V", row.wins], ["E", row.draws], ["D", row.losses],
     ["GP", row.goalsFor], ["GC", row.goalsAgainst], ["SG", row.goalDifference],
   ].filter(([, value]) => value !== null && value !== undefined);
-  return <article className="agenda-standing-team">
+  return <article className={`agenda-standing-team ${label === "STRIX" ? "is-strix" : "is-opponent"}`}>
     <strong>{row.position ? `${row.position}º` : "—"}</strong>
     <div><small>{label}</small><b>{row.team}</b><dl>{metrics.map(([key, value]) => <div key={key}><dt>{key}</dt><dd>{key === "SG" && Number(value) > 0 ? `+${value}` : value}</dd></div>)}</dl></div>
   </article>;
 }
-function AgendaModal({ entry, mode = "new", presets, roster = [], assetUrl, standings, onClose, onSave, logoForOpponent = catalogLogo, defaultDate = defaultAgendaForm.date, suggestTimeForDate }) {
+function AgendaModal({ entry, mode = "new", presets, roster = [], assetUrl, standings, onClose, onEdit, onSave, logoForOpponent = catalogLogo, defaultDate = defaultAgendaForm.date, suggestTimeForDate }) {
   const edit = Boolean(entry);
   const [form, setForm] = useState(() => {
     const saved = entry
@@ -1542,6 +1580,7 @@ function AgendaModal({ entry, mode = "new", presets, roster = [], assetUrl, stan
             <button type="button" className="secondary" onClick={onClose}>
               {readOnly ? "FECHAR" : "CANCELAR"}
             </button>
+            {readOnly && onEdit && <button type="button" className="primary agenda-edit-lineup" onClick={onEdit}><Icon name="squad" size={16} />EDITAR ESCALAÇÃO</button>}
             {!readOnly && <button className="primary">
               <RollingLabel>{swap
                 ? "TROCAR ADVERSÁRIO"
@@ -1964,28 +2003,16 @@ function AgendaLive({ navigate, workspace }) {
           <article
             key={item.id}
             className={`agenda-game ${item.cancelled ? "is-cancelled" : ""}`}
-            role="button"
-            tabIndex={0}
-            aria-label={`Abrir escalação de ${item.opponent}`}
-            onClick={(event) => {
-              if (event.target.closest("button, [role='menu']")) return;
-              setActions(null);
-              setModal({ entry: item, mode: "view" });
-            }}
-            onKeyDown={(event) => {
-              if (event.target !== event.currentTarget || !["Enter", " "].includes(event.key)) return;
-              event.preventDefault();
-              setActions(null);
-              setModal({ entry: item, mode: "view" });
-            }}
           >
-            <time className={tab === "next" ? "future-kickoff" : ""}>{tab === "next" && <span>{item.date}</span>}<b>{item.time}</b></time>
-            <div className="agenda-match">
-              <Avatar name={item.opponent} logo={item.logo} />
-              <div>{item.previousOpponent && <small className="replaced-opponent"><s>{item.previousOpponent}</s> → TROCADO</small>}<small>STRIX UNITED VS</small><b>{item.opponent}</b></div>
-            </div>
-            <span className="game-competition">{item.competition}</span>
-            <em className={item.status === "EM BREVE" ? "soon" : ""}>{item.status}</em>
+            <button className="agenda-game-open" type="button" aria-label={`Abrir escalação de ${item.opponent}`} onClick={() => { setActions(null); setModal({ entry: item, mode: "view" }); }}>
+              <time className={tab === "next" ? "future-kickoff" : ""}>{tab === "next" && <span>{item.date}</span>}<b>{item.time}</b></time>
+              <div className="agenda-match">
+                <Avatar name={item.opponent} logo={item.logo} />
+                <div>{item.previousOpponent && <small className="replaced-opponent"><s>{item.previousOpponent}</s> → TROCADO</small>}<small>STRIX UNITED VS</small><b>{item.opponent}</b></div>
+              </div>
+              <span className="game-competition">{item.competition}</span>
+              <em className={item.status === "EM BREVE" ? "soon" : ""}>{item.status}</em>
+            </button>
             <button data-agenda-menu-trigger aria-haspopup="menu" aria-expanded={actions === item.id} aria-label={`Ações para ${item.opponent}`} onClick={(event) => { event.stopPropagation(); setActions(actions === item.id ? null : item.id); }}>•••</button>
             {actions === item.id && <div className="agenda-actions" role="menu" onClick={(event) => event.stopPropagation()} onKeyDown={(event) => {
               if (!["ArrowDown", "ArrowUp"].includes(event.key)) return;
@@ -2003,7 +2030,7 @@ function AgendaLive({ navigate, workspace }) {
         )) : <div className="agenda-empty">{workspace.loading ? "Sincronizando agenda..." : "Nenhuma partida programada."}</div>}
       </section>
       {showPresets && <PresetPanel presets={presets} setPresets={setPresets} roster={workspace.players} assetUrl={workspace.assetUrl} onClose={() => setShowPresets(false)} />}
-      {modal && <AgendaModal entry={modal.entry} mode={modal.mode} presets={presets} roster={workspace.players} assetUrl={workspace.assetUrl} standings={agendaStandingComparison(modal.entry?.db, workspace.competitionSources, workspace.competitionTeams)} defaultDate={defaultNewDate} suggestTimeForDate={suggestTimeForDate} onClose={() => setModal(null)} logoForOpponent={(name) => { const logo = matchingLogo(workspace.logos, name); return logo?.storage_path ? workspace.assetUrl(logo.storage_path) : catalogLogo(name); }} onSave={(payload, mode) => void run(async () => { await workspace.saveAgenda(payload, mode, modal.entry?.db); setModal(null); })} />}
+      {modal && <AgendaModal entry={modal.entry} mode={modal.mode} presets={presets} roster={workspace.players} assetUrl={workspace.assetUrl} standings={agendaStandingComparison(modal.entry?.db, workspace.competitionSources, workspace.competitionTeams)} defaultDate={defaultNewDate} suggestTimeForDate={suggestTimeForDate} onClose={() => setModal(null)} onEdit={modal.entry ? () => setModal({ entry: modal.entry, mode: "edit" }) : undefined} logoForOpponent={(name) => { const logo = matchingLogo(workspace.logos, name); return logo?.storage_path ? workspace.assetUrl(logo.storage_path) : catalogLogo(name); }} onSave={(payload, mode) => void run(async () => { await workspace.saveAgenda(payload, mode, modal.entry?.db); setModal(null); })} />}
       {pendingAction && <ViewportDialog className="modal-backdrop" onMouseDown={() => setPendingAction(null)}>
         <article className="agenda-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="agenda-confirm-title" onMouseDown={(event) => event.stopPropagation()}>
           <header>
@@ -2185,15 +2212,15 @@ function SquadPageV3({ workspace, profile }) {
     </section>
   );
 }
-function FeatureBoundary({ children }) {
-  return <Suspense fallback={<WorkspaceSkeleton/>}>{children}</Suspense>;
+function FeatureBoundary({ children, type = "table" }) {
+  return <Suspense fallback={<WorkspaceSkeleton type={type}/>}>{children}</Suspense>;
 }
 
 function DataPage({ id, workspace, profile, client }) {
   const statisticalMatches = (workspace.matches || []).map((match) => ({ ...match, performance: currentMatchPerformance(match) }));
-  if (id === "estatisticas") return <FeatureBoundary><StatisticsPage workspace={workspace} matches={statisticalMatches}/></FeatureBoundary>;
-  if (id === "analise") return <FeatureBoundary><AnalysisPage workspace={workspace} profile={profile} matches={statisticalMatches}/></FeatureBoundary>;
-  if (id === "biblioteca") return <FeatureBoundary><LibraryPage client={client} profile={profile}/></FeatureBoundary>;
+  if (id === "estatisticas") return <FeatureBoundary type="statistics"><StatisticsPage workspace={workspace} matches={statisticalMatches}/></FeatureBoundary>;
+  if (id === "analise") return <FeatureBoundary type="analysis"><AnalysisPage workspace={workspace} profile={profile} matches={statisticalMatches}/></FeatureBoundary>;
+  if (id === "biblioteca") return <FeatureBoundary type="library"><LibraryPage client={client} profile={profile}/></FeatureBoundary>;
   if (id === "desenvolvedor" && profile?.access_tier !== "dev") return <section className="placeholder page-enter"><span>ÁREA RESTRITA</span><h1>Desenvolvedor</h1><p>Esta área é exclusiva para Desenvolvimento.</p></section>;
   if (id === "desenvolvedor") return <FeatureBoundary><DeveloperPage client={client} profile={profile} workspace={workspace}/></FeatureBoundary>;
   if (id === "midia") return <FeatureBoundary><GameDayEditor profile={profile} client={client} workspace={workspace}/></FeatureBoundary>;
@@ -2734,22 +2761,19 @@ function CurrentGame({ navigate }) {
   );
 }
 function CurrentGameLive({ navigate, workspace }) {
-  const item = useMemo(() => workspace.agenda
-    .filter((value) => !["cancelled", "completed"].includes(value.status))
-    .sort((left, right) => new Date(left.scheduled_at) - new Date(right.scheduled_at))[0], [workspace.agenda]);
+  const item = useMemo(() => nextAgendaMatches(workspace.agenda)[0], [workspace.agenda]);
   return <button className="now-playing" onClick={() => navigate("agenda")}><Crest small/><div><small>{item ? "PRÓXIMA PARTIDA" : "AGENDA LIVRE"}</small><b>{item ? `Strix United vs ${item.opponent_name}` : "Nenhuma partida programada"}</b></div><strong>{item ? timePart(item.scheduled_at) : "—"}</strong><Icon name="arrow" size={17}/></button>;
 }
-function WorkspaceSkeleton() {
+function WorkspaceSkeleton({ type = "central" }) {
+  const rowCount = type === "table" || type === "competitions" ? 5 : 3;
   return (
-    <section className="workspace-skeleton" aria-label="Carregando conteúdo" aria-busy="true">
-      <div className="motion-skeleton skeleton-title" />
-      <div className="motion-skeleton skeleton-subtitle" />
-      <div className="skeleton-cards">
-        <div className="motion-skeleton" />
-        <div className="motion-skeleton" />
-        <div className="motion-skeleton" />
-      </div>
-      <div className="motion-skeleton skeleton-table" />
+    <section className={`workspace-skeleton is-${type}`} aria-label="Carregando conteúdo" aria-busy="true">
+      <header className="skeleton-heading"><div className="motion-skeleton skeleton-eyebrow"/><div className="motion-skeleton skeleton-title"/><div className="motion-skeleton skeleton-subtitle"/></header>
+      {(type === "central") && <div className="motion-skeleton skeleton-hero"><i/><i/><i/></div>}
+      {(type === "statistics" || type === "analysis") && <div className="skeleton-metrics">{Array.from({ length: 4 }, (_, index) => <div className="motion-skeleton" key={index}><i/><b/></div>)}</div>}
+      {(type === "statistics" || type === "analysis") && <div className="skeleton-split"><div className="motion-skeleton skeleton-chart"/><div className="skeleton-ranking">{Array.from({ length: 5 }, (_, index) => <div className="motion-skeleton" key={index}/>)}</div></div>}
+      {(type === "table" || type === "competitions" || type === "library") && <div className="skeleton-table"><div className="motion-skeleton skeleton-table-head"/>{Array.from({ length: rowCount }, (_, index) => <div className="motion-skeleton skeleton-table-row" key={index}><i/><b/><i/></div>)}</div>}
+      {type === "central" && <div className="skeleton-agenda">{Array.from({ length: 3 }, (_, index) => <div className="motion-skeleton" key={index}><i/><b/><i/></div>)}</div>}
     </section>
   );
 }
@@ -2802,6 +2826,25 @@ function App() {
     document.addEventListener("pointerdown", closeCreate);
     return () => document.removeEventListener("pointerdown", closeCreate);
   }, [createOpen]);
+  useEffect(() => {
+    if (workspace.loading || active !== "central") return undefined;
+    const warm = () => {
+      for (const id of ["estatisticas", "campeonatos", "analise"]) void preloadRoute(id);
+    };
+    if (typeof window.requestIdleCallback === "function") {
+      const idleId = window.requestIdleCallback(warm, { timeout: 1400 });
+      return () => window.cancelIdleCallback(idleId);
+    }
+    const timer = setTimeout(warm, 350);
+    return () => clearTimeout(timer);
+  }, [active, workspace.loading]);
+  useEffect(() => {
+    if (workspace.loading) return;
+    preloadClubLogos(workspace.agenda
+      .filter((match) => !["cancelled", "completed"].includes(match.status))
+      .slice(0, 12)
+      .map((match) => match.resolved_opponent_logo_url || (match.opponent_logos?.storage_path ? workspace.assetUrl(match.opponent_logos.storage_path) : "")));
+  }, [workspace.agenda, workspace.loading]);
   if (!auth.profile)
     return (
       <LoginScreen
@@ -2873,11 +2916,11 @@ function App() {
         ) : active === "agenda" ? (
           <AgendaLive navigate={navigate} workspace={workspace} />
         ) : active === "partidas" ? (
-          <FeatureBoundary><MatchesPage profile={auth.profile} workspace={workspace} client={auth.client} /></FeatureBoundary>
+          <FeatureBoundary type="table"><MatchesPage profile={auth.profile} workspace={workspace} client={auth.client} /></FeatureBoundary>
         ) : active === "elenco" ? (
           <SquadPageV3 workspace={workspace} profile={auth.profile} />
         ) : active === "campeonatos" ? (
-          <FeatureBoundary><CompetitionsPage profile={auth.profile} workspace={workspace} client={auth.client} /></FeatureBoundary>
+          <FeatureBoundary type="competitions"><CompetitionsPage profile={auth.profile} workspace={workspace} client={auth.client} /></FeatureBoundary>
         ) : (
           <DataPage id={active} workspace={workspace} profile={auth.profile} client={auth.client} />
         )}

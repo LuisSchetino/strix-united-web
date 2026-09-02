@@ -32,3 +32,17 @@ export function todayAgendaMatches(matches = [], now = new Date()) {
     (match) => saoPauloDay(match.scheduled_at) === today,
   );
 }
+
+export function agendaHeroSelection(matches = [], now = new Date()) {
+  const today = todayAgendaMatches(matches, now);
+  const nextToday = today.find((match) => new Date(match.scheduled_at).getTime() >= now.getTime());
+  if (nextToday) return { match: nextToday, isToday: true };
+  if (today.length) {
+    const closest = [...today].sort((left, right) => (
+      Math.abs(new Date(left.scheduled_at).getTime() - now.getTime())
+      - Math.abs(new Date(right.scheduled_at).getTime() - now.getTime())
+    ))[0];
+    return { match: closest, isToday: true };
+  }
+  return { match: nextAgendaMatches(matches, now)[0] || null, isToday: false };
+}
