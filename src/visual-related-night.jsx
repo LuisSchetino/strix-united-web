@@ -177,7 +177,7 @@ function App() {
 
   return (
     <main style={{ minHeight: "100vh", margin: 0, padding: 24, background: "#050607", color: "#f5f5f5", fontFamily: "Inter, sans-serif" }}>
-      <h1>QA · Relacionados da Noite v3</h1>
+      <h1>QA · Relacionados da Noite v4</h1>
       <p>{status}</p>
       {blobInfo && <p>{blobInfo.duration}s · {blobInfo.fps} fps · {blobInfo.frames} frames · {(blobInfo.size / 1024 / 1024).toFixed(2)} MB</p>}
       {qa && <p style={{ color: qa.includes("FREEZE") || qa.includes("RESERVA") ? "#ffbdc6" : "#b8e0c8" }}>{qa}</p>}

@@ -1,8 +1,10 @@
 import { AGENDA_TEMPLATE_ID, agendaFileName, fingerprintAgendaRender } from "./agenda-media-core.js";
 import { encodeAgendaMp4 } from "./encode-mp4.js";
-import { loadAgendaAssets, loadRelatedNightAssets } from "./media-assets.js";
+import { loadAgendaAssets, loadRelatedNightAssets, loadSummaryAssets } from "./media-assets.js";
 import { relatedNightFileName, fingerprintRelatedNightRender, RELATED_NIGHT_TEMPLATE_ID } from "./related-night-core.js";
 import { relatedNightFrameTime, renderRelatedNightFrame } from "./related-night-frame.js";
+import { fingerprintSummaryRender, SUMMARY_TEMPLATE_ID, summaryFileName } from "./summary-core.js";
+import { summaryFrameTime, renderSummaryFrame } from "./summary-frame.js";
 
 const DB_NAME = "strix-fc27-media";
 const STORE = "renders";
@@ -246,6 +248,95 @@ export async function startRelatedNightRender({
       fileName,
       createdAt: new Date().toISOString(),
       matchCount: players.length,
+      blob,
+    };
+    await writeCached(record);
+    emit({
+      status: "ready",
+      stage: "ready",
+      progress: { stage: "finishing", ratio: 1, totalFrames: timeline.totalFrames, frame: timeline.totalFrames },
+      result: record,
+      error: "",
+      controller: null,
+    });
+  } catch (error) {
+    if (error?.name === "AbortError") {
+      emit({ status: "idle", stage: "", error: "", controller: null, result: null });
+      return getMediaJob();
+    }
+    emit({
+      status: "error",
+      stage: "error",
+      error: error?.message || "Não foi possível gerar o vídeo.",
+      controller: null,
+    });
+  }
+  return getMediaJob();
+}
+
+export async function startSummaryRender({
+  period,
+  format = "story",
+  day,
+  dayLabel,
+  timeline,
+  force = false,
+} = {}) {
+  if (job.status === "running") return job;
+  const mode = period?.mode === "week" ? "week" : "day";
+  const matches = period?.matches || [];
+  const fingerprint = await fingerprintSummaryRender({ mode, day, format, matches });
+  const fileName = summaryFileName({ day, mode, format });
+  if (!force) {
+    const cached = await findCachedRender(fingerprint, format);
+    if (cached) {
+      emit({
+        status: "ready",
+        stage: "cached",
+        format,
+        fingerprint,
+        progress: { stage: "finishing", ratio: 1 },
+        result: cached,
+        error: "",
+      });
+      return getMediaJob();
+    }
+  }
+
+  const controller = new AbortController();
+  emit({
+    status: "running",
+    stage: "preparing",
+    format,
+    fingerprint,
+    progress: { stage: "preparing", loaded: 0, total: 0 },
+    result: null,
+    error: "",
+    controller,
+  });
+
+  try {
+    const assets = await loadSummaryAssets(matches, {
+      onProgress: (progress) => emit({ stage: "preparing", progress }),
+    });
+    const blob = await encodeAgendaMp4({
+      timeline,
+      assets,
+      dayLabel,
+      signal: controller.signal,
+      onProgress: (progress) => emit({ stage: progress.stage, progress }),
+      renderFrame: renderSummaryFrame,
+      frameTime: summaryFrameTime,
+    });
+    const record = {
+      id: `${fingerprint}:${format}`,
+      fingerprint,
+      format,
+      template: SUMMARY_TEMPLATE_ID,
+      day,
+      fileName,
+      createdAt: new Date().toISOString(),
+      matchCount: matches.length,
       blob,
     };
     await writeCached(record);

@@ -117,12 +117,13 @@ export function fieldStage(timeline, camera = {}) {
   return {
     width,
     height,
-    top: safe.top + (story ? 36 : 16),
-    bottom: height - safe.bottom - (story ? 12 : 8),
+    top: safe.top + (story ? 92 : 40),
+    bottom: height - safe.bottom - (story ? 88 : 36),
     zoom: Number.isFinite(camera.zoom) ? camera.zoom : 1,
     lookU: Number.isFinite(camera.lookU) ? camera.lookU : 0.5,
     lookV: Number.isFinite(camera.lookV) ? camera.lookV : 0.5,
-    camZ: 2.35,
+    camZ: 2.55,
+    originX: width * (story ? 0.44 : 0.5),
   };
 }
 
@@ -137,9 +138,9 @@ export function projectFieldPoint(u, v, timeline, camera = {}) {
   const t = (persp - farPersp) / (nearPersp - farPersp);
   const lookShift = (stage.lookV - 0.5) * (stage.bottom - stage.top) * 0.2;
   const y = stage.top + (stage.bottom - stage.top) * t - lookShift + (camera.y || 0);
-  const fieldW = timeline.width * 1.04 * zoom * perspN;
-  const pan = (0.5 - stage.lookU) * timeline.width * 0.1;
-  const x = timeline.width / 2 + (u - 0.5) * fieldW + (camera.x || 0) + pan;
+  const fieldW = timeline.width * 0.84 * zoom * perspN;
+  const pan = (0.5 - stage.lookU) * timeline.width * 0.08;
+  const x = stage.originX + (u - 0.5) * fieldW + (camera.x || 0) + pan;
   return {
     x,
     y,

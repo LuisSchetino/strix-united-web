@@ -99,3 +99,7 @@ export async function loadRelatedNightAssets(players = [], { onProgress } = {}) 
     total: unique.length,
   };
 }
+
+export function loadSummaryAssets(matches = [], options = {}) {
+  return loadAgendaAssets(matches, options);
+}

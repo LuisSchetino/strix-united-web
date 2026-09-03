@@ -67,7 +67,7 @@ test("projeção em perspectiva mantém profundidade", () => {
   assert.ok(near.scale > far.scale);
   assert.ok(near.y > far.y);
   assert.ok(near.fieldW > far.fieldW);
-  assert.ok(near.fieldW > timeline.width * 0.95);
+  assert.ok(near.fieldW > timeline.width * 0.7);
   const boxEdge = PITCH.penaltyDepth;
   assert.ok(boxEdge > 0.14 && boxEdge < 0.18);
 });

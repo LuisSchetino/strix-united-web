@@ -11,7 +11,7 @@ import {
 } from "./agenda-media-core.js";
 import { buildAgendaTimeline } from "./agenda-timeline.js";
 import { agendaFrameTime, renderAgendaFrame } from "./agenda-frame.js";
-import { loadAgendaAssets, loadRelatedNightAssets } from "./media-assets.js";
+import { loadAgendaAssets, loadRelatedNightAssets, loadSummaryAssets } from "./media-assets.js";
 import {
   describeTonightRelated,
   fingerprintRelatedNightRender,
@@ -22,11 +22,20 @@ import { NightRelatedEditor } from "../agenda/NightRelatedEditor.jsx";
 import { buildRelatedNightTimeline } from "./related-night-timeline.js";
 import { relatedNightFrameTime, renderRelatedNightFrame } from "./related-night-frame.js";
 import {
+  collectPeriodSummary,
+  fingerprintSummaryRender,
+  SUMMARY_TEMPLATE_ID,
+  summaryFileName,
+} from "./summary-core.js";
+import { buildSummaryTimeline } from "./summary-timeline.js";
+import { summaryFrameTime, renderSummaryFrame } from "./summary-frame.js";
+import {
   downloadBlob,
   listCachedRenders,
   progressLabel,
   startAgendaRender,
   startRelatedNightRender,
+  startSummaryRender,
   subscribeMediaJob,
 } from "./media-jobs.js";
 import "./media.css";
@@ -124,6 +133,9 @@ export function MediaPage({ profile, client, workspace }) {
   const [relatedAssets, setRelatedAssets] = useState(null);
   const [cache, setCache] = useState([]);
   const [relatedCache, setRelatedCache] = useState([]);
+  const [summaryCache, setSummaryCache] = useState([]);
+  const [summaryAssets, setSummaryAssets] = useState(null);
+  const [summaryAssetError, setSummaryAssetError] = useState("");
   const [viewer, setViewer] = useState(null);
   const [assetError, setAssetError] = useState("");
   const [relatedAssetError, setRelatedAssetError] = useState("");
@@ -134,6 +146,13 @@ export function MediaPage({ profile, client, workspace }) {
     [workspace.nightRelated, workspace.agenda, workspace.players],
   );
   const related = relatedState.players;
+  const summaryMode = tab === "summary-week" ? "week" : "day";
+  const summary = useMemo(
+    () => collectPeriodSummary(workspace, { mode: summaryMode }),
+    [workspace.matches, summaryMode],
+  );
+  const summaryTimeline = useMemo(() => buildSummaryTimeline(summary, { format: "story" }), [summary]);
+  const hasSummary = summary.matches.length > 0;
   const matchKey = matches.map((match) => `${match.id}:${match.scheduled_at}:${match.opponent_logo}:${match.competition_logo}`).join("|");
   const relatedKey = related.map((player) => `${player.id}:${player.name}:${player.photo}:${player.position}:${player.group}`).join("|");
   const timeline = useMemo(() => buildAgendaTimeline(matches, { format }), [matches, format]);
@@ -149,16 +168,19 @@ export function MediaPage({ profile, client, workspace }) {
     Promise.all([
       listCachedRenders(day.iso, { template: AGENDA_TEMPLATE_ID }),
       listCachedRenders(day.iso, { template: RELATED_NIGHT_TEMPLATE_ID }),
-    ]).then(([agendaRows, relatedRows]) => {
+      listCachedRenders(day.iso, { template: SUMMARY_TEMPLATE_ID }),
+    ]).then(([agendaRows, relatedRows, summaryRows]) => {
       if (!alive) return;
       setCache(agendaRows);
       setRelatedCache(relatedRows);
+      setSummaryCache(summaryRows);
     });
     return () => { alive = false; };
   }, [day.iso, job?.status]);
 
   const [prints, setPrints] = useState({ story: "", feed: "" });
   const [relatedPrint, setRelatedPrint] = useState("");
+  const [summaryPrint, setSummaryPrint] = useState("");
   useEffect(() => {
     let alive = true;
     Promise.all([
@@ -174,6 +196,29 @@ export function MediaPage({ profile, client, workspace }) {
       .then((value) => { if (alive) setRelatedPrint(value); });
     return () => { alive = false; };
   }, [day.iso, relatedKey, relatedState.saved]);
+
+  const summaryKey = summary.matches.map((match) => `${match.id}:${match.strix_score}:${match.opponent_score}:${match.opponent_logo}`).join("|");
+  useEffect(() => {
+    let alive = true;
+    fingerprintSummaryRender({ mode: summary.mode, day: day.iso, format: "story", matches: summary.matches })
+      .then((value) => { if (alive) setSummaryPrint(value); });
+    return () => { alive = false; };
+  }, [day.iso, summary.mode, summaryKey]);
+
+  useEffect(() => {
+    if (!hasSummary || (tab !== "summary-day" && tab !== "summary-week")) {
+      setSummaryAssets(null);
+      return undefined;
+    }
+    let alive = true;
+    setSummaryAssetError("");
+    loadSummaryAssets(summary.matches).then((loaded) => {
+      if (alive) setSummaryAssets(loaded);
+    }).catch((error) => {
+      if (alive) setSummaryAssetError(error.message || "Não foi possível preparar os escudos.");
+    });
+    return () => { alive = false; };
+  }, [hasSummary, summaryKey, tab]);
 
   useEffect(() => {
     if (!hasGames) {
@@ -243,6 +288,24 @@ export function MediaPage({ profile, client, workspace }) {
     }
   };
 
+  const generateSummary = async (force = false) => {
+    if (!hasSummary || running) return;
+    const started = await startSummaryRender({
+      period: summary,
+      format: "story",
+      day: day.iso,
+      dayLabel: summary.rangeLabel,
+      timeline: summaryTimeline,
+      force,
+    });
+    if (started.status === "ready") {
+      notify(started.stage === "cached" ? "Render reutilizado do cache." : "Vídeo gerado.");
+      setViewer(started.result);
+    } else if (started.status === "error") {
+      notify(started.error);
+    }
+  };
+
   if (!allowed) {
     return (
       <section className="media-page page-enter">
@@ -265,7 +328,13 @@ export function MediaPage({ profile, client, workspace }) {
     <section className="media-page page-enter">
       <MotionTabs
         className="media-tabs"
-        items={[["agenda", "AGENDA DO DIA"], ["related", "RELACIONADOS DA NOITE"], ["gameday", "GAME DAY"]]}
+        items={[
+          ["agenda", "AGENDA DO DIA"],
+          ["related", "RELACIONADOS DA NOITE"],
+          ["summary-day", "RESUMO DO DIA"],
+          ["summary-week", "RESUMO DA SEMANA"],
+          ["gameday", "GAME DAY"],
+        ]}
         active={tab}
         onChange={setTab}
         label="Área de mídia"
@@ -276,6 +345,95 @@ export function MediaPage({ profile, client, workspace }) {
             <GameDayEditor profile={profile} client={client} workspace={workspace} />
           </Suspense>
         </div>
+      ) : tab === "summary-day" || tab === "summary-week" ? (
+        <>
+          <header className="media-hero">
+            <div>
+              <span>GERADOR DE MÍDIA</span>
+              <h1>{summary.mode === "week" ? "Resumo da semana." : "Resumo do dia."}</h1>
+              <p>Peça vertical com o desempenho do Strix no período, a partir do histórico oficial de partidas.</p>
+            </div>
+            <div className="media-hero-meta">
+              <span>{summary.rangeLabel}</span>
+              <b>{summary.matches.length}</b>
+              <small>{summary.matches.length === 1 ? "jogo concluído" : "jogos concluídos"}</small>
+            </div>
+          </header>
+          {!hasSummary ? (
+            <div className="media-empty">
+              <span>{summary.title}</span>
+              <h1>{summary.mode === "week" ? "Nenhum jogo concluído nesta semana." : "Nenhum jogo concluído hoje."}</h1>
+              <p>O resumo usa somente partidas do histórico com placar. Sem resultado, o vídeo não é gerado.</p>
+              <button type="button" className="primary" disabled>GERAR STORY</button>
+            </div>
+          ) : (
+            <div className="media-layout">
+              <section className="media-preview-card">
+                <header>
+                  <span>PREVIEW</span>
+                  <h2>Story / Reels 9:16</h2>
+                </header>
+                <div className={`media-preview-frame${summaryAssets ? "" : " is-empty"}`}>
+                  {summaryAssets ? (
+                    <PreviewCanvas
+                      timeline={summaryTimeline}
+                      assets={summaryAssets}
+                      dayLabel={summary.rangeLabel}
+                      format="story"
+                      frameTime={summaryFrameTime}
+                      renderFrame={renderSummaryFrame}
+                      label="Preview do resumo"
+                    />
+                  ) : (
+                    <p>{summaryAssetError || "Carregando escudos antes do preview…"}</p>
+                  )}
+                </div>
+                <div className="media-actions">
+                  <button type="button" className="primary" disabled={!summaryAssets || running} onClick={() => void generateSummary(false)}>
+                    <RollingLabel>{running ? "GERANDO…" : "GERAR STORY"}</RollingLabel>
+                  </button>
+                  <button type="button" className="secondary" disabled={!summaryAssets || running} onClick={() => void generateSummary(true)}>
+                    GERAR NOVAMENTE
+                  </button>
+                </div>
+                {running && (
+                  <div className="media-progress">
+                    <b>{progressLabel(job.progress)}</b>
+                    <i>{determinate && <em style={{ transform: `scaleX(${ratio})` }} />}</i>
+                  </div>
+                )}
+                {job?.status === "ready" && job.result && job.result.template === SUMMARY_TEMPLATE_ID && (
+                  <div className="media-actions">
+                    <p>✓ Vídeo gerado</p>
+                    <button type="button" className="primary" onClick={() => downloadBlob(job.result.blob, job.result.fileName || summaryFileName({ day: day.iso, mode: summary.mode, format: "story" }))}>
+                      BAIXAR MP4
+                    </button>
+                    <button type="button" className="secondary" onClick={() => setViewer(job.result)}>VISUALIZAR</button>
+                  </div>
+                )}
+                {job?.status === "error" && <p className="media-error">{job.error}</p>}
+              </section>
+              <aside className="media-side">
+                <h2>Último render</h2>
+                <div className="media-cache">
+                  <CacheCard
+                    title="STORY"
+                    record={summaryCache.find((row) => row.format === "story" && (row.fileName || "").includes(summary.mode === "week" ? "semana" : "dia")) || summaryCache.find((row) => row.format === "story") || null}
+                    currentFingerprint={summaryPrint}
+                    unit="jogo"
+                    disabled={running}
+                    onView={() => setViewer(summaryCache.find((row) => row.format === "story") || null)}
+                    onDownload={() => {
+                      const record = summaryCache.find((row) => row.format === "story");
+                      if (record) downloadBlob(record.blob, record.fileName);
+                    }}
+                    onRegen={() => void generateSummary(true)}
+                  />
+                </div>
+              </aside>
+            </div>
+          )}
+        </>
       ) : tab === "related" ? (
         <>
           <header className="media-hero">
