@@ -5,7 +5,6 @@ import {
   beatDuration,
   finaleDuration,
   introDuration,
-  lockupDuration,
 } from "./agenda-media-core.js";
 
 export const clamp01 = (value) => Math.max(0, Math.min(1, Number(value) || 0));
@@ -49,7 +48,6 @@ export function buildAgendaTimeline(matches = [], { format = "story" } = {}) {
   const introEnd = introDuration(count);
   const beat = beatDuration(count);
   const finale = finaleDuration(count);
-  const lockup = lockupDuration(count);
   const scenes = [];
 
   if (!count) {
@@ -90,20 +88,12 @@ export function buildAgendaTimeline(matches = [], { format = "story" } = {}) {
   scenes.push(...matchScenes);
 
   const finaleStart = introEnd + count * beat;
-  const lockupStart = finaleStart + finale;
   scenes.push({
     id: "finale",
     type: "finale",
     start: finaleStart,
-    end: lockupStart,
-    hold: finale,
-    lockupStart,
-  });
-  scenes.push({
-    id: "lockup",
-    type: "lockup",
-    start: lockupStart,
     end: duration,
+    hold: finale,
   });
 
   return {
@@ -115,7 +105,7 @@ export function buildAgendaTimeline(matches = [], { format = "story" } = {}) {
     totalFrames: Math.max(1, Math.round(duration * fps)),
     introEnd,
     finaleStart,
-    lockupStart,
+    lockupStart: duration,
     safe: safeArea(spec.id),
     scenes,
     matches,

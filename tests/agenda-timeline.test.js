@@ -65,7 +65,7 @@ test("timeline adapta beats e nunca sai da safe area do Instagram", () => {
   const sevenBeat = seven.scenes.find((scene) => scene.type === "match").end - seven.scenes.find((scene) => scene.type === "match").start;
   assert.ok(fiveBeat >= 2.4 && fiveBeat < 2.7);
   assert.ok(sevenBeat >= 2.1 && sevenBeat <= 2.3);
-  assert.equal(one.scenes.filter((scene) => scene.type === "lockup").length, 1);
+  assert.equal(one.scenes.filter((scene) => scene.type === "lockup").length, 0);
   assert.deepEqual(measureSafeZones(one), {
     format: "story",
     width: 1080,
@@ -81,7 +81,7 @@ test("timeline adapta beats e nunca sai da safe area do Instagram", () => {
   assert.equal(one.totalFrames, Math.round(one.duration * one.fps));
   assert.equal(sceneAt(one, 0.2).type, "intro");
   assert.equal(sceneAt(one, one.finaleStart + 0.1).type, "finale");
-  assert.equal(sceneAt(one, one.lockupStart + 0.1).type, "lockup");
+  assert.equal(sceneAt(one, Math.max(0, one.duration - 0.05)).type, "finale");
   assert.ok(one.introEnd >= 2);
   assert.ok(one.duration - one.finaleStart >= 3.2);
   assert.ok(typeScale("story").title >= 110);
@@ -106,14 +106,26 @@ test("easing premium não é linear e o painter cobre intro, jogo e finale", () 
   paintAgendaFrame(ctx, { timeline, time: 0.8, assets, dayLabel: "02 SET 2026" });
   paintAgendaFrame(ctx, { timeline, time: timeline.introEnd + 0.6, assets, dayLabel: "02 SET 2026" });
   paintAgendaFrame(ctx, { timeline, time: timeline.finaleStart + 0.8, assets, dayLabel: "02 SET 2026" });
-  paintAgendaFrame(ctx, { timeline, time: timeline.lockupStart + 0.6, assets, dayLabel: "02 SET 2026" });
+  paintAgendaFrame(ctx, { timeline, time: Math.max(0, timeline.duration - 0.2), assets, dayLabel: "02 SET 2026" });
   const texts = ctx.calls.filter((call) => Array.isArray(call) && call[0] === "fillText").map((call) => call[1]);
   assert.ok(texts.includes("AGENDA"));
   assert.ok(texts.includes("DO DIA"));
   assert.ok(texts.includes("AGENDA COMPLETA"));
   assert.ok(texts.includes("STRIX UNITED"));
-  assert.ok(texts.includes("MATCHDAY"));
+  assert.ok(!texts.includes("MATCHDAY"));
   assert.ok(texts.some((text) => String(text).includes("WINNER")));
+  const lateMatch = mockContext();
+  const lastMatch = timeline.scenes.filter((scene) => scene.type === "match").at(-1);
+  paintAgendaFrame(lateMatch, { timeline, time: lastMatch.end - 0.04, assets, dayLabel: "02 SET 2026" });
+  const lateTexts = lateMatch.calls.filter((call) => Array.isArray(call) && call[0] === "fillText").map((call) => call[1]);
+  assert.ok(!lateTexts.includes("AGENDA COMPLETA"));
+  assert.ok(!lateTexts.includes("MATCHDAY"));
+  const lateIntro = mockContext();
+  paintAgendaFrame(lateIntro, { timeline, time: timeline.introEnd - 0.04, assets, dayLabel: "02 SET 2026" });
+  const introTexts = lateIntro.calls.filter((call) => Array.isArray(call) && call[0] === "fillText").map((call) => call[1]);
+  assert.ok(!introTexts.some((text) => String(text).startsWith("JOGO")));
+  assert.ok(!introTexts.includes("AGENDA COMPLETA"));
+  assert.equal(timeline.scenes.at(-1).type, "finale");
 });
 
 test("zero jogos não produz composição renderizável", () => {

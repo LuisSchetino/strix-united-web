@@ -63,19 +63,22 @@ test("preview e encode compartilham o mesmo relógio de frame", () => {
   }
 });
 
-test("1, 3 e 6 jogos cobrem opening, confrontos, agenda e MATCHDAY", () => {
+test("1, 3 e 6 jogos cobrem opening, confrontos e agenda completa", () => {
   for (const count of [1, 3, 6]) {
     const timeline = buildAgendaTimeline(matches(count), { format: "story" });
     assert.equal(describeAgendaFrame(timeline, 0.5).sceneType, "intro");
     assert.equal(describeAgendaFrame(timeline, timeline.introEnd + 0.4).sceneType, "match");
     assert.equal(describeAgendaFrame(timeline, timeline.introEnd + 0.4).matchIndex, 0);
     assert.equal(describeAgendaFrame(timeline, timeline.finaleStart + 0.3).sceneType, "finale");
-    assert.equal(describeAgendaFrame(timeline, timeline.lockupStart + 0.2).sceneType, "lockup");
+    assert.equal(describeAgendaFrame(timeline, Math.max(0, timeline.duration - 0.05)).sceneType, "finale");
     if (count >= 3) {
       assert.equal(describeAgendaFrame(timeline, timeline.introEnd + 3.4).matchIndex, 1);
       assert.equal(describeAgendaFrame(timeline, timeline.introEnd + 6.4).matchIndex, 2);
     }
     assert.ok(agendaDurationSeconds(count) === timeline.duration);
+    const lastMatch = timeline.scenes.filter((scene) => scene.type === "match").at(-1);
+    assert.equal(describeAgendaFrame(timeline, lastMatch.end - 0.01).sceneType, "match");
+    assert.equal(describeAgendaFrame(timeline, lastMatch.end).sceneType, "finale");
   }
 });
 

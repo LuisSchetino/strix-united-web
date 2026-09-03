@@ -29,6 +29,8 @@ test("logos do painter não usam círculo cinza e compartilham a mesma caixa óp
   assert.match(paint, /logoDrawRect/);
   assert.match(paint, /measureOpaqueBounds/);
   assert.match(paint, /paintAmbient/);
+  assert.doesNotMatch(paint, /MATCHDAY/);
+  assert.doesNotMatch(paint, /paintLockup/);
   assert.doesNotMatch(paint, /fillStyle = GRAPHITE/);
   assert.doesNotMatch(paint, /ctx\.arc\(0, 0, half/);
 });
