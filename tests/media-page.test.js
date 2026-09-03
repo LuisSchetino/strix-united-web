@@ -7,6 +7,7 @@ const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 test("Mídia vira gerador automático da Agenda do Dia sem misturar EA Sync", async () => {
   const page = await read("src/features/media/MediaPage.jsx");
   const main = await read("src/main.jsx");
+  const editor = await read("src/features/agenda/NightRelatedEditor.jsx");
   const jobs = await read("src/features/media/media-jobs.js");
   const assets = await read("src/features/media/media-assets.js");
   assert.match(main, /features\/media\/MediaPage/);
@@ -16,8 +17,20 @@ test("Mídia vira gerador automático da Agenda do Dia sem misturar EA Sync", as
   assert.match(page, /STORY 9:16/);
   assert.match(page, /FEED 4:5/);
   assert.match(page, /BAIXAR MP4/);
+  assert.match(page, /RELACIONADOS DA NOITE/);
+  assert.match(page, /GERAR STORY/);
+  assert.match(page, /Nenhum relacionado salvo para hoje/);
+  assert.match(page, /sugestão ainda não salva/);
+  assert.match(page, /NightRelatedEditor/);
+  assert.match(page, /describeTonightRelated/);
+  assert.doesNotMatch(page, /união desses jogadores/);
+  assert.doesNotMatch(page, /RESERVA|BANCO|SUPLENTE|XI TITULAR/);
   assert.doesNotMatch(page, /proclubs\.ea\.com/);
   assert.doesNotMatch(page, /services\/ea-sync/);
+  assert.match(editor, /PREENCHER PELAS ESCALAÇÕES/);
+  assert.match(editor, /Sugestão ainda não salva/);
+  assert.match(main, /night_related/);
+  assert.match(main, /saveNightRelated/);
   assert.match(jobs, /fingerprint/);
   assert.match(jobs, /GERAR|force/);
   assert.match(assets, /cacheableProviderAssetUrl/);
@@ -49,6 +62,9 @@ test("encode usa H.264 e nunca troca logo depois que o render começa", async ()
   assert.doesNotMatch(encode, /desynchronized/);
   assert.match(page, /renderAgendaFrame/);
   assert.match(page, /agendaFrameTime/);
+  assert.match(page, /renderRelatedNightFrame/);
+  assert.match(page, /relatedNightFrameTime/);
   assert.match(assets, /loadAgendaAssets/);
+  assert.match(assets, /loadRelatedNightAssets/);
   assert.doesNotMatch(encode, /html-to-image/);
 });

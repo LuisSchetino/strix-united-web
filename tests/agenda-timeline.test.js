@@ -1,7 +1,18 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { buildAgendaTimeline, easeOutExpo, sceneAt } from "../src/features/media/agenda-timeline.js";
-import { logoDrawRect, measureSafeZones, paintAgendaFrame, typeScale } from "../src/features/media/agenda-paint.js";
+import {
+  finaleDensity,
+  finaleRowLayout,
+  finaleRowZones,
+  logoDrawRect,
+  matchStagePresence,
+  measureSafeZones,
+  paintAgendaFrame,
+  typeScale,
+} from "../src/features/media/agenda-paint.js";
+import { AGENDA_TEMPLATE_VERSION } from "../src/features/media/agenda-media-core.js";
+import { readFile } from "node:fs/promises";
 
 function matches(count) {
   return Array.from({ length: count }, (_, index) => ({
@@ -126,6 +137,90 @@ test("easing premium não é linear e o painter cobre intro, jogo e finale", () 
   assert.ok(!introTexts.some((text) => String(text).startsWith("JOGO")));
   assert.ok(!introTexts.includes("AGENDA COMPLETA"));
   assert.equal(timeline.scenes.at(-1).type, "finale");
+});
+
+test("agenda-day-v6 mantém palco persistente entre os jogos", () => {
+  assert.equal(AGENDA_TEMPLATE_VERSION, "agenda-day-v6");
+  const timeline = buildAgendaTimeline(matches(5), { format: "story" });
+  const assets = {
+    strix: { bitmap: null, initials: "SU", name: "Strix United" },
+    opponents: matches(5).map((match) => ({ bitmap: null, initials: "WE", name: match.opponent })),
+  };
+  const beat = timeline.scenes.find((scene) => scene.type === "match").end
+    - timeline.scenes.find((scene) => scene.type === "match").start;
+  const times = [
+    timeline.introEnd + 1.1,
+    timeline.introEnd + beat,
+    timeline.introEnd + beat + 0.12,
+    timeline.introEnd + beat * 2,
+    timeline.introEnd + beat * 4,
+    timeline.introEnd + beat * 4 + 0.14,
+  ];
+  for (const time of times) {
+    const presence = matchStagePresence(timeline, time);
+    assert.ok(presence.persistent >= 0.99, `Strix persistente em ${time}`);
+    const ctx = mockContext();
+    paintAgendaFrame(ctx, { timeline, time, assets, dayLabel: "02 SET 2026" });
+    const texts = ctx.calls.filter((call) => Array.isArray(call) && call[0] === "fillText").map((call) => call[1]);
+    assert.ok(texts.includes("STRIX UNITED"), `STRIX UNITED em ${time}`);
+    assert.ok(texts.includes("×"), `× em ${time}`);
+  }
+});
+
+test("agenda completa adapta 3/5/6 jogos e separa competição do matchup", () => {
+  const long = (count) => Array.from({ length: count }, (_, index) => ({
+    id: `m${index}`,
+    opponent: index % 2 ? "Sinceridade" : "POA City FC",
+    kickoff: `${21 + index}:10`,
+    competition: index % 2 ? "MASTER LEAGUE" : "SUPERLIGA YESHUA",
+    round: "",
+  }));
+  assert.equal(finaleDensity(3), "spacious");
+  assert.equal(finaleDensity(5), "compact");
+  assert.equal(finaleDensity(6), "dense");
+  for (const count of [3, 5, 6]) {
+    const timeline = buildAgendaTimeline(long(count), { format: "story" });
+    const layout = finaleRowLayout(timeline);
+    assert.equal(layout.density, finaleDensity(count));
+    assert.ok(layout.minCompGap >= 18);
+    for (let index = 0; index < count; index += 1) {
+      const zones = finaleRowZones(layout, index);
+      assert.ok(zones.compY - zones.matchupBottom >= layout.minCompGap - 0.01);
+      assert.ok(zones.timeY < zones.matchupMid);
+      assert.ok(zones.compY < layout.endY + 0.01);
+    }
+    const ctx = mockContext();
+    paintAgendaFrame(ctx, { timeline, time: timeline.finaleStart + 0.8, assets: {
+      strix: { bitmap: null, initials: "SU", name: "Strix United" },
+      opponents: long(count).map((match) => ({ bitmap: null, initials: "WE", name: match.opponent })),
+    }, dayLabel: "02 SET 2026" });
+    const texts = ctx.calls.filter((call) => Array.isArray(call) && call[0] === "fillText").map((call) => call[1]);
+    assert.ok(texts.includes("AGENDA COMPLETA"));
+    assert.ok(texts.some((text) => String(text).includes("SUPERLIGA YESHUA")));
+    assert.ok(texts.some((text) => String(text).includes("MASTER LEAGUE")));
+  }
+});
+
+test("opening v6 é tipográfico e o painter separa palco de conteúdo variável", async () => {
+  const paint = await readFile(new URL("../src/features/media/agenda-paint.js", import.meta.url), "utf8");
+  assert.match(paint, /paintMatchStagePersistent/);
+  assert.match(paint, /paintMatchVariableContent/);
+  assert.doesNotMatch(paint, /logoIntro/);
+  assert.doesNotMatch(paint, /MASTER LEAGUE/);
+  assert.doesNotMatch(paint, /SUPERLIGA YESHUA/);
+  const timeline = buildAgendaTimeline(matches(3), { format: "story" });
+  const ctx = mockContext();
+  paintAgendaFrame(ctx, {
+    timeline,
+    time: 1.4,
+    assets: { strix: { bitmap: null, initials: "SU", name: "Strix United" }, opponents: [] },
+    dayLabel: "02 SET 2026",
+  });
+  const texts = ctx.calls.filter((call) => Array.isArray(call) && call[0] === "fillText").map((call) => call[1]);
+  assert.ok(texts.includes("AGENDA"));
+  assert.ok(texts.includes("DO DIA"));
+  assert.ok(texts.includes("03 JOGOS"));
+  assert.ok(typeScale("story").title >= 170);
 });
 
 test("zero jogos não produz composição renderizável", () => {

@@ -1,7 +1,7 @@
 import { saoPauloDay, todayAgendaMatches } from "../agenda/agenda-time.js";
 
 export const AGENDA_TEMPLATE_ID = "agenda-day";
-export const AGENDA_TEMPLATE_VERSION = "agenda-day-v5";
+export const AGENDA_TEMPLATE_VERSION = "agenda-day-v6";
 export const AGENDA_FPS = 30;
 
 export const MEDIA_FORMATS = Object.freeze({

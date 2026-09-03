@@ -10,7 +10,7 @@ export function typeScale(format) {
   const story = format !== "feed";
   return {
     eyebrow: story ? 32 : 24,
-    title: story ? 148 : 100,
+    title: story ? 178 : 120,
     date: story ? 44 : 32,
     gameIndex: story ? 38 : 28,
     countHero: story ? 52 : 36,
@@ -28,7 +28,6 @@ export function typeScale(format) {
     brand: story ? 28 : 22,
     logoMatch: story ? 300 : 220,
     logoFinale: story ? 78 : 58,
-    logoIntro: story ? 248 : 176,
   };
 }
 
@@ -204,11 +203,25 @@ function paintAmbient(ctx, timeline, time, assets, phase = "intro") {
   ctx.fillText("STRIX", width * 0.5 + Math.sin(time * 0.16) * 14, wordY);
   ctx.restore();
 
+  if (phase === "intro" && timeline.matches?.length) {
+    ctx.save();
+    ctx.globalAlpha = 0.05 + breath * 0.012;
+    ctx.fillStyle = INK;
+    ctx.textAlign = "center";
+    ctx.font = `800 ${Math.round(width * 0.58)}px Rajdhani, sans-serif`;
+    ctx.fillText(
+      String(timeline.matches.length).padStart(2, "0"),
+      width * 0.5 + Math.cos(time * 0.14) * 12,
+      height * 0.8 + Math.sin(time * 0.18) * 8,
+    );
+    ctx.restore();
+  }
+
   const owl = phase === "match"
     ? { x: width * 0.1, y: height * 0.86, box: width * 0.46, alpha: 0.014 }
     : phase === "finale"
       ? { x: width * 0.94, y: height * 0.92, box: width * 0.36, alpha: 0.012 }
-      : { x: width * 0.86, y: height * 0.78, box: width * 0.7, alpha: 0.018 };
+      : null;
   if (assets?.strix && owl) {
     ctx.save();
     ctx.globalAlpha = owl.alpha + breath * 0.004;
@@ -254,7 +267,6 @@ function paintAmbient(ctx, timeline, time, assets, phase = "intro") {
 function paintSceneSweep(ctx, timeline, time) {
   const edges = [
     timeline.introEnd,
-    ...timeline.scenes.filter((scene) => scene.type === "match").map((scene) => scene.start),
     timeline.finaleStart,
   ].filter((value) => value > 0 && value < timeline.duration);
   const edge = edges.find((value) => time >= value && time < value + 0.36);
@@ -270,24 +282,22 @@ function paintSceneSweep(ctx, timeline, time) {
   ctx.fillRect(0, 0, width, height);
 }
 
-function paintIntro(ctx, timeline, time, dayLabel, assets) {
+function paintIntro(ctx, timeline, time, dayLabel) {
   const { width, height, safe, matches } = timeline;
   const type = typeScale(timeline.format);
   const fadeOut = time > timeline.introEnd - 0.32
     ? 1 - reveal(time, timeline.introEnd - 0.32, 0.32, easeInOutCubic)
     : 1;
   const brand = reveal(time, 0.06, 0.42, easeOutExpo) * fadeOut;
-  const title = reveal(time, 0.2, 0.64, easeOutQuart) * fadeOut;
-  const date = reveal(time, 0.78, 0.46, easeOutQuart) * fadeOut;
-  const count = reveal(time, 1.02, 0.4, easeOutQuart) * fadeOut;
-  const mark = reveal(time, 0.48, 0.72, easeOutExpo) * fadeOut;
+  const title = reveal(time, 0.16, 0.72, easeOutQuart) * fadeOut;
+  const date = reveal(time, 0.7, 0.46, easeOutQuart) * fadeOut;
+  const count = reveal(time, 0.92, 0.42, easeOutQuart) * fadeOut;
+  const lines = reveal(time, 0.22, 0.86, easeOutExpo) * fadeOut;
   const x = width / 2;
-  const y = safe.top + (timeline.format === "feed" ? 12 : 24);
-  const titleY = y + 78 + type.title * 0.94;
-  const lineY = titleY + type.title * 1.08 + 36;
-  const countY = lineY + 132;
-  const logoFloor = height - safe.bottom - (timeline.format === "feed" ? 56 : 72);
-  const logoY = Math.min(logoFloor, (countY + 90 + logoFloor) / 2);
+  const y = safe.top + (timeline.format === "feed" ? 4 : 10);
+  const titleY = y + 92 + type.title * 0.78;
+  const lineY = titleY + type.title * 1.12 + 28;
+  const countY = lineY + 118;
 
   ctx.save();
   ctx.globalAlpha = brand;
@@ -298,18 +308,30 @@ function paintIntro(ctx, timeline, time, dayLabel, assets) {
   ctx.strokeStyle = RULE;
   ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.moveTo(x - 110 * brand, y + 52);
-  ctx.lineTo(x + 110 * brand, y + 52);
+  ctx.moveTo(x - 118 * brand, y + 52);
+  ctx.lineTo(x + 118 * brand, y + 52);
   ctx.stroke();
   ctx.restore();
 
   ctx.save();
-  ctx.globalAlpha = title * 0.22;
-  const glow = ctx.createRadialGradient(x, titleY + type.title * 0.4, 12, x, titleY + type.title * 0.4, 320);
-  glow.addColorStop(0, "rgba(239,236,230,0.34)");
+  ctx.globalAlpha = lines * 0.55;
+  ctx.strokeStyle = RULE;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(safe.side, titleY - type.title * 0.72);
+  ctx.lineTo(safe.side + 86 * lines, titleY - type.title * 0.72);
+  ctx.moveTo(width - safe.side, titleY - type.title * 0.72);
+  ctx.lineTo(width - safe.side - 86 * lines, titleY - type.title * 0.72);
+  ctx.stroke();
+  ctx.restore();
+
+  ctx.save();
+  ctx.globalAlpha = title * 0.16;
+  const glow = ctx.createRadialGradient(x, titleY + type.title * 0.4, 12, x, titleY + type.title * 0.4, 360);
+  glow.addColorStop(0, "rgba(239,236,230,0.28)");
   glow.addColorStop(1, "rgba(239,236,230,0)");
   ctx.fillStyle = glow;
-  ctx.fillRect(x - 360, titleY - type.title, 720, type.title * 2.6);
+  ctx.fillRect(x - 400, titleY - type.title, 800, type.title * 2.8);
   ctx.restore();
 
   ctx.save();
@@ -317,21 +339,21 @@ function paintIntro(ctx, timeline, time, dayLabel, assets) {
   ctx.fillStyle = INK;
   ctx.textAlign = "center";
   ctx.font = `700 ${type.title}px Rajdhani, sans-serif`;
-  const settle = 1.045 - title * 0.045;
+  const settle = 1.04 - title * 0.04;
   ctx.translate(x, titleY);
   ctx.scale(settle, settle);
   ctx.beginPath();
-  ctx.rect(-width * 0.5, -type.title, width * Math.max(title, 0.1), type.title * 2.4);
+  ctx.rect(-width * 0.5, -type.title, width * Math.max(title, 0.08), type.title * 2.5);
   ctx.clip();
   ctx.fillText("AGENDA", 0, 0);
   ctx.fillText("DO DIA", 0, type.title * 0.96);
-  const sweepX = -220 + title * 520;
-  const sweep = ctx.createLinearGradient(sweepX, 0, sweepX + 180, 0);
+  const sweepX = -240 + title * 560;
+  const sweep = ctx.createLinearGradient(sweepX, 0, sweepX + 190, 0);
   sweep.addColorStop(0, "rgba(255,255,255,0)");
-  sweep.addColorStop(0.5, "rgba(255,255,255,0.16)");
+  sweep.addColorStop(0.5, "rgba(255,255,255,0.14)");
   sweep.addColorStop(1, "rgba(255,255,255,0)");
   ctx.fillStyle = sweep;
-  ctx.fillRect(-260, -type.title, 520, type.title * 2.2);
+  ctx.fillRect(-280, -type.title, 560, type.title * 2.3);
   ctx.restore();
 
   ctx.save();
@@ -339,8 +361,8 @@ function paintIntro(ctx, timeline, time, dayLabel, assets) {
   ctx.strokeStyle = INK;
   ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.moveTo(x - 186 * date, lineY);
-  ctx.lineTo(x + 186 * date, lineY);
+  ctx.moveTo(x - 200 * date, lineY);
+  ctx.lineTo(x + 200 * date, lineY);
   ctx.stroke();
   ctx.fillStyle = INK;
   ctx.textAlign = "center";
@@ -353,52 +375,78 @@ function paintIntro(ctx, timeline, time, dayLabel, assets) {
   ctx.fillStyle = INK;
   ctx.textAlign = "center";
   ctx.font = `800 ${type.countHero}px Inter, sans-serif`;
-  ctx.fillText(`${matches.length} ${matches.length === 1 ? "JOGO" : "JOGOS"}`, x, countY);
+  const countLabel = String(matches.length).padStart(2, "0");
+  ctx.fillText(`${countLabel} ${matches.length === 1 ? "JOGO" : "JOGOS"}`, x, countY);
   ctx.restore();
 
   ctx.save();
-  ctx.globalAlpha = mark * 0.96;
-  drawLogo(ctx, assets?.strix, x, logoY, type.logoIntro, mark, 1.07 - mark * 0.07);
+  ctx.globalAlpha = lines * 0.4;
+  ctx.strokeStyle = RULE;
+  ctx.lineWidth = 1;
+  const floorY = Math.min(height - safe.bottom - 24, countY + 86);
+  ctx.beginPath();
+  ctx.moveTo(safe.side, floorY);
+  ctx.lineTo(width - safe.side, floorY);
+  ctx.stroke();
   ctx.restore();
 }
 
-function paintMatch(ctx, timeline, scene, time, assets) {
-  const { width, height, safe, matches } = timeline;
+export function matchStageWindow(timeline) {
+  const scenes = (timeline?.scenes || []).filter((scene) => scene.type === "match");
+  if (!scenes.length) return null;
+  return { start: scenes[0].start, end: scenes[scenes.length - 1].end, scenes };
+}
+
+export function matchStagePresence(timeline, time) {
+  const window = matchStageWindow(timeline);
+  if (!window || time < window.start || time >= window.end) {
+    return { persistent: 0, variable: 0, current: null, incoming: 0 };
+  }
+  const first = window.scenes[0];
+  const last = window.scenes[window.scenes.length - 1];
+  const enter = reveal(time, first.start, 0.34, easeOutExpo);
+  const exit = time > last.end - 0.32
+    ? 1 - reveal(time, last.end - 0.32, 0.32, easeInOutCubic)
+    : 1;
+  const current = window.scenes.find((scene) => time >= scene.start && time < scene.end) || last;
+  const local = time - current.start;
+  const incoming = current.index > 0 ? reveal(local, 0, 0.28, easeInOutCubic) : 1;
+  return { persistent: enter * exit, variable: enter * exit, current, incoming };
+}
+
+function matchCardGeometry(timeline) {
+  const { width, height, safe } = timeline;
   const type = typeScale(timeline.format);
-  const local = time - scene.start;
-  const enter = reveal(local, 0, 0.34, easeOutExpo);
-  const logos = reveal(local, 0.06, 0.34, easeOutExpo);
-  const meta = reveal(local, 0.12, 0.34, easeOutQuart);
-  const exit = time > scene.end - 0.28 ? 1 - reveal(time, scene.end - 0.28, 0.28, easeInOutCubic) : 1;
-  const match = scene.match;
-  const indexLabel = String(scene.index + 1).padStart(2, "0");
   const centerY = safe.top + (height - safe.top - safe.bottom) * (timeline.format === "feed" ? 0.5 : 0.52);
   const box = type.logoMatch;
   const gap = timeline.format === "feed" ? 196 : 228;
-  const presence = enter * exit;
-  const wipe = (1 - enter) * width;
+  const logoY = centerY - 78;
+  return {
+    type,
+    centerY,
+    box,
+    gap,
+    logoY,
+    leftX: width / 2 - gap,
+    rightX: width / 2 + gap,
+    nameY: logoY + box * 0.5 + 84,
+    nameWidth: gap + 16,
+    frameTop: centerY - (timeline.format === "feed" ? 230 : 290),
+    frameH: timeline.format === "feed" ? 400 : 500,
+  };
+}
+
+function paintMatchStagePersistent(ctx, timeline, time, assets) {
+  const window = matchStageWindow(timeline);
+  if (!window) return;
+  const { persistent } = matchStagePresence(timeline, time);
+  if (persistent <= 0) return;
+  const { width, safe } = timeline;
+  const geo = matchCardGeometry(timeline);
+  const float = Math.sin(time * 0.7) * 3;
 
   ctx.save();
-  ctx.globalAlpha = presence * 0.07;
-  ctx.fillStyle = INK;
-  ctx.textAlign = "right";
-  ctx.font = `800 ${type.giantIndex}px Rajdhani, sans-serif`;
-  ctx.fillText(indexLabel, width - 22, safe.top - 36);
-  ctx.restore();
-
-  ctx.save();
-  ctx.globalAlpha = presence;
-  ctx.beginPath();
-  ctx.rect(wipe * 0.38, 0, width, height);
-  ctx.clip();
-
-  ctx.fillStyle = INK;
-  ctx.textAlign = "left";
-  ctx.font = `800 ${type.gameIndex}px Inter, sans-serif`;
-  ctx.fillText(matches.length > 1 ? `JOGO ${indexLabel}` : "CONFRONTO", safe.side, safe.top + 36);
-  ctx.textAlign = "right";
-  ctx.font = `800 ${type.competition}px Inter, sans-serif`;
-  ctx.fillText(fitText(ctx, (match.competition || "AGENDA").toUpperCase(), 480, ctx.font), width - safe.side, safe.top + 36);
+  ctx.globalAlpha = persistent;
   ctx.strokeStyle = RULE;
   ctx.lineWidth = 1;
   ctx.beginPath();
@@ -406,17 +454,14 @@ function paintMatch(ctx, timeline, scene, time, assets) {
   ctx.lineTo(width - safe.side, safe.top + 62);
   ctx.stroke();
 
-  const frameTop = centerY - (timeline.format === "feed" ? 230 : 290);
-  const frameH = timeline.format === "feed" ? 400 : 500;
-  ctx.save();
   ctx.strokeStyle = "rgba(239,236,230,0.38)";
   ctx.lineWidth = 2;
   const fl = 34;
   [
-    [safe.side, frameTop],
-    [width - safe.side, frameTop],
-    [safe.side, frameTop + frameH],
-    [width - safe.side, frameTop + frameH],
+    [safe.side, geo.frameTop],
+    [width - safe.side, geo.frameTop],
+    [safe.side, geo.frameTop + geo.frameH],
+    [width - safe.side, geo.frameTop + geo.frameH],
   ].forEach(([fx, fy], index) => {
     const dirX = index % 2 === 0 ? 1 : -1;
     const dirY = index < 2 ? 1 : -1;
@@ -428,130 +473,216 @@ function paintMatch(ctx, timeline, scene, time, assets) {
   });
   ctx.restore();
 
-  const float = Math.sin(time * 0.7) * 3;
-  const logoY = centerY - 78;
-  const leftX = width / 2 - gap;
-  const rightX = width / 2 + gap;
-  drawLogo(ctx, assets.strix, leftX, logoY + float, box, logos, 1);
-  drawLogo(ctx, assets.opponents[scene.index], rightX, logoY + float, box, logos, 1);
+  drawLogo(ctx, assets.strix, geo.leftX, geo.logoY + float, geo.box, persistent, 1);
 
   ctx.save();
-  ctx.globalAlpha = logos;
+  ctx.globalAlpha = persistent;
   ctx.fillStyle = INK;
-  ctx.font = `700 ${type.vs}px Rajdhani, sans-serif`;
+  ctx.font = `700 ${geo.type.vs}px Rajdhani, sans-serif`;
   ctx.textAlign = "center";
-  ctx.fillText("×", width / 2, logoY + 12);
-  ctx.restore();
-
-  ctx.fillStyle = INK;
-  ctx.textAlign = "center";
-  ctx.font = `700 ${type.team}px Rajdhani, sans-serif`;
-  const nameWidth = gap + 16;
-  const nameY = logoY + box * 0.5 + 84;
-  wrapText(ctx, "STRIX UNITED", nameWidth, ctx.font, 2).forEach((line, index) => {
-    ctx.fillText(line, leftX, nameY + index * (type.team * 0.84));
+  ctx.fillText("×", width / 2, geo.logoY + 12);
+  ctx.font = `700 ${geo.type.team}px Rajdhani, sans-serif`;
+  wrapText(ctx, "STRIX UNITED", geo.nameWidth, ctx.font, 2).forEach((line, index) => {
+    ctx.fillText(line, geo.leftX, geo.nameY + index * (geo.type.team * 0.84));
   });
-  wrapText(ctx, (match.opponent || "ADVERSÁRIO").toUpperCase(), nameWidth, `700 ${type.team}px Rajdhani, sans-serif`, 2).forEach((line, index) => {
-    ctx.fillText(line, rightX, nameY + index * (type.team * 0.84));
-  });
-
-  ctx.save();
-  ctx.globalAlpha = meta;
-  ctx.fillStyle = INK;
-  ctx.font = `700 ${type.kickoff}px Rajdhani, sans-serif`;
-  ctx.fillText(match.kickoff || "", width / 2, nameY + 128);
-  const detail = [match.competition, match.round].filter(Boolean).join("  ·  ").toUpperCase();
-  if (detail) {
-    ctx.fillStyle = MUTED;
-    ctx.font = `800 ${type.competition}px Inter, sans-serif`;
-    ctx.fillText(fitText(ctx, detail, width - safe.side * 2, ctx.font), width / 2, nameY + 178);
-  }
-  ctx.restore();
   ctx.restore();
 }
 
-function finaleGeometry(timeline) {
+function paintMatchVariableBlock(ctx, timeline, scene, time, assets, alpha, offsetX = 0) {
+  if (!scene || alpha <= 0) return;
+  const { width, safe, matches } = timeline;
+  const geo = matchCardGeometry(timeline);
+  const match = scene.match;
+  const indexLabel = String(scene.index + 1).padStart(2, "0");
+  const float = Math.sin(time * 0.7) * 3;
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.translate(offsetX, 0);
+
+  ctx.fillStyle = INK;
+  ctx.textAlign = "right";
+  ctx.font = `800 ${geo.type.giantIndex}px Rajdhani, sans-serif`;
+  ctx.globalAlpha = alpha * 0.07;
+  ctx.fillText(indexLabel, width - 22, safe.top - 36);
+  ctx.globalAlpha = alpha;
+  ctx.textAlign = "left";
+  ctx.font = `800 ${geo.type.gameIndex}px Inter, sans-serif`;
+  ctx.fillText(matches.length > 1 ? `JOGO ${indexLabel}` : "CONFRONTO", safe.side, safe.top + 36);
+  ctx.textAlign = "right";
+  ctx.font = `800 ${geo.type.competition}px Inter, sans-serif`;
+  ctx.fillText(fitText(ctx, (match.competition || "AGENDA").toUpperCase(), 480, ctx.font), width - safe.side, safe.top + 36);
+
+  drawLogo(ctx, assets.opponents[scene.index], geo.rightX, geo.logoY + float, geo.box, 1, 1);
+  ctx.fillStyle = INK;
+  ctx.textAlign = "center";
+  ctx.font = `700 ${geo.type.team}px Rajdhani, sans-serif`;
+  wrapText(ctx, (match.opponent || "ADVERSÁRIO").toUpperCase(), geo.nameWidth, ctx.font, 2).forEach((line, index) => {
+    ctx.fillText(line, geo.rightX, geo.nameY + index * (geo.type.team * 0.84));
+  });
+  ctx.font = `700 ${geo.type.kickoff}px Rajdhani, sans-serif`;
+  ctx.fillText(match.kickoff || "", width / 2, geo.nameY + 128);
+  const detail = [match.competition, match.round].filter(Boolean).join("  ·  ").toUpperCase();
+  if (detail) {
+    ctx.fillStyle = MUTED;
+    ctx.font = `800 ${geo.type.competition}px Inter, sans-serif`;
+    ctx.fillText(fitText(ctx, detail, width - safe.side * 2, ctx.font), width / 2, geo.nameY + 178);
+  }
+  ctx.restore();
+}
+
+function paintMatchVariableContent(ctx, timeline, time, assets) {
+  const { persistent, current, incoming } = matchStagePresence(timeline, time);
+  if (!current || persistent <= 0) return;
+  const window = matchStageWindow(timeline);
+  const { width } = timeline;
+  const prev = current.index > 0 ? window.scenes[current.index - 1] : null;
+  if (prev && incoming < 1) {
+    const wipe = (1 - incoming) * width;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, 0, wipe, timeline.height);
+    ctx.clip();
+    paintMatchVariableBlock(ctx, timeline, prev, time, assets, persistent, -40 * incoming);
+    ctx.restore();
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(wipe, 0, width, timeline.height);
+    ctx.clip();
+    paintMatchVariableBlock(ctx, timeline, current, time, assets, persistent, 48 * (1 - incoming));
+    ctx.restore();
+    return;
+  }
+  paintMatchVariableBlock(ctx, timeline, current, time, assets, persistent, 0);
+}
+
+export function finaleDensity(count) {
+  if (count <= 3) return "spacious";
+  if (count <= 5) return "compact";
+  return "dense";
+}
+
+export function finaleRowLayout(timeline) {
   const { height, safe, matches } = timeline;
+  const count = matches.length;
+  const density = finaleDensity(count);
   const feed = timeline.format === "feed";
-  const startY = safe.top + (feed ? 4 : 8);
-  const header = feed ? 118 : 148;
-  const endY = height - safe.bottom - 8;
-  const row = (endY - startY - header) / Math.max(matches.length, 1);
-  return { startY, header, endY, row };
+  const type = typeScale(timeline.format);
+  const startY = safe.top + (density === "dense" ? 2 : feed ? 4 : 8);
+  const header = density === "dense"
+    ? (feed ? 86 : 104)
+    : density === "compact"
+      ? (feed ? 102 : 126)
+      : (feed ? 118 : 148);
+  const endY = height - safe.bottom - (density === "dense" ? 2 : 8);
+  const row = (endY - startY - header) / Math.max(count, 1);
+  const logoBox = Math.min(
+    density === "dense" ? type.logoFinale * 0.84 : type.logoFinale,
+    Math.max(44, row * (density === "spacious" ? 0.2 : density === "compact" ? 0.18 : 0.16)),
+  );
+  const minCompGap = density === "spacious" ? 28 : density === "compact" ? 22 : 18;
+  const timeH = Math.min(type.finaleTime, row * (density === "dense" ? 0.2 : 0.22));
+  const nameH = Math.min(type.finaleName, row * 0.12);
+  const matchupH = Math.max(logoBox, nameH);
+  const compH = Math.min(type.finaleComp, row * 0.12);
+  const stack = timeH + 10 + matchupH + minCompGap + compH;
+  const pad = Math.max(4, (row - stack) / 2);
+  return {
+    density,
+    startY,
+    header,
+    endY,
+    row,
+    logoBox,
+    minCompGap,
+    timeH,
+    matchupH,
+    compH,
+    pad,
+    decorative: density === "dense" ? 0.03 : density === "compact" ? 0.045 : 0.055,
+    type,
+  };
+}
+
+export function finaleRowZones(layout, index) {
+  const y = layout.startY + layout.header + index * layout.row;
+  const timeY = y + layout.pad + layout.timeH;
+  const matchupMid = y + layout.pad + layout.timeH + 10 + layout.matchupH / 2;
+  const matchupBottom = matchupMid + layout.matchupH / 2;
+  const compY = matchupBottom + layout.minCompGap + layout.compH * 0.75;
+  return { y, timeY, matchupMid, matchupBottom, compY };
 }
 
 function paintFinale(ctx, timeline, time, assets, dayLabel) {
   const { width, height, safe, matches, finaleStart } = timeline;
-  const type = typeScale(timeline.format);
   const local = time - finaleStart;
   const enter = reveal(local, 0, 0.42, easeOutExpo);
   const close = reveal(time, timeline.duration - 0.9, 0.45, easeOutQuart);
-  const presence = enter;
-  const { startY, header, row } = finaleGeometry(timeline);
-  const logoBox = Math.min(type.logoFinale, Math.max(48, row * 0.28));
+  const layout = finaleRowLayout(timeline);
+  const { type, startY, header, row, logoBox, decorative } = layout;
 
   ctx.save();
-  ctx.globalAlpha = presence;
+  ctx.globalAlpha = enter;
   ctx.beginPath();
   ctx.rect(0, (1 - enter) * 80, width, timeline.height);
   ctx.clip();
   ctx.fillStyle = MUTED;
   ctx.textAlign = "left";
   ctx.font = `800 ${type.finaleKicker}px Inter, sans-serif`;
-  ctx.fillText("AGENDA COMPLETA", safe.side, startY + 24);
+  ctx.fillText("AGENDA COMPLETA", safe.side, startY + 22);
   ctx.fillStyle = INK;
-  ctx.font = `700 ${type.finaleTitle}px Rajdhani, sans-serif`;
-  ctx.fillText("AGENDA", safe.side, startY + 24 + type.finaleTitle * 0.9);
+  ctx.font = `700 ${Math.min(type.finaleTitle, header * 0.62)}px Rajdhani, sans-serif`;
+  ctx.fillText("AGENDA", safe.side, startY + 22 + Math.min(type.finaleTitle, header * 0.62) * 0.88);
   ctx.textAlign = "right";
   ctx.font = `700 ${type.finaleDate}px Inter, sans-serif`;
-  ctx.fillText(dayLabel, width - safe.side, startY + 24 + type.finaleTitle * 0.52);
+  ctx.fillText(dayLabel, width - safe.side, startY + 22 + Math.min(type.finaleTitle, header * 0.62) * 0.5);
   ctx.strokeStyle = INK;
   ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.moveTo(safe.side, startY + header - 20);
-  ctx.lineTo(safe.side + 180, startY + header - 20);
+  ctx.moveTo(safe.side, startY + header - 18);
+  ctx.lineTo(safe.side + 160, startY + header - 18);
   ctx.stroke();
 
   matches.forEach((match, index) => {
-    const stagger = reveal(local, 0.12 + index * 0.1, 0.42, easeOutQuart);
-    const y = startY + header + index * row;
-    const mid = y + row * 0.5;
+    const stagger = reveal(local, 0.12 + index * 0.08, 0.42, easeOutQuart);
+    const zones = finaleRowZones(layout, index);
     ctx.save();
-    ctx.globalAlpha = stagger * 0.055;
+    ctx.globalAlpha = stagger * decorative;
     ctx.fillStyle = INK;
     ctx.textAlign = "left";
-    ctx.font = `800 ${Math.round(Math.min(row * 0.55, 120))}px Rajdhani, sans-serif`;
-    ctx.fillText(String(index + 1).padStart(2, "0"), safe.side - 8, y + row * 0.78);
+    ctx.font = `800 ${Math.round(Math.min(row * 0.42, layout.density === "dense" ? 72 : 110))}px Rajdhani, sans-serif`;
+    ctx.fillText(String(index + 1).padStart(2, "0"), safe.side - 8, zones.y + row * 0.82);
     ctx.restore();
 
     ctx.save();
     ctx.globalAlpha = stagger;
     ctx.fillStyle = INK;
     ctx.textAlign = "center";
-    ctx.font = `700 ${Math.min(type.finaleTime, row * 0.28)}px Rajdhani, sans-serif`;
-    ctx.fillText(match.kickoff || "", width / 2, mid - row * 0.22);
+    ctx.font = `700 ${layout.timeH}px Rajdhani, sans-serif`;
+    ctx.fillText(match.kickoff || "", width / 2, zones.timeY);
 
     const float = Math.sin(time * 0.7 + index) * 2;
     const leftX = width / 2 - 118;
     const rightX = width / 2 + 118;
+    const nameSize = Math.min(type.finaleName, layout.matchupH * 0.42);
     ctx.textAlign = "right";
-    ctx.font = `700 ${Math.min(type.finaleName, row * 0.14)}px Rajdhani, sans-serif`;
-    ctx.fillText(fitText(ctx, "STRIX UNITED", 280, ctx.font), leftX - logoBox * 0.72, mid + 8);
-    drawLogo(ctx, assets.strix, leftX, mid + 8 + float, logoBox, 1, 1);
+    ctx.font = `700 ${nameSize}px Rajdhani, sans-serif`;
+    ctx.fillText(fitText(ctx, "STRIX UNITED", 280, ctx.font), leftX - logoBox * 0.72, zones.matchupMid + 8);
+    drawLogo(ctx, assets.strix, leftX, zones.matchupMid + float, logoBox, 1, 1);
     ctx.textAlign = "center";
     ctx.font = `700 ${type.vs}px Rajdhani, sans-serif`;
-    ctx.fillText("×", width / 2, mid + 14);
-    drawLogo(ctx, assets.opponents[index], rightX, mid + 8 - float, logoBox, 1, 1);
+    ctx.fillText("×", width / 2, zones.matchupMid + 10);
+    drawLogo(ctx, assets.opponents[index], rightX, zones.matchupMid - float, logoBox, 1, 1);
     ctx.textAlign = "left";
-    ctx.font = `700 ${Math.min(type.finaleName, row * 0.14)}px Rajdhani, sans-serif`;
-    ctx.fillText(fitText(ctx, (match.opponent || "").toUpperCase(), 280, ctx.font), rightX + logoBox * 0.72, mid + 8);
+    ctx.font = `700 ${nameSize}px Rajdhani, sans-serif`;
+    ctx.fillText(fitText(ctx, (match.opponent || "").toUpperCase(), 280, ctx.font), rightX + logoBox * 0.72, zones.matchupMid + 8);
     ctx.textAlign = "center";
     ctx.fillStyle = MUTED;
-    ctx.font = `800 ${type.finaleComp}px Inter, sans-serif`;
+    ctx.font = `800 ${layout.compH}px Inter, sans-serif`;
     ctx.fillText(
-      fitText(ctx, [match.competition, match.round].filter(Boolean).join(" · ").toUpperCase() || "AGENDA", 640, ctx.font),
+      fitText(ctx, [match.competition, match.round].filter(Boolean).join(" · ").toUpperCase() || "AGENDA", 720, ctx.font),
       width / 2,
-      mid + row * 0.28,
+      zones.compY,
     );
     ctx.restore();
   });
@@ -576,12 +707,11 @@ export function paintAgendaFrame(ctx, { timeline, time, assets, dayLabel }) {
   paintAmbient(ctx, timeline, time, assets, phase);
   paintSceneSweep(ctx, timeline, time);
   if (time >= 0 && time < timeline.introEnd) {
-    paintIntro(ctx, timeline, time, dayLabel, assets);
+    paintIntro(ctx, timeline, time, dayLabel);
   }
-  for (const scene of timeline.scenes) {
-    if (scene.type !== "match") continue;
-    if (time < scene.start || time >= scene.end) continue;
-    paintMatch(ctx, timeline, scene, time, assets);
+  if (time >= timeline.introEnd && time < timeline.finaleStart) {
+    paintMatchStagePersistent(ctx, timeline, time, assets);
+    paintMatchVariableContent(ctx, timeline, time, assets);
   }
   if (time >= timeline.finaleStart) {
     paintFinale(ctx, timeline, time, assets, dayLabel);

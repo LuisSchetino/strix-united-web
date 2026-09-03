@@ -62,3 +62,38 @@ export async function loadAgendaAssets(matches = [], { onProgress } = {}) {
     total: unique.length,
   };
 }
+
+export async function loadRelatedNightAssets(players = [], { onProgress } = {}) {
+  const unique = [];
+  const seen = new Set();
+  const push = (url, name) => {
+    const key = `${url}::${name}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    unique.push({ url, name });
+  };
+  push(STRIX_BRAND.logo, "Strix United");
+  for (const player of players) {
+    push(player.photo, player.name);
+  }
+  let loaded = 0;
+  const report = () => {
+    loaded += 1;
+    onProgress?.({ loaded, total: unique.length, stage: "preparing" });
+  };
+  await document.fonts?.ready;
+  await Promise.allSettled([
+    document.fonts?.load("800 36px Inter"),
+    document.fonts?.load("700 118px Rajdhani"),
+  ]);
+  const results = await Promise.all(unique.map((item) => loadLogoAsset(item.url, item.name, report)));
+  const byUrl = new Map(results.map((item) => [`${item.url}::${item.name}`, item]));
+  const pick = (url, name) => byUrl.get(`${url}::${name}`) || { name, url, bitmap: null, initials: opponentInitials(name) };
+  const playerAssets = players.map((player) => pick(player.photo, player.name));
+  return {
+    strix: pick(STRIX_BRAND.logo, "Strix United"),
+    players: playerAssets,
+    byId: Object.fromEntries(players.map((player, index) => [player.id, playerAssets[index]])),
+    total: unique.length,
+  };
+}

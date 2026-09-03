@@ -6,9 +6,11 @@ import { encodeAgendaMp4 } from "./features/media/encode-mp4.js";
 import { loadAgendaAssets } from "./features/media/media-assets.js";
 
 const sample = [
-  { id: "1", opponent: "Winner Elevens", kickoff: "22:10", scheduled_at: "2026-09-02T22:10:00-03:00", opponent_logo: "", competition: "Amistoso", competition_logo: "", round: "" },
-  { id: "2", opponent: "Genius Esports", kickoff: "22:40", scheduled_at: "2026-09-02T22:40:00-03:00", opponent_logo: "", competition: "Superliga Yeshua", competition_logo: "", round: "Rodada 9" },
-  { id: "3", opponent: "CTX Gaming", kickoff: "23:10", scheduled_at: "2026-09-02T23:10:00-03:00", opponent_logo: "", competition: "Master League", competition_logo: "", round: "" },
+  { id: "1", opponent: "Maquina", kickoff: "21:10", scheduled_at: "2026-09-02T21:10:00-03:00", opponent_logo: "", competition: "Amistoso", competition_logo: "", round: "" },
+  { id: "2", opponent: "Summit ES", kickoff: "21:40", scheduled_at: "2026-09-02T21:40:00-03:00", opponent_logo: "", competition: "Superliga Yeshua", competition_logo: "", round: "" },
+  { id: "3", opponent: "POA City FC", kickoff: "22:10", scheduled_at: "2026-09-02T22:10:00-03:00", opponent_logo: "", competition: "Master League", competition_logo: "", round: "" },
+  { id: "4", opponent: "Genius Esports", kickoff: "22:40", scheduled_at: "2026-09-02T22:40:00-03:00", opponent_logo: "", competition: "Superliga Yeshua", competition_logo: "", round: "Rodada 9" },
+  { id: "5", opponent: "Sinceridade", kickoff: "23:10", scheduled_at: "2026-09-02T23:10:00-03:00", opponent_logo: "", competition: "Master League", competition_logo: "", round: "" },
 ];
 
 const dayLabel = "02 DE SET DE 2026";
@@ -160,7 +162,12 @@ function App() {
       {qa && <p style={{ color: qa.includes("FREEZE") ? "#ffbdc6" : "#b8e0c8" }}>{qa}</p>}
       {error && <p style={{ color: "#ffbdc6" }}>{error}</p>}
       {assets?.painted && <FrameStrip marks={assets.painted} />}
-      {videoUrl && <video src={videoUrl} controls autoPlay muted playsInline style={{ width: 360, marginTop: 24, background: "#000" }} />}
+      {videoUrl && (
+        <>
+          <p><a href={videoUrl} download="strix-agenda-2026-09-02-story.mp4" style={{ color: "#efece6" }}>Baixar MP4 da Agenda</a></p>
+          <video src={videoUrl} controls autoPlay muted playsInline style={{ width: 360, marginTop: 24, background: "#000" }} />
+        </>
+      )}
     </main>
   );
 }

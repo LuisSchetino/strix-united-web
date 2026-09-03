@@ -62,6 +62,8 @@ export async function encodeAgendaMp4({
   dayLabel,
   onProgress,
   signal,
+  renderFrame = renderAgendaFrame,
+  frameTime = agendaFrameTime,
 } = {}) {
   if (!canEncodeMp4()) {
     throw new Error("Este navegador não consegue gerar MP4 H.264. Use Chrome ou Edge atualizado.");
@@ -101,8 +103,8 @@ export async function encodeAgendaMp4({
     }
     if (encoderError) throw encoderError;
     await waitEncoderDrain(encoder);
-    const timeSec = agendaFrameTime(index, timeline);
-    renderAgendaFrame(ctx, { timeline, timeSec, assets, dayLabel });
+    const timeSec = frameTime(index, timeline);
+    renderFrame(ctx, { timeline, timeSec, assets, dayLabel });
     const bitmap = await snapshotCanvas(canvas);
     const frame = new VideoFrame(bitmap, {
       timestamp: Math.round(index * frameDuration),

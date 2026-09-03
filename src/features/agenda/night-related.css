@@ -1,0 +1,19 @@
+.night-related{
+  display:grid;gap:12px;padding:16px 18px;border:1px solid var(--strix-border);border-radius:16px;background:#0b0d10
+}
+.night-related header{display:flex;justify-content:space-between;gap:12px;align-items:flex-end}
+.night-related header span{color:#aeb4bb;font-size:10px;font-weight:900;letter-spacing:.14em}
+.night-related header h2{margin:4px 0 6px;font-size:22px}
+.night-related header p,.night-related-selected p,.night-related-note{margin:0;color:#8e969f}
+.night-related header b{font-size:28px}
+.night-related-warn{display:grid;gap:8px;margin:0;padding:10px 12px;border:1px solid #5d5340;border-radius:10px;background:#1a1710;color:#e6c37a}
+.night-related-warn p{margin:0;color:#e6c37a}
+.night-related-selected,.night-related-pool,.night-related-actions{display:flex;flex-wrap:wrap;gap:8px}
+.night-related-selected button,.night-related-pool button{
+  display:grid;justify-items:start;gap:2px;padding:8px 10px;border:1px solid var(--strix-border);border-radius:10px;background:#111419;color:#efece6
+}
+.night-related-selected button.is-on{border-color:#efece6}
+.night-related-selected small{color:#8e969f;font-size:11px}
+.night-related-pool button{color:#c7ccd1}
+.night-related.is-compact header h2{font-size:18px}
+.night-related.is-compact header b{font-size:22px}

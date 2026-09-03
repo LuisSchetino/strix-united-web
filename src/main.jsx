@@ -16,6 +16,7 @@ import "./fc27-data.css";
 import "./fc27-fixes.css";
 import { nextAgendaSlot } from "./features/agenda/agenda-slots.js";
 import { activeAgendaMatches, agendaHeroSelection, nextAgendaMatches, todayAgendaMatches } from "./features/agenda/agenda-time.js";
+import { NightRelatedEditor } from "./features/agenda/NightRelatedEditor.jsx";
 import { agendaStandingComparison } from "./features/agenda/agenda-standings.js";
 import { resolveAgendaTeamIdentity, resolveTeamIdentity } from "./features/teams/team-identity.js";
 import { notify, RollingLabel, ToastViewport } from "./ui/motion/motion.jsx";
@@ -536,6 +537,7 @@ function useFc27Workspace(client, profile) {
     competitionFixtures: [],
     competitionTeams: [],
     systemFlags: [],
+    nightRelated: [],
     schemaPending: false,
     error: "",
   });
@@ -551,7 +553,7 @@ function useFc27Workspace(client, profile) {
       return refreshInFlight.current;
     }
     const task = (async () => {
-    const [agendaResult, logosResult, playersResult, aliasesResult, matchesResult, competitionsResult, editionsResult, sourcesResult, fixturesResult, teamsResult, flagsResult] = await Promise.all([
+    const [agendaResult, logosResult, playersResult, aliasesResult, matchesResult, competitionsResult, editionsResult, sourcesResult, fixturesResult, teamsResult, flagsResult, nightRelatedResult] = await Promise.all([
       client.from("agenda_matches").select("*, opponent_logos!agenda_matches_opponent_logo_id_fkey(*)").order("scheduled_at", { ascending: true }),
       client.from("opponent_logos").select("*").order("canonical_name"),
       client.from("club_players").select("*").order("display_name"),
@@ -563,6 +565,7 @@ function useFc27Workspace(client, profile) {
       client.from("competition_fixtures").select("*").order("scheduled_at", { ascending: true }),
       client.from("competition_teams").select("*").order("name"),
       client.from("system_flags").select("*").order("key"),
+      client.from("night_related").select("*").order("night_date", { ascending: false }),
     ]);
     const failure = [agendaResult, logosResult, playersResult, aliasesResult, matchesResult].find((result) => result.error)?.error;
     if (failure) {
@@ -573,7 +576,7 @@ function useFc27Workspace(client, profile) {
       }));
       return;
     }
-    const optionalResults = [competitionsResult, editionsResult, sourcesResult, fixturesResult, teamsResult, flagsResult];
+    const optionalResults = [competitionsResult, editionsResult, sourcesResult, fixturesResult, teamsResult, flagsResult, nightRelatedResult];
     const isMissingOptionalSchema = (error) => ["42P01", "PGRST205"].includes(error?.code);
     const optionalFailure = optionalResults.find((result) => result.error && !isMissingOptionalSchema(result.error))?.error;
     const publicLogos = (logosResult.data || []).map((logo) => ({
@@ -626,6 +629,7 @@ function useFc27Workspace(client, profile) {
       competitionFixtures: fixturesResult.data || [],
       competitionTeams: teamsResult.data || [],
       systemFlags: flagsResult.data || [],
+      nightRelated: nightRelatedResult.error && isMissingOptionalSchema(nightRelatedResult.error) ? [] : (nightRelatedResult.data || []),
       schemaPending: optionalResults.some((result) => isMissingOptionalSchema(result.error)),
       error: optionalFailure?.message || "",
     });
@@ -660,6 +664,7 @@ function useFc27Workspace(client, profile) {
       .on("postgres_changes", { event: "*", schema: "public", table: "competition_fixtures" }, scheduleRealtimeRefresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "competition_teams" }, scheduleRealtimeRefresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "system_flags" }, scheduleRealtimeRefresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "night_related" }, scheduleRealtimeRefresh)
       .subscribe();
     return () => {
       clearTimeout(realtimeRefreshTimer.current);
@@ -898,6 +903,20 @@ function useFc27Workspace(client, profile) {
       } finally {
         await refresh();
       }
+    },
+    saveNightRelated: async (nightDate, playerIds) => {
+      const ids = [...new Set((playerIds || []).map((id) => String(id || "")).filter(Boolean))];
+      const existing = (state.nightRelated || []).find((row) => String(row.night_date).slice(0, 10) === nightDate);
+      const payload = {
+        night_date: nightDate,
+        player_ids: ids,
+        updated_by: profile.user_id,
+      };
+      const result = existing
+        ? await client.from("night_related").update(payload).eq("night_date", nightDate)
+        : await client.from("night_related").insert({ ...payload, created_by: profile.user_id });
+      if (result.error) throw result.error;
+      await refresh();
     },
     savePlayer,
     removePlayer,
@@ -1925,7 +1944,7 @@ function Agenda({ navigate }) {
     </section>
   );
 }
-function AgendaLive({ navigate, workspace }) {
+function AgendaLive({ navigate, workspace, profile }) {
   const [tab, setTab] = useState("today");
   const [modal, setModal] = useState(null);
   const [actions, setActions] = useState(null);
@@ -1997,6 +2016,7 @@ function AgendaLive({ navigate, workspace }) {
         <button onClick={() => navigate("partidas")}>Concluídos <Icon name="arrow" size={13} /></button>
       </nav>
       {(workspace.error || feedback) && <p className="matches-error">{feedback || workspace.error}</p>}
+      {tab === "today" && <NightRelatedEditor workspace={workspace} profile={profile} />}
       <section className="agenda-list" aria-busy={workspace.loading}>
         <div className="agenda-list-heading"><span>{tab === "next" ? "DATA · HORÁRIO" : "HORÁRIO"}</span><span>PARTIDA</span><span>CAMPEONATO</span><span>STATUS</span></div>
         {visible.length ? visible.map((item) => (
@@ -2914,7 +2934,7 @@ function App() {
         {workspace.loading ? <WorkspaceSkeleton /> : active === "central" ? (
           <CentralLive workspace={workspace} navigate={navigate} />
         ) : active === "agenda" ? (
-          <AgendaLive navigate={navigate} workspace={workspace} />
+          <AgendaLive navigate={navigate} workspace={workspace} profile={auth.profile} />
         ) : active === "partidas" ? (
           <FeatureBoundary type="table"><MatchesPage profile={auth.profile} workspace={workspace} client={auth.client} /></FeatureBoundary>
         ) : active === "elenco" ? (

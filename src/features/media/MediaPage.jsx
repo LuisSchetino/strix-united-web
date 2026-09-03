@@ -2,6 +2,7 @@ import React, { lazy, Suspense, useEffect, useMemo, useRef, useState } from "rea
 import { createPortal } from "react-dom";
 import { MotionTabs, RollingLabel, notify } from "../../ui/motion/motion.jsx";
 import {
+  AGENDA_TEMPLATE_ID,
   agendaFileName,
   canManageMedia,
   collectTodayAgenda,
@@ -10,19 +11,37 @@ import {
 } from "./agenda-media-core.js";
 import { buildAgendaTimeline } from "./agenda-timeline.js";
 import { agendaFrameTime, renderAgendaFrame } from "./agenda-frame.js";
-import { loadAgendaAssets } from "./media-assets.js";
+import { loadAgendaAssets, loadRelatedNightAssets } from "./media-assets.js";
+import {
+  describeTonightRelated,
+  fingerprintRelatedNightRender,
+  RELATED_NIGHT_TEMPLATE_ID,
+  relatedNightFileName,
+} from "./related-night-core.js";
+import { NightRelatedEditor } from "../agenda/NightRelatedEditor.jsx";
+import { buildRelatedNightTimeline } from "./related-night-timeline.js";
+import { relatedNightFrameTime, renderRelatedNightFrame } from "./related-night-frame.js";
 import {
   downloadBlob,
   listCachedRenders,
   progressLabel,
   startAgendaRender,
+  startRelatedNightRender,
   subscribeMediaJob,
 } from "./media-jobs.js";
 import "./media.css";
 
 const GameDayEditor = lazy(() => import("../../gameday/GameDayEditor.jsx").then((module) => ({ default: module.GameDayEditor })));
 
-function PreviewCanvas({ timeline, assets, dayLabel, format }) {
+function PreviewCanvas({
+  timeline,
+  assets,
+  dayLabel,
+  format,
+  frameTime = agendaFrameTime,
+  renderFrame = renderAgendaFrame,
+  label = "Preview da agenda do dia",
+}) {
   const canvasRef = useRef(null);
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -31,21 +50,21 @@ function PreviewCanvas({ timeline, assets, dayLabel, format }) {
     let frame = 0;
     let raf = 0;
     const tick = () => {
-      const timeSec = agendaFrameTime(frame % timeline.totalFrames, timeline);
-      renderAgendaFrame(ctx, { timeline, timeSec, assets, dayLabel });
+      const timeSec = frameTime(frame % timeline.totalFrames, timeline);
+      renderFrame(ctx, { timeline, timeSec, assets, dayLabel });
       frame += 1;
       raf = requestAnimationFrame(tick);
     };
     tick();
     return () => cancelAnimationFrame(raf);
-  }, [assets, dayLabel, timeline]);
+  }, [assets, dayLabel, frameTime, renderFrame, timeline]);
   return (
     <canvas
       ref={canvasRef}
       width={timeline.width}
       height={timeline.height}
       className={format === "feed" ? "is-feed" : ""}
-      aria-label="Preview da agenda do dia"
+      aria-label={label}
     />
   );
 }
@@ -72,16 +91,17 @@ function Viewer({ record, close }) {
   );
 }
 
-function CacheCard({ title, record, currentFingerprint, onView, onDownload, onRegen, disabled }) {
+function CacheCard({ title, record, currentFingerprint, onView, onDownload, onRegen, disabled, unit = "jogo" }) {
   const stale = Boolean(record && currentFingerprint && record.fingerprint !== currentFingerprint);
+  const plural = record?.matchCount === 1 ? unit : `${unit}s`;
   return (
     <article className={stale ? "stale" : ""}>
       <small>{title}</small>
       {record ? (
         <>
           <b>{new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short", timeZone: "America/Sao_Paulo" }).format(new Date(record.createdAt))}</b>
-          <p>{record.matchCount} jogo{record.matchCount === 1 ? "" : "s"} · {record.fileName}</p>
-          {stale && <p className="media-changed">A Agenda mudou desde este render.</p>}
+          <p>{record.matchCount} {plural} · {record.fileName}</p>
+          {stale && <p className="media-changed">Os dados mudaram desde este render.</p>}
         </>
       ) : (
         <p>Nenhum render ainda.</p>
@@ -101,25 +121,44 @@ export function MediaPage({ profile, client, workspace }) {
   const [format, setFormat] = useState("story");
   const [job, setJob] = useState(null);
   const [assets, setAssets] = useState(null);
+  const [relatedAssets, setRelatedAssets] = useState(null);
   const [cache, setCache] = useState([]);
+  const [relatedCache, setRelatedCache] = useState([]);
   const [viewer, setViewer] = useState(null);
   const [assetError, setAssetError] = useState("");
+  const [relatedAssetError, setRelatedAssetError] = useState("");
   const day = useMemo(() => formatAgendaDay(), []);
   const matches = useMemo(() => collectTodayAgenda(workspace), [workspace.agenda, workspace.competitions, workspace.competitionFixtures]);
+  const relatedState = useMemo(
+    () => describeTonightRelated(workspace),
+    [workspace.nightRelated, workspace.agenda, workspace.players],
+  );
+  const related = relatedState.players;
   const matchKey = matches.map((match) => `${match.id}:${match.scheduled_at}:${match.opponent_logo}:${match.competition_logo}`).join("|");
+  const relatedKey = related.map((player) => `${player.id}:${player.name}:${player.photo}:${player.position}:${player.group}`).join("|");
   const timeline = useMemo(() => buildAgendaTimeline(matches, { format }), [matches, format]);
+  const relatedTimeline = useMemo(() => buildRelatedNightTimeline(related, { format: "story" }), [related]);
   const hasGames = matches.length > 0;
+  const hasRelated = relatedState.saved && related.length > 0;
   const running = job?.status === "running";
 
   useEffect(() => subscribeMediaJob(setJob), []);
 
   useEffect(() => {
     let alive = true;
-    listCachedRenders(day.iso).then((rows) => { if (alive) setCache(rows); });
+    Promise.all([
+      listCachedRenders(day.iso, { template: AGENDA_TEMPLATE_ID }),
+      listCachedRenders(day.iso, { template: RELATED_NIGHT_TEMPLATE_ID }),
+    ]).then(([agendaRows, relatedRows]) => {
+      if (!alive) return;
+      setCache(agendaRows);
+      setRelatedCache(relatedRows);
+    });
     return () => { alive = false; };
   }, [day.iso, job?.status]);
 
   const [prints, setPrints] = useState({ story: "", feed: "" });
+  const [relatedPrint, setRelatedPrint] = useState("");
   useEffect(() => {
     let alive = true;
     Promise.all([
@@ -128,6 +167,13 @@ export function MediaPage({ profile, client, workspace }) {
     ]).then(([story, feed]) => { if (alive) setPrints({ story, feed }); });
     return () => { alive = false; };
   }, [day.iso, matchKey]);
+
+  useEffect(() => {
+    let alive = true;
+    fingerprintRelatedNightRender({ day: day.iso, format: "story", players: related, saved: relatedState.saved })
+      .then((value) => { if (alive) setRelatedPrint(value); });
+    return () => { alive = false; };
+  }, [day.iso, relatedKey, relatedState.saved]);
 
   useEffect(() => {
     if (!hasGames) {
@@ -144,6 +190,21 @@ export function MediaPage({ profile, client, workspace }) {
     return () => { alive = false; };
   }, [hasGames, matchKey]);
 
+  useEffect(() => {
+    if (!hasRelated) {
+      setRelatedAssets(null);
+      return undefined;
+    }
+    let alive = true;
+    setRelatedAssetError("");
+    loadRelatedNightAssets(related).then((loaded) => {
+      if (alive) setRelatedAssets(loaded);
+    }).catch((error) => {
+      if (alive) setRelatedAssetError(error.message || "Não foi possível preparar as fotos.");
+    });
+    return () => { alive = false; };
+  }, [hasRelated, relatedKey]);
+
   const generate = async (targetFormat, force = false) => {
     if (!hasGames || running) return;
     const nextTimeline = buildAgendaTimeline(matches, { format: targetFormat });
@@ -159,6 +220,24 @@ export function MediaPage({ profile, client, workspace }) {
       notify(started.stage === "cached" ? "Render reutilizado do cache." : "Vídeo gerado.");
       setViewer(started.result);
       setFormat(targetFormat);
+    } else if (started.status === "error") {
+      notify(started.error);
+    }
+  };
+
+  const generateRelated = async (force = false) => {
+    if (!hasRelated || running) return;
+    const started = await startRelatedNightRender({
+      players: related,
+      format: "story",
+      day: day.iso,
+      dayLabel: day.label,
+      timeline: relatedTimeline,
+      force,
+    });
+    if (started.status === "ready") {
+      notify(started.stage === "cached" ? "Render reutilizado do cache." : "Vídeo gerado.");
+      setViewer(started.result);
     } else if (started.status === "error") {
       notify(started.error);
     }
@@ -186,7 +265,7 @@ export function MediaPage({ profile, client, workspace }) {
     <section className="media-page page-enter">
       <MotionTabs
         className="media-tabs"
-        items={[["agenda", "AGENDA DO DIA"], ["gameday", "GAME DAY"]]}
+        items={[["agenda", "AGENDA DO DIA"], ["related", "RELACIONADOS DA NOITE"], ["gameday", "GAME DAY"]]}
         active={tab}
         onChange={setTab}
         label="Área de mídia"
@@ -197,6 +276,108 @@ export function MediaPage({ profile, client, workspace }) {
             <GameDayEditor profile={profile} client={client} workspace={workspace} />
           </Suspense>
         </div>
+      ) : tab === "related" ? (
+        <>
+          <header className="media-hero">
+            <div>
+              <span>GERADOR DE MÍDIA</span>
+              <h1>Relacionados da noite.</h1>
+              <p>Uma peça vertical com todos os relacionados do dia no mesmo campo, sem titulares nem reservas.</p>
+            </div>
+            <div className="media-hero-meta">
+              <span>{day.label}</span>
+              <b>{relatedState.saved ? related.length : 0}</b>
+              <small>{relatedState.saved
+                ? (related.length === 1 ? "relacionado salvo" : "relacionados salvos")
+                : "sugestão ainda não salva"}</small>
+            </div>
+          </header>
+          <NightRelatedEditor workspace={workspace} profile={profile} compact />
+          {!hasRelated ? (
+            <div className="media-empty">
+              <span>RELACIONADOS DA NOITE</span>
+              <h1>Nenhum relacionado salvo para hoje.</h1>
+              <p>As escalações só sugerem. Salve a lista oficial para gerar o vídeo. O jogador relacionado que não entrar em nenhum jogo continua na mídia.</p>
+              <button type="button" className="primary" disabled>GERAR STORY</button>
+            </div>
+          ) : (
+            <div className="media-layout">
+              <section className="media-preview-card">
+                <header>
+                  <span>PREVIEW</span>
+                  <h2>Story / Reels 9:16</h2>
+                </header>
+                <div className={`media-preview-frame${relatedAssets ? "" : " is-empty"}`}>
+                  {relatedAssets ? (
+                    <PreviewCanvas
+                      timeline={relatedTimeline}
+                      assets={relatedAssets}
+                      dayLabel={day.label}
+                      format="story"
+                      frameTime={relatedNightFrameTime}
+                      renderFrame={renderRelatedNightFrame}
+                      label="Preview dos relacionados da noite"
+                    />
+                  ) : (
+                    <p>{relatedAssetError || "Carregando fotos antes do preview…"}</p>
+                  )}
+                </div>
+                <div className="media-actions">
+                  <button
+                    type="button"
+                    className="primary"
+                    disabled={!relatedAssets || running}
+                    onClick={() => void generateRelated(false)}
+                  >
+                    <RollingLabel>{running ? "GERANDO…" : "GERAR STORY"}</RollingLabel>
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary"
+                    disabled={!relatedAssets || running}
+                    onClick={() => void generateRelated(true)}
+                  >
+                    GERAR NOVAMENTE
+                  </button>
+                </div>
+                {running && (
+                  <div className="media-progress">
+                    <b>{progressLabel(job.progress)}</b>
+                    <i>{determinate && <em style={{ transform: `scaleX(${ratio})` }} />}</i>
+                  </div>
+                )}
+                {job?.status === "ready" && job.result && job.result.template === RELATED_NIGHT_TEMPLATE_ID && (
+                  <div className="media-actions">
+                    <p>✓ Vídeo gerado</p>
+                    <button type="button" className="primary" onClick={() => downloadBlob(job.result.blob, job.result.fileName || relatedNightFileName({ day: day.iso, format: "story" }))}>
+                      BAIXAR MP4
+                    </button>
+                    <button type="button" className="secondary" onClick={() => setViewer(job.result)}>VISUALIZAR</button>
+                  </div>
+                )}
+                {job?.status === "error" && <p className="media-error">{job.error}</p>}
+              </section>
+              <aside className="media-side">
+                <h2>Último render</h2>
+                <div className="media-cache">
+                  <CacheCard
+                    title="STORY"
+                    record={relatedCache.find((row) => row.format === "story") || null}
+                    currentFingerprint={relatedPrint}
+                    unit="relacionado"
+                    disabled={running}
+                    onView={() => setViewer(relatedCache.find((row) => row.format === "story") || null)}
+                    onDownload={() => {
+                      const record = relatedCache.find((row) => row.format === "story");
+                      if (record) downloadBlob(record.blob, record.fileName);
+                    }}
+                    onRegen={() => void generateRelated(true)}
+                  />
+                </div>
+              </aside>
+            </div>
+          )}
+        </>
       ) : (
         <>
           <header className="media-hero">

@@ -1,6 +1,8 @@
-import { agendaFileName, fingerprintAgendaRender } from "./agenda-media-core.js";
+import { AGENDA_TEMPLATE_ID, agendaFileName, fingerprintAgendaRender } from "./agenda-media-core.js";
 import { encodeAgendaMp4 } from "./encode-mp4.js";
-import { loadAgendaAssets } from "./media-assets.js";
+import { loadAgendaAssets, loadRelatedNightAssets } from "./media-assets.js";
+import { relatedNightFileName, fingerprintRelatedNightRender, RELATED_NIGHT_TEMPLATE_ID } from "./related-night-core.js";
+import { relatedNightFrameTime, renderRelatedNightFrame } from "./related-night-frame.js";
 
 const DB_NAME = "strix-fc27-media";
 const STORE = "renders";
@@ -77,13 +79,18 @@ export async function findCachedRender(fingerprint, format) {
   return record;
 }
 
-export async function listCachedRenders(day) {
+export async function listCachedRenders(day, { template } = {}) {
   try {
     const db = await openDb();
     return await new Promise((resolve, reject) => {
       const request = db.transaction(STORE, "readonly").objectStore(STORE).getAll();
       request.onsuccess = () => {
-        const rows = (request.result || []).filter((row) => !day || row.day === day);
+        const rows = (request.result || []).filter((row) => {
+          if (day && row.day !== day) return false;
+          if (!template) return true;
+          const rowTemplate = row.template || AGENDA_TEMPLATE_ID;
+          return rowTemplate === template;
+        });
         resolve(rows.sort((left, right) => String(right.createdAt).localeCompare(String(left.createdAt))));
       };
       request.onerror = () => reject(request.error);
@@ -147,10 +154,98 @@ export async function startAgendaRender({
       id: `${fingerprint}:${format}`,
       fingerprint,
       format,
+      template: AGENDA_TEMPLATE_ID,
       day,
       fileName,
       createdAt: new Date().toISOString(),
       matchCount: matches.length,
+      blob,
+    };
+    await writeCached(record);
+    emit({
+      status: "ready",
+      stage: "ready",
+      progress: { stage: "finishing", ratio: 1, totalFrames: timeline.totalFrames, frame: timeline.totalFrames },
+      result: record,
+      error: "",
+      controller: null,
+    });
+  } catch (error) {
+    if (error?.name === "AbortError") {
+      emit({ status: "idle", stage: "", error: "", controller: null, result: null });
+      return getMediaJob();
+    }
+    emit({
+      status: "error",
+      stage: "error",
+      error: error?.message || "Não foi possível gerar o vídeo.",
+      controller: null,
+    });
+  }
+  return getMediaJob();
+}
+
+export async function startRelatedNightRender({
+  players,
+  format = "story",
+  day,
+  dayLabel,
+  timeline,
+  force = false,
+} = {}) {
+  if (job.status === "running") return job;
+  const fingerprint = await fingerprintRelatedNightRender({ day, format, players });
+  const fileName = relatedNightFileName({ day, format });
+  if (!force) {
+    const cached = await findCachedRender(fingerprint, format);
+    if (cached) {
+      emit({
+        status: "ready",
+        stage: "cached",
+        format,
+        fingerprint,
+        progress: { stage: "finishing", ratio: 1 },
+        result: cached,
+        error: "",
+      });
+      return getMediaJob();
+    }
+  }
+
+  const controller = new AbortController();
+  emit({
+    status: "running",
+    stage: "preparing",
+    format,
+    fingerprint,
+    progress: { stage: "preparing", loaded: 0, total: 0 },
+    result: null,
+    error: "",
+    controller,
+  });
+
+  try {
+    const assets = await loadRelatedNightAssets(players, {
+      onProgress: (progress) => emit({ stage: "preparing", progress }),
+    });
+    const blob = await encodeAgendaMp4({
+      timeline,
+      assets,
+      dayLabel,
+      signal: controller.signal,
+      onProgress: (progress) => emit({ stage: progress.stage, progress }),
+      renderFrame: renderRelatedNightFrame,
+      frameTime: relatedNightFrameTime,
+    });
+    const record = {
+      id: `${fingerprint}:${format}`,
+      fingerprint,
+      format,
+      template: RELATED_NIGHT_TEMPLATE_ID,
+      day,
+      fileName,
+      createdAt: new Date().toISOString(),
+      matchCount: players.length,
       blob,
     };
     await writeCached(record);

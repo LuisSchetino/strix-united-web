@@ -6,6 +6,7 @@ const migrationUrl = new URL("../supabase/migrations/20260808014500_fc27_gameday
 const competitionRlsFixUrl = new URL("../supabase/migrations/20260808164217_fix_competition_edition_insert_rls.sql", import.meta.url);
 const syncMigrationUrl = new URL("../supabase/migrations/20260808191417_fc27_competition_sync_and_provider_agenda.sql", import.meta.url);
 const identityAndBracketUrl = new URL("../supabase/migrations/20260813103000_fc27_team_identity_and_bracket_slots.sql", import.meta.url);
+const nightRelatedUrl = new URL("../supabase/migrations/20260902220000_fc27_night_related.sql", import.meta.url);
 
 test("migration FC27 e aditiva e ativa RLS nos novos dominios", async () => {
   const sql = await readFile(migrationUrl, "utf8");
@@ -49,4 +50,14 @@ test("team identity and bracket migration preserves data and protects stable slo
   assert.match(sql, /unique \(edition_id, bracket_slot_key\)/i);
   assert.match(sql, /duplicate_bracket_slot/i);
   assert.match(sql, /opponent_team_id is null/i);
+});
+
+test("night related migration is additive and keyed by Sao Paulo date", async () => {
+  const sql = await readFile(nightRelatedUrl, "utf8");
+  assert.doesNotMatch(sql, /\b(drop\s+table|truncate|delete\s+from)\b/i);
+  assert.match(sql, /create table if not exists public\.night_related/i);
+  assert.match(sql, /night_date date primary key/i);
+  assert.match(sql, /player_ids uuid\[\]/i);
+  assert.match(sql, /alter table public\.night_related enable row level security/i);
+  assert.match(sql, /private\.has_minimum_tier\('diretoria'\)/);
 });
