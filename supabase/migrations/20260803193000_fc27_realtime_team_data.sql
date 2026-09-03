@@ -7,7 +7,6 @@ alter table public.agenda_matches
   add column if not exists previous_opponent_name text,
   add column if not exists previous_opponent_logo_id uuid references public.opponent_logos(id) on delete set null,
   add column if not exists cancelled_at timestamptz;
-
 create table if not exists public.club_players (
   id uuid primary key default gen_random_uuid(),
   display_name text not null check (char_length(trim(display_name)) between 1 and 120),
@@ -23,7 +22,6 @@ create table if not exists public.club_players (
   updated_at timestamptz not null default now(),
   unique (normalized_name)
 );
-
 create table if not exists public.club_matches (
   id uuid primary key default gen_random_uuid(),
   external_match_id text unique,
@@ -41,25 +39,19 @@ create table if not exists public.club_matches (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
-
 create index if not exists club_players_active_idx on public.club_players (is_active, display_name);
 create index if not exists club_matches_played_at_idx on public.club_matches (played_at desc);
 create index if not exists club_matches_competition_idx on public.club_matches (competition_name, played_at desc);
-
 drop trigger if exists club_players_touch on public.club_players;
 create trigger club_players_touch before update on public.club_players
 for each row execute function private.touch_updated_at();
-
 drop trigger if exists club_matches_touch on public.club_matches;
 create trigger club_matches_touch before update on public.club_matches
 for each row execute function private.touch_updated_at();
-
 alter table public.club_players enable row level security;
 alter table public.club_matches enable row level security;
-
 grant select on public.club_players, public.club_matches to authenticated;
 grant insert, update, delete on public.club_players, public.club_matches to authenticated;
-
 create policy "authenticated members read FC27 squad" on public.club_players
 for select to authenticated using (true);
 create policy "directors manage FC27 squad" on public.club_players
@@ -69,7 +61,6 @@ with check (
   and created_by = (select auth.uid())
   and updated_by = (select auth.uid())
 );
-
 create policy "authenticated members read FC27 matches" on public.club_matches
 for select to authenticated using (true);
 create policy "directors manage FC27 matches" on public.club_matches
@@ -79,7 +70,6 @@ with check (
   and created_by = (select auth.uid())
   and updated_by = (select auth.uid())
 );
-
 do $$
 declare
   table_name text;

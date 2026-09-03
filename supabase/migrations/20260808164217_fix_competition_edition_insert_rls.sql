@@ -1,11 +1,7 @@
 -- Allow INSERT ... RETURNING on active competition editions.
---
--- The previous SELECT policy called a helper that queried the row being
--- returned. During INSERT ... RETURNING that self-lookup cannot see the new
--- tuple yet, so PostgREST reported the INSERT as an RLS violation even though
--- the dev actor fields and tier were valid. Evaluate the visible row directly
--- instead; historical editions remain restricted to Conselho and above.
-
+-- The previous SELECT policy used a nested edition-read helper.
+-- That helper queried competition_editions again, so a row that passed the
+-- INSERT policy could not be returned in the same statement.
 drop policy if exists "members read permitted competition editions"
   on public.competition_editions;
 
@@ -16,4 +12,4 @@ to authenticated
 using (
   status <> 'historical'
   or (select private.has_minimum_tier('conselho'))
-);
+);;

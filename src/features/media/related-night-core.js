@@ -2,7 +2,7 @@ import { saoPauloDay, todayAgendaMatches } from "../agenda/agenda-time.js";
 import { formatAgendaDay, MEDIA_FORMATS } from "./agenda-media-core.js";
 
 export const RELATED_NIGHT_TEMPLATE_ID = "related-night";
-export const RELATED_NIGHT_TEMPLATE_VERSION = "related-night-v1";
+export const RELATED_NIGHT_TEMPLATE_VERSION = "related-night-v3";
 export const RELATED_NIGHT_FPS = 30;
 
 export const LINEUP_SLOT_POSITIONS = Object.freeze([
@@ -190,26 +190,27 @@ export function relatedNightFileName({ day, format } = {}) {
 
 export function relatedNightIntroDuration(count) {
   if (count <= 0) return 0;
-  return 1.85;
+  return 1.55;
 }
 
 export function relatedNightBeatDuration(count) {
   if (count <= 0) return 0;
-  if (count <= 11) return 1.38;
-  if (count <= 13) return 1.24;
-  return 1.1;
+  if (count <= 11) return 1.58;
+  if (count <= 13) return 1.5;
+  return 1.34;
 }
 
 export function relatedNightOverlap(count) {
-  if (count <= 11) return 0.16;
-  return 0.18;
+  if (count <= 11) return 0.12;
+  if (count <= 13) return 0.14;
+  return 0.16;
 }
 
 export function relatedNightFinaleDuration(count) {
   if (count <= 0) return 0;
-  if (count <= 11) return 2.8;
-  if (count <= 13) return 2.7;
-  return 2.55;
+  if (count <= 11) return 2.35;
+  if (count <= 13) return 2.2;
+  return 2.1;
 }
 
 export function relatedNightDurationSeconds(count) {

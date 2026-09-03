@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { orderRelated } from "../src/features/media/related-night-core.js";
-import { distributeRelatedOnField, projectFieldPoint } from "../src/features/media/related-night-layout.js";
+import { distributeRelatedOnField, projectFieldPoint, relatedNightCamera, PITCH } from "../src/features/media/related-night-layout.js";
 import { buildRelatedNightTimeline } from "../src/features/media/related-night-timeline.js";
 
 function sample(spec) {
@@ -47,7 +47,7 @@ test("11, 13 e 15 relacionados cabem no campo sem overlap", () => {
     assert.equal(placed.filter((item) => item.group === "GOL").length, pack.filter((item) => item.group === "GOL").length);
     assert.ok(!overlaps(placed), `overlap em ${pack.length}`);
     assert.ok(placed.every((item) => item.u >= 0.07 && item.u <= 0.93));
-    assert.ok(placed.every((item) => item.v >= 0.12 && item.v <= 0.93));
+    assert.ok(placed.every((item) => item.v >= 0.1 && item.v <= 0.94));
   }
 });
 
@@ -56,14 +56,27 @@ test("dois goleiros ficam no mesmo setor e ninguém vira reserva visual", () => 
   const goals = placed.filter((item) => item.group === "GOL");
   assert.equal(goals.length, 2);
   assert.ok(Math.abs(goals[0].v - goals[1].v) < 0.02);
-  assert.ok(goals.every((item) => item.v > 0.72 && item.v < 0.86));
-  assert.ok(placed.every((item) => item.v <= 0.86));
+  assert.ok(goals.every((item) => item.v > 0.86 && item.v < 0.94));
+  assert.ok(placed.every((item) => item.v <= 0.94));
 });
 
 test("projeção em perspectiva mantém profundidade", () => {
   const timeline = buildRelatedNightTimeline(sample([["GOL", 1], ["ATA", 1]]), { format: "story" });
-  const near = projectFieldPoint(0.5, 0.9, timeline, { zoom: 1 });
+  const near = projectFieldPoint(0.5, 1, timeline, { zoom: 1 });
   const far = projectFieldPoint(0.5, 0.2, timeline, { zoom: 1 });
   assert.ok(near.scale > far.scale);
   assert.ok(near.y > far.y);
+  assert.ok(near.fieldW > far.fieldW);
+  assert.ok(near.fieldW > timeline.width * 0.95);
+  const boxEdge = PITCH.penaltyDepth;
+  assert.ok(boxEdge > 0.14 && boxEdge < 0.18);
+});
+
+test("câmera começa próxima e abre no final", () => {
+  const timeline = buildRelatedNightTimeline(sample([["GOL", 2], ["ZAG", 4], ["MC", 5], ["ATA", 2]]), { format: "story" });
+  const first = timeline.scenes.find((scene) => scene.type === "player");
+  const early = relatedNightCamera(timeline, first.start + 0.3);
+  const finale = relatedNightCamera(timeline, timeline.duration - 0.2);
+  assert.ok(early.zoom > finale.zoom);
+  assert.ok(early.lookV > finale.lookV);
 });

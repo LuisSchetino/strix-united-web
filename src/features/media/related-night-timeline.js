@@ -19,6 +19,10 @@ export function buildRelatedNightTimeline(players = [], { format = "story" } = {
   const overlap = relatedNightOverlap(count);
   const finale = relatedNightFinaleDuration(count);
   const placed = distributeRelatedOnField(players);
+  const groupSizes = placed.reduce((acc, player) => {
+    acc[player.group] = (acc[player.group] || 0) + 1;
+    return acc;
+  }, {});
 
   if (!count) {
     return {
@@ -35,6 +39,7 @@ export function buildRelatedNightTimeline(players = [], { format = "story" } = {
       safe: safeArea(spec.id),
       scenes: [],
       players: [],
+      groupSizes: {},
     };
   }
 
@@ -47,6 +52,7 @@ export function buildRelatedNightTimeline(players = [], { format = "story" } = {
 
   const playerScenes = placed.map((player, index) => {
     const start = introEnd + index * (beat - overlap);
+    const previous = placed[index - 1];
     return {
       id: `player-${player.id || index}`,
       type: "player",
@@ -54,6 +60,8 @@ export function buildRelatedNightTimeline(players = [], { format = "story" } = {
       start,
       end: start + beat,
       player,
+      groupLead: !previous || previous.group !== player.group,
+      groupSize: groupSizes[player.group] || 0,
     };
   });
   scenes.push(...playerScenes);
@@ -81,6 +89,7 @@ export function buildRelatedNightTimeline(players = [], { format = "story" } = {
     safe: safeArea(spec.id),
     scenes,
     players: placed,
+    groupSizes,
   };
 }
 

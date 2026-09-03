@@ -3,7 +3,6 @@
 -- graph and remains restricted to the Dev tier.
 
 begin;
-
 create table if not exists public.library_items (
   id uuid primary key default gen_random_uuid(),
   title text not null check (char_length(trim(title)) between 1 and 180),
@@ -22,7 +21,6 @@ create table if not exists public.library_items (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
-
 create table if not exists public.library_view_progress (
   item_id uuid not null references public.library_items(id) on delete cascade,
   user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
@@ -37,7 +35,6 @@ create table if not exists public.library_view_progress (
   updated_at timestamptz not null default now(),
   primary key (item_id, user_id)
 );
-
 create table if not exists public.system_flags (
   key text primary key check (key ~ '^[a-z0-9_]{3,64}$'),
   label text not null,
@@ -47,24 +44,20 @@ create table if not exists public.system_flags (
   updated_by uuid not null references auth.users(id) on delete restrict,
   updated_at timestamptz not null default now()
 );
-
 create index if not exists library_items_status_published_idx
   on public.library_items (status, published_at desc);
 create index if not exists library_view_progress_user_access_idx
   on public.library_view_progress (user_id, last_accessed_at desc);
 create index if not exists library_view_progress_item_percent_idx
   on public.library_view_progress (item_id, progress_percent desc);
-
 drop trigger if exists library_items_touch on public.library_items;
 create trigger library_items_touch
 before update on public.library_items
 for each row execute function private.touch_updated_at();
-
 drop trigger if exists system_flags_touch on public.system_flags;
 create trigger system_flags_touch
 before update on public.system_flags
 for each row execute function private.touch_updated_at();
-
 create or replace function private.set_library_progress_identity()
 returns trigger
 language plpgsql
@@ -82,24 +75,19 @@ begin
   return new;
 end;
 $$;
-
 revoke all on function private.set_library_progress_identity() from public, anon, authenticated;
-
 drop trigger if exists library_progress_identity on public.library_view_progress;
 create trigger library_progress_identity
 before insert or update on public.library_view_progress
 for each row execute function private.set_library_progress_identity();
-
 alter table public.library_items enable row level security;
 alter table public.library_view_progress enable row level security;
 alter table public.system_flags enable row level security;
-
 grant select, insert, update, delete on public.library_items to authenticated;
 grant select, insert, update on public.library_view_progress to authenticated;
 revoke delete on public.library_view_progress from authenticated;
 grant select, insert, update on public.system_flags to authenticated;
 revoke delete on public.system_flags from authenticated;
-
 create policy "members read permitted library items"
 on public.library_items for select to authenticated
 using (
@@ -109,7 +97,6 @@ using (
   )
   or (select private.has_minimum_tier('diretoria'))
 );
-
 create policy "directors create library items"
 on public.library_items for insert to authenticated
 with check (
@@ -117,7 +104,6 @@ with check (
   and created_by = (select auth.uid())
   and updated_by = (select auth.uid())
 );
-
 create policy "directors update library items"
 on public.library_items for update to authenticated
 using ((select private.has_minimum_tier('diretoria')))
@@ -125,38 +111,31 @@ with check (
   (select private.has_minimum_tier('diretoria'))
   and updated_by = (select auth.uid())
 );
-
 create policy "directors delete library items"
 on public.library_items for delete to authenticated
 using ((select private.has_minimum_tier('diretoria')));
-
 create policy "members read own library progress"
 on public.library_view_progress for select to authenticated
 using (
   user_id = (select auth.uid())
   or (select private.has_minimum_tier('conselho'))
 );
-
 create policy "members create own library progress"
 on public.library_view_progress for insert to authenticated
 with check (user_id = (select auth.uid()));
-
 create policy "members update own library progress"
 on public.library_view_progress for update to authenticated
 using (user_id = (select auth.uid()))
 with check (user_id = (select auth.uid()));
-
 create policy "members read public system flags"
 on public.system_flags for select to authenticated
 using (public_to_members or (select private.has_minimum_tier('dev')));
-
 create policy "developers create system flags"
 on public.system_flags for insert to authenticated
 with check (
   (select private.has_minimum_tier('dev'))
   and updated_by = (select auth.uid())
 );
-
 create policy "developers update system flags"
 on public.system_flags for update to authenticated
 using ((select private.has_minimum_tier('dev')))
@@ -164,19 +143,15 @@ with check (
   (select private.has_minimum_tier('dev'))
   and updated_by = (select auth.uid())
 );
-
 -- Deleting an edition cascades only provider-owned rows. Agenda and club matches keep
 -- their own records because their competition foreign keys are ON DELETE SET NULL.
 grant delete on public.competition_editions, public.competitions to authenticated;
-
 create policy "developers delete competition editions"
 on public.competition_editions for delete to authenticated
 using ((select private.has_minimum_tier('dev')));
-
 create policy "developers delete competitions"
 on public.competitions for delete to authenticated
 using ((select private.has_minimum_tier('dev')));
-
 do $$
 begin
   if not exists (select 1 from public.system_flags where key = 'site_maintenance') then
@@ -196,7 +171,6 @@ begin
     limit 1;
   end if;
 end $$;
-
 do $$
 declare table_name text;
 begin
@@ -213,5 +187,4 @@ begin
     end loop;
   end if;
 end $$;
-
 commit;

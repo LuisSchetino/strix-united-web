@@ -3,36 +3,29 @@
 
 create extension if not exists pg_net with schema extensions;
 create extension if not exists pg_cron with schema pg_catalog;
-
 alter table public.competition_sources
   add column if not exists content_fingerprint text,
   add column if not exists last_checked_at timestamptz,
   add column if not exists next_sync_at timestamptz not null default now(),
   add column if not exists consecutive_failures integer not null default 0
     check (consecutive_failures >= 0);
-
 alter table public.competition_stages
   add column if not exists qualification_slots integer
     check (qualification_slots is null or qualification_slots > 0),
   add column if not exists qualification_rule jsonb not null default '{}'::jsonb;
-
 alter table public.competition_groups
   add column if not exists qualification_slots integer
     check (qualification_slots is null or qualification_slots > 0),
   add column if not exists qualification_rule jsonb not null default '{}'::jsonb;
-
 alter table public.agenda_matches
   add column if not exists source_fixture_id uuid
     references public.competition_fixtures(id) on delete set null;
-
 create unique index if not exists agenda_matches_source_fixture_unique_idx
   on public.agenda_matches (source_fixture_id)
   where source_fixture_id is not null;
-
 create index if not exists competition_sources_due_sync_idx
   on public.competition_sources (next_sync_at)
   where sync_status <> 'error' or consecutive_failures < 6;
-
 create table if not exists public.competition_sync_log (
   id bigint generated always as identity primary key,
   competition_id uuid references public.competitions(id) on delete set null,
@@ -51,22 +44,18 @@ create table if not exists public.competition_sync_log (
   started_at timestamptz not null default now(),
   completed_at timestamptz not null default now()
 );
-
 create index if not exists competition_sync_log_edition_created_idx
   on public.competition_sync_log (edition_id, completed_at desc);
 create index if not exists competition_sync_log_source_id_idx
   on public.competition_sync_log (source_id);
 create index if not exists competition_sync_log_competition_id_idx
   on public.competition_sync_log (competition_id);
-
 alter table public.competition_sync_log enable row level security;
 grant select on public.competition_sync_log to authenticated;
 revoke insert, update, delete on public.competition_sync_log from authenticated;
-
 create policy "developers read competition sync log"
 on public.competition_sync_log for select to authenticated
 using ((select private.has_minimum_tier('dev')));
-
 create or replace function private.invoke_fc27_competition_sync()
 returns bigint
 language plpgsql
@@ -100,9 +89,7 @@ begin
   return request_id;
 end;
 $$;
-
 revoke all on function private.invoke_fc27_competition_sync() from public, anon, authenticated;
-
 do $$
 declare
   existing_job bigint;

@@ -26,4 +26,4 @@ revoke update, delete, truncate, references, trigger
 revoke truncate, references, trigger
   on public.gameday_projects,
      public.gameday_player_assets
-  from authenticated;
+  from authenticated;;

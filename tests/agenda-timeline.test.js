@@ -139,8 +139,8 @@ test("easing premium não é linear e o painter cobre intro, jogo e finale", () 
   assert.equal(timeline.scenes.at(-1).type, "finale");
 });
 
-test("agenda-day-v6 mantém palco persistente entre os jogos", () => {
-  assert.equal(AGENDA_TEMPLATE_VERSION, "agenda-day-v6");
+test("agenda-day-v7 mantém palco persistente entre os jogos", () => {
+  assert.equal(AGENDA_TEMPLATE_VERSION, "agenda-day-v7");
   const timeline = buildAgendaTimeline(matches(5), { format: "story" });
   const assets = {
     strix: { bitmap: null, initials: "SU", name: "Strix United" },
@@ -176,13 +176,18 @@ test("agenda completa adapta 3/5/6 jogos e separa competição do matchup", () =
     round: "",
   }));
   assert.equal(finaleDensity(3), "spacious");
-  assert.equal(finaleDensity(5), "compact");
-  assert.equal(finaleDensity(6), "dense");
+  assert.equal(finaleDensity(5), "medium");
+  assert.equal(finaleDensity(6), "compact");
   for (const count of [3, 5, 6]) {
     const timeline = buildAgendaTimeline(long(count), { format: "story" });
     const layout = finaleRowLayout(timeline);
     assert.equal(layout.density, finaleDensity(count));
     assert.ok(layout.minCompGap >= 18);
+    if (count === 5) {
+      const safeW = timeline.width - timeline.safe.side * 2;
+      assert.ok(layout.span >= safeW * 0.78);
+      assert.ok(layout.logoBox >= 70);
+    }
     for (let index = 0; index < count; index += 1) {
       const zones = finaleRowZones(layout, index);
       assert.ok(zones.compY - zones.matchupBottom >= layout.minCompGap - 0.01);
@@ -201,7 +206,7 @@ test("agenda completa adapta 3/5/6 jogos e separa competição do matchup", () =
   }
 });
 
-test("opening v6 é tipográfico e o painter separa palco de conteúdo variável", async () => {
+test("opening v7 é tipográfico e o painter separa palco de conteúdo variável", async () => {
   const paint = await readFile(new URL("../src/features/media/agenda-paint.js", import.meta.url), "utf8");
   assert.match(paint, /paintMatchStagePersistent/);
   assert.match(paint, /paintMatchVariableContent/);

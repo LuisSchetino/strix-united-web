@@ -4,13 +4,11 @@
 alter table public.agenda_matches
   add column if not exists opponent_team_id uuid
     references public.competition_teams(id) on delete set null;
-
 alter table public.competition_fixtures
   add column if not exists bracket_slot_key text,
   add column if not exists bracket_position integer,
   add column if not exists winner_to_slot_key text,
   add column if not exists winner_to_slot smallint;
-
 do $$
 begin
   if not exists (
@@ -32,7 +30,6 @@ begin
       check (winner_to_slot is null or winner_to_slot in (1, 2)) not valid;
   end if;
 end $$;
-
 -- Pick one canonical record per existing round/position. Linked and completed rows win;
 -- the remaining records are preserved for audit, but no longer participate in the tree.
 with ranked as (
@@ -98,7 +95,6 @@ set metadata = fixture.metadata || jsonb_build_object(
 )
 from ranked
 where fixture.id = ranked.id and ranked.slot_rank > 1;
-
 do $$
 begin
   if not exists (
@@ -111,13 +107,11 @@ begin
       unique (edition_id, bracket_slot_key);
   end if;
 end $$;
-
 create index if not exists agenda_matches_opponent_team_id_idx
   on public.agenda_matches (opponent_team_id);
 create index if not exists competition_fixtures_winner_to_slot_key_idx
   on public.competition_fixtures (edition_id, winner_to_slot_key)
   where winner_to_slot_key is not null;
-
 -- Existing automatic Agenda rows inherit the canonical opponent without recreation.
 update public.agenda_matches agenda
 set opponent_team_id = case
@@ -128,12 +122,10 @@ end
 from public.competition_fixtures fixture
 where agenda.source_fixture_id = fixture.id
   and agenda.opponent_team_id is null;
-
 alter table public.competition_fixtures
   validate constraint competition_fixtures_bracket_position_check;
 alter table public.competition_fixtures
   validate constraint competition_fixtures_winner_to_slot_check;
-
 comment on column public.agenda_matches.opponent_team_id is
   'Canonical competition team used to resolve the opponent identity dynamically.';
 comment on column public.competition_fixtures.bracket_slot_key is

@@ -11,7 +11,6 @@ create table if not exists public.opponent_logos (
   updated_at timestamptz not null default now(),
   unique (normalized_name)
 );
-
 create table if not exists public.agenda_matches (
   id uuid primary key default gen_random_uuid(),
   opponent_name text not null check (char_length(trim(opponent_name)) between 1 and 120),
@@ -25,10 +24,8 @@ create table if not exists public.agenda_matches (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
-
 create index if not exists agenda_matches_scheduled_at_idx on public.agenda_matches (scheduled_at);
 create index if not exists agenda_matches_status_scheduled_at_idx on public.agenda_matches (status, scheduled_at);
-
 create or replace function private.touch_updated_at()
 returns trigger
 language plpgsql
@@ -40,31 +37,24 @@ begin
   return new;
 end;
 $$;
-
 revoke all on function private.touch_updated_at() from public;
-
 drop trigger if exists opponent_logos_touch on public.opponent_logos;
 create trigger opponent_logos_touch before update on public.opponent_logos
 for each row execute function private.touch_updated_at();
-
 drop trigger if exists agenda_matches_touch on public.agenda_matches;
 create trigger agenda_matches_touch before update on public.agenda_matches
 for each row execute function private.touch_updated_at();
-
 alter table public.opponent_logos enable row level security;
 alter table public.agenda_matches enable row level security;
-
 grant select on public.opponent_logos to authenticated;
 grant select on public.agenda_matches to authenticated;
 grant insert, update, delete on public.opponent_logos to authenticated;
 grant insert, update, delete on public.agenda_matches to authenticated;
-
 create policy "authenticated members read opponent logos" on public.opponent_logos
 for select to authenticated using (true);
 create policy "directors manage opponent logos" on public.opponent_logos
 for all to authenticated using (private.has_minimum_tier('diretoria'))
 with check (private.has_minimum_tier('diretoria'));
-
 create policy "authenticated members read agenda" on public.agenda_matches
 for select to authenticated using (true);
 create policy "directors create agenda" on public.agenda_matches
@@ -81,11 +71,9 @@ with check (
 );
 create policy "directors delete agenda" on public.agenda_matches
 for delete to authenticated using (private.has_minimum_tier('diretoria'));
-
 insert into storage.buckets (id, name, public)
 values ('fc27-team-assets', 'fc27-team-assets', true)
 on conflict (id) do update set public = excluded.public;
-
 create policy "authenticated members read FC27 assets" on storage.objects
 for select to authenticated using (bucket_id = 'fc27-team-assets');
 create policy "directors upload FC27 assets" on storage.objects

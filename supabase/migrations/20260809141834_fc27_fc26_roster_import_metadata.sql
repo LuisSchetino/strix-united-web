@@ -39,4 +39,4 @@ create index if not exists club_players_source_order_idx
 comment on column public.club_players.source_system is
   'Optional source used for safe, idempotent roster reconciliation.';
 comment on column public.club_players.source_player_id is
-  'Stable identifier from the source system; it is not a cross-project foreign key.';
+  'Stable identifier from the source system; it is not a cross-project foreign key.';;

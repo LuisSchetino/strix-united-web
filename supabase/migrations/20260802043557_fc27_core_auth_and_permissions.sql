@@ -1,14 +1,12 @@
 -- FC 27 starts with a separate, normalized identity core. Discord is the
 -- authorization source; an email or phone number is never required here.
 create extension if not exists pgcrypto;
-
 do $$
 begin
   create type public.access_tier as enum ('teste', 'player', 'conselho', 'diretoria', 'dev');
 exception
   when duplicate_object then null;
 end $$;
-
 create table if not exists public.team_members (
   user_id uuid primary key references auth.users(id) on delete cascade,
   discord_id text not null unique check (discord_id ~ '^[0-9]{15,25}$'),
@@ -23,14 +21,11 @@ create table if not exists public.team_members (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
-
 create index if not exists team_members_active_tier_idx
   on public.team_members (is_active, access_tier);
 create index if not exists team_members_discord_sync_idx
   on public.team_members (last_discord_sync_at asc nulls first);
-
 create schema if not exists private;
-
 create or replace function private.tier_weight(tier public.access_tier)
 returns integer
 language sql
@@ -45,7 +40,6 @@ as $$
     when 'dev'::public.access_tier then 50
   end;
 $$;
-
 -- This is deliberately server-owned. It uses only auth.uid(), takes no user
 -- supplied identity and lives outside the API-exposed public schema.
 create or replace function private.has_minimum_tier(required_tier public.access_tier)
@@ -63,12 +57,10 @@ as $$
       and private.tier_weight(member.access_tier) >= private.tier_weight(required_tier)
   );
 $$;
-
 revoke all on function private.tier_weight(public.access_tier) from public;
 revoke all on function private.has_minimum_tier(public.access_tier) from public;
 grant usage on schema private to authenticated;
 grant execute on function private.has_minimum_tier(public.access_tier) to authenticated;
-
 create or replace function private.touch_team_member()
 returns trigger
 language plpgsql
@@ -87,23 +79,18 @@ begin
   return new;
 end;
 $$;
-
 revoke all on function private.touch_team_member() from public;
-
 drop trigger if exists team_members_touch on public.team_members;
 create trigger team_members_touch
 before update on public.team_members
 for each row execute function private.touch_team_member();
-
 alter table public.team_members enable row level security;
-
 drop policy if exists "members read their own access state" on public.team_members;
 create policy "members read their own access state"
 on public.team_members
 for select
 to authenticated
 using (user_id = (select auth.uid()));
-
 -- There are intentionally no browser INSERT/UPDATE/DELETE policies. Role sync
 -- is done only by a server route with a service key after Discord verification.
 
