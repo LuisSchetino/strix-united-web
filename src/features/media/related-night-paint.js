@@ -2,6 +2,13 @@ import { opponentInitials } from "./agenda-media-core.js";
 import { easeInOutCubic, easeOutExpo, easeOutQuart, reveal } from "./agenda-timeline.js";
 import { GROUP_KICKER } from "./related-night-core.js";
 import {
+  cameraHeroAmount,
+  classifyHeroPhoto,
+  heroPresence,
+  heroStageBox,
+  lowerThirdPresence,
+} from "./related-night-hero.js";
+import {
   PITCH,
   fieldQuad,
   projectFieldPoint,
@@ -13,10 +20,12 @@ import { relatedNightSceneAt } from "./related-night-timeline.js";
 const INK = "#efece6";
 const MUTED = "#a3a8ae";
 const VOID = "#050607";
-const PITCH_A = "#171c22";
-const PITCH_B = "#1f262e";
-const RULE = "rgba(239,236,230,0.62)";
-const METAL = "rgba(186,190,196,0.55)";
+const PITCH_A = "#1d242c";
+const PITCH_B = "#283039";
+const RULE = "rgba(239,236,230,0.84)";
+const METAL = "rgba(196,200,206,0.62)";
+
+let heroLayer = null;
 
 function fitText(ctx, text, maxWidth, font) {
   ctx.font = font;
@@ -25,21 +34,6 @@ function fitText(ctx, text, maxWidth, font) {
   let next = value;
   while (next.length > 1 && ctx.measureText(`${next}…`).width > maxWidth) next = next.slice(0, -1);
   return `${next}…`;
-}
-
-function roundRectPath(ctx, x, y, w, h, r) {
-  const rad = Math.max(0, Math.min(r, w / 2, h / 2));
-  ctx.beginPath();
-  ctx.moveTo(x + rad, y);
-  ctx.lineTo(x + w - rad, y);
-  ctx.arc(x + w - rad, y + rad, rad, -Math.PI / 2, 0);
-  ctx.lineTo(x + w, y + h - rad);
-  ctx.arc(x + w - rad, y + h - rad, rad, 0, Math.PI / 2);
-  ctx.lineTo(x + rad, y + h);
-  ctx.arc(x + rad, y + h - rad, rad, Math.PI / 2, Math.PI);
-  ctx.lineTo(x, y + rad);
-  ctx.arc(x + rad, y + rad, rad, Math.PI, Math.PI * 1.5);
-  ctx.closePath();
 }
 
 function coverPhoto(ctx, bitmap, dx, dy, dw, dh, focusY = 0.24) {
@@ -85,15 +79,15 @@ function paintStadium(ctx, timeline, time, camera) {
   ctx.fillRect(0, 0, width, height);
 
   const sky = ctx.createLinearGradient(0, 0, 0, height * 0.42);
-  sky.addColorStop(0, "#141922");
-  sky.addColorStop(0.55, "#0a0d12");
+  sky.addColorStop(0, "#0b0e13");
+  sky.addColorStop(0.55, "#07090c");
   sky.addColorStop(1, "rgba(5,6,7,0)");
   ctx.fillStyle = sky;
   ctx.fillRect(0, 0, width, height * 0.5);
 
   const parallax = (camera.x || 0) * 0.22 + Math.sin(time * 0.1) * 5;
   ctx.save();
-  ctx.globalAlpha = 0.16;
+  ctx.globalAlpha = 0.08;
   ctx.fillStyle = "#1a2028";
   for (let row = 0; row < 11; row += 1) {
     const y = height * 0.08 + row * 28;
@@ -116,7 +110,7 @@ function paintStadium(ctx, timeline, time, camera) {
   }
   ctx.restore();
 
-  const pulse = 0.1 + Math.sin(time * 0.7) * 0.025;
+  const pulse = 0.07 + Math.sin(time * 0.7) * 0.018;
   [[0.08, 0.04, 0.36], [0.92, 0.05, 0.62]].forEach(([sx, sy, ex], index) => {
     const beam = ctx.createLinearGradient(width * sx, height * sy, width * ex, height * 0.68);
     beam.addColorStop(0, `rgba(239,236,230,${pulse + index * 0.015})`);
@@ -181,7 +175,21 @@ function paintGoal(ctx, timeline, camera, vGoal) {
   ctx.stroke();
 }
 
-function paintField(ctx, timeline, camera, presence) {
+function paintSectorLight(ctx, timeline, camera, spotlight) {
+  const amount = spotlight?.amount || 0;
+  if (amount < 0.02) return;
+  const v = { GOL: 0.88, DEF: 0.72, MEI: 0.46, ATA: 0.18 }[spotlight.group] ?? 0.5;
+  const center = pt(0.5, v, timeline, camera);
+  const radius = 240 * center.scale;
+  const glow = ctx.createRadialGradient(center.x, center.y, 8, center.x, center.y, radius);
+  glow.addColorStop(0, `rgba(239,236,230,${0.13 * amount})`);
+  glow.addColorStop(0.55, `rgba(239,236,230,${0.05 * amount})`);
+  glow.addColorStop(1, "rgba(239,236,230,0)");
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, timeline.width, timeline.height);
+}
+
+function paintField(ctx, timeline, camera, presence, spotlight) {
   const { width } = timeline;
   const quad = fieldQuad(timeline, camera);
   const rim = uvLine(timeline, camera, [[-0.035, -0.02], [1.035, -0.02], [1.035, 1.028], [-0.035, 1.028]]);
@@ -236,8 +244,9 @@ function paintField(ctx, timeline, camera, presence) {
   ctx.fillStyle = light;
   ctx.fillRect(0, 0, timeline.width, timeline.height);
 
+  paintSectorLight(ctx, timeline, camera, spotlight);
   ctx.strokeStyle = RULE;
-  ctx.lineWidth = 2.5;
+  ctx.lineWidth = 2.9;
   strokePoly(ctx, uvLine(timeline, camera, [[0, 0], [1, 0], [1, 1], [0, 1]]), true);
   strokePoly(ctx, uvLine(timeline, camera, [[0, 0.5], [1, 0.5]]));
 
@@ -288,196 +297,199 @@ function paintField(ctx, timeline, camera, presence) {
   ctx.restore();
 }
 
-function heroScreenBox(timeline, scene, assets) {
-  if (scene?.type !== "player") return null;
-  const { width, height, safe } = timeline;
-  const story = timeline.format !== "feed";
-  const player = scene.player;
-  const asset = assets?.byId?.[player.id] || assets?.players?.[player.index];
-  const hasPhoto = Boolean(asset?.bitmap);
-  const heroW = story ? width * 0.42 : width * 0.34;
-  const heroH = heroW * 1.62;
-  const x = width - safe.side - heroW * 0.28;
-  const y = Math.min(height * 0.52, height - safe.bottom - heroH * 0.28);
-  const plateW = Math.min(width * 0.5, 540);
-  const plateH = story ? 92 : 78;
-  const plateX = width - safe.side - plateW;
-  const plateY = Math.min(y + heroH * 0.38, height - safe.bottom - plateH - 10);
-  if (hasPhoto) {
-    return {
-      left: x - heroW * 0.52,
-      right: width - safe.side + 8,
-      top: y - heroH * 0.5,
-      bottom: plateY + plateH + 8,
-      featuredId: player.id,
-    };
-  }
-  return {
-    left: plateX - 8,
-    right: width - safe.side + 8,
-    top: y - 70,
-    bottom: plateY + plateH + 8,
-    featuredId: player.id,
-  };
-}
-
 function markerHiddenByHero(point, box, player) {
   if (!box || player.id === box.featuredId) return false;
-  return point.x >= box.left && point.x <= box.right && point.y >= box.top && point.y <= box.bottom;
+  return point.x >= box.left + 18 && point.x <= box.right && point.y >= box.top && point.y <= box.plateY + 20;
 }
 
-function paintMarker(ctx, timeline, player, camera, alpha, featured, heroBox, seq) {
+function heroBuffer(width, height) {
+  if (!heroLayer || heroLayer.width !== width || heroLayer.height !== height) {
+    heroLayer = typeof OffscreenCanvas === "function"
+      ? new OffscreenCanvas(width, height)
+      : (typeof document !== "undefined" ? document.createElement("canvas") : null);
+    if (heroLayer) {
+      heroLayer.width = width;
+      heroLayer.height = height;
+    }
+  }
+  if (!heroLayer) return null;
+  const ctx = heroLayer.getContext("2d");
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, width, height);
+  return ctx;
+}
+
+function applyHeroMask(ctx, width, height, cutout) {
+  const mask = ctx.createLinearGradient(0, 0, 0, height);
+  mask.addColorStop(0, "rgba(0,0,0,0.08)");
+  mask.addColorStop(0.07, "#000");
+  mask.addColorStop(cutout ? 0.84 : 0.52, "#000");
+  mask.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.globalCompositeOperation = "destination-in";
+  ctx.fillStyle = mask;
+  ctx.fillRect(0, 0, width, height);
+  const side = ctx.createLinearGradient(0, 0, width, 0);
+  side.addColorStop(0, "rgba(0,0,0,0)");
+  side.addColorStop(0.12, "#000");
+  side.addColorStop(0.88, "#000");
+  side.addColorStop(1, "rgba(0,0,0,0.12)");
+  ctx.fillStyle = side;
+  ctx.fillRect(0, 0, width, height);
+  ctx.globalCompositeOperation = "source-over";
+}
+
+function paintNormalizedPhoto(ctx, bitmap, width, height) {
+  const info = classifyHeroPhoto(bitmap);
+  const cutout = info.kind === "cutout";
+  const layer = heroBuffer(width, height);
+  if (!layer) {
+    coverPhoto(ctx, bitmap, 0, 0, width, height, 0.2);
+    return;
+  }
+  if (cutout) {
+    layer.save();
+    layer.filter = "blur(14px)";
+    layer.globalAlpha = 0.42;
+    coverPhoto(layer, bitmap, 10, 16, width, height, 0.2);
+    layer.filter = "none";
+    layer.globalAlpha = 1;
+    coverPhoto(layer, bitmap, 0, 0, width, height, 0.2);
+    layer.restore();
+  } else {
+    layer.fillStyle = VOID;
+    layer.fillRect(0, 0, width, height);
+    layer.save();
+    layer.filter = info.strongBg ? "blur(22px)" : "blur(12px)";
+    layer.globalAlpha = info.strongBg ? 0.28 : 0.4;
+    coverPhoto(layer, bitmap, -width * 0.08, -height * 0.04, width * 1.16, height * 1.12, 0.28);
+    layer.restore();
+    layer.fillStyle = info.strongBg ? "rgba(5,6,7,0.58)" : "rgba(5,6,7,0.32)";
+    layer.fillRect(0, 0, width, height);
+    coverPhoto(layer, bitmap, 0, 0, width, height, 0.2);
+    if (info.strongBg) {
+      const wash = layer.createRadialGradient(width * 0.5, height * 0.28, 20, width * 0.5, height * 0.32, width * 0.62);
+      wash.addColorStop(0, "rgba(5,6,7,0)");
+      wash.addColorStop(1, "rgba(5,6,7,0.42)");
+      layer.fillStyle = wash;
+      layer.fillRect(0, 0, width, height);
+    }
+  }
+  applyHeroMask(layer, width, height, cutout);
+  ctx.drawImage(heroLayer, 0, 0);
+}
+
+function paintMarker(ctx, timeline, player, camera, alpha, featured, heroBox) {
   const point = projectFieldPoint(player.u, player.v, timeline, camera);
   if (markerHiddenByHero(point, heroBox, player)) return;
   const name = String(player.name || "").toUpperCase();
-  const size = Math.round(15 + point.scale * 10);
-  const kit = 18 + point.scale * 10;
+  const size = Math.max(28, Math.round(26 + point.scale * 15));
+  const posSize = Math.max(13, Math.round(size * 0.52));
+  const label = fitText(ctx, name, 210 * point.scale + 80, `800 ${size}px Inter, sans-serif`);
+  const pos = String(player.position || "");
+  const dot = 4.2 + point.scale * 2.4;
   ctx.save();
   ctx.globalAlpha = alpha;
-  ctx.fillStyle = featured ? INK : player.group === "GOL" ? "rgba(214,196,150,0.92)" : "rgba(239,236,230,0.9)";
-  roundRectPath(ctx, point.x - kit * 0.38, point.y - kit * 0.55, kit * 0.76, kit, 4);
-  ctx.fill();
-  ctx.fillStyle = VOID;
   ctx.textAlign = "center";
-  ctx.font = `800 ${Math.max(10, kit * 0.38)}px Inter, sans-serif`;
-  ctx.fillText(String(seq || "").padStart(2, "0").slice(-2), point.x, point.y + 2);
-
-  const label = fitText(ctx, name, 150 * point.scale + 40, `800 ${size}px Inter, sans-serif`);
-  const pos = String(player.position || "");
-  const boxW = Math.max(ctx.measureText(label).width, 40) + 16;
-  const boxH = size + 24;
-  const labelY = point.y + kit * 0.72 + 8;
-  ctx.fillStyle = "rgba(8,10,12,0.82)";
-  roundRectPath(ctx, point.x - boxW / 2, labelY, boxW, boxH, 3);
+  ctx.shadowColor = "rgba(0,0,0,0.88)";
+  ctx.shadowBlur = 8;
+  ctx.fillStyle = featured ? INK : player.group === "GOL" ? "rgba(214,196,150,0.95)" : INK;
+  ctx.beginPath();
+  ctx.arc(point.x, point.y, featured ? dot + 1.4 : dot, 0, Math.PI * 2);
   ctx.fill();
   ctx.fillStyle = INK;
   ctx.font = `800 ${size}px Inter, sans-serif`;
-  ctx.fillText(label, point.x, labelY + size + 2);
+  ctx.fillText(label, point.x, point.y + size + 10);
   ctx.fillStyle = featured ? INK : MUTED;
-  ctx.font = `800 ${Math.max(10, size - 6)}px Inter, sans-serif`;
-  ctx.fillText(pos, point.x, labelY + boxH - 5);
+  ctx.font = `800 ${posSize}px Inter, sans-serif`;
+  ctx.fillText(pos, point.x, point.y + size + posSize + 16);
   ctx.restore();
 }
 
 function paintHero(ctx, timeline, scene, time, assets) {
-  const { width, height, safe } = timeline;
-  const story = timeline.format !== "feed";
-  const local = time - scene.start;
-  const enter = reveal(local, 0.02, 0.3, easeOutExpo);
-  const exit = time > scene.end - 0.22 ? 1 - reveal(time, scene.end - 0.22, 0.22, easeInOutCubic) : 1;
-  const presence = enter * exit;
+  const presence = heroPresence(scene, time);
   if (presence <= 0.01) return;
-
+  const { width, height } = timeline;
+  const stage = heroStageBox(timeline);
   const player = scene.player;
   const asset = assets?.byId?.[player.id] || assets?.players?.[player.index];
   const hasPhoto = Boolean(asset?.bitmap);
   const seq = String((scene.index || 0) + 1).padStart(2, "0");
-  const slide = (1 - enter) * 90;
-  const heroW = story ? width * 0.42 : width * 0.34;
-  const heroH = heroW * 1.62;
-  const x = width - safe.side - heroW * 0.28 + slide;
-  const y = Math.min(height * 0.52, height - safe.bottom - heroH * 0.28);
+  const slide = (1 - presence) * 84;
+  const x = stage.left + slide;
+  const y = stage.portraitTop;
 
   ctx.save();
-  ctx.globalAlpha = presence * 0.32;
-  const veil = ctx.createLinearGradient(width * 0.52, 0, width, 0);
+  ctx.globalAlpha = presence * 0.38;
+  const veil = ctx.createLinearGradient(width * 0.58, 0, width, 0);
   veil.addColorStop(0, "rgba(5,6,7,0)");
-  veil.addColorStop(1, "rgba(5,6,7,0.55)");
+  veil.addColorStop(1, "rgba(5,6,7,0.5)");
   ctx.fillStyle = veil;
-  ctx.fillRect(width * 0.5, 0, width * 0.5, height);
+  ctx.fillRect(width * 0.55, 0, width * 0.45, height);
   ctx.restore();
 
-  if (hasPhoto) {
-    ctx.save();
-    ctx.globalAlpha = presence * 0.38;
-    ctx.fillStyle = "rgba(0,0,0,0.5)";
-    ctx.beginPath();
-    ctx.ellipse(x, y + heroH * 0.4, heroW * 0.26, 16, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.scale(0.96 + presence * 0.04, 0.96 + presence * 0.04);
-    ctx.beginPath();
-    ctx.moveTo(-heroW * 0.46, heroH * 0.48);
-    ctx.lineTo(-heroW * 0.46, -heroH * 0.16);
-    ctx.quadraticCurveTo(-heroW * 0.42, -heroH * 0.5, 0, -heroH * 0.5);
-    ctx.quadraticCurveTo(heroW * 0.46, -heroH * 0.5, heroW * 0.48, -heroH * 0.12);
-    ctx.lineTo(heroW * 0.48, heroH * 0.48);
-    ctx.closePath();
-    ctx.clip();
-    ctx.globalAlpha = presence;
-    coverPhoto(ctx, asset.bitmap, -heroW / 2, -heroH / 2, heroW, heroH, 0.22);
-    const fade = ctx.createLinearGradient(0, heroH * 0.04, 0, heroH / 2);
-    fade.addColorStop(0, "rgba(5,6,7,0)");
-    fade.addColorStop(1, "rgba(5,6,7,0.88)");
-    ctx.fillStyle = fade;
-    ctx.fillRect(-heroW / 2, 0, heroW, heroH / 2);
-    ctx.restore();
-  } else {
-    ctx.save();
-    ctx.globalAlpha = presence;
-    ctx.translate(x - 24, y - 10);
-    ctx.fillStyle = "rgba(0,0,0,0.38)";
-    ctx.beginPath();
-    ctx.ellipse(0, heroH * 0.28, heroW * 0.22, 14, 0, 0, Math.PI * 2);
-    ctx.fill();
-    const plate = ctx.createLinearGradient(-heroW * 0.28, -heroH * 0.42, heroW * 0.28, heroH * 0.28);
-    plate.addColorStop(0, "#2a3038");
-    plate.addColorStop(1, "#101318");
-    ctx.fillStyle = plate;
-    ctx.beginPath();
-    ctx.moveTo(-heroW * 0.28, heroH * 0.26);
-    ctx.lineTo(-heroW * 0.28, -heroH * 0.08);
-    ctx.quadraticCurveTo(-heroW * 0.22, -heroH * 0.38, 0, -heroH * 0.4);
-    ctx.quadraticCurveTo(heroW * 0.26, -heroH * 0.38, heroW * 0.3, -heroH * 0.06);
-    ctx.lineTo(heroW * 0.3, heroH * 0.26);
-    ctx.closePath();
-    ctx.fill();
-    ctx.strokeStyle = "rgba(239,236,230,0.22)";
-    ctx.lineWidth = 1.6;
-    ctx.stroke();
-    ctx.fillStyle = INK;
-    ctx.fillRect(-heroW * 0.28, -heroH * 0.4, 6, heroH * 0.66);
-    ctx.fillStyle = MUTED;
-    ctx.textAlign = "center";
-    ctx.font = "800 18px Inter, sans-serif";
-    ctx.fillText(`${seq}  ·  ${player.position || "MEI"}`, 0, -heroH * 0.16);
-    ctx.fillStyle = INK;
-    ctx.font = "800 92px Rajdhani, sans-serif";
-    ctx.fillText(asset?.initials || opponentInitials(player.name), 0, heroH * 0.08);
-    ctx.restore();
-  }
-
-  paintLowerThird(ctx, timeline, player, seq, presence, y + heroH * 0.4);
-}
-
-function paintLowerThird(ctx, timeline, player, seq, presence, plateY) {
-  const { width, safe } = timeline;
-  const story = timeline.format !== "feed";
-  const plateW = Math.min(width * 0.5, 540);
-  const plateH = story ? 92 : 78;
-  const x = width - safe.side - plateW;
-  const y = Math.min(plateY, timeline.height - safe.bottom - plateH - 10);
   ctx.save();
   ctx.globalAlpha = presence;
-  ctx.fillStyle = "rgba(8,10,12,0.94)";
-  ctx.beginPath();
-  ctx.moveTo(x + 18, y);
-  ctx.lineTo(x + plateW, y);
-  ctx.lineTo(x + plateW, y + plateH);
-  ctx.lineTo(x, y + plateH);
-  ctx.closePath();
-  ctx.fill();
-  ctx.fillStyle = INK;
-  ctx.fillRect(x, y, 7, plateH);
-  ctx.fillStyle = MUTED;
+  ctx.translate(x, y);
+  if (hasPhoto) {
+    ctx.save();
+    ctx.globalAlpha = presence * 0.4;
+    ctx.fillStyle = "rgba(0,0,0,0.55)";
+    ctx.beginPath();
+    ctx.ellipse(stage.portraitW * 0.5, stage.portraitH * 0.92, stage.portraitW * 0.28, 14, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    paintNormalizedPhoto(ctx, asset.bitmap, stage.portraitW, stage.portraitH);
+    const rim = ctx.createLinearGradient(0, 0, 18, 0);
+    rim.addColorStop(0, "rgba(239,236,230,0.28)");
+    rim.addColorStop(1, "rgba(239,236,230,0)");
+    ctx.fillStyle = rim;
+    ctx.fillRect(0, 0, 18, stage.portraitH * 0.78);
+    const sweepX = ((time * 0.35) % 1.4) * stage.portraitW - 40;
+    const sweep = ctx.createLinearGradient(sweepX, 0, sweepX + 70, 0);
+    sweep.addColorStop(0, "rgba(255,255,255,0)");
+    sweep.addColorStop(0.5, "rgba(255,255,255,0.07)");
+    sweep.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = sweep;
+    ctx.fillRect(0, 0, stage.portraitW, stage.portraitH * 0.7);
+  } else {
+    const wash = ctx.createRadialGradient(stage.portraitW * 0.5, stage.portraitH * 0.38, 12, stage.portraitW * 0.5, stage.portraitH * 0.4, stage.portraitW * 0.58);
+    wash.addColorStop(0, "rgba(42,48,56,0.55)");
+    wash.addColorStop(1, "rgba(5,6,7,0)");
+    ctx.fillStyle = wash;
+    ctx.fillRect(0, 0, stage.portraitW, stage.portraitH);
+    ctx.fillStyle = INK;
+    ctx.textAlign = "center";
+    ctx.font = `800 ${Math.round(stage.portraitW * 0.34)}px Rajdhani, sans-serif`;
+    ctx.fillText(asset?.initials || opponentInitials(player.name), stage.portraitW * 0.5, stage.portraitH * 0.46);
+  }
+  ctx.restore();
+  paintLowerThird(ctx, timeline, player, seq, lowerThirdPresence(scene, time), stage, slide);
+}
+
+function paintLowerThird(ctx, timeline, player, seq, presence, stage, slide = 0) {
+  if (presence <= 0.01) return;
+  const story = timeline.format !== "feed";
+  const x = stage.left + 6 + slide;
+  const y = stage.plateY;
+  const name = fitText(ctx, String(player.name || "").toUpperCase(), stage.width - 12, `700 ${story ? 76 : 56}px Rajdhani, sans-serif`);
+  ctx.save();
+  ctx.globalAlpha = presence;
   ctx.textAlign = "left";
+  ctx.fillStyle = MUTED;
   ctx.font = "800 20px Inter, sans-serif";
-  ctx.fillText(`${seq}  ·  ${player.position || "MEI"}`, x + 24, y + 30);
+  ctx.fillText(`${seq}  ·  ${player.position || "MEI"}`, x, y + 22);
+  ctx.strokeStyle = "rgba(239,236,230,0.7)";
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(x, y + 34);
+  ctx.lineTo(x + Math.min(stage.width * 0.78, 320), y + 38);
+  ctx.stroke();
   ctx.fillStyle = INK;
-  ctx.font = `700 ${story ? 54 : 40}px Rajdhani, sans-serif`;
-  ctx.fillText(fitText(ctx, String(player.name || "").toUpperCase(), plateW - 40, ctx.font), x + 24, y + 74);
+  ctx.font = `700 ${story ? 76 : 56}px Rajdhani, sans-serif`;
+  ctx.fillText(name, x, y + 98);
+  ctx.fillStyle = MUTED;
+  ctx.font = "800 13px Inter, sans-serif";
+  ctx.fillText("STRIX UNITED", x, y + 118);
   ctx.restore();
 }
 
@@ -488,11 +500,11 @@ function paintSectorKicker(ctx, timeline, scene, time) {
   const hold = local < 0.9 ? 1 : 1 - reveal(local, 0.9, 0.2, easeInOutCubic);
   const presence = enter * hold;
   if (presence <= 0.02) return;
-  const { width, safe } = timeline;
+  const { safe } = timeline;
   const label = GROUP_KICKER[scene.player.group] || "RELACIONADOS";
   ctx.save();
   ctx.globalAlpha = presence;
-  ctx.translate(width / 2, safe.top + 58);
+  ctx.translate(safe.side + 196, safe.top + 58);
   ctx.fillStyle = "rgba(8,10,12,0.88)";
   ctx.beginPath();
   ctx.moveTo(-210, 0);
@@ -609,39 +621,41 @@ function paintChrome(ctx, timeline, time, dayLabel) {
 
 function paintVignette(ctx, timeline) {
   const { width, height } = timeline;
-  const vignette = ctx.createRadialGradient(width / 2, height * 0.5, width * 0.22, width / 2, height * 0.5, width * 0.86);
+  const vignette = ctx.createRadialGradient(width * 0.42, height * 0.5, width * 0.18, width / 2, height * 0.5, width * 0.9);
   vignette.addColorStop(0, "rgba(5,6,7,0)");
-  vignette.addColorStop(1, "rgba(5,6,7,0.46)");
+  vignette.addColorStop(1, "rgba(5,6,7,0.56)");
   ctx.fillStyle = vignette;
   ctx.fillRect(0, 0, width, height);
 }
 
 export function paintRelatedNightFrame(ctx, { timeline, time, assets, dayLabel }) {
   if (!ctx || !timeline) return;
-  const camera = relatedNightCamera(timeline, time);
-  const fieldIn = reveal(time, 0.06, 0.58, easeOutQuart);
   const scene = relatedNightSceneAt(timeline, time);
-  const heroBox = scene?.type === "player" && time >= timeline.introEnd
-    ? heroScreenBox(timeline, scene, assets)
-    : null;
+  const showingHero = scene?.type === "player" && time >= timeline.introEnd && time < timeline.finaleStart;
+  const camera = relatedNightCamera(timeline, time, { hero: showingHero ? cameraHeroAmount(scene, time, timeline) : 0 });
+  const fieldIn = reveal(time, 0.06, 0.58, easeOutQuart);
+  const stage = showingHero ? { ...heroStageBox(timeline), featuredId: scene.player.id } : null;
   paintStadium(ctx, timeline, time, camera);
   if (fieldIn > 0.01) {
-    paintField(ctx, timeline, camera, fieldIn);
+    paintField(ctx, timeline, camera, fieldIn, {
+      group: scene?.player?.group,
+      amount: showingHero ? heroPresence(scene, time) * fieldIn : 0,
+    });
     for (const item of timeline.scenes) {
       if (item.type !== "player") continue;
       const appear = reveal(time, item.start + 0.16, 0.26, easeOutExpo);
       if (appear <= 0.01) continue;
-      const featured = time >= item.start && time < item.end;
-      paintMarker(ctx, timeline, item.player, camera, appear * fieldIn, featured, heroBox, (item.index || 0) + 1);
+      const featured = showingHero && item.player.id === scene.player.id;
+      paintMarker(ctx, timeline, item.player, camera, appear * fieldIn, featured, stage);
     }
   }
   if (time >= 0 && time < timeline.introEnd) {
     paintIntro(ctx, timeline, time, dayLabel);
   }
-  if (scene?.type === "player" && time >= timeline.introEnd) {
+  paintVignette(ctx, timeline);
+  if (showingHero) {
     paintHero(ctx, timeline, scene, time, assets);
     paintSectorKicker(ctx, timeline, scene, time);
   }
   paintChrome(ctx, timeline, time, dayLabel);
-  paintVignette(ctx, timeline);
 }

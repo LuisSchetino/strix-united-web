@@ -9,20 +9,97 @@ import { sampleFrameSignature as agendaSignature, signatureDistance as agendaDis
 const dayLabel = "02 DE SET DE 2026";
 
 const sample = [
-  { id: "g1", name: "Ceni", photo: "/brand/strix/portrait-ceni.png?v=3", position: "GOL", group: "GOL" },
-  { id: "g2", name: "João", photo: "/brand/strix/portrait-joao.png?v=3", position: "GOL", group: "GOL" },
-  { id: "d1", name: "YGO", photo: "/brand/strix/portrait-ygo.png?v=3", position: "ZAG", group: "DEF" },
-  { id: "d2", name: "Cedraz", photo: "", position: "ZAG", group: "DEF" },
+  { id: "g1", name: "Ceni", photo: "/brand/strix/portrait-ceni.png?v=3", position: "GOL", group: "GOL", kind: "cutout" },
+  { id: "g2", name: "João", photo: "/brand/strix/portrait-joao.png?v=3", position: "GOL", group: "GOL", kind: "stadium" },
+  { id: "d1", name: "YGO", photo: "/brand/strix/portrait-ygo.png?v=3", position: "ZAG", group: "DEF", kind: "crest" },
+  { id: "d2", name: "Cedraz", photo: "", position: "ZAG", group: "DEF", kind: "none" },
   { id: "d3", name: "Léo", photo: "", position: "ZAG", group: "DEF" },
   { id: "d4", name: "Rafa", photo: "", position: "ZAG", group: "DEF" },
   { id: "m1", name: "Oben", photo: "", position: "VOL", group: "MEI" },
-  { id: "m2", name: "Nunes", photo: "/brand/strix/portrait-nunes.png?v=3", position: "MC", group: "MEI" },
+  { id: "m2", name: "Nunes", photo: "/brand/strix/portrait-nunes.png?v=3", position: "MC", group: "MEI", kind: "selfie" },
   { id: "m3", name: "Kestol", photo: "", position: "MC", group: "MEI" },
   { id: "m4", name: "Dudu", photo: "", position: "MEI", group: "MEI" },
   { id: "m5", name: "Biel", photo: "", position: "ALA", group: "MEI" },
-  { id: "a1", name: "Santozz", photo: "/brand/strix/portrait-santozz.png?v=3", position: "ATA", group: "ATA" },
+  { id: "a1", name: "Santozz", photo: "/brand/strix/portrait-santozz.png?v=3", position: "ATA", group: "ATA", kind: "studio" },
   { id: "a2", name: "Vini", photo: "", position: "ATA", group: "ATA" },
 ];
+
+async function treatPortrait(bitmap, kind) {
+  if (!bitmap || kind === "studio") return bitmap;
+  const canvas = document.createElement("canvas");
+  canvas.width = 480;
+  canvas.height = 720;
+  const ctx = canvas.getContext("2d");
+  if (kind === "cutout") {
+    const scale = Math.max(canvas.width / bitmap.width, canvas.height / bitmap.height);
+    ctx.drawImage(bitmap, (canvas.width - bitmap.width * scale) / 2, (canvas.height - bitmap.height * scale) / 2, bitmap.width * scale, bitmap.height * scale);
+    ctx.globalCompositeOperation = "destination-in";
+    ctx.beginPath();
+    ctx.moveTo(86, 720);
+    ctx.lineTo(78, 310);
+    ctx.quadraticCurveTo(90, 48, 240, 28);
+    ctx.quadraticCurveTo(400, 48, 404, 300);
+    ctx.lineTo(396, 720);
+    ctx.closePath();
+    ctx.fill();
+    return createImageBitmap(canvas);
+  }
+  if (kind === "stadium") {
+    ctx.fillStyle = "#152033";
+    ctx.fillRect(0, 0, 480, 720);
+    for (let row = 0; row < 20; row += 1) {
+      ctx.fillStyle = row % 2 ? "#22324d" : "#2a3c5c";
+      ctx.fillRect(0, row * 36, 480, 34);
+    }
+    ctx.fillStyle = "rgba(255, 210, 90, 0.28)";
+    ctx.beginPath();
+    ctx.arc(90, 110, 78, 0, Math.PI * 2);
+    ctx.fill();
+    const scale = Math.max(340 / bitmap.width, 500 / bitmap.height);
+    ctx.drawImage(bitmap, 70, 120, bitmap.width * scale, bitmap.height * scale);
+    return createImageBitmap(canvas);
+  }
+  if (kind === "crest") {
+    ctx.fillStyle = "#101318";
+    ctx.fillRect(0, 0, 480, 720);
+    ctx.fillStyle = "#efece6";
+    ctx.beginPath();
+    ctx.arc(240, 250, 168, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#6f757c";
+    ctx.font = "800 84px Rajdhani, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("FC", 240, 278);
+    const scale = Math.max(480 / bitmap.width, 720 / bitmap.height);
+    ctx.drawImage(bitmap, (480 - bitmap.width * scale) / 2, (720 - bitmap.height * scale) / 2, bitmap.width * scale, bitmap.height * scale);
+    return createImageBitmap(canvas);
+  }
+  if (kind === "selfie") {
+    ctx.translate(240, 360);
+    ctx.rotate(-0.09);
+    const scale = Math.max(680 / bitmap.width, 980 / bitmap.height);
+    ctx.drawImage(bitmap, -bitmap.width * scale / 2, -bitmap.height * scale * 0.38, bitmap.width * scale, bitmap.height * scale);
+    return createImageBitmap(canvas);
+  }
+  return bitmap;
+}
+
+async function applyPhotoCases(loaded) {
+  const next = {
+    ...loaded,
+    players: [...loaded.players],
+    byId: { ...loaded.byId },
+  };
+  for (const [index, player] of sample.entries()) {
+    if (!player.kind || player.kind === "none") continue;
+    const current = next.players[index];
+    if (!current?.bitmap) continue;
+    const treated = await treatPortrait(current.bitmap, player.kind);
+    next.players[index] = { ...current, bitmap: treated, kind: player.kind };
+    next.byId[player.id] = next.players[index];
+  }
+  return next;
+}
 
 function paintSignature(timeline, assets, time) {
   const canvas = document.createElement("canvas");
@@ -113,7 +190,7 @@ function App() {
     let url = "";
     loadRelatedNightAssets(sample)
       .then(async (loaded) => {
-        const withPhotos = loaded;
+        const withPhotos = await applyPhotoCases(loaded);
         const fallbackOnly = {
           ...loaded,
           players: loaded.players.map((asset) => ({ ...asset, bitmap: null })),
@@ -145,6 +222,14 @@ function App() {
         });
         setStatus("Comparando MP4 com o painter…");
         const painted = times.map((mark) => ({ ...mark, ...paintSignature(timeline, withPhotos, mark.time) }));
+        const kinds = [
+          { label: "cutout", time: beats[0].start + 0.5 },
+          { label: "stadium", time: beats[1].start + 0.45 },
+          { label: "crest", time: beats[2].start + 0.4 },
+          { label: "selfie", time: beats[7].start + 0.4 },
+          { label: "sem foto", time: beats[3].start + 0.4 },
+        ];
+        const cases = kinds.map((mark) => ({ ...mark, ...paintSignature(timeline, withPhotos, mark.time) }));
         const fallback = [times[1], times[2], times[8]].map((mark) => ({
           ...mark,
           label: `fallback ${mark.label}`,
@@ -169,7 +254,7 @@ function App() {
         const frozen = motion.every((value) => value < 8);
         setQa(`${pairs.join(" · ")} · no campo ${lastPainted.scene.onField.length}/${sample.length} · motion ${motion.join("/")} · ${frozen ? "FREEZE" : "MOTION OK"} · ${reservedLook ? "PARECE RESERVA" : "MAPA ÚNICO"}`);
         setStatus(`MP4 pronto · ${(blob.size / 1024 / 1024).toFixed(2)} MB · ${timeline.duration}s`);
-        setAssets((current) => current && { ...current, painted, fallback });
+        setAssets((current) => current && { ...current, painted, fallback, cases });
       })
       .catch((item) => setError(item.message || String(item)));
     return () => { if (url) URL.revokeObjectURL(url); };
@@ -177,11 +262,17 @@ function App() {
 
   return (
     <main style={{ minHeight: "100vh", margin: 0, padding: 24, background: "#050607", color: "#f5f5f5", fontFamily: "Inter, sans-serif" }}>
-      <h1>QA · Relacionados da Noite v4</h1>
+      <h1>QA · Relacionados da Noite v5</h1>
       <p>{status}</p>
       {blobInfo && <p>{blobInfo.duration}s · {blobInfo.fps} fps · {blobInfo.frames} frames · {(blobInfo.size / 1024 / 1024).toFixed(2)} MB</p>}
       {qa && <p style={{ color: qa.includes("FREEZE") || qa.includes("RESERVA") ? "#ffbdc6" : "#b8e0c8" }}>{qa}</p>}
       {error && <p style={{ color: "#ffbdc6" }}>{error}</p>}
+      {assets?.cases && (
+        <>
+          <h2>5 tipos de foto</h2>
+          <FrameStrip marks={assets.cases} />
+        </>
+      )}
       {assets?.painted && (
         <>
           <h2>Com portraits</h2>
@@ -197,7 +288,10 @@ function App() {
       {videoUrl && (
         <>
           <p><a href={videoUrl} download="strix-relacionados-2026-09-02-story.mp4" style={{ color: "#efece6" }}>Baixar MP4 dos Relacionados</a></p>
-          <video src={videoUrl} controls autoPlay muted playsInline style={{ width: 360, marginTop: 24, background: "#000" }} />
+          <div style={{ display: "flex", gap: 24, alignItems: "flex-start", marginTop: 24 }}>
+            <video src={videoUrl} controls autoPlay muted playsInline style={{ width: 360, background: "#000" }} />
+            <video src={videoUrl} controls muted playsInline style={{ width: 320, background: "#000" }} />
+          </div>
         </>
       )}
     </main>

@@ -37,7 +37,7 @@ function placeLine(players, v, inset) {
   }));
 }
 
-function separate(placed, minDist = 0.11) {
+function separate(placed, minDist = 0.125) {
   const next = placed.map((item) => ({ ...item }));
   for (let pass = 0; pass < 4; pass += 1) {
     for (let i = 0; i < next.length; i += 1) {
@@ -70,6 +70,7 @@ function lerpCam(left, right, t) {
     zoom: lerp(left.zoom, right.zoom, ease),
     lookU: lerp(left.lookU, right.lookU, ease),
     lookV: lerp(left.lookV, right.lookV, ease),
+    originN: lerp(left.originN ?? 0.44, right.originN ?? 0.44, ease),
   };
 }
 
@@ -123,7 +124,7 @@ export function fieldStage(timeline, camera = {}) {
     lookU: Number.isFinite(camera.lookU) ? camera.lookU : 0.5,
     lookV: Number.isFinite(camera.lookV) ? camera.lookV : 0.5,
     camZ: 2.55,
-    originX: width * (story ? 0.44 : 0.5),
+    originX: width * (Number.isFinite(camera.originN) ? camera.originN : (story ? 0.44 : 0.5)),
   };
 }
 
@@ -191,20 +192,24 @@ function playerCamera(player, index, count) {
     zoom: baseZoom + sector.zoomAdd,
     lookU: 0.5 + (player.u - 0.5) * 0.08,
     lookV: sector.lookV,
+    originN: 0.44,
   };
 }
 
-export function relatedNightCamera(timeline, time) {
+export function relatedNightCamera(timeline, time, extras = {}) {
   const t = Number(time) || 0;
   const count = timeline?.players?.length || 0;
   const scenes = (timeline?.scenes || []).filter((scene) => scene.type === "player");
   const introEnd = timeline?.introEnd || 0;
   const finaleStart = timeline?.finaleStart || 0;
+  const story = timeline?.format !== "feed";
+  const width = timeline?.width || 1080;
+  const hero = Math.max(0, Math.min(1, extras.hero || 0));
 
   const keys = [
-    { t: 0, cam: { x: 0, y: -6, zoom: 1.08, lookU: 0.5, lookV: 0.58 } },
-    { t: introEnd * 0.45, cam: { x: 0, y: 2, zoom: 1.02, lookU: 0.5, lookV: 0.5 } },
-    { t: introEnd, cam: { x: 0, y: 12, zoom: 1.1, lookU: 0.5, lookV: 0.86 } },
+    { t: 0, cam: { x: 0, y: -6, zoom: 1.08, lookU: 0.5, lookV: 0.58, originN: 0.46 } },
+    { t: introEnd * 0.45, cam: { x: 0, y: 2, zoom: 1.02, lookU: 0.5, lookV: 0.5, originN: 0.45 } },
+    { t: introEnd, cam: { x: 0, y: 12, zoom: 1.1, lookU: 0.5, lookV: 0.86, originN: 0.44 } },
   ];
 
   scenes.forEach((scene, index) => {
@@ -219,11 +224,11 @@ export function relatedNightCamera(timeline, time) {
     t: finaleStart,
     cam: lastPlayer
       ? playerCamera(lastPlayer.player, Math.max(0, count - 1), count)
-      : { x: 0, y: 0, zoom: 1, lookU: 0.5, lookV: 0.5 },
+      : { x: 0, y: 0, zoom: 1, lookU: 0.5, lookV: 0.5, originN: 0.47 },
   });
   keys.push({
     t: finaleStart + 0.9,
-    cam: { x: 0, y: -4, zoom: 0.98, lookU: 0.5, lookV: 0.5 },
+    cam: { x: 0, y: -8, zoom: 0.9, lookU: 0.5, lookV: 0.5, originN: 0.5 },
   });
 
   let cam = keys[0].cam;
@@ -242,10 +247,11 @@ export function relatedNightCamera(timeline, time) {
   if (t >= keys.at(-1).t) cam = keys.at(-1).cam;
 
   return {
-    x: cam.x + Math.sin(t * 0.41) * 4,
+    x: cam.x + Math.sin(t * 0.41) * 4 - (story ? width * 0.068 : 0) * hero,
     y: cam.y + Math.sin(t * 0.33) * 2.6,
     zoom: cam.zoom * (1 + Math.sin(t * 0.37) * 0.006),
     lookU: cam.lookU,
     lookV: cam.lookV,
+    originN: (cam.originN ?? (story ? 0.44 : 0.5)) - (story ? 0.05 : 0) * hero,
   };
 }

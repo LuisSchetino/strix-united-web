@@ -46,6 +46,12 @@ function mockContext() {
     measureText(text) { return { width: String(text).length * 12 }; },
     createLinearGradient() { return { addColorStop() {} }; },
     createRadialGradient() { return { addColorStop() {} }; },
+    filter: "",
+    globalCompositeOperation: "source-over",
+    shadowBlur: 0,
+    shadowColor: "",
+    setTransform() {},
+    clearRect() {},
   };
 }
 
