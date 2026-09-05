@@ -16,7 +16,8 @@ test("motion system centralizes tokens and honors reduced motion", async () => {
   assert.match(css, /prefers-reduced-motion:\s*reduce/);
   assert.match(source, /matchMedia\("\(prefers-reduced-motion: reduce\)"\)/);
   assert.match(main, /ArrowDown/);
-  assert.match(source, /scrollIntoView/);
+  assert.match(source, /root\.scrollTo/);
+  assert.doesNotMatch(source, /button\.scrollIntoView/);
   assert.doesNotMatch(pkg, /framer-motion|"motion"\s*:/);
 });
 

@@ -26,7 +26,12 @@ export function SegmentedControl({ items, active, onChange, className = "", labe
     if (!root || !button) return undefined;
     const measure = () => {
       setIndicator({ left: button.offsetLeft, width: button.offsetWidth, ready: true });
-      button.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "nearest", inline: "nearest" });
+      // Scroll only the tab strip, never the document or its enclosing modal.
+      const left = button.offsetLeft;
+      const right = left + button.offsetWidth;
+      if (left < root.scrollLeft || right > root.scrollLeft + root.clientWidth) {
+        root.scrollTo({ left: Math.max(0, left - (root.clientWidth - button.offsetWidth) / 2), behavior: reduced ? "auto" : "smooth" });
+      }
     };
     measure();
     const observer = new ResizeObserver(measure);
@@ -49,6 +54,16 @@ export function SegmentedControl({ items, active, onChange, className = "", labe
             data-motion-tab={id}
             className={active === id ? "active" : ""}
             aria-selected={active === id}
+            tabIndex={active === id ? 0 : -1}
+            onKeyDown={(event) => {
+              const tabs = Array.from(rootRef.current.querySelectorAll('[role="tab"]'));
+              const index = tabs.indexOf(event.currentTarget);
+              const next = event.key === "ArrowRight" ? (index + 1) % tabs.length : event.key === "ArrowLeft" ? (index - 1 + tabs.length) % tabs.length : event.key === "Home" ? 0 : event.key === "End" ? tabs.length - 1 : -1;
+              if (next < 0) return;
+              event.preventDefault();
+              tabs[next].focus({ preventScroll: true });
+              onChange(tabs[next].dataset.motionTab);
+            }}
             onClick={() => onChange(id)}
             key={id}
           >

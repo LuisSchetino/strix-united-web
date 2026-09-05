@@ -28,6 +28,7 @@ import "./features/squad-cards.css";
 import "./fc27-brand.css";
 import "./round-discovery.css";
 import "./performance-polish.css";
+import "./quality-polish.css";
 
 const routeLoaders = {
   partidas: () => import("./features/matches/MatchesPage.jsx").then((module) => ({ default: module.MatchesPage })),
@@ -983,9 +984,17 @@ function Sidebar({
   signOut,
 }) {
   const warmRoute = (id) => () => { void preloadRoute(id); };
+  const [mobile, setMobile] = useState(() => window.matchMedia("(max-width:900px)").matches);
+  useEffect(() => {
+    const query = window.matchMedia("(max-width:900px)");
+    const update = () => setMobile(query.matches);
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
   return (
     <aside
       className={`sidebar ${compact ? "is-compact" : ""} ${mobileOpen ? "mobile-open" : ""}`}
+      inert={mobile && !mobileOpen ? true : undefined}
     >
       <div className="brand">
         <Crest small />
@@ -1013,6 +1022,7 @@ function Sidebar({
         <p>Central</p>
         <button
           className={active === "central" ? "active" : ""}
+          aria-current={active === "central" ? "page" : undefined}
           onClick={() => navigate("central")}
         >
           <Icon name="live" />
@@ -1025,6 +1035,7 @@ function Sidebar({
           <button
             key={id}
             className={active === id ? "active" : ""}
+            aria-current={active === id ? "page" : undefined}
             onClick={() => navigate(id)}
             onPointerEnter={warmRoute(id)}
             onFocus={warmRoute(id)}
@@ -1209,7 +1220,7 @@ function CentralLive({ workspace, navigate }) {
 }
 function GameRowLive({ game, index, workspace }) {
   const logo = game.resolved_opponent_logo_url || (game.opponent_logos?.storage_path ? workspace.assetUrl(game.opponent_logos.storage_path) : "");
-  const status = game.temporal_status === "today" ? "HOJE" : index === 0 ? "PRÓXIMO" : "AGENDADO";
+  const status = game.temporal_status === "overdue" ? "ATRASADO" : game.temporal_status === "today" ? "HOJE" : index === 0 ? "PRÓXIMO" : "AGENDADO";
   return <article className="upcoming-game-card">
     <header><span>{game.round_label || game.competition_name || "PARTIDA"}</span><time>{datePart(game.scheduled_at)} · {timePart(game.scheduled_at)}</time></header>
     <div className="upcoming-game-versus"><div><b>STRIX UNITED</b><Crest /></div><i>×</i><div><Avatar name={game.opponent_name} logo={logo} /><b>{game.opponent_name}</b></div></div>
@@ -1295,7 +1306,7 @@ function FormationPicker({ lineup, onChange, compact = false, readOnly = false, 
         >
           <header>
             <span>POSIÇÃO · {lineupSlots[slot]}</span>
-            <button type="button" onClick={() => setSlot(null)}>
+            <button type="button" aria-label="Fechar seleção de jogador" onClick={() => setSlot(null)}>
               <Icon name="close" size={16} />
             </button>
           </header>
@@ -1496,6 +1507,7 @@ function AgendaModal({ entry, mode = "new", presets, roster = [], assetUrl, stan
                   value={form.competition}
                   onChange={change}
                 >
+                  {!["AMISTOSO", "SUPERLIGA YESHUA", "MASTER LEAGUE", "COPA YESHUA"].includes(form.competition) && <option>{form.competition}</option>}
                   <option>AMISTOSO</option>
                   <option>SUPERLIGA YESHUA</option>
                   <option>MASTER LEAGUE</option>
@@ -2954,7 +2966,9 @@ function App() {
     </div>
   );
 }
-createRoot(document.getElementById("root")).render(
+export { Sidebar, CentralLive, AgendaLive, FormationPicker, SquadPageV3, DataPage };
+
+if (document.getElementById("root")) createRoot(document.getElementById("root")).render(
   <StrictMode>
     <App />
   </StrictMode>,

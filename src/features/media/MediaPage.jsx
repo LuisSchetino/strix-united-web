@@ -1,6 +1,6 @@
 import React, { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { MotionTabs, RollingLabel, notify } from "../../ui/motion/motion.jsx";
+import { MotionTabs, RollingLabel, notify, useReducedMotion } from "../../ui/motion/motion.jsx";
 import {
   AGENDA_TEMPLATE_ID,
   agendaFileName,
@@ -52,41 +52,55 @@ function PreviewCanvas({
   label = "Preview da agenda do dia",
 }) {
   const canvasRef = useRef(null);
+  const frameRef = useRef(0);
+  const reduced = useReducedMotion();
+  const [paused, setPaused] = useState(false);
+  useEffect(() => { frameRef.current = 0; }, [assets, timeline]);
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas || !timeline?.totalFrames || !assets) return undefined;
     const ctx = canvas.getContext("2d", { alpha: false });
-    let frame = 0;
     let raf = 0;
     const tick = () => {
-      const timeSec = frameTime(frame % timeline.totalFrames, timeline);
+      const timeSec = frameTime(frameRef.current % timeline.totalFrames, timeline);
       renderFrame(ctx, { timeline, timeSec, assets, dayLabel });
-      frame += 1;
-      raf = requestAnimationFrame(tick);
+      if (!reduced && !paused && !document.hidden) { frameRef.current += 1; raf = requestAnimationFrame(tick); }
     };
+    const visibility = () => { cancelAnimationFrame(raf); if (!document.hidden) tick(); };
+    document.addEventListener("visibilitychange", visibility);
     tick();
-    return () => cancelAnimationFrame(raf);
-  }, [assets, dayLabel, frameTime, renderFrame, timeline]);
+    return () => { cancelAnimationFrame(raf); document.removeEventListener("visibilitychange", visibility); };
+  }, [assets, dayLabel, frameTime, renderFrame, timeline, reduced, paused]);
   return (
-    <canvas
+    <div className="media-preview-stage"><canvas
       ref={canvasRef}
       width={timeline.width}
       height={timeline.height}
       className={format === "feed" ? "is-feed" : ""}
       aria-label={label}
-    />
+    />{!reduced && <button type="button" className="media-playback" aria-pressed={paused} onClick={() => setPaused(value => !value)}>{paused ? "Reproduzir preview" : "Pausar preview"}</button>}</div>
   );
 }
 
 function Viewer({ record, close }) {
+  const dialogRef = useRef(null);
   const url = useMemo(() => (record?.blob ? URL.createObjectURL(record.blob) : ""), [record]);
   useEffect(() => () => { if (url) URL.revokeObjectURL(url); }, [url]);
+  useEffect(() => {
+    if (!url) return undefined;
+    const dialog = dialogRef.current;
+    const previous = document.activeElement;
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    dialog?.showModal();
+    return () => { dialog?.close(); document.body.style.overflow = overflow; previous?.focus?.({ preventScroll: true }); };
+  }, [url]);
   if (!record || !url) return null;
   return createPortal(
-    <div className="media-viewer" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && close()}>
+    <dialog ref={dialogRef} className="media-viewer" aria-label="Visualizar vídeo gerado" onCancel={(event) => { event.preventDefault(); close(); }} onMouseDown={(event) => event.target === event.currentTarget && close()}>
       <section>
         <header>
-          <span>RENDER PRONTO</span>
+          <span>VÍDEO PRONTO</span>
           <h2>{record.fileName}</h2>
         </header>
         <video src={url} controls autoPlay playsInline />
@@ -95,7 +109,7 @@ function Viewer({ record, close }) {
           <button type="button" className="secondary" onClick={close}>FECHAR</button>
         </div>
       </section>
-    </div>,
+    </dialog>,
     document.body,
   );
 }
@@ -113,13 +127,13 @@ function CacheCard({ title, record, currentFingerprint, onView, onDownload, onRe
           {stale && <p className="media-changed">Os dados mudaram desde este render.</p>}
         </>
       ) : (
-        <p>Nenhum render ainda.</p>
+        <p>Gere esta versão para visualizar e baixar o vídeo aqui.</p>
       )}
-      <div className="media-inline-actions">
+      {record && <div className="media-inline-actions">
         <button type="button" className="secondary" disabled={!record} onClick={onView}>VISUALIZAR</button>
         <button type="button" className="secondary" disabled={!record} onClick={onDownload}>BAIXAR</button>
         <button type="button" className="secondary" disabled={disabled} onClick={onRegen}>GERAR NOVAMENTE</button>
-      </div>
+      </div>}
     </article>
   );
 }
@@ -326,6 +340,7 @@ export function MediaPage({ profile, client, workspace }) {
 
   return (
     <section className="media-page page-enter">
+      <header className="media-editorial-heading"><span>STRIX UNITED · MÍDIA</span><h1>Central de conteúdo.</h1><p>A noite em campo. A história nas redes.</p></header>
       <MotionTabs
         className="media-tabs"
         items={[
@@ -349,7 +364,7 @@ export function MediaPage({ profile, client, workspace }) {
         <>
           <header className="media-hero">
             <div>
-              <span>GERADOR DE MÍDIA</span>
+              <span>CONTEÚDO DO STRIX</span>
               <h1>{summary.mode === "week" ? "Resumo da semana." : "Resumo do dia."}</h1>
               <p>Peça vertical com o desempenho do Strix no período, a partir do histórico oficial de partidas.</p>
             </div>
@@ -414,7 +429,7 @@ export function MediaPage({ profile, client, workspace }) {
                 {job?.status === "error" && <p className="media-error">{job.error}</p>}
               </section>
               <aside className="media-side">
-                <h2>Último render</h2>
+                <h2>Vídeo disponível</h2>
                 <div className="media-cache">
                   <CacheCard
                     title="STORY"
@@ -438,7 +453,7 @@ export function MediaPage({ profile, client, workspace }) {
         <>
           <header className="media-hero">
             <div>
-              <span>GERADOR DE MÍDIA</span>
+              <span>CONTEÚDO DO STRIX</span>
               <h1>Relacionados da noite.</h1>
               <p>Uma peça vertical com todos os relacionados do dia no mesmo campo, sem titulares nem reservas.</p>
             </div>
@@ -516,7 +531,7 @@ export function MediaPage({ profile, client, workspace }) {
                 {job?.status === "error" && <p className="media-error">{job.error}</p>}
               </section>
               <aside className="media-side">
-                <h2>Último render</h2>
+                <h2>Vídeo disponível</h2>
                 <div className="media-cache">
                   <CacheCard
                     title="STORY"
@@ -540,7 +555,7 @@ export function MediaPage({ profile, client, workspace }) {
         <>
           <header className="media-hero">
             <div>
-              <span>GERADOR DE MÍDIA</span>
+              <span>CONTEÚDO DO STRIX</span>
               <h1>Agenda do dia.</h1>
               <p>Uma peça vertical pronta para o Instagram, montada só com os jogos de hoje em São Paulo.</p>
             </div>
@@ -614,7 +629,7 @@ export function MediaPage({ profile, client, workspace }) {
                 {job?.status === "error" && <p className="media-error">{job.error}</p>}
               </section>
               <aside className="media-side">
-                <h2>Últimos renders</h2>
+                <h2>Vídeos disponíveis</h2>
                 <div className="media-cache">
                   <CacheCard
                     title="STORY"

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { STRIX_BRAND } from "../brand.js";
 import { cacheableProviderAssetUrl } from "./provider-assets.js";
 import "./club-logo.css";
@@ -13,14 +13,31 @@ const initialsOf = (name) => String(name || "?")
   .join("");
 
 export function ClubLogo({ name, url, className = "", kind = "logo", priority = false, sizes = "48px", decorative = false }) {
+  const resolvedUrl = cacheableProviderAssetUrl(url);
+  // A source owns its lifecycle. Never reset a loaded image in a passive effect:
+  // cached image events can arrive before that effect runs.
+  return <LogoAsset key={resolvedUrl} {...{ name, url, resolvedUrl, className, kind, priority, sizes, decorative }} />;
+}
+
+function LogoAsset({ name, url, resolvedUrl, className, kind, priority, sizes, decorative }) {
   const [failed, setFailed] = useState(false);
   const [loaded, setLoaded] = useState(false);
-  const resolvedUrl = cacheableProviderAssetUrl(url);
-  useEffect(() => { setFailed(false); setLoaded(false); }, [resolvedUrl]);
+  const [attempt, setAttempt] = useState(0);
+  const imageRef = useCallback((image) => {
+    if (image?.complete && image.naturalWidth > 0) setLoaded(true);
+  }, []);
+  useEffect(() => {
+    if (!failed) return undefined;
+    const retry = () => { setFailed(false); setLoaded(false); setAttempt(value => value + 1); };
+    const timer = attempt < 2 ? window.setTimeout(retry, 1000 * (attempt + 1)) : null;
+    window.addEventListener("online", retry);
+    return () => { window.clearTimeout(timer); window.removeEventListener("online", retry); };
+  }, [failed, attempt]);
   const hasAsset = Boolean(url && !failed);
-  const isStrix = hasAsset && STRIX_LOGO.test(String(url));
+  const isStrix = hasAsset && attempt === 0 && STRIX_LOGO.test(String(url));
   const alt = decorative ? "" : kind === "photo" ? `Foto de ${name || "jogador"}` : `Escudo ${name || "do clube"}`;
   const imageProps = {
+    ref: imageRef,
     alt,
     width: 512,
     height: 512,
@@ -32,7 +49,7 @@ export function ClubLogo({ name, url, className = "", kind = "logo", priority = 
   };
   return (
     <span className={`club-logo ${className}${hasAsset ? " has-image" : " is-fallback"}${loaded ? " is-loaded" : " is-loading"} is-${kind}`.trim()} aria-hidden={decorative || undefined}>
-      {hasAsset && !loaded && <b className="club-logo-placeholder" aria-hidden="true">{initialsOf(name)}</b>}
+      {hasAsset && !loaded && <b className="club-logo-placeholder" aria-hidden="true" />}
       {isStrix ? <picture><source type="image/avif" srcSet={STRIX_BRAND.avifSet} sizes={sizes}/><source type="image/webp" srcSet={STRIX_BRAND.webpSet} sizes={sizes}/><img src={STRIX_BRAND.logoFallback} sizes={sizes} {...imageProps}/></picture>
         : hasAsset ? <img src={resolvedUrl} {...imageProps}/>
           : <b>{initialsOf(name)}</b>}

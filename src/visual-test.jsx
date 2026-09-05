@@ -103,4 +103,5 @@ else if (page === "gameday") {
   }
   content = <main className="visual-gameday"><GameDayCanvas project={project} selectedId="" onSelect={() => {}} onLayerChange={() => {}} exportMode/></main>;
 } else content = <CompetitionsPage profile={profile} workspace={workspace} client={client}/>;
-createRoot(document.getElementById("root")).render(<div className="app-shell"><main className="content visual-content">{content}</main></div>);
+export { workspace, profile, client };
+if (document.getElementById("root")) createRoot(document.getElementById("root")).render(<div className="app-shell"><main className="content visual-content">{content}</main></div>);

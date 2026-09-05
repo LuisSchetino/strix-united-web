@@ -1,0 +1,86 @@
+/* Shared finish: surfaces stay quiet; data and primary actions own the emphasis. */
+:root{--ui-space-1:8px;--ui-space-2:16px;--ui-space-3:24px;--ui-space-4:32px;--motion-fast:160ms;--motion-normal:200ms}
+.workspace{min-width:0}
+.workspace :is(h1,h2,h3){text-wrap:balance}
+.workspace :is(.data-page-header,.agenda-hero){gap:var(--ui-space-3)}
+.workspace :is(.data-page-header,.agenda-hero) h1{font-size:clamp(30px,3.5vw,48px);letter-spacing:-.045em;line-height:1.12}
+.workspace :is(.data-page-header,.agenda-hero) p{font-size:14px;line-height:1.6;color:#a5adb6}
+.workspace :is(.matches-empty,.agenda-empty,.competition-empty,.statistics-no-data){font-size:14px;line-height:1.65;color:#a5adb6;padding:24px}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid #efeee9;outline-offset:3px}
+.sidebar .brand .club-logo{filter:none}
+.sidebar .menu-group button{min-height:44px}
+.sidebar .collapse,.sidebar .mobile-close,.sidebar .sidebar-user button{min-width:44px;min-height:44px}
+.page-home .match-hero:after{background:linear-gradient(0deg,#ffffff04,transparent)!important}
+.page-home .match-hero:before{background:radial-gradient(ellipse at 50% 0,#ffffff09,transparent 65%),repeating-linear-gradient(90deg,transparent 0 20%,#ffffff03 20% 20.5%,transparent 20.5% 40%)!important}
+.page-home .match-hero .smoke{display:none}
+.page-home .match-hero .stadium-light{background:radial-gradient(ellipse at 50% 0,#ffffff12,transparent 66%);animation:none;filter:none}
+.page-home .hero-teams .club-logo{filter:none!important}
+.page-home .hero-teams strong{overflow-wrap:anywhere;line-height:1.4}
+.workspace .statistics-overview-grid{gap:0;border-block:1px solid var(--strix-border);padding:8px 0}
+.workspace .statistics-stat-card{border:0;border-radius:0;background:none!important;box-shadow:none;padding:20px 18px}
+.workspace .statistics-stat-card p{font-size:12px;line-height:1.5;color:#a5adb6}
+.workspace .statistics-ranking-card li{min-height:58px}
+.workspace .statistics-ranking-card li small{font-size:11px;color:#a5adb6}
+.workspace .squad-card-identity>span{font-size:11px;color:#a5adb6}
+.workspace .squad-player-card .squad-more{width:44px;height:44px;background:#111318;color:#d8dde2}
+.workspace .squad-context-menu{background:#101216;border-color:var(--strix-border-strong);box-shadow:0 12px 32px #0006}
+.workspace .squad-context-menu button{min-height:44px;font-size:13px;color:#e2e5e9}
+.workspace .night-related{margin-bottom:20px;border-radius:12px}
+.workspace .night-related button{min-height:44px}
+.workspace .night-related header p,.workspace .night-related-selected p{font-size:13px;line-height:1.6}
+.workspace .night-related-pool button{border-radius:6px}
+.workspace .agenda-standing-team small{font-size:10px}
+.workspace .agenda-standing-team dl{gap:8px}
+.workspace .agenda-standing-team dt,.workspace .agenda-standing-team dd{font-size:11px}
+.competitions-page .competition-detail-hero,.competitions-page .provider-next-match{background:#0e1013!important;border-color:var(--strix-border)!important}
+.competitions-page .competition-detail-hero>div>small{color:var(--strix-muted)}
+.competitions-page .competition-selector-item>button.active{border-color:#ffffff40!important;box-shadow:none!important}
+.competitions-page .competition-detail-hero .rolling-action{background:#191c20;color:#eeefef;border-color:#ffffff20}
+.competitions-page .competition-identity-logo{width:72px;height:72px;padding:0;background:none;border-radius:0}
+.competitions-page .competition-selector-logo{width:36px;height:36px;padding:0}
+.competitions-page .standing-logo{width:28px;height:28px}
+.competitions-page .competition-delete-trigger{min-width:44px;min-height:44px}
+.competitions-page .standings-table article{min-height:52px}
+.competitions-page .standings-table article:hover{background:#ffffff04}
+.competitions-page .standings-table article.is-strix> b:first-child{color:var(--next-clubs-accent,#c7ff2f)}
+.competitions-page .standings-table,.competitions-page .standings-table header,.competitions-page .standings-table article{background:#0b0d10!important;border-color:var(--strix-border)!important}
+.competitions-page .standings-table article.is-strix{background:#171a1e!important;box-shadow:none!important}
+.competitions-page .standings-table article:before{display:none!important}
+.competitions-page .standings-table article>div,.competitions-page .standings-table article>b{background:transparent!important}
+.competitions-page .standings-table article strong small{background:none!important;color:var(--next-clubs-accent,#c7ff2f)!important}
+.competitions-page .competition-section>header span{color:var(--strix-muted)!important}
+.competitions-page .qualification-legend{color:var(--next-clubs-accent,#c7ff2f)!important}
+.agenda-modal .modal-close,.formation-roster>header button,.statistics-ranking-modal>header button{min-width:44px;min-height:44px;background:#171a1e;color:#e6e8eb}
+.library-v2 .library-tabs{background:#111317!important;border-color:var(--strix-border)!important}
+.library-v2 .library-play-filter-menu{background:#111317;border-color:var(--strix-border)}
+.formation-roster>header{min-height:44px;align-items:center}
+.formation-roster-group button>span{font-size:13px!important;line-height:1.35}
+.formation-roster-group button small{font-size:11px!important;color:#9aa2ab}
+.formation-roster-group button>b{font-size:9px!important;color:#939ba4}
+.formation-roster .is-improvised button{background:#0b0d10;border-color:#ffffff0b}
+.statistics-ranking-modal{max-height:calc(100dvh - 32px);display:flex;flex-direction:column;overflow:hidden}
+.statistics-ranking-modal>header{flex:0 0 auto}
+.statistics-ranking-list{overflow-y:auto;min-height:0;overscroll-behavior:contain}
+.statistics-ranking-list article.is-top:before{display:none}
+.statistics-ranking-list article>div>b{font-size:14px}
+.statistics-ranking-list article small,.statistics-ranking-list article em{font-size:11px!important;line-height:1.5;color:#9aa2ab}
+@media(min-width:801px){
+  .matches-list.progressive-history{--history-grid:112px minmax(260px,1fr) 92px minmax(112px,.5fr) 108px}
+  .matches-list.progressive-history>header,.matches-list.progressive-history>.match-history-desktop{display:grid;grid-template-columns:var(--history-grid)!important;gap:12px;min-width:0;padding-inline:16px}
+  .matches-list.progressive-history>header>span{text-align:center}
+  .matches-list.progressive-history>header>span:first-child{text-align:left}
+  .matches-list.progressive-history>.match-history-desktop>em,.matches-list.progressive-history>.match-history-desktop>small{justify-self:center;text-align:center}
+  .matches-list.progressive-history .match-row-actions{display:flex;gap:4px;justify-content:center;opacity:1;visibility:visible}
+  .matches-list.progressive-history .match-row-actions button{width:32px;min-width:32px;height:36px;padding:0}
+}
+@media(max-width:700px){
+  .workspace :is(.data-page-header,.agenda-hero){padding-inline:0}
+  .workspace .statistics-stat-card{padding:16px 10px}
+  .workspace :is(.primary,.secondary,.icon-button,.agenda-more,.squad-more){min-height:44px;min-width:44px}
+  .workspace .hero-actions button{width:100%;justify-content:center}
+  .sidebar{height:100dvh;overflow-y:auto;padding-bottom:110px}
+  .workspace .squad-context-menu{min-width:180px}
+}
+@media(prefers-reduced-motion:reduce){
+  .page-enter,.statistics-panel-enter,.competition-panel-enter,.agenda-standing-team,.club-logo-placeholder{animation:none!important;transition:none!important}
+}

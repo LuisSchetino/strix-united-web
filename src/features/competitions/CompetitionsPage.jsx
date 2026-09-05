@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { MatchDisplay } from "../../ui/MatchDisplay.jsx";
+import { ClubLogo } from "../../ui/ClubLogo.jsx";
 import { NextClubsSignature } from "../../ui/NextClubsBrand.jsx";
 import { STRIX_BRAND } from "../../brand.js";
 import {
@@ -319,11 +320,7 @@ function Standings({ groups, accent, slots, canEdit, onSlotsChange }) {
               >
                 <b>{row.position}</b>
                 <div>
-                  {row.logo ? (
-                    <img src={row.logo} alt="" />
-                  ) : (
-                    <i>{row.team.slice(0, 2)}</i>
-                  )}
+                  <ClubLogo name={row.team} url={row.logo} className="standing-logo" decorative />
                   <strong>
                     {row.team}
                     {row.isStrix && <small>STRIX</small>}
@@ -885,11 +882,7 @@ function CompetitionExplorer({
       style={{ "--competition-accent": competition.accent_color }}
     >
       <header className="competition-detail-hero">
-        {competition.logo_url ? (
-          <img src={competition.logo_url} alt="" />
-        ) : (
-          <span>{competition.name.slice(0, 2)}</span>
-        )}
+        <ClubLogo name={competition.name} url={competition.logo_url} className="competition-identity-logo" />
         <div>
           <small>{competition.organization || "COMPETIÇÃO"}</small>
           <h1>{competition.name}</h1>
@@ -1129,11 +1122,7 @@ export function CompetitionsPage({ profile, workspace, client }) {
             {available.map(({ competition, edition }) => (
               <div className="competition-selector-item" key={edition.id} style={{ "--competition-accent": competition.accent_color }}>
               <button className={selected?.edition.id === edition.id ? "active" : ""} aria-pressed={selected?.edition.id === edition.id} onClick={() => setSelectedEditionId(edition.id)}>
-                {competition.logo_url ? (
-                  <img src={competition.logo_url} alt="" />
-                ) : (
-                  <span>{competition.name.slice(0, 2)}</span>
-                )}
+                <ClubLogo name={competition.name} url={competition.logo_url} className="competition-selector-logo" decorative />
                 <div className="competition-selector-copy">
                   <b>{competition.name}</b>
                   <small>{edition.label}</small>

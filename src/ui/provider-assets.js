@@ -26,7 +26,8 @@ export function preloadClubLogos(values = []) {
     preloadedAssets.add(url);
     const image = new Image();
     image.decoding = "async";
+    image.onerror = () => preloadedAssets.delete(url);
     image.src = url;
-    image.decode?.().catch(() => undefined);
+    image.decode?.().catch(() => preloadedAssets.delete(url));
   }
 }
