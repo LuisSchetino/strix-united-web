@@ -8,13 +8,15 @@ import {
   ANNOUNCE_TEMPLATE_ID,
   ANNOUNCE_TITLES,
   applyAnnounceRoles,
+  clearStoredAnnounceRoles,
   collectAnnouncePeople,
   isStructureRole,
   pickAnnouncePhrase,
   phrasesForPerson,
+  readAnnounceDraft,
   readStoredAnnounceRoles,
   resolveAnnouncePhrase,
-  writeStoredAnnounceRoles,
+  writeAnnounceDraft,
 } from "./announce-core.js";
 import { announceFrameTime, renderAnnounceFrame } from "./announce-frame.js";
 import { buildAnnounceTimeline } from "./announce-timeline.js";
@@ -129,26 +131,29 @@ function moveItem(ids, index, offset) {
 }
 
 export function AnnounceStudio({ workspace }) {
-  const [kind, setKind] = useState("individual");
-  const [format, setFormat] = useState("story");
-  const [query, setQuery] = useState("");
-  const [groupFilter, setGroupFilter] = useState("all");
-  const [roles, setRoles] = useState(() => readStoredAnnounceRoles());
-  const [selectedIds, setSelectedIds] = useState([]);
-  const [announceType, setAnnounceType] = useState("jogador");
-  const [phraseId, setPhraseId] = useState("");
-  const [customPhrase, setCustomPhrase] = useState("");
-  const [title, setTitle] = useState("ELENCO FC 27");
+  const draft = useMemo(() => readAnnounceDraft() || {}, []);
+  const [kind, setKind] = useState(draft.kind === "team" ? "team" : "individual");
+  const [format, setFormat] = useState(draft.format === "feed" ? "feed" : "story");
+  const [query, setQuery] = useState(draft.query || "");
+  const [groupFilter, setGroupFilter] = useState(draft.groupFilter || "all");
+  const [pendingRoles, setPendingRoles] = useState({});
+  const [selectedIds, setSelectedIds] = useState(Array.isArray(draft.selectedIds) ? draft.selectedIds : []);
+  const [announceType, setAnnounceType] = useState(draft.announceType || "jogador");
+  const [phraseId, setPhraseId] = useState(draft.phraseId || "");
+  const [customPhrase, setCustomPhrase] = useState(draft.customPhrase || "");
+  const [title, setTitle] = useState(draft.title || "ELENCO FC 27");
+  const [usedPhraseIds, setUsedPhraseIds] = useState(Array.isArray(draft.usedPhraseIds) ? draft.usedPhraseIds : []);
   const [assets, setAssets] = useState(null);
   const [job, setJob] = useState(null);
   const [cache, setCache] = useState([]);
   const [history, setHistory] = useState([]);
   const [viewer, setViewer] = useState(null);
   const dragIndex = useRef(null);
+  const migrated = useRef(false);
 
   const people = useMemo(
-    () => applyAnnounceRoles(collectAnnouncePeople(workspace, roles), roles),
-    [workspace, roles],
+    () => applyAnnounceRoles(collectAnnouncePeople(workspace), pendingRoles),
+    [workspace, pendingRoles],
   );
 
   const filtered = useMemo(() => {
@@ -180,8 +185,9 @@ export function AnnounceStudio({ workspace }) {
       type: announceType,
       phraseId,
       custom: customPhrase,
+      usedIds: usedPhraseIds,
     });
-  }, [kind, selected, announceType, phraseId, customPhrase]);
+  }, [kind, selected, announceType, phraseId, customPhrase, usedPhraseIds]);
 
   const timeline = useMemo(() => buildAnnounceTimeline({
     kind,
@@ -213,6 +219,37 @@ export function AnnounceStudio({ workspace }) {
   useEffect(() => { refreshCache(); }, []);
 
   useEffect(() => {
+    writeAnnounceDraft({
+      kind,
+      format,
+      query,
+      groupFilter,
+      selectedIds,
+      announceType,
+      phraseId,
+      customPhrase,
+      title,
+      usedPhraseIds,
+    });
+  }, [kind, format, query, groupFilter, selectedIds, announceType, phraseId, customPhrase, title, usedPhraseIds]);
+
+  useEffect(() => {
+    if (migrated.current) return undefined;
+    const legacy = readStoredAnnounceRoles();
+    const entries = Object.entries(legacy).filter(([, role]) => role && role !== "jogador");
+    if (entries.length) {
+      setPendingRoles((current) => ({ ...Object.fromEntries(entries), ...current }));
+    }
+    if (!workspace?.saveStructureRole || !entries.length) return undefined;
+    migrated.current = true;
+    Promise.allSettled(entries.map(([id, role]) => workspace.saveStructureRole(id, role)))
+      .then((results) => {
+        if (results.some((result) => result.status === "fulfilled")) clearStoredAnnounceRoles();
+      });
+    return undefined;
+  }, [workspace]);
+
+  useEffect(() => {
     if (job?.status === "ready" && job.result?.template === ANNOUNCE_TEMPLATE_ID) {
       setHistory((current) => {
         const next = [job.result, ...current.filter((item) => item.id !== job.result.id)];
@@ -222,10 +259,19 @@ export function AnnounceStudio({ workspace }) {
     }
   }, [job?.status, job?.result?.id]);
 
-  const setRole = (id, role) => {
-    const next = { ...roles, [id]: role };
-    setRoles(next);
-    writeStoredAnnounceRoles(next);
+  const setRole = async (id, role) => {
+    setPendingRoles((current) => ({ ...current, [id]: role }));
+    if (!workspace?.saveStructureRole) return;
+    try {
+      await workspace.saveStructureRole(id, role);
+      setPendingRoles((current) => {
+        const next = { ...current };
+        delete next[id];
+        return next;
+      });
+    } catch (error) {
+      notify(error?.message || "A função oficial não pôde ser salva no elenco. Aplique a migration structure_role.", "error");
+    }
   };
 
   const toggleSelected = (id) => {
@@ -244,7 +290,7 @@ export function AnnounceStudio({ workspace }) {
 
   const shufflePhrase = () => {
     if (!selected[0]) return;
-    const next = pickAnnouncePhrase(selected[0], { type: announceType, currentId: phrase.id });
+    const next = pickAnnouncePhrase(selected[0], { type: announceType, currentId: phrase.id, usedIds: usedPhraseIds });
     setPhraseId(next.id);
     setCustomPhrase("");
   };
@@ -263,7 +309,12 @@ export function AnnounceStudio({ workspace }) {
       force,
     });
     if (next.status === "error") notify(next.error || "Não foi possível gerar o anúncio.", "error");
-    else if (next.status === "ready") notify(format === "feed" ? "Post gerado." : "Reels gerado.");
+    else if (next.status === "ready") {
+      if (phrase.id && phrase.id !== "custom") {
+        setUsedPhraseIds((current) => [...current.filter((id) => id !== phrase.id), phrase.id].slice(-8));
+      }
+      notify(format === "feed" ? "Post gerado." : "Reels gerado.");
+    }
   };
 
   const running = job?.status === "running";
@@ -311,7 +362,9 @@ export function AnnounceStudio({ workspace }) {
 
       <div className="media-layout announce-layout">
         <aside className="media-side announce-side">
-          <h2>Elenco e estrutura</h2>
+          <h2>Conteúdo</h2>
+          <p className="announce-note">Função oficial persiste no elenco. Ordem, frase e formato ficam no rascunho desta máquina.</p>
+          <p className="announce-draft">Rascunho da geração gravado automaticamente neste aparelho.</p>
           <label className="announce-search">
             <span>BUSCAR</span>
             <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Nome, nick ou posição" />
@@ -362,7 +415,7 @@ export function AnnounceStudio({ workspace }) {
                     <small>{[person.position, person.extraBadge || ANNOUNCE_ROLES[person.extraRole]?.label].filter(Boolean).join(" · ")}</small>
                   </button>
                   <SelectControl
-                    label="Função extra"
+                    label="Função oficial"
                     value={person.extraRole}
                     options={ROLE_OPTIONS}
                     onChange={(value) => setRole(person.id, value)}
@@ -381,6 +434,7 @@ export function AnnounceStudio({ workspace }) {
           </ul>
           {kind === "individual" ? (
             <div className="announce-phrase">
+              <h2>Configuração</h2>
               <SelectControl label="Tipo do anúncio" value={announceType} options={TYPE_OPTIONS} onChange={(value) => { setAnnounceType(value); setPhraseId(""); }} />
               <SelectControl
                 label="Frase"

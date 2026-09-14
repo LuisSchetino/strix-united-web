@@ -2,11 +2,12 @@ import { MEDIA_FORMATS, opponentInitials } from "./agenda-media-core.js";
 import { positionGroup } from "./related-night-core.js";
 
 export const ANNOUNCE_TEMPLATE_ID = "season-announce";
-export const ANNOUNCE_TEMPLATE_VERSION = "season-announce-v1";
+export const ANNOUNCE_TEMPLATE_VERSION = "season-announce-v2";
 export const ANNOUNCE_FPS = 30;
 export const ANNOUNCE_SEASON = "FC 27";
 export const ANNOUNCE_CACHE_DAY = "fc27";
 export const ANNOUNCE_ROLES_STORAGE_KEY = "strix-fc27-announce-roles";
+export const ANNOUNCE_DRAFT_STORAGE_KEY = "strix-fc27-announce-draft";
 
 export const ANNOUNCE_ROLES = Object.freeze({
   jogador: { id: "jogador", label: "Jogador", badge: "", kind: "player" },
@@ -24,13 +25,13 @@ export const ANNOUNCE_TITLES = Object.freeze([
 ]);
 
 export const ANNOUNCE_PHRASES = Object.freeze([
-  { id: "next-season", text: "Pronto para escrever a próxima temporada.", kinds: ["jogador", "retorno"] },
-  { id: "piece", text: "Mais uma peça confirmada para o FC 27.", kinds: ["jogador", "renovacao"] },
+  { id: "next-season", text: "Pronto para escrever a próxima temporada.", kinds: ["jogador", "retorno", "novo"] },
+  { id: "piece", text: "Mais uma peça confirmada para o FC 27.", kinds: ["jogador", "renovacao", "novo"] },
   { id: "takes-shape", text: "O projeto segue ganhando forma.", kinds: ["jogador", "staff", "diretoria"] },
-  { id: "colors", text: "Nome confirmado para defender as cores do Strix.", kinds: ["jogador"] },
+  { id: "colors", text: "Nome confirmado para defender as cores do Strix.", kinds: ["jogador", "novo"] },
   { id: "history", text: "A história continua em mais uma temporada.", kinds: ["jogador", "retorno", "renovacao"] },
-  { id: "chapter", text: "Um novo capítulo começa agora.", kinds: ["jogador", "retorno"] },
-  { id: "enters", text: "{nome} entra em campo pelo Strix no {temporada}.", kinds: ["jogador"] },
+  { id: "chapter", text: "Um novo capítulo começa agora.", kinds: ["jogador", "retorno", "novo"] },
+  { id: "enters", text: "{nome} entra em campo pelo Strix no {temporada}.", kinds: ["jogador", "novo"] },
   { id: "plantel", text: "Confirmado. {posição} no plantel {temporada}.", kinds: ["jogador"] },
   { id: "back", text: "De volta às cores. A temporada pede {nome}.", kinds: ["retorno"] },
   { id: "renewal", text: "A renovação que o projeto precisava.", kinds: ["renovacao"] },
@@ -91,9 +92,28 @@ export function readStoredAnnounceRoles() {
   }
 }
 
-export function writeStoredAnnounceRoles(roles = {}) {
+export function clearStoredAnnounceRoles() {
   if (typeof localStorage === "undefined") return;
-  localStorage.setItem(ANNOUNCE_ROLES_STORAGE_KEY, JSON.stringify(roles));
+  localStorage.removeItem(ANNOUNCE_ROLES_STORAGE_KEY);
+}
+
+export function readAnnounceDraft() {
+  if (typeof localStorage === "undefined") return null;
+  try {
+    const parsed = JSON.parse(localStorage.getItem(ANNOUNCE_DRAFT_STORAGE_KEY) || "null");
+    return parsed && typeof parsed === "object" ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+export function writeAnnounceDraft(draft = {}) {
+  if (typeof localStorage === "undefined") return;
+  localStorage.setItem(ANNOUNCE_DRAFT_STORAGE_KEY, JSON.stringify(draft));
+}
+
+export function officialStructureRole(player = {}, fallback = "jogador") {
+  return normalizeAnnounceRole(player.structure_role || fallback);
 }
 
 function nickForPlayer(player, aliases = []) {
@@ -115,7 +135,7 @@ export function collectAnnouncePeople(workspace = {}, roles = {}) {
     .filter((player) => player?.is_active !== false && player?.member_type !== "teste")
     .map((player) => {
       const position = String((player.positions || [])[0] || "MC").toUpperCase();
-      const role = normalizeAnnounceRole(roles[player.id] || player.announce_role);
+      const role = officialStructureRole(player, roles[player.id] || player.announce_role);
       return {
         id: String(player.id),
         name: String(player.display_name || "").trim(),
@@ -206,28 +226,26 @@ export function resolveAnnouncePhrase(person = {}, { type = "", phraseId = "", c
 }
 
 export function individualAnnounceDuration() {
-  return 9;
+  return 10.6;
 }
 
 export function announceTeamTiming(count) {
-  if (count <= 0) return { duration: 0, intro: 0, beat: 0, finale: 0 };
-  const intro = 1.65;
-  const finale = 2.4;
-  let beat = count <= 6 ? 1.32 : count <= 11 ? 1.08 : count <= 16 ? 0.9 : 0.76;
-  let duration = intro + count * beat + finale;
-  if (duration < 10) {
-    beat = (10 - intro - finale) / count;
-    duration = 10;
-  } else if (duration > 22) {
-    beat = Math.max(0.55, (22 - intro - finale) / count);
-    duration = intro + count * beat + finale;
-    if (duration > 22) duration = 22;
-  }
+  if (count <= 0) return { duration: 0, intro: 0, beat: 0, overlap: 0, finale: 0, readable: 0, pages: 0 };
+  const intro = 2.15;
+  const beat = 3.65;
+  const overlap = 0.32;
+  const pages = count <= 8 ? 1 : Math.ceil(count / 8);
+  const finale = pages === 1 ? 4.4 : pages * 2.8;
+  const players = beat + Math.max(0, count - 1) * (beat - overlap);
+  const duration = intro + players + finale;
   return {
     duration: Number(duration.toFixed(3)),
     intro: Number(intro.toFixed(3)),
     beat: Number(beat.toFixed(3)),
+    overlap: Number(overlap.toFixed(3)),
     finale: Number(finale.toFixed(3)),
+    readable: Number((beat - 0.5 - overlap).toFixed(3)),
+    pages,
   };
 }
 

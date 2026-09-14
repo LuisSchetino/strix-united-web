@@ -11,6 +11,7 @@ import {
   pickAnnouncePhrase,
   resolveAnnouncePhrase,
 } from "../src/features/media/announce-core.js";
+import { personVariant } from "../src/features/media/announce-look.js";
 import { buildAnnounceTimeline } from "../src/features/media/announce-timeline.js";
 import { announceFrameTime, describeAnnounceFrame, renderAnnounceFrame } from "../src/features/media/announce-frame.js";
 
@@ -55,14 +56,18 @@ function mockContext() {
     arc() {},
     translate() {},
     scale() {},
+    rotate() {},
     drawImage() {},
     measureText(text) { return { width: String(text).length * 12 }; },
     createLinearGradient() { return { addColorStop() {} }; },
   };
 }
 
-test("elenco ativo vira source of truth e ignora teste/inativo", () => {
-  const people = collectAnnouncePeople(workspace(), { p1: "diretoria" });
+test("elenco ativo usa structure_role oficial e ignora teste/inativo", () => {
+  const people = collectAnnouncePeople({
+    ...workspace(),
+    players: workspace().players.map((player) => player.id === "p1" ? { ...player, structure_role: "diretoria" } : player),
+  });
   assert.equal(people.some((person) => person.name === "Teste"), false);
   assert.equal(people.some((person) => person.name === "Inativo"), false);
   const oben = people.find((person) => person.id === "p1");
@@ -93,13 +98,16 @@ test("frases cobrem o tom da temporada e aceitam variáveis", () => {
   assert.notEqual(shuffled.id, "next-season");
 });
 
-test("duração individual fica entre 7s e 12s e o time adapta entre 10s e 22s", () => {
-  assert.equal(announceDurationSeconds({ kind: "individual", format: "story" }), 9);
+test("duração individual fica entre 8s e 12s e o time não é comprimido", () => {
+  assert.equal(announceDurationSeconds({ kind: "individual", format: "story" }), 10.6);
   assert.equal(announceDurationSeconds({ kind: "individual", format: "feed" }), 0.04);
-  const small = announceTeamTiming(3);
+  const four = announceTeamTiming(4);
+  const eight = announceTeamTiming(8);
   const large = announceTeamTiming(18);
-  assert.ok(small.duration >= 10 && small.duration <= 22);
-  assert.ok(large.duration >= 10 && large.duration <= 22);
+  assert.ok(four.beat >= 3 && four.beat <= 4);
+  assert.ok(four.readable >= 2.5);
+  assert.ok(eight.duration > 22);
+  assert.ok(large.duration > eight.duration);
   assert.equal(announceFileName({ kind: "individual", format: "story", name: "Oben" }), "strix-anuncio-individual-oben-reels.mp4");
   assert.equal(announceFileName({ kind: "team", format: "feed", title: "ELENCO FC 27" }), "strix-anuncio-elenco-elenco-fc-27-post.png");
 });
@@ -138,11 +146,18 @@ test("os 4 modos montam timeline e o painter escreve o nome", () => {
       assert.equal(describeAnnounceFrame(timeline, 0.2).sceneType, "intro");
       assert.equal(describeAnnounceFrame(timeline, 4).sceneType, "hold");
       assert.equal(describeAnnounceFrame(timeline, timeline.duration - 0.2).sceneType, "close");
-      assert.equal(timeline.duration, 9);
+      assert.equal(timeline.duration, 10.6);
     } else {
       assert.equal(describeAnnounceFrame(timeline, 0.3).sceneType, "intro");
       assert.equal(describeAnnounceFrame(timeline, timeline.introEnd + 0.2).sceneType, "person");
       assert.equal(describeAnnounceFrame(timeline, timeline.duration - 0.1).sceneType, "finale");
+      const hero = timeline.scenes.find((scene) => scene.type === "person");
+      assert.ok(hero.end - hero.start >= 3 && hero.end - hero.start <= 4);
+      assert.equal(timeline.look.variants[0], "left");
+      assert.equal(personVariant(1), "overlap");
+      assert.equal(personVariant(2), "bleed");
+      assert.equal(personVariant(3), "stack");
+      assert.equal(personVariant(4), "left");
     }
     const ctx = mockContext();
     renderAnnounceFrame(ctx, { timeline, timeSec: announceFrameTime(0, timeline), assets: { players: [], byId: {} } });

@@ -16,18 +16,26 @@
 .announce-filters button.is-active{background:#efece6;color:#111;border-color:#efece6}
 .announce-people{list-style:none;margin:0;padding:0;display:grid;gap:8px;max-height:52vh;overflow:auto}
 .announce-people li{
-  display:grid;grid-template-columns:minmax(0,1fr) minmax(120px,.7fr) auto;gap:8px;align-items:center;
+  display:grid;grid-template-columns:minmax(0,1fr) minmax(132px,168px);gap:8px;align-items:center;
   padding:10px;border:1px solid var(--strix-border);border-radius:12px;background:#101216
 }
 .announce-people li.is-selected{border-color:#efece6}
-.announce-person{display:grid;gap:2px;text-align:left;background:none;border:0;color:inherit;padding:4px;min-height:44px}
-.announce-person b{font-size:15px}
+.announce-person{display:grid;gap:2px;text-align:left;background:none;border:0;color:inherit;padding:4px;min-height:44px;min-width:0}
+.announce-person b{font-size:15px;overflow-wrap:anywhere}
 .announce-person small{color:#a6adb5}
-.announce-empty{padding:18px;color:#8e969f}
-.announce-order{display:flex;align-items:center;gap:4px}
+.announce-note{margin:0;color:#8e969f;font-size:13px;line-height:1.5}
+.announce-draft{margin:0;color:#a6adb5;font-size:12px;letter-spacing:.04em}
+.announce-order{display:flex;align-items:center;gap:4px;grid-column:1/-1}
 .announce-order span{font-size:11px;font-weight:800;letter-spacing:.08em;color:#a6adb5}
 .announce-order button{min-width:36px;min-height:36px}
 .announce-phrase,.announce-phrase-actions{display:grid;gap:10px}
+.announce-studio .media-preview-card>*{order:0}
+.announce-studio .media-preview-card>header{order:1}
+.announce-studio .media-preview-card>.media-preview-frame{order:2}
+.announce-studio .media-preview-card>.media-actions,
+.announce-studio .media-preview-card>.media-progress,
+.announce-studio .media-preview-card>.media-error{order:3}
+.announce-studio .media-preview-card>.media-cache{order:4}
 .announce-studio .media-viewer img{
   width:100%;max-height:calc(100dvh - 240px);object-fit:contain;border-radius:12px;background:#000
 }
@@ -38,4 +46,7 @@
 @media(max-width:580px){
   .announce-people{max-height:none}
   .announce-bulk{display:grid;grid-template-columns:1fr 1fr}
+  .announce-filters{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch}
+  .announce-filters button{flex:0 0 auto}
+  .announce-controls .media-tabs button{min-height:48px}
 }

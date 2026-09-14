@@ -813,6 +813,9 @@ function useFc27Workspace(client, profile) {
       shirt_number: player.shirt_number === "" || player.shirt_number === undefined ? null : Number(player.shirt_number),
       trial_expires_at: player.trial_expires_at || null,
       is_active: player.is_active !== false,
+      structure_role: ["jogador", "staff", "diretoria", "conselho", "manager"].includes(player.structure_role)
+        ? player.structure_role
+        : "jogador",
       updated_by: profile.user_id,
     };
     const result = player.id
@@ -920,6 +923,20 @@ function useFc27Workspace(client, profile) {
       await refresh();
     },
     savePlayer,
+    saveStructureRole: async (playerId, role) => {
+      const nextRole = ["jogador", "staff", "diretoria", "conselho", "manager"].includes(role) ? role : "jogador";
+      const { error } = await client.from("club_players").update({
+        structure_role: nextRole,
+        updated_by: profile.user_id,
+      }).eq("id", playerId);
+      if (error) throw error;
+      setState((current) => ({
+        ...current,
+        players: (current.players || []).map((player) => (
+          String(player.id) === String(playerId) ? { ...player, structure_role: nextRole } : player
+        )),
+      }));
+    },
     removePlayer,
     importLegacyRoster,
     removePlayerAlias,

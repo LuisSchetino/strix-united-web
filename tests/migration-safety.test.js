@@ -61,3 +61,10 @@ test("night related migration is additive and keyed by Sao Paulo date", async ()
   assert.match(sql, /alter table public\.night_related enable row level security/i);
   assert.match(sql, /private\.has_minimum_tier\('diretoria'\)/);
 });
+
+test("structure_role is additive on club_players and covers manager/staff", async () => {
+  const sql = await readFile(new URL("../supabase/migrations/20260914220000_fc27_club_structure_role.sql", import.meta.url), "utf8");
+  assert.doesNotMatch(sql, /\b(drop\s+table|truncate|delete\s+from)\b/i);
+  assert.match(sql, /add column if not exists structure_role/i);
+  assert.match(sql, /jogador.*staff.*diretoria.*conselho.*manager/s);
+});
