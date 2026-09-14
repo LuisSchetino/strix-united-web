@@ -1,0 +1,41 @@
+.announce-studio{display:grid;gap:22px}
+.announce-controls{display:grid;gap:10px}
+.announce-controls .media-tabs{width:100%}
+.announce-search{display:grid;gap:8px}
+.announce-search span{font-size:10px;font-weight:800;letter-spacing:.14em;color:#a6adb5}
+.announce-search input,.announce-search textarea{
+  width:100%;min-height:44px;padding:12px 14px;border:1px solid var(--strix-border);border-radius:10px;
+  background:#0b0d10;color:var(--strix-text);font:inherit
+}
+.announce-search textarea{min-height:92px;resize:vertical;line-height:1.45}
+.announce-filters,.announce-bulk{display:flex;flex-wrap:wrap;gap:8px}
+.announce-filters button{
+  min-height:40px;padding:8px 12px;border:1px solid var(--strix-border);border-radius:999px;
+  background:#101216;color:#d8dce0;font-size:11px;font-weight:800;letter-spacing:.08em
+}
+.announce-filters button.is-active{background:#efece6;color:#111;border-color:#efece6}
+.announce-people{list-style:none;margin:0;padding:0;display:grid;gap:8px;max-height:52vh;overflow:auto}
+.announce-people li{
+  display:grid;grid-template-columns:minmax(0,1fr) minmax(120px,.7fr) auto;gap:8px;align-items:center;
+  padding:10px;border:1px solid var(--strix-border);border-radius:12px;background:#101216
+}
+.announce-people li.is-selected{border-color:#efece6}
+.announce-person{display:grid;gap:2px;text-align:left;background:none;border:0;color:inherit;padding:4px;min-height:44px}
+.announce-person b{font-size:15px}
+.announce-person small{color:#a6adb5}
+.announce-empty{padding:18px;color:#8e969f}
+.announce-order{display:flex;align-items:center;gap:4px}
+.announce-order span{font-size:11px;font-weight:800;letter-spacing:.08em;color:#a6adb5}
+.announce-order button{min-width:36px;min-height:36px}
+.announce-phrase,.announce-phrase-actions{display:grid;gap:10px}
+.announce-studio .media-viewer img{
+  width:100%;max-height:calc(100dvh - 240px);object-fit:contain;border-radius:12px;background:#000
+}
+@media(max-width:900px){
+  .announce-people li{grid-template-columns:minmax(0,1fr);gap:10px}
+  .announce-order{justify-content:flex-start}
+}
+@media(max-width:580px){
+  .announce-people{max-height:none}
+  .announce-bulk{display:grid;grid-template-columns:1fr 1fr}
+}

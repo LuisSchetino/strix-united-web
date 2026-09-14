@@ -1,10 +1,17 @@
 import { AGENDA_TEMPLATE_ID, agendaFileName, fingerprintAgendaRender } from "./agenda-media-core.js";
-import { encodeAgendaMp4 } from "./encode-mp4.js";
-import { loadAgendaAssets, loadRelatedNightAssets, loadSummaryAssets } from "./media-assets.js";
+import { encodeAgendaMp4, encodeStillPng } from "./encode-mp4.js";
+import { loadAgendaAssets, loadAnnounceAssets, loadRelatedNightAssets, loadSummaryAssets } from "./media-assets.js";
 import { relatedNightFileName, fingerprintRelatedNightRender, RELATED_NIGHT_TEMPLATE_ID } from "./related-night-core.js";
 import { relatedNightFrameTime, renderRelatedNightFrame } from "./related-night-frame.js";
 import { fingerprintSummaryRender, SUMMARY_TEMPLATE_ID, summaryFileName } from "./summary-core.js";
 import { summaryFrameTime, renderSummaryFrame } from "./summary-frame.js";
+import {
+  ANNOUNCE_CACHE_DAY,
+  ANNOUNCE_TEMPLATE_ID,
+  announceFileName,
+  fingerprintAnnounceRender,
+} from "./announce-core.js";
+import { announceFrameTime, renderAnnounceFrame } from "./announce-frame.js";
 
 const DB_NAME = "strix-fc27-media";
 const STORE = "renders";
@@ -363,6 +370,120 @@ export async function startSummaryRender({
   return getMediaJob();
 }
 
+export async function startAnnounceRender({
+  kind = "individual",
+  format = "story",
+  people = [],
+  phrase = "",
+  phraseId = "",
+  title = "",
+  announceType = "",
+  day = ANNOUNCE_CACHE_DAY,
+  timeline,
+  force = false,
+} = {}) {
+  if (job.status === "running") return job;
+  const fingerprint = await fingerprintAnnounceRender({
+    kind,
+    format,
+    people,
+    phrase,
+    phraseId,
+    title,
+    announceType,
+  });
+  const fileName = announceFileName({
+    kind,
+    format,
+    name: people[0]?.name || "",
+    title,
+  });
+  if (!force) {
+    const cached = await findCachedRender(fingerprint, format);
+    if (cached) {
+      emit({
+        status: "ready",
+        stage: "cached",
+        format,
+        fingerprint,
+        progress: { stage: "finishing", ratio: 1 },
+        result: cached,
+        error: "",
+      });
+      return getMediaJob();
+    }
+  }
+
+  const controller = new AbortController();
+  emit({
+    status: "running",
+    stage: "preparing",
+    format,
+    fingerprint,
+    progress: { stage: "preparing", loaded: 0, total: 0 },
+    result: null,
+    error: "",
+    controller,
+  });
+
+  try {
+    const assets = await loadAnnounceAssets(people, {
+      onProgress: (progress) => emit({ stage: "preparing", progress }),
+    });
+    if (format === "feed") {
+      emit({ stage: "image", progress: { stage: "image", ratio: 0.6 } });
+    }
+    const blob = format === "feed"
+      ? await encodeStillPng({
+        timeline,
+        assets,
+        renderFrame: renderAnnounceFrame,
+        timeSec: 0,
+      })
+      : await encodeAgendaMp4({
+        timeline,
+        assets,
+        signal: controller.signal,
+        onProgress: (progress) => emit({ stage: progress.stage, progress }),
+        renderFrame: renderAnnounceFrame,
+        frameTime: announceFrameTime,
+      });
+    const record = {
+      id: `${fingerprint}:${format}`,
+      fingerprint,
+      format,
+      template: ANNOUNCE_TEMPLATE_ID,
+      day,
+      fileName,
+      createdAt: new Date().toISOString(),
+      matchCount: people.length,
+      mime: blob.type,
+      blob,
+    };
+    await writeCached(record);
+    emit({
+      status: "ready",
+      stage: "ready",
+      progress: { stage: "finishing", ratio: 1, totalFrames: timeline.totalFrames, frame: timeline.totalFrames },
+      result: record,
+      error: "",
+      controller: null,
+    });
+  } catch (error) {
+    if (error?.name === "AbortError") {
+      emit({ status: "idle", stage: "", error: "", controller: null, result: null });
+      return getMediaJob();
+    }
+    emit({
+      status: "error",
+      stage: "error",
+      error: error?.message || "Não foi possível gerar o anúncio.",
+      controller: null,
+    });
+  }
+  return getMediaJob();
+}
+
 export function cancelAgendaRender() {
   job.controller?.abort();
 }
@@ -389,6 +510,7 @@ export function progressLabel(progress) {
     return `Renderizando ${progress.frame}/${progress.totalFrames} frames`;
   }
   if (progress.stage === "encoding") return "Codificando vídeo";
+  if (progress.stage === "image") return "Gerando imagem";
   if (progress.stage === "finishing") return "Finalizando";
   if (progress.stage === "cached") return "Render em cache";
   return "";

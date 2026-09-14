@@ -38,6 +38,7 @@ import {
   startSummaryRender,
   subscribeMediaJob,
 } from "./media-jobs.js";
+import { AnnounceStudio } from "./AnnounceStudio.jsx";
 import "./media.css";
 
 const GameDayEditor = lazy(() => import("../../gameday/GameDayEditor.jsx").then((module) => ({ default: module.GameDayEditor })));
@@ -348,6 +349,7 @@ export function MediaPage({ profile, client, workspace }) {
           ["related", "RELACIONADOS DA NOITE"],
           ["summary-day", "RESUMO DO DIA"],
           ["summary-week", "RESUMO DA SEMANA"],
+          ["announce", "ANÚNCIOS FC 27"],
           ["gameday", "GAME DAY"],
         ]}
         active={tab}
@@ -360,6 +362,8 @@ export function MediaPage({ profile, client, workspace }) {
             <GameDayEditor profile={profile} client={client} workspace={workspace} />
           </Suspense>
         </div>
+      ) : tab === "announce" ? (
+        <AnnounceStudio workspace={workspace} />
       ) : tab === "summary-day" || tab === "summary-week" ? (
         <>
           <header className="media-hero">

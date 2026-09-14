@@ -131,3 +131,28 @@ export async function encodeAgendaMp4({
   onProgress?.({ stage: "finishing", frame: totalFrames, totalFrames, ratio: 1 });
   return new Blob([muxer.target.buffer], { type: "video/mp4" });
 }
+
+export async function encodeStillPng({
+  timeline,
+  assets,
+  dayLabel,
+  renderFrame = renderAgendaFrame,
+  timeSec,
+} = {}) {
+  const { width, height } = timeline;
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d", { alpha: false, willReadFrequently: true });
+  if (!ctx) throw new Error("Canvas 2D indisponível para o render.");
+  await document.fonts?.ready;
+  const resolved = Number.isFinite(timeSec) ? timeSec : (timeline.still ? 0 : timeline.duration);
+  renderFrame(ctx, { timeline, timeSec: resolved, assets, dayLabel });
+  const blob = await new Promise((resolve, reject) => {
+    canvas.toBlob((result) => {
+      if (result) resolve(result);
+      else reject(new Error("Não foi possível gerar o PNG."));
+    }, "image/png");
+  });
+  return blob;
+}

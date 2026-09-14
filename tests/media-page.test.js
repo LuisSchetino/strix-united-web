@@ -18,6 +18,8 @@ test("Mídia vira gerador automático da Agenda do Dia sem misturar EA Sync", as
   assert.match(page, /FEED 4:5/);
   assert.match(page, /BAIXAR MP4/);
   assert.match(page, /RELACIONADOS DA NOITE/);
+  assert.match(page, /ANÚNCIOS FC 27/);
+  assert.match(page, /AnnounceStudio/);
   assert.match(page, /GERAR STORY/);
   assert.match(page, /Nenhum relacionado salvo para hoje/);
   assert.match(page, /sugestão ainda não salva/);
@@ -52,6 +54,7 @@ test("encode usa H.264 e nunca troca logo depois que o render começa", async ()
   const encode = await read("src/features/media/encode-mp4.js");
   const page = await read("src/features/media/MediaPage.jsx");
   const assets = await read("src/features/media/media-assets.js");
+  const jobs = await read("src/features/media/media-jobs.js");
   assert.match(encode, /VideoEncoder/);
   assert.match(encode, /avc1/);
   assert.match(encode, /mp4-muxer/);
@@ -65,6 +68,8 @@ test("encode usa H.264 e nunca troca logo depois que o render começa", async ()
   assert.match(page, /renderRelatedNightFrame/);
   assert.match(page, /relatedNightFrameTime/);
   assert.match(assets, /loadAgendaAssets/);
-  assert.match(assets, /loadRelatedNightAssets/);
+  assert.match(jobs, /startAnnounceRender/);
+  assert.match(assets, /loadAnnounceAssets/);
+  assert.match(encode, /encodeStillPng/);
   assert.doesNotMatch(encode, /html-to-image/);
 });
