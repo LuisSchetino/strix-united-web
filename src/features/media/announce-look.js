@@ -35,10 +35,89 @@ export function classifyAnnouncePhoto(bitmap) {
 }
 
 export function photoFocusY(classified = {}) {
-  if (classified.crop === "selfie") return 0.16;
-  if (classified.crop === "fullbody") return 0.12;
+  if (classified.crop === "selfie") return 0.18;
+  if (classified.crop === "fullbody") return 0.14;
+  if (classified.crop === "cutout") return 0.16;
   if (classified.crop === "stadium") return 0.18;
   return 0.2;
+}
+
+function clampFit(value, min = 0, max = 1) {
+  return Math.max(min, Math.min(max, Number(value) || 0));
+}
+
+export function headVisibleInDest(fit, destH) {
+  if (!fit || destH <= 0) return false;
+  const headBottom = fit.dy + fit.dh * 0.22;
+  return fit.dy > -destH * 0.08 && headBottom > destH * 0.08;
+}
+
+export function fitAnnounceSubject(bitmap, destW, destH, classified = {}, options = {}) {
+  const bw = Math.max(1, Number(bitmap?.width) || 1);
+  const bh = Math.max(1, Number(bitmap?.height) || 1);
+  const boxW = Math.max(1, Number(destW) || 1);
+  const boxH = Math.max(1, Number(destH) || 1);
+  const crop = classified.crop || "portrait";
+  const cameraScale = Math.max(1, Number(options.scale) || 1);
+  const alphaRatio = Number(classified.alphaRatio) || 0;
+  const useContent = crop === "cutout" || crop === "fullbody" || alphaRatio > 0.12;
+  const left = clampFit(classified.contentLeft ?? 0, 0, 0.48);
+  const top = clampFit(classified.contentTop ?? 0, 0, 0.48);
+  const right = clampFit(classified.contentRight ?? 1, 0.52, 1);
+  const bottom = clampFit(classified.contentBottom ?? 1, 0.52, 1);
+  const srcX = useContent ? left * bw : 0;
+  const srcY = useContent ? top * bh : 0;
+  const srcW = useContent ? Math.max(1, (right - left) * bw) : bw;
+  const srcH = useContent ? Math.max(1, (bottom - top) * bh) : bh;
+  const cover = Math.max(boxW / srcW, boxH / srcH);
+  const contain = Math.min(boxW / srcW, boxH / srcH);
+  const preferContain = crop === "cutout" || crop === "fullbody" || alphaRatio > 0.18;
+  const zoomCap = crop === "cutout" ? 1.1 : crop === "fullbody" ? 1.12 : 1.16;
+  let scale = (preferContain ? contain : cover) * Math.min(cameraScale, zoomCap);
+  const requestedFocus = Number.isFinite(options.focusY) ? options.focusY : photoFocusY(classified);
+  const focus = preferContain
+    ? clampFit(Math.min(requestedFocus, 0.2), 0.14, 0.22)
+    : clampFit(requestedFocus, 0.14, 0.28);
+  const eyeDest = clampFit(crop === "selfie" ? 0.28 : crop === "fullbody" ? 0.26 : 0.32, 0.22, 0.4);
+
+  const place = (nextScale) => {
+    const dw = srcW * nextScale;
+    const dh = srcH * nextScale;
+    let dx = (boxW - dw) / 2;
+    let dy = boxH * eyeDest - dh * focus;
+    if (preferContain && nextScale <= contain * 1.03 && dh <= boxH) {
+      dy = (boxH - dh) * 0.12;
+    }
+    if (dy > boxH * 0.18) dy = boxH * 0.18;
+    if (dy + dh * 0.22 < boxH * 0.08) dy = boxH * 0.08 - dh * 0.22;
+    if (dy < -boxH * 0.06) dy = -boxH * 0.06;
+    return { dx, dy, dw, dh };
+  };
+
+  let placed = place(scale);
+  let guard = 0;
+  while (!headVisibleInDest(placed, boxH) && scale > contain * 0.98 && guard < 8) {
+    scale *= 0.88;
+    placed = place(scale);
+    guard += 1;
+  }
+  if (!headVisibleInDest(placed, boxH)) {
+    scale = contain;
+    placed = place(scale);
+    if (placed.dy < 0) placed.dy = 0;
+  }
+
+  return {
+    sx: srcX,
+    sy: srcY,
+    sw: srcW,
+    sh: srcH,
+    dx: placed.dx,
+    dy: placed.dy,
+    dw: placed.dw,
+    dh: placed.dh,
+    scale,
+  };
 }
 
 export function faceSafeBox(box = {}, classified = {}) {
@@ -184,10 +263,14 @@ export function announceGridSpec(count = 0, format = "story") {
   const n = Math.max(0, Number(count) || 0);
   const story = format !== "feed";
   if (story) {
+    if (n <= 1) return { cols: 1, maxAspect: 1.52, nameReserve: 78 };
+    if (n === 2) return { cols: 2, maxAspect: 1.5, nameReserve: 74 };
     if (n <= 4) return { cols: 2, maxAspect: 1.48, nameReserve: 70 };
     if (n <= 6) return { cols: 2, maxAspect: 1.4, nameReserve: 66 };
     return { cols: 2, maxAspect: 1.45, nameReserve: 68 };
   }
+  if (n <= 1) return { cols: 1, maxAspect: 1.28, nameReserve: 86 };
+  if (n === 2) return { cols: 2, maxAspect: 1.22, nameReserve: 82 };
   if (n <= 4) return { cols: 2, maxAspect: 1.18, nameReserve: 80 };
   if (n <= 6) return { cols: 2, maxAspect: 1.08, nameReserve: 76 };
   if (n <= 8) return { cols: 2, maxAspect: 1.0, nameReserve: 74 };

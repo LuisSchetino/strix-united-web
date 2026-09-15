@@ -6,6 +6,7 @@ import {
   announceGridSpec,
   campaignName,
   classifyAnnouncePhoto,
+  fitAnnounceSubject,
   fitNameLayout,
   photoBoxForVariant,
   photoFocusY,
@@ -100,13 +101,6 @@ function coverPhoto(ctx, bitmap, dx, dy, dw, dh, focusY = 0.22) {
   const sx = (bitmap.width - sw) / 2;
   const sy = Math.max(0, Math.min(bitmap.height - sh, bitmap.height * focusY - sh * 0.28));
   ctx.drawImage(bitmap, sx, sy, sw, sh, dx, dy, dw, dh);
-}
-
-function containBottom(ctx, bitmap, dx, dy, dw, dh) {
-  const scale = Math.max(dw / bitmap.width, dh / bitmap.height);
-  const w = bitmap.width * scale;
-  const h = bitmap.height * scale;
-  ctx.drawImage(bitmap, dx + (dw - w) / 2, dy + dh - h, w, h);
 }
 
 function drawMark(ctx, asset, x, y, box, alpha = 1) {
@@ -356,7 +350,6 @@ function paintSubject(ctx, bitmap, person, box, classified, { scale = 1, alpha =
   ctx.save();
   ctx.globalAlpha = alpha;
   ctx.translate(x + w / 2 + drift, y + h / 2);
-  ctx.scale(scale, scale);
   ctx.translate(-w / 2, -h / 2);
   if (!bitmap) {
     paintCampaignFallback(ctx, person, { x: 0, y: 0, w, h }, assets);
@@ -366,11 +359,11 @@ function paintSubject(ctx, bitmap, person, box, classified, { scale = 1, alpha =
   ctx.beginPath();
   ctx.rect(0, 0, w, h);
   ctx.clip();
-  if (classified?.crop === "cutout") {
-    containBottom(ctx, bitmap, -w * 0.04, 0, w * 1.08, h);
-  } else {
-    coverPhoto(ctx, bitmap, 0, 0, w, h, focusY || photoFocusY(classified));
-  }
+  const fit = fitAnnounceSubject(bitmap, w, h, classified, {
+    scale,
+    focusY: focusY || photoFocusY(classified),
+  });
+  ctx.drawImage(bitmap, fit.sx, fit.sy, fit.sw, fit.sh, fit.dx, fit.dy, fit.dw, fit.dh);
   paintGrade(ctx, 0, 0, w, h);
   ctx.restore();
 }
@@ -965,18 +958,31 @@ function paintTeamPersonStage(ctx, timeline, time, scene, assets, alpha = 1) {
 function wallMetrics(count, timeline) {
   const spec = announceGridSpec(count, timeline.format);
   const story = timeline.format !== "feed";
+  const n = Math.max(1, count);
   const cols = spec.cols;
-  const rows = Math.ceil(Math.max(1, count) / cols);
+  const rows = Math.ceil(n / cols);
   const gap = story ? 22 : 18;
   const top0 = timeline.safe.top + (story ? 132 : 108);
   const bottom = timeline.height - timeline.safe.bottom;
   const availableH = bottom - top0;
   const availableW = timeline.width - timeline.safe.side * 2;
-  const cellW = (availableW - gap * (cols - 1)) / cols;
-  const cellH = Math.min((availableH - gap * (rows - 1)) / rows, cellW * spec.maxAspect);
-  const used = rows * cellH + (rows - 1) * gap;
-  const top = top0 + Math.max(0, (availableH - used) * 0.12);
-  return { cols, rows, gap, top, cellW, cellH, nameReserve: spec.nameReserve };
+  let cellW;
+  let cellH;
+  if (n === 1) {
+    cellW = Math.min(availableW * (story ? 0.72 : 0.7), availableH * 0.68);
+    cellH = Math.min(availableH, cellW * spec.maxAspect);
+  } else if (n === 2) {
+    cellW = (availableW - gap) / 2;
+    cellH = Math.min(availableH * 0.92, cellW * spec.maxAspect);
+  } else {
+    cellW = (availableW - gap * (cols - 1)) / cols;
+    cellH = Math.min((availableH - gap * (rows - 1)) / rows, cellW * spec.maxAspect);
+  }
+  const usedH = rows * cellH + (rows - 1) * gap;
+  const usedW = cols * cellW + (cols - 1) * gap;
+  const top = top0 + Math.max(0, (availableH - usedH) * (n <= 2 ? 0.22 : 0.12));
+  const left = timeline.safe.side + Math.max(0, (availableW - usedW) * 0.5);
+  return { cols, rows, gap, top, left, cellW, cellH, nameReserve: spec.nameReserve };
 }
 
 function paintTeamRoster(ctx, timeline, time, scene, assets) {
@@ -1010,7 +1016,7 @@ function paintTeamRoster(ctx, timeline, time, scene, assets) {
   people.forEach((person, index) => {
     const col = index % metrics.cols;
     const row = Math.floor(index / metrics.cols);
-    const x = safe.side + col * (metrics.cellW + metrics.gap);
+    const x = metrics.left + col * (metrics.cellW + metrics.gap);
     const y = metrics.top + 18 + row * (metrics.cellH + metrics.gap);
     const photoH = metrics.cellH - metrics.nameReserve - 8;
     const asset = assets?.byId?.[person.id];

@@ -61,8 +61,12 @@ test("classifica recorte transparente e foto com fundo forte", () => {
   const crest = classifyHeroPixels(opaque(48, 72), 48, 72);
   assert.equal(punched.kind, "cutout");
   assert.ok(punched.alphaRatio > 0.12);
+  assert.ok(punched.contentTop > 0.05 && punched.contentTop < 0.2);
+  assert.ok(punched.contentBottom > 0.75);
   assert.equal(crest.kind, "photo");
   assert.equal(crest.strongBg, true);
+  assert.equal(crest.contentTop, 0);
+  assert.equal(crest.contentBottom, 1);
 });
 
 test("câmera desloca o campo à esquerda só durante o hero", () => {

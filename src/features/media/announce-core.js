@@ -3,7 +3,7 @@ import { ANNOUNCE_FX_REVISION } from "./announce-fx.js";
 import { positionGroup } from "./related-night-core.js";
 
 export const ANNOUNCE_TEMPLATE_ID = "season-announce";
-export const ANNOUNCE_TEMPLATE_VERSION = "season-announce-v3.4";
+export const ANNOUNCE_TEMPLATE_VERSION = "season-announce-v3.5";
 export const ANNOUNCE_FPS = 30;
 export const ANNOUNCE_SEASON = "FC 27";
 export const ANNOUNCE_CACHE_DAY = "fc27";

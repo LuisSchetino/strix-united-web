@@ -32,13 +32,12 @@ function stillsFor(timeline) {
       ? [{ time: 0, label: "post" }]
       : [
           { time: 0.12, label: "0.12s opening" },
-          { time: 0.6, label: "0.6s opening" },
-          { time: 1.4, label: "1.4s reveal" },
-          { time: 2.5, label: "2.5s hero" },
-          { time: 4.3, label: "4.3s frase" },
-          { time: 5.4, label: "5.4s reframe" },
-          { time: 7.4, label: "7.4s detail" },
-          { time: 9.5, label: "9.5s close" },
+          { time: 1.5, label: "1.5s" },
+          { time: 2.5, label: "2.5s" },
+          { time: 3.5, label: "3.5s" },
+          { time: 5, label: "5s" },
+          { time: 7, label: "7s" },
+          { time: 9, label: "9s" },
         ];
   }
   const peopleScenes = (timeline.scenes || []).filter((scene) => scene.type === "person");
@@ -47,7 +46,7 @@ function stillsFor(timeline) {
     ? [{ time: 0, label: "elenco" }]
     : [
         { time: 0.5, label: "opening" },
-        ...peopleScenes.slice(0, 4).map((scene, index) => ({
+        ...peopleScenes.map((scene, index) => ({
           time: scene.start + 1.1,
           label: `hero ${index + 1}`,
         })),
@@ -105,6 +104,20 @@ function App() {
           marks: stillsFor(timeline).map((mark) => ({ ...mark, ...paintStill(timeline, assets, mark.time) })),
         };
       });
+      captured.push(
+        ...[
+          { id: "finale-1", people: people.slice(0, 1) },
+          { id: "finale-2", people: people.slice(0, 2) },
+        ].map((item) => {
+          const timeline = buildAnnounceTimeline({ kind: "team", format: "story", people: item.people, title: "ELENCO FC 27" });
+          const time = timeline.finaleStart + 0.55;
+          return {
+            id: item.id,
+            title: `${item.id} · still`,
+            marks: [{ time, label: item.id, ...paintStill(timeline, assets, time) }],
+          };
+        }),
+      );
       setFrames(captured);
       if (new URLSearchParams(window.location.search).has("stills")) {
         setStatus("Stills prontos. Encode ignorado (?stills).");
@@ -115,7 +128,7 @@ function App() {
         setStatus(`Gerando ${mode.id}…`);
         const result = await encodeMode(mode, assets);
         const url = URL.createObjectURL(result.blob);
-        const fileName = (mode.id === "team-8" ? "strix-anuncio-elenco-8-reels.mp4" : result.fileName).replace(/(\.\w+)$/, "-v34$1");
+        const fileName = (mode.id === "team-8" ? "strix-anuncio-elenco-8-reels.mp4" : result.fileName).replace(/(\.\w+)$/, "-v35$1");
         done.push({ ...result, url, fileName, id: mode.id });
         setExports([...done]);
       }
@@ -126,7 +139,7 @@ function App() {
 
   return (
     <main style={{ fontFamily: "Inter, sans-serif", background: "#050607", color: "#efece6", minHeight: "100dvh", padding: 24 }}>
-      <h1>Anúncios FC 27 · polish v3.4</h1>
+      <h1>Anúncios FC 27 · crop hotfix v3.5</h1>
       <p>{status}</p>
       <p>{timing}</p>
       {frames.map((group) => (

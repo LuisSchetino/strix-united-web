@@ -11,7 +11,7 @@ import {
   pickAnnouncePhrase,
   resolveAnnouncePhrase,
 } from "../src/features/media/announce-core.js";
-import { personVariant, campaignName, fitNameLayout, announceGridSpec } from "../src/features/media/announce-look.js";
+import { personVariant, campaignName, fitNameLayout, announceGridSpec, fitAnnounceSubject, headVisibleInDest } from "../src/features/media/announce-look.js";
 import { composeAnnounceFx, listAnnounceFxSlots, missingAnnounceFx, ANNOUNCE_FX_SLOTS, ANNOUNCE_FX_SKIPPED } from "../src/features/media/announce-fx.js";
 import { buildAnnounceTimeline } from "../src/features/media/announce-timeline.js";
 import { announceFrameTime, describeAnnounceFrame, renderAnnounceFrame } from "../src/features/media/announce-frame.js";
@@ -192,6 +192,8 @@ test("v3.1 names wrap, team post uses 2x4, and missing FX do not paint", () => {
   assert.equal(announceGridSpec(8, "feed").cols, 2);
   assert.equal(announceGridSpec(15, "feed").cols, 3);
   assert.equal(announceGridSpec(4, "story").cols, 2);
+  assert.equal(announceGridSpec(1, "story").cols, 1);
+  assert.equal(announceGridSpec(2, "story").cols, 2);
   assert.equal(listAnnounceFxSlots().length, 4);
   assert.ok(ANNOUNCE_FX_SLOTS.lightSweep01.path.includes("light-rays-sweep-01.mp4"));
   assert.ok(ANNOUNCE_FX_SLOTS.flare01.path.includes("light-leak-warm-01.mp4"));
@@ -205,4 +207,38 @@ test("v3.1 names wrap, team post uses 2x4, and missing FX do not paint", () => {
   const missing = missingAnnounceFx({});
   assert.equal(missing.length, listAnnounceFxSlots().length);
   assert.equal(composeAnnounceFx(ctx, { bitmap: null }, { x: 0, y: 0, w: 100, h: 100, alpha: 1 }), false);
+});
+
+test("subject fit never crops the head out of the photo box", () => {
+  const destW = 800;
+  const destH = 850;
+  const cutout = fitAnnounceSubject(
+    { width: 800, height: 1600 },
+    destW,
+    destH,
+    { crop: "cutout", alphaRatio: 0.4, contentTop: 0.02, contentBottom: 0.98, contentLeft: 0.18, contentRight: 0.82 },
+    { scale: 1.34, focusY: 0.3 },
+  );
+  assert.equal(headVisibleInDest(cutout, destH), true);
+  assert.ok(cutout.dy > -destH * 0.08);
+
+  const misclassified = fitAnnounceSubject(
+    { width: 700, height: 1800 },
+    destW,
+    destH,
+    { crop: "portrait", alphaRatio: 0.22, contentTop: 0.04, contentBottom: 0.96, contentLeft: 0.2, contentRight: 0.8 },
+    { scale: 1.4, focusY: 0.4 },
+  );
+  assert.equal(headVisibleInDest(misclassified, destH), true);
+
+  const portrait = fitAnnounceSubject(
+    { width: 900, height: 1200 },
+    destW,
+    destH,
+    { crop: "portrait", alphaRatio: 0 },
+    { scale: 1.34, focusY: 0.07 },
+  );
+  assert.equal(headVisibleInDest(portrait, destH), true);
+  const eyeY = portrait.dy + portrait.dh * 0.22;
+  assert.ok(eyeY > destH * 0.12 && eyeY < destH * 0.48);
 });

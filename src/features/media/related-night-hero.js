@@ -61,13 +61,24 @@ export function classifyHeroPixels(data, width, height) {
   let edgeCount = 0;
   let edgeBright = 0;
   let saturation = 0;
+  let minX = width;
+  let minY = height;
+  let maxX = -1;
+  let maxY = -1;
   for (let y = 0; y < height; y += 1) {
     for (let x = 0; x < width; x += 1) {
       const index = (y * width + x) * 4;
       const alpha = data[index + 3];
-      if (alpha < 40) transparent += 1;
+      if (alpha < 40) {
+        transparent += 1;
+        continue;
+      }
+      if (x < minX) minX = x;
+      if (y < minY) minY = y;
+      if (x > maxX) maxX = x;
+      if (y > maxY) maxY = y;
       const edge = x < 3 || x > width - 4 || y < 3 || y > height - 4;
-      if (!edge || alpha < 40) continue;
+      if (!edge) continue;
       edgeCount += 1;
       const red = data[index];
       const green = data[index + 1];
@@ -81,7 +92,16 @@ export function classifyHeroPixels(data, width, height) {
   const kind = alphaRatio > 0.12 ? "cutout" : "photo";
   const strongBg = kind === "photo" && edgeCount > 0
     && (edgeBright / edgeCount > 0.32 || saturation / edgeCount > 42);
-  return { kind, strongBg, alphaRatio };
+  const hasContent = maxY >= 0;
+  return {
+    kind,
+    strongBg,
+    alphaRatio,
+    contentLeft: hasContent ? minX / width : 0,
+    contentTop: hasContent ? minY / height : 0,
+    contentRight: hasContent ? (maxX + 1) / width : 1,
+    contentBottom: hasContent ? (maxY + 1) / height : 1,
+  };
 }
 
 export function classifyHeroPhoto(bitmap) {
