@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import { encodeAgendaMp4, encodeStillPng } from "./features/media/encode-mp4.js";
 import { loadAnnounceAssets } from "./features/media/media-assets.js";
 import { announceFileName, announceTeamTiming, fillAnnouncePhrase, individualAnnounceDuration } from "./features/media/announce-core.js";
-import { ANNOUNCE_FX_SKIPPED, missingAnnounceFx, presentAnnounceFxIds } from "./features/media/announce-fx.js";
+import { presentAnnounceFxIds } from "./features/media/announce-fx.js";
 import { buildAnnounceTimeline } from "./features/media/announce-timeline.js";
 import { announceFrameTime, describeAnnounceFrame, renderAnnounceFrame } from "./features/media/announce-frame.js";
 
@@ -18,59 +18,42 @@ const people = [
   { id: "p8", name: "João", nick: "", photo: "/brand/strix/portrait-joao.png?v=3", position: "GOL", group: "GOL", extraRole: "jogador", extraBadge: "", initials: "JO" },
 ];
 
-const large = [
-  ...people,
-  ...Array.from({ length: 7 }, (_, index) => ({
-    id: `x${index}`,
-    name: `Nome Longo Extra ${index + 9}`,
-    nick: "",
-    photo: "",
-    position: ["GOL", "ZAG", "MC", "ATA"][index % 4],
-    group: ["GOL", "DEF", "MEI", "ATA"][index % 4],
-    extraRole: "jogador",
-    extraBadge: "",
-    initials: `N${index + 9}`,
-  })),
-];
-
 const modes = [
-  { id: "ind-reels", kind: "individual", format: "story", people: [people[0]], phrase: fillAnnouncePhrase("Pronto para escrever a próxima temporada.", people[0]), title: "" },
+  { id: "ind-reels", kind: "individual", format: "story", people: [people[0]], phrase: fillAnnouncePhrase("Mais uma peça confirmada para o FC 27.", people[0]), title: "" },
   { id: "ind-post", kind: "individual", format: "feed", people: [people[0]], phrase: fillAnnouncePhrase("Mais uma peça confirmada para o FC 27.", people[0]), title: "" },
   { id: "team-reels", kind: "team", format: "story", people: people.slice(0, 4), title: "ELENCO FC 27" },
-  { id: "team-post", kind: "team", format: "feed", people, title: "PLANTEL FC 27" },
   { id: "team-8", kind: "team", format: "story", people, title: "ELENCO FC 27" },
+  { id: "team-post", kind: "team", format: "feed", people, title: "ELENCO FC 27" },
 ];
-
-const qaModes = modes.filter((mode) => mode.id === "ind-reels" || mode.id === "team-reels");
 
 function stillsFor(timeline) {
   if (timeline.kind === "individual") {
     return timeline.still
       ? [{ time: 0, label: "post" }]
       : [
-          { time: 0.5, label: "0.5s" },
-          { time: 1.2, label: "1.2s cut" },
-          { time: 1.5, label: "1.5s" },
-          { time: 3.0, label: "3s" },
-          { time: 5.0, label: "5s" },
-          { time: 7.0, label: "7s" },
-          { time: 9.0, label: "9s" },
-          { time: 10.0, label: "10s" },
+          { time: 0.12, label: "0.12s opening" },
+          { time: 0.6, label: "0.6s opening" },
+          { time: 1.4, label: "1.4s reveal" },
+          { time: 2.5, label: "2.5s hero" },
+          { time: 4.3, label: "4.3s frase" },
+          { time: 5.4, label: "5.4s reframe" },
+          { time: 7.4, label: "7.4s detail" },
+          { time: 9.5, label: "9.5s close" },
         ];
   }
   const peopleScenes = (timeline.scenes || []).filter((scene) => scene.type === "person");
   const finaleScenes = (timeline.scenes || []).filter((scene) => scene.type === "finale");
   return timeline.still
-    ? [{ time: 0, label: "grid" }]
+    ? [{ time: 0, label: "elenco" }]
     : [
-        { time: 0.5, label: "abertura" },
-        ...peopleScenes.map((scene, index) => ({
-          time: scene.start + 1.7,
+        { time: 0.5, label: "opening" },
+        ...peopleScenes.slice(0, 4).map((scene, index) => ({
+          time: scene.start + 1.1,
           label: `hero ${index + 1}`,
         })),
         ...finaleScenes.map((scene, index) => ({
-          time: scene.start + 0.6,
-          label: scene.pageCount > 1 ? `mural ${index + 1}` : "mural",
+          time: scene.start + 0.7,
+          label: scene.pageCount > 1 ? `elenco ${index + 1}` : "elenco",
         })),
       ];
 }
@@ -81,10 +64,7 @@ function paintStill(timeline, assets, time) {
   canvas.height = timeline.height;
   const ctx = canvas.getContext("2d", { willReadFrequently: true });
   renderAnnounceFrame(ctx, { timeline, timeSec: time, assets });
-  return {
-    image: canvas.toDataURL("image/png"),
-    scene: describeAnnounceFrame(timeline, time),
-  };
+  return { image: canvas.toDataURL("image/png"), scene: describeAnnounceFrame(timeline, time) };
 }
 
 async function encodeMode(mode, assets) {
@@ -111,45 +91,42 @@ function App() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const assets = await loadAnnounceAssets(large);
+      const assets = await loadAnnounceAssets(people);
       if (cancelled) return;
       const four = announceTeamTiming(4);
       const eight = announceTeamTiming(8);
-      const fifteen = announceTeamTiming(15);
       const present = presentAnnounceFxIds(assets.fx);
-      const missing = missingAnnounceFx(assets.fx).map((slot) => slot.id);
-      setTiming(`FX on: ${present.join(", ") || "none"} · missing: ${missing.join(", ") || "none"} · skipped ${ANNOUNCE_FX_SKIPPED.length} · Individual ${individualAnnounceDuration()}s · Time 4=${four.duration}s beat ${four.beat}s leitura ${four.readable}s · 8=${eight.duration}s · 15=${fifteen.duration}s`);
-      const captured = qaModes.map((mode) => {
+      setTiming(`FX ${present.join(", ") || "none"} · Individual ${individualAnnounceDuration()}s · Team4 ${four.duration}s · Team8 ${eight.duration}s`);
+      const captured = modes.map((mode) => {
         const timeline = buildAnnounceTimeline(mode);
         return {
           id: mode.id,
-          title: `${mode.id} · ${mode.kind}/${mode.format === "feed" ? "post" : "reels"}`,
+          title: `${mode.id} · ${mode.format === "feed" ? "post" : "reels"}`,
           marks: stillsFor(timeline).map((mark) => ({ ...mark, ...paintStill(timeline, assets, mark.time) })),
         };
       });
       setFrames(captured);
       if (new URLSearchParams(window.location.search).has("stills")) {
-        setStatus("Stills FX prontos. Encode ignorado (?stills).");
+        setStatus("Stills prontos. Encode ignorado (?stills).");
         return;
       }
-      setStatus("Stills prontos. Encode Individual Reel + Team Reel 4…");
       const done = [];
-      for (const mode of qaModes) {
+      for (const mode of modes) {
         setStatus(`Gerando ${mode.id}…`);
         const result = await encodeMode(mode, assets);
         const url = URL.createObjectURL(result.blob);
-        const fileName = result.fileName.replace(/(\.\w+)$/, "-v31-fx$1");
+        const fileName = (mode.id === "team-8" ? "strix-anuncio-elenco-8-reels.mp4" : result.fileName).replace(/(\.\w+)$/, "-v34$1");
         done.push({ ...result, url, fileName, id: mode.id });
         setExports([...done]);
       }
-      setStatus("LOCALMENTE PRONTO · Individual Reel + Team Reel 4 com FX reais.");
+      setStatus("LOCALMENTE PRONTO · Individual + Team gerados. NÃO PUBLICADO.");
     })().catch((error) => setStatus(error.message || "Falha no QA de anúncios."));
     return () => { cancelled = true; };
   }, []);
 
   return (
     <main style={{ fontFamily: "Inter, sans-serif", background: "#050607", color: "#efece6", minHeight: "100dvh", padding: 24 }}>
-      <h1>Anúncios FC 27 · QA FX</h1>
+      <h1>Anúncios FC 27 · polish v3.4</h1>
       <p>{status}</p>
       <p>{timing}</p>
       {frames.map((group) => (
@@ -165,13 +142,13 @@ function App() {
           </div>
         </section>
       ))}
-      <section style={{ marginTop: 32, display: "grid", gap: 18 }}>
+      <section style={{ marginTop: 32, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 18 }}>
         {exports.map((item) => (
           <article key={item.id}>
             <h3>{item.fileName}</h3>
             {item.fileName.endsWith(".png")
-              ? <img src={item.url} alt={item.fileName} width={280} />
-              : <video src={item.url} controls playsInline width={280} />}
+              ? <img src={item.url} alt={item.fileName} width={260} />
+              : <video src={item.url} controls playsInline width={260} />}
             <div><a href={item.url} download={item.fileName}>baixar</a></div>
           </article>
         ))}

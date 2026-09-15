@@ -158,9 +158,10 @@ test("os 4 modos montam timeline e o painter escreve o nome", () => {
       assert.equal(describeAnnounceFrame(timeline, 0).sceneType === "still" || describeAnnounceFrame(timeline, 0).sceneType === "grid", true);
     } else if (mode.kind === "individual") {
       assert.equal(describeAnnounceFrame(timeline, 0.2).sceneType, "intro");
+      assert.equal(describeAnnounceFrame(timeline, 1.8).sceneType, "reveal");
       assert.equal(describeAnnounceFrame(timeline, 3.2).sceneType, "hero");
-      assert.equal(describeAnnounceFrame(timeline, 5).sceneType, "reframe");
-      assert.equal(describeAnnounceFrame(timeline, 7).sceneType, "detail");
+      assert.equal(describeAnnounceFrame(timeline, 5.2).sceneType, "reframe");
+      assert.equal(describeAnnounceFrame(timeline, 7.2).sceneType, "detail");
       assert.equal(describeAnnounceFrame(timeline, timeline.duration - 0.2).sceneType, "close");
       assert.equal(timeline.duration, 10.6);
     } else {

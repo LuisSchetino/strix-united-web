@@ -140,7 +140,7 @@ function drawLogo(ctx, asset, x, y, box, progress = 1, scale = 1) {
   ctx.restore();
 }
 
-function paintCorners(ctx, timeline, alpha = 0.55) {
+export function paintCorners(ctx, timeline, alpha = 0.55) {
   const { width, height, safe } = timeline;
   const len = 42;
   const inset = 36;
@@ -166,7 +166,7 @@ function paintCorners(ctx, timeline, alpha = 0.55) {
   ctx.restore();
 }
 
-function paintAmbient(ctx, timeline, time, assets, phase = "intro") {
+export function paintAmbient(ctx, timeline, time, assets, phase = "intro", options = {}) {
   const { width, height } = timeline;
   ctx.fillStyle = VOID;
   ctx.fillRect(0, 0, width, height);
@@ -217,9 +217,9 @@ function paintAmbient(ctx, timeline, time, assets, phase = "intro") {
     ctx.restore();
   }
 
-  const owl = phase === "match"
-    ? { x: width * 0.08, y: height * 0.9, box: width * 0.22, alpha: 0.01 }
-    : null;
+  const owl = options.owl === false || phase !== "match"
+    ? null
+    : { x: width * 0.08, y: height * 0.9, box: width * 0.22, alpha: 0.01 };
   if (assets?.strix && owl) {
     ctx.save();
     ctx.globalAlpha = owl.alpha + breath * 0.004;
@@ -262,7 +262,7 @@ function paintAmbient(ctx, timeline, time, assets, phase = "intro") {
   paintCorners(ctx, timeline, 0.32 + Math.sin(time * 0.75) * 0.05);
 }
 
-function paintSceneSweep(ctx, timeline, time) {
+export function paintSceneSweep(ctx, timeline, time) {
   const edges = [
     timeline.introEnd,
     timeline.finaleStart,

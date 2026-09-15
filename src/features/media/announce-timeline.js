@@ -65,12 +65,12 @@ export function buildAnnounceTimeline({
 
   if (mode === "individual") {
     const duration = still ? 0.04 : individualAnnounceDuration();
-    const introEnd = still ? 0 : 1.32;
-    const revealEnd = still ? 0 : 3.0;
-    const heroEnd = still ? 0 : 4.6;
-    const reframeEnd = still ? 0 : 6.2;
-    const holdEnd = still ? 0 : 7.6;
-    const heroTime = still ? 5.2 : 5.2;
+    const introEnd = still ? 0 : 1.18;
+    const revealEnd = still ? 0 : 2.22;
+    const heroEnd = still ? 0 : 4.55;
+    const reframeEnd = still ? 0 : 6.45;
+    const detailEnd = still ? 0 : 8.2;
+    const heroTime = still ? 5.2 : 3.15;
     return {
       ...empty,
       duration,
@@ -78,7 +78,8 @@ export function buildAnnounceTimeline({
       introEnd,
       revealEnd,
       holdStart: introEnd,
-      finaleStart: holdEnd,
+      finaleStart: detailEnd,
+      phraseStart: still ? 0 : 4.05,
       heroTime,
       scenes: still
         ? [{ id: "still", type: "still", start: 0, end: duration, person: selected[0], variant: look.variants[0] }]
@@ -87,8 +88,8 @@ export function buildAnnounceTimeline({
             { id: "reveal", type: "reveal", start: introEnd, end: revealEnd, person: selected[0] },
             { id: "hero", type: "hero", start: revealEnd, end: heroEnd, person: selected[0] },
             { id: "reframe", type: "reframe", start: heroEnd, end: reframeEnd, person: selected[0] },
-            { id: "detail", type: "detail", start: reframeEnd, end: holdEnd, person: selected[0] },
-            { id: "close", type: "close", start: holdEnd, end: duration, person: selected[0] },
+            { id: "detail", type: "detail", start: reframeEnd, end: detailEnd, person: selected[0] },
+            { id: "close", type: "close", start: detailEnd, end: duration, person: selected[0] },
           ],
       people: selected.slice(0, 1),
       person: selected[0],

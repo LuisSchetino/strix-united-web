@@ -11,11 +11,12 @@ export const ANNOUNCE_FX_SLOTS = Object.freeze({
     role: "overlay",
     usage: ["opening", "reveal", "hero"],
     blendMode: "screen",
-    defaultOpacity: 0.5,
+    defaultOpacity: 0.2,
     defaultScale: 1.08,
     anchor: "center",
     loop: true,
     duration: 0,
+    cycle: 2.05,
     maxWidth: 540,
     maxFrames: 20,
   },
@@ -26,11 +27,12 @@ export const ANNOUNCE_FX_SLOTS = Object.freeze({
     role: "overlay",
     usage: ["opening", "close"],
     blendMode: "screen",
-    defaultOpacity: 0.42,
-    defaultScale: 1,
+    defaultOpacity: 0.22,
+    defaultScale: 1.04,
     anchor: "center",
     loop: false,
     duration: 0,
+    cycle: 1.8,
     maxWidth: 540,
     maxFrames: 18,
   },
@@ -56,11 +58,12 @@ export const ANNOUNCE_FX_SLOTS = Object.freeze({
     role: "overlay",
     usage: ["hero", "depth"],
     blendMode: "screen",
-    defaultOpacity: 0.16,
-    defaultScale: 1.15,
+    defaultOpacity: 0.07,
+    defaultScale: 1.22,
     anchor: "center",
     loop: true,
     duration: 0,
+    cycle: 2.35,
     maxWidth: 480,
     maxFrames: 18,
   },
@@ -110,10 +113,12 @@ export function fxEnvelope(time, start, duration, hold = 0) {
 
 export function fxBitmapAt(fx, time = 0) {
   if (fx?.frames?.length) {
-    const fps = fx.fps || (fx.frames.length / Math.max(0.08, fx.duration || 1));
-    let index = Math.floor(Math.max(0, Number(time) || 0) * fps);
-    if (fx.loop) index %= fx.frames.length;
-    else index = Math.min(fx.frames.length - 1, index);
+    const count = fx.frames.length;
+    const cycle = Math.max(0.12, fx.cycle || (fx.loop ? 2.1 : fx.duration || 1));
+    const span = fx.loop ? count : Math.max(1, count - 1);
+    let index = Math.floor(Math.max(0, Number(time) || 0) / cycle * span);
+    if (fx.loop) index = ((index % count) + count) % count;
+    else index = Math.min(count - 1, index);
     return fx.frames[index];
   }
   return fx?.bitmap || null;
