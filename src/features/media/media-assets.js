@@ -1,6 +1,7 @@
 import { STRIX_BRAND } from "../../brand.js";
 import { cacheableProviderAssetUrl } from "../../ui/provider-assets.js";
 import { opponentInitials } from "./agenda-media-core.js";
+import { loadAnnounceFxLibrary } from "./announce-fx.js";
 
 async function bitmapFromUrl(url) {
   const source = cacheableProviderAssetUrl(url);
@@ -106,11 +107,12 @@ export function loadSummaryAssets(matches = [], options = {}) {
 
 export async function loadAnnounceAssets(people = [], { onProgress } = {}) {
   const assets = await loadRelatedNightAssets(people, { onProgress });
+  const fx = await loadAnnounceFxLibrary();
   await Promise.allSettled([
     document.fonts?.load("800 22px Inter"),
     document.fonts?.load("600 34px Inter"),
     document.fonts?.load("700 128px Rajdhani"),
     document.fonts?.load("700 92px Rajdhani"),
   ]);
-  return assets;
+  return { ...assets, fx };
 }

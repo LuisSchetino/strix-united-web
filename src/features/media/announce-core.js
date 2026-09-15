@@ -1,8 +1,9 @@
 import { MEDIA_FORMATS, opponentInitials } from "./agenda-media-core.js";
+import { ANNOUNCE_FX_REVISION } from "./announce-fx.js";
 import { positionGroup } from "./related-night-core.js";
 
 export const ANNOUNCE_TEMPLATE_ID = "season-announce";
-export const ANNOUNCE_TEMPLATE_VERSION = "season-announce-v2";
+export const ANNOUNCE_TEMPLATE_VERSION = "season-announce-v3.1";
 export const ANNOUNCE_FPS = 30;
 export const ANNOUNCE_SEASON = "FC 27";
 export const ANNOUNCE_CACHE_DAY = "fc27";
@@ -231,10 +232,11 @@ export function individualAnnounceDuration() {
 
 export function announceTeamTiming(count) {
   if (count <= 0) return { duration: 0, intro: 0, beat: 0, overlap: 0, finale: 0, readable: 0, pages: 0 };
-  const intro = 2.15;
+  const intro = 1.45;
   const beat = 3.65;
   const overlap = 0.32;
-  const pages = count <= 8 ? 1 : Math.ceil(count / 8);
+  const pageSize = count <= 6 ? count : count <= 8 ? 4 : 6;
+  const pages = count <= 6 ? 1 : Math.ceil(count / pageSize);
   const finale = pages === 1 ? 4.4 : pages * 2.8;
   const players = beat + Math.max(0, count - 1) * (beat - overlap);
   const duration = intro + players + finale;
@@ -289,6 +291,7 @@ export function announceIdentityPayload({
   return {
     template: ANNOUNCE_TEMPLATE_ID,
     templateVersion,
+    fxRevision: ANNOUNCE_FX_REVISION,
     kind: kind === "team" ? "team" : "individual",
     format: format === "feed" ? "feed" : "story",
     season: ANNOUNCE_SEASON,

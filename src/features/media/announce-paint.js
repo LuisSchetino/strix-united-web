@@ -1,15 +1,26 @@
 import { opponentInitials } from "./agenda-media-core.js";
 import { logoDrawRect } from "./agenda-paint.js";
 import { easeInOutCubic, easeOutExpo, easeOutQuart, reveal } from "./agenda-timeline.js";
-import { classifyAnnouncePhoto, photoBoxForVariant } from "./announce-look.js";
+import { composeAnnounceFx, fxEnvelope } from "./announce-fx.js";
+import {
+  announceGridSpec,
+  campaignName,
+  classifyAnnouncePhoto,
+  fitNameLayout,
+  photoBoxForVariant,
+  photoFocusY,
+  typeBoxForVariant,
+} from "./announce-look.js";
 import { announceSceneAt } from "./announce-timeline.js";
 
 const INK = "#efece6";
-const MUTED = "#a3a8ae";
+const MUTED = "#9aa0a6";
 const VOID = "#050607";
-const RULE = "rgba(239,236,230,0.42)";
+const RULE = "rgba(239,236,230,0.34)";
 
+const softPlanes = new WeakMap();
 let grainTile = null;
+let fxScratch = null;
 
 function clamp(value, min = 0, max = 1) {
   return Math.max(min, Math.min(max, Number(value) || 0));
@@ -39,11 +50,7 @@ function wrapPhrase(ctx, text, maxWidth, font) {
     }
   }
   lines.push(current);
-  return lines.slice(0, 3);
-}
-
-function displayName(person) {
-  return String(person?.nick || person?.name || "").toUpperCase();
+  return lines.slice(0, 2);
 }
 
 function getGrainTile() {
@@ -62,11 +69,28 @@ function getGrainTile() {
     image.data[index] = value;
     image.data[index + 1] = value;
     image.data[index + 2] = value;
-    image.data[index + 3] = 30;
+    image.data[index + 3] = 26;
   }
   ctx.putImageData(image, 0, 0);
   grainTile = canvas;
   return grainTile;
+}
+
+function getSoftPlane(bitmap) {
+  if (!bitmap) return null;
+  const cached = softPlanes.get(bitmap);
+  if (cached) return cached;
+  if (typeof document === "undefined") return null;
+  const canvas = document.createElement("canvas");
+  canvas.width = 180;
+  canvas.height = 320;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+  ctx.drawImage(bitmap, 0, 0, 180, 320);
+  ctx.fillStyle = "rgba(5,6,7,0.66)";
+  ctx.fillRect(0, 0, 180, 320);
+  softPlanes.set(bitmap, canvas);
+  return canvas;
 }
 
 function coverPhoto(ctx, bitmap, dx, dy, dw, dh, focusY = 0.22) {
@@ -78,7 +102,7 @@ function coverPhoto(ctx, bitmap, dx, dy, dw, dh, focusY = 0.22) {
   ctx.drawImage(bitmap, sx, sy, sw, sh, dx, dy, dw, dh);
 }
 
-function containPhoto(ctx, bitmap, dx, dy, dw, dh) {
+function containBottom(ctx, bitmap, dx, dy, dw, dh) {
   const scale = Math.max(dw / bitmap.width, dh / bitmap.height);
   const w = bitmap.width * scale;
   const h = bitmap.height * scale;
@@ -102,421 +126,569 @@ function drawMark(ctx, asset, x, y, box, alpha = 1) {
   ctx.restore();
 }
 
-function paintGrain(ctx, timeline, time) {
+function paintGrain(ctx, timeline, time, assets) {
+  const grain = assets?.fx?.grain01;
+  if (composeAnnounceFx(ctx, grain, { x: 0, y: 0, w: timeline.width, h: timeline.height, alpha: 1, time })) return;
   const tile = getGrainTile();
   if (!tile) return;
-  const { width, height } = timeline;
-  const shift = Math.round((time * 18) % 96);
+  const shift = Math.round((time * 8) % 96);
   ctx.save();
-  ctx.globalAlpha = 0.11 + Math.sin(time * 0.7) * 0.02;
-  ctx.drawImage(tile, -shift, -shift, width + 96, height + 96);
+  ctx.globalAlpha = 0.07;
+  ctx.drawImage(tile, -shift, -shift, timeline.width + 96, timeline.height + 96);
   ctx.restore();
 }
 
-function paintAmbient(ctx, timeline, time) {
+function paintGrade(ctx, x, y, w, h) {
+  ctx.fillStyle = "rgba(5,6,7,0.16)";
+  ctx.fillRect(x, y, w, h);
+  const vig = ctx.createRadialGradient(x + w / 2, y + h * 0.4, Math.min(w, h) * 0.16, x + w / 2, y + h * 0.42, Math.max(w, h) * 0.72);
+  vig.addColorStop(0, "rgba(5,6,7,0)");
+  vig.addColorStop(1, "rgba(5,6,7,0.36)");
+  ctx.fillStyle = vig;
+  ctx.fillRect(x, y, w, h);
+}
+
+function paintBackground(ctx, timeline, bitmap, time, camera = 1) {
   const { width, height } = timeline;
   ctx.fillStyle = VOID;
   ctx.fillRect(0, 0, width, height);
-
-  ctx.save();
-  ctx.globalAlpha = 0.05;
-  ctx.fillStyle = INK;
-  ctx.font = `800 ${Math.round(width * 0.58)}px Rajdhani, sans-serif`;
-  ctx.textAlign = "center";
-  ctx.translate(width * 0.52 + Math.sin(time * 0.11) * 18, height * 0.4 + Math.cos(time * 0.09) * 10);
-  ctx.rotate(-0.08);
-  ctx.fillText("STRIX", 0, 0);
-  ctx.restore();
-
-  ctx.save();
-  ctx.globalAlpha = 0.035;
-  ctx.strokeStyle = INK;
-  ctx.lineWidth = 1;
-  for (let index = 0; index < 16; index += 1) {
-    const x = width * (0.04 + index * 0.07) + Math.sin(time * 0.13 + index) * 10;
-    ctx.beginPath();
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x - 70, height);
-    ctx.stroke();
+  const plane = getSoftPlane(bitmap);
+  if (plane) {
+    const drift = Math.sin(time * 0.11) * 8;
+    const scale = 1.16 * camera;
+    const w = width * scale;
+    const h = height * scale;
+    ctx.save();
+    ctx.globalAlpha = 0.32;
+    ctx.drawImage(plane, (width - w) / 2 + drift, (height - h) / 2 + drift * 0.22, w, h);
+    ctx.restore();
   }
-  ctx.restore();
-
-  const sweep = ((time * 0.08) % 1.5) - 0.25;
-  const light = ctx.createLinearGradient(width * sweep, 0, width * sweep + 280, height * 0.2);
-  light.addColorStop(0, "rgba(239,236,230,0)");
-  light.addColorStop(0.5, "rgba(239,236,230,0.055)");
-  light.addColorStop(1, "rgba(239,236,230,0)");
-  ctx.fillStyle = light;
+  const veil = ctx.createLinearGradient(0, 0, 0, height);
+  veil.addColorStop(0, "rgba(5,6,7,0.28)");
+  veil.addColorStop(0.45, "rgba(5,6,7,0.06)");
+  veil.addColorStop(1, "rgba(5,6,7,0.7)");
+  ctx.fillStyle = veil;
   ctx.fillRect(0, 0, width, height);
-
-  ctx.save();
-  ctx.globalAlpha = 0.07;
-  ctx.strokeStyle = INK;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(0, height * (0.18 + Math.sin(time * 0.2) * 0.02));
-  ctx.lineTo(width, height * (0.22 + Math.cos(time * 0.17) * 0.02));
-  ctx.stroke();
-  ctx.restore();
-
-  paintGrain(ctx, timeline, time);
 }
 
-function paintStrokes(ctx, timeline, time, progress = 1) {
-  const strokes = timeline.look?.strokes || [];
-  const amount = clamp(progress);
-  if (!amount) return;
-  ctx.save();
-  ctx.lineCap = "round";
-  ctx.lineJoin = "round";
-  ctx.strokeStyle = INK;
-  ctx.fillStyle = INK;
-  strokes.forEach((stroke, strokeIndex) => {
-    const points = stroke.points || [];
-    const visible = Math.max(2, Math.floor(points.length * amount));
-    const shown = points.slice(0, visible);
-    ctx.globalAlpha = (stroke.alpha || 0.22) * (0.82 + Math.sin(time * 0.55 + strokeIndex) * 0.12);
-    ctx.beginPath();
-    shown.forEach((point, index) => {
-      ctx.lineWidth = (point.w || 8) * (stroke.kind === "slash" ? 1.25 : 1);
-      if (index === 0) ctx.moveTo(point.x, point.y);
-      else ctx.lineTo(point.x, point.y);
-    });
-    ctx.stroke();
-    if (stroke.kind === "spray" || stroke.kind === "ring") {
-      shown.forEach((point, index) => {
-        if (index % 2) return;
-        ctx.globalAlpha = (stroke.alpha || 0.22) * 0.55;
-        ctx.beginPath();
-        ctx.arc(point.x + 6, point.y - 4, Math.max(1.2, (point.w || 8) * 0.18), 0, Math.PI * 2);
-        ctx.fill();
-      });
-    }
-  });
-  ctx.restore();
+function paintTypePlate(ctx, timeline, variant, lift = 0) {
+  const { width, height } = timeline;
+  if (variant === "left") {
+    ctx.fillStyle = VOID;
+    ctx.fillRect(Math.round(width * 0.60), 0, width, height);
+    return;
+  }
+  if (variant === "tight") {
+    ctx.fillStyle = VOID;
+    ctx.fillRect(0, 0, Math.round(width * 0.36), height);
+    return;
+  }
+  const start = height * (0.5 - lift * 0.06);
+  const fade = ctx.createLinearGradient(0, start, 0, height);
+  fade.addColorStop(0, "rgba(5,6,7,0)");
+  fade.addColorStop(0.18, "rgba(5,6,7,0.5)");
+  fade.addColorStop(0.42, "rgba(5,6,7,0.92)");
+  fade.addColorStop(1, "rgba(5,6,7,1)");
+  ctx.fillStyle = fade;
+  ctx.fillRect(0, start, width, height - start);
 }
 
-function paintCorners(ctx, timeline, alpha = 1) {
-  const { width, height, safe } = timeline;
-  const inset = Math.max(36, safe.side - 18);
-  const arm = 34;
-  ctx.save();
-  ctx.globalAlpha = alpha;
-  ctx.strokeStyle = RULE;
-  ctx.lineWidth = 2;
-  [[inset, inset, 1, 1], [width - inset, inset, -1, 1], [inset, height - inset, 1, -1], [width - inset, height - inset, -1, -1]].forEach(([x, y, sx, sy]) => {
-    ctx.beginPath();
-    ctx.moveTo(x, y + arm * sy);
-    ctx.lineTo(x, y);
-    ctx.lineTo(x + arm * sx, y);
-    ctx.stroke();
-  });
-  ctx.restore();
+function paintTopVeil(ctx, timeline) {
+  const fade = ctx.createLinearGradient(0, 0, 0, 170);
+  fade.addColorStop(0, "rgba(5,6,7,0.58)");
+  fade.addColorStop(1, "rgba(5,6,7,0)");
+  ctx.fillStyle = fade;
+  ctx.fillRect(0, 0, timeline.width, 170);
 }
 
-function paintChrome(ctx, timeline, time, { alpha = 1, kicker = "STRIX UNITED", season = "FC 27" } = {}) {
+function paintChrome(ctx, timeline, { alpha = 1, season = "FC 27", variant = "center" } = {}) {
   const { width, safe } = timeline;
   ctx.save();
   ctx.globalAlpha = alpha;
-  ctx.fillStyle = MUTED;
-  ctx.font = "800 18px Inter, sans-serif";
-  ctx.textAlign = "left";
-  ctx.fillText(kicker, safe.side, safe.top - 4);
-  ctx.textAlign = "right";
-  ctx.fillStyle = INK;
-  ctx.fillText(season, width - safe.side, safe.top - 4);
-  ctx.fillStyle = RULE;
-  ctx.fillRect(safe.side, safe.top + 10, width - safe.side * 2, 1);
+  ctx.font = "800 16px Inter, sans-serif";
+  if (variant === "left") {
+    const x = Math.round(width * 0.66);
+    ctx.fillStyle = MUTED;
+    ctx.textAlign = "left";
+    ctx.fillText("STRIX UNITED", x, safe.top - 8);
+    ctx.fillStyle = INK;
+    ctx.textAlign = "right";
+    ctx.fillText(season, width - safe.side, safe.top - 8);
+    ctx.fillStyle = RULE;
+    ctx.fillRect(x, safe.top + 6, width - safe.side - x, 1);
+  } else if (variant === "tight") {
+    ctx.fillStyle = MUTED;
+    ctx.textAlign = "left";
+    ctx.fillText("STRIX UNITED", safe.side, safe.top - 8);
+    ctx.fillStyle = INK;
+    ctx.fillText(season, Math.round(width * 0.32) - 12, safe.top - 8);
+    ctx.fillStyle = RULE;
+    ctx.fillRect(safe.side, safe.top + 6, Math.round(width * 0.32) - 20, 1);
+  } else {
+    ctx.fillStyle = MUTED;
+    ctx.textAlign = "left";
+    ctx.fillText("STRIX UNITED", safe.side, safe.top - 8);
+    ctx.textAlign = "right";
+    ctx.fillStyle = INK;
+    ctx.fillText(season, width - safe.side, safe.top - 8);
+    ctx.fillStyle = RULE;
+    ctx.fillRect(safe.side, safe.top + 6, width - safe.side * 2, 1);
+  }
   ctx.restore();
-  paintCorners(ctx, timeline, alpha * 0.85);
 }
 
-function clipInkWipe(ctx, timeline, progress) {
+function paintShutter(ctx, timeline, amount) {
+  const closed = clamp(amount);
+  if (closed <= 0.001) return;
   const { width, height } = timeline;
-  const amount = clamp(progress);
-  const reach = amount * (width + height);
-  ctx.beginPath();
-  ctx.moveTo(-height, 0);
-  ctx.lineTo(reach, 0);
-  ctx.lineTo(reach - height, height);
-  ctx.lineTo(-height, height);
-  ctx.closePath();
-  ctx.clip();
+  const h = height * 0.5 * closed;
+  ctx.fillStyle = VOID;
+  ctx.fillRect(0, 0, width, h);
+  ctx.fillRect(0, height - h, width, h);
 }
 
-function paintInitialsPlate(ctx, person, x, y, w, h) {
+function hasFx(fx) {
+  return Boolean(fx && !fx.missing && (fx.frames?.length || fx.bitmap));
+}
+
+function getFxScratch(width, height) {
+  if (typeof document === "undefined") return null;
+  if (!fxScratch || fxScratch.width !== width || fxScratch.height !== height) {
+    fxScratch = document.createElement("canvas");
+    fxScratch.width = width;
+    fxScratch.height = height;
+  }
+  return fxScratch;
+}
+
+function paintInkReveal(ctx, timeline, amount, assets, paintIncoming) {
+  const fx = assets?.fx?.inkReveal01;
+  if (!hasFx(fx) || amount <= 0.001) return false;
+  const scratch = getFxScratch(timeline.width, timeline.height);
+  if (!scratch) return false;
+  const sctx = scratch.getContext("2d");
+  if (!sctx) return false;
+  sctx.setTransform(1, 0, 0, 1, 0, 0);
+  sctx.globalCompositeOperation = "source-over";
+  sctx.globalAlpha = 1;
+  sctx.clearRect(0, 0, timeline.width, timeline.height);
+  paintIncoming(sctx);
+  composeAnnounceFx(sctx, fx, {
+    x: 0,
+    y: 0,
+    w: timeline.width,
+    h: timeline.height,
+    alpha: 1,
+    time: (1 - clamp(amount)) * (fx.duration || 1),
+  });
+  ctx.drawImage(scratch, 0, 0);
+  return true;
+}
+
+function paintBrushCut(ctx, timeline, amount, assets) {
+  const fx = assets?.fx?.brush01;
+  if (!hasFx(fx) || amount <= 0.001) return false;
+  return composeAnnounceFx(ctx, fx, {
+    x: 0,
+    y: 0,
+    w: timeline.width,
+    h: timeline.height,
+    alpha: clamp(amount),
+    time: (1 - clamp(amount)) * (fx.duration || 1),
+  });
+}
+
+function paintCutCover(ctx, timeline, amount, assets, even, inked) {
+  if (amount <= 0.001) return;
+  const brushed = paintBrushCut(ctx, timeline, amount, assets);
+  if (inked || brushed) return;
+  if (even) paintShutter(ctx, timeline, amount);
+  else paintPhotoFlash(ctx, timeline, amount, assets);
+}
+
+function paintPhotoFlash(ctx, timeline, amount, assets) {
+  const closed = clamp(amount);
+  if (closed <= 0.001) return;
+  if (composeAnnounceFx(ctx, assets?.fx?.flash01, {
+    x: 0,
+    y: 0,
+    w: timeline.width,
+    h: timeline.height,
+    alpha: closed,
+  })) return;
+  ctx.fillStyle = `rgba(239,236,230,${0.78 * closed})`;
+  ctx.fillRect(0, 0, timeline.width, timeline.height);
+}
+
+function paintNameAccent(ctx, box, progress, y) {
+  const amount = clamp(progress);
+  if (amount <= 0) return;
+  ctx.save();
+  ctx.globalAlpha = 0.55 * amount;
+  ctx.fillStyle = INK;
+  ctx.fillRect(box.x, y, Math.min(box.w * 0.42, 220) * (0.35 + amount * 0.65), 3);
+  ctx.restore();
+}
+
+function paintCampaignFallback(ctx, person, box, assets) {
+  const { x, y, w, h } = box;
   ctx.fillStyle = "#101318";
   ctx.fillRect(x, y, w, h);
-  ctx.fillStyle = "rgba(239,236,230,0.08)";
-  ctx.fillRect(x, y, 8, h);
-  ctx.fillStyle = INK;
-  ctx.font = `700 ${Math.round(Math.min(w, h) * 0.28)}px Rajdhani, sans-serif`;
+  const glow = ctx.createRadialGradient(x + w / 2, y + h * 0.42, 16, x + w / 2, y + h * 0.42, Math.max(w, h) * 0.52);
+  glow.addColorStop(0, "rgba(239,236,230,0.08)");
+  glow.addColorStop(1, "rgba(239,236,230,0)");
+  ctx.fillStyle = glow;
+  ctx.fillRect(x, y, w, h);
+  drawMark(ctx, assets?.strix, x + w / 2, y + h * 0.46, Math.min(w, h) * 0.62, 0.2);
+  ctx.fillStyle = MUTED;
+  ctx.font = "800 14px Inter, sans-serif";
   ctx.textAlign = "center";
+  ctx.textBaseline = "alphabetic";
+  ctx.fillText("FC 27", x + w / 2, y + h * 0.16);
+  ctx.fillStyle = "rgba(239,236,230,0.16)";
+  ctx.font = `700 ${Math.round(Math.min(w, h) * 0.22)}px Rajdhani, sans-serif`;
   ctx.textBaseline = "middle";
-  ctx.fillText(person?.initials || opponentInitials(person?.name), x + w / 2, y + h / 2);
+  ctx.fillText(person?.initials || opponentInitials(person?.name), x + w / 2, y + h * 0.78);
 }
 
-function paintHeroPhoto(ctx, bitmap, person, box, classified, { scale = 1, alpha = 1 } = {}) {
+function paintSubject(ctx, bitmap, person, box, classified, { scale = 1, alpha = 1, drift = 0, assets } = {}) {
   const { x, y, w, h, focusY = 0.22 } = box;
   ctx.save();
   ctx.globalAlpha = alpha;
-  ctx.translate(x + w / 2, y + h / 2);
+  ctx.translate(x + w / 2 + drift, y + h / 2);
   ctx.scale(scale, scale);
   ctx.translate(-w / 2, -h / 2);
   if (!bitmap) {
-    paintInitialsPlate(ctx, person, 0, 0, w, h);
+    paintCampaignFallback(ctx, person, { x: 0, y: 0, w, h }, assets);
     ctx.restore();
     return;
   }
+  ctx.beginPath();
+  ctx.rect(0, 0, w, h);
+  ctx.clip();
   if (classified?.crop === "cutout") {
-    containPhoto(ctx, bitmap, -w * 0.08, 0, w * 1.16, h);
+    containBottom(ctx, bitmap, -w * 0.04, 0, w * 1.08, h);
   } else {
-    ctx.beginPath();
-    ctx.rect(0, 0, w, h);
-    ctx.clip();
-    coverPhoto(ctx, bitmap, 0, 0, w, h, classified?.crop === "selfie" ? 0.16 : focusY);
-    const veil = ctx.createLinearGradient(0, h * 0.52, 0, h);
-    veil.addColorStop(0, "rgba(5,6,7,0)");
-    veil.addColorStop(1, "rgba(5,6,7,0.48)");
-    ctx.fillStyle = veil;
-    ctx.fillRect(0, 0, w, h);
-    if (classified?.strongBg) {
-      const side = ctx.createLinearGradient(0, 0, w, 0);
-      side.addColorStop(0, "rgba(5,6,7,0.28)");
-      side.addColorStop(0.42, "rgba(5,6,7,0)");
-      side.addColorStop(1, "rgba(5,6,7,0.12)");
-      ctx.fillStyle = side;
-      ctx.fillRect(0, 0, w, h);
+    coverPhoto(ctx, bitmap, 0, 0, w, h, focusY || photoFocusY(classified));
+  }
+  paintGrade(ctx, 0, 0, w, h);
+  ctx.restore();
+}
+
+function paintTypeStack(ctx, person, timeline, box, {
+  alpha = 1,
+  nameSize,
+  brushProgress = 1,
+  phrase = "",
+  phraseAlpha = 0,
+  stage = "hero",
+} = {}) {
+  if (alpha <= 0) return;
+  const story = timeline.format !== "feed";
+  const prefer = nameSize || (story ? 88 : 72);
+  const layout = fitNameLayout(ctx, campaignName(person), box.w, prefer, story ? 44 : 40);
+  const meta = [person.position || "MC", person.extraBadge].filter(Boolean).join("  ·  ");
+  const metaSize = stage === "detail" || stage === "close" || !story ? 16 : 14;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.textAlign = "left";
+  ctx.fillStyle = MUTED;
+  ctx.font = `800 ${metaSize}px Inter, sans-serif`;
+  ctx.fillText(meta, box.x, box.y);
+  const nameY = box.y + (story ? 70 : 58);
+  layout.lines.forEach((line, index) => {
+    ctx.fillStyle = INK;
+    ctx.font = `700 ${layout.size}px Rajdhani, sans-serif`;
+    ctx.fillText(line, box.x, nameY + index * (layout.size * 0.86));
+  });
+  const accentY = nameY + layout.lines.length * (layout.size * 0.86) - layout.size * 0.18;
+  paintNameAccent(ctx, box, brushProgress, accentY);
+  if (stage === "detail" || stage === "close" || timeline.format === "feed") {
+    ctx.fillStyle = MUTED;
+    ctx.font = "800 13px Inter, sans-serif";
+    ctx.fillText(timeline.season || "FC 27", box.x, accentY + 28);
+  }
+  if (phrase && phraseAlpha > 0) {
+    ctx.globalAlpha = alpha * phraseAlpha;
+    ctx.fillStyle = RULE;
+    ctx.fillRect(box.x, accentY + 46, 36, 2);
+    ctx.fillStyle = INK;
+    ctx.font = story ? "600 26px Inter, sans-serif" : "600 25px Inter, sans-serif";
+    wrapPhrase(ctx, phrase, box.w, ctx.font).forEach((line, index) => {
+      ctx.fillText(line, box.x, accentY + 84 + index * 32);
+    });
+  }
+  ctx.restore();
+}
+
+function paintOpening(ctx, timeline, time, assets) {
+  const { width, height, season } = timeline;
+  const flash = timeline.still ? 0 : Math.sin(Math.min(1, time / 0.18) * Math.PI) * (time < 0.24 ? 0.72 : 0);
+  const markIn = timeline.still ? 1 : reveal(time, 0.04, 0.42, easeOutExpo);
+  const typeIn = timeline.still ? 1 : reveal(time, 0.28, 0.32, easeOutExpo);
+  const seasonIn = timeline.still ? 1 : reveal(time, 0.48, 0.28, easeOutExpo);
+  ctx.fillStyle = VOID;
+  ctx.fillRect(0, 0, width, height);
+  const glow = ctx.createRadialGradient(width / 2, height * 0.4, 12, width / 2, height * 0.4, 420);
+  glow.addColorStop(0, "rgba(239,236,230,0.12)");
+  glow.addColorStop(1, "rgba(239,236,230,0)");
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, width, height);
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(0, 0, width, height);
+  ctx.clip();
+  ctx.translate(width / 2, height * 0.4);
+  const pop = 2.28 - markIn * 1.18;
+  ctx.scale(pop, pop);
+  ctx.globalAlpha = Math.min(1, 0.35 + markIn);
+  drawMark(ctx, assets?.strix, 0, 0, 320, 1);
+  ctx.restore();
+  if (flash > 0) {
+    if (!composeAnnounceFx(ctx, assets?.fx?.flash01, { x: 0, y: 0, w: width, h: height, alpha: flash })) {
+      ctx.fillStyle = `rgba(239,236,230,${flash})`;
+      ctx.fillRect(0, 0, width, height);
     }
   }
-  ctx.restore();
-}
-
-function paintRoleMark(ctx, person, x, y, alpha = 1) {
-  const badge = person?.extraBadge || "";
-  if (!badge) return;
   ctx.save();
-  ctx.globalAlpha = alpha;
-  ctx.fillStyle = MUTED;
-  ctx.font = "800 16px Inter, sans-serif";
-  ctx.textAlign = "left";
-  ctx.fillText(badge, x, y);
-  ctx.restore();
-}
-
-function paintOpening(ctx, timeline, time, assets, { intoHero = false } = {}) {
-  const { width, height, safe, season } = timeline;
-  const enter = timeline.still ? 1 : reveal(time, 0, 0.55, easeOutQuart);
-  const typeIn = timeline.still ? 1 : reveal(time, 0.28, 0.7, easeOutExpo);
-  const markIn = timeline.still ? 1 : reveal(time, 0.7, 0.5, easeOutExpo);
-  paintAmbient(ctx, timeline, time);
-  paintStrokes(ctx, timeline, time, reveal(time, 0.18, 0.9, easeOutQuart) || (timeline.still ? 1 : 0));
-  paintChrome(ctx, timeline, time, { alpha: enter, season });
-  ctx.save();
-  ctx.globalAlpha = typeIn;
-  ctx.translate(width / 2, height * 0.42 + (1 - typeIn) * 40);
-  ctx.fillStyle = INK;
   ctx.textAlign = "center";
-  ctx.font = "800 22px Inter, sans-serif";
-  ctx.fillText("NOVA TEMPORADA", 0, -118);
-  ctx.font = `700 ${Math.round(width * 0.24)}px Rajdhani, sans-serif`;
-  ctx.fillText("STRIX", 0, 18);
-  ctx.font = "700 86px Rajdhani, sans-serif";
-  ctx.fillText(season || "FC 27", 0, 118);
+  ctx.fillStyle = INK;
+  ctx.globalAlpha = typeIn;
+  ctx.font = "800 28px Inter, sans-serif";
+  ctx.fillText("STRIX UNITED", width / 2, height * 0.4 + 178);
+  ctx.fillStyle = RULE;
+  ctx.fillRect(width / 2 - 40, height * 0.4 + 196, 80, 2);
+  ctx.globalAlpha = seasonIn;
+  ctx.fillStyle = INK;
+  ctx.font = "700 108px Rajdhani, sans-serif";
+  ctx.fillText(season || "FC 27", width / 2, height * 0.4 + 292);
   ctx.restore();
-  ctx.save();
-  ctx.globalAlpha = markIn;
-  drawMark(ctx, assets?.strix, width / 2, safe.top + 210, 132, markIn);
-  ctx.restore();
-  if (intoHero) {
+  composeAnnounceFx(ctx, assets?.fx?.flare01, {
+    x: 0,
+    y: 0,
+    w: width,
+    h: height,
+    alpha: Math.max(flash, fxEnvelope(time, 0.02, 1.15)),
+    time,
+  });
+  composeAnnounceFx(ctx, assets?.fx?.lightSweep01, {
+    x: 0,
+    y: height * 0.12,
+    w: width,
+    h: height * 0.7,
+    alpha: fxEnvelope(time, 0.1, 0.9),
+    time,
+  });
+  paintGrain(ctx, timeline, time, assets);
+}
+
+function heroCamera(time, still, stage = "hero") {
+  if (still) return { scale: 1.05, drift: 0, bg: 1.03, focusShift: 0, plateLift: 0.35 };
+  if (stage === "reveal") return { scale: 1.1, drift: Math.sin(time * 0.35) * 12, bg: 1.07, focusShift: 0.03, plateLift: 0 };
+  if (stage === "hero") return { scale: 1.03, drift: Math.sin(time * 0.15) * 8, bg: 1.02, focusShift: 0, plateLift: 0 };
+  if (stage === "reframe") return { scale: 1.15, drift: Math.sin(time * 0.22) * 20, bg: 1.09, focusShift: -0.055, plateLift: 0.2 };
+  if (stage === "detail") return { scale: 1.08, drift: Math.sin(time * 0.13) * 10, bg: 1.04, focusShift: -0.02, plateLift: 0.35 };
+  return { scale: 1.02, drift: Math.sin(time * 0.1) * 5, bg: 1.02, focusShift: 0, plateLift: 0.45 };
+}
+
+function paintHeroComposition(ctx, timeline, time, person, assets, {
+  variant = "center",
+  photoIn = 1,
+  nameIn = 1,
+  brushIn = 1,
+  phraseIn = 0,
+  phrase = "",
+  indexLabel = "",
+  recede = 1,
+  stage = "hero",
+} = {}) {
+  const asset = assets?.byId?.[person?.id] || assets?.players?.[0];
+  const classified = classifyAnnouncePhoto(asset?.bitmap);
+  const box = photoBoxForVariant(variant, timeline, classified);
+  box.focusY = clamp((box.focusY || photoFocusY(classified)) + heroCamera(time, timeline.still, stage).focusShift, 0.08, 0.34);
+  const type = typeBoxForVariant(variant, timeline, box);
+  const camera = heroCamera(time, timeline.still, stage);
+  const arrive = 1.12 - photoIn * 0.12;
+  paintBackground(ctx, timeline, asset?.bitmap, time, camera.bg);
+  composeAnnounceFx(ctx, assets?.fx?.smoke01, {
+    x: 0,
+    y: timeline.height * 0.28,
+    w: timeline.width,
+    h: timeline.height * 0.62,
+    alpha: photoIn,
+    time,
+  });
+  paintSubject(ctx, asset?.bitmap, person, box, classified, {
+    scale: arrive * camera.scale * recede,
+    alpha: photoIn,
+    drift: camera.drift * 0.28,
+    assets,
+  });
+  paintTypePlate(ctx, timeline, variant === "center" && timeline.format === "feed" ? "center" : variant, camera.plateLift);
+  if (variant === "center" || timeline.format === "feed") paintTopVeil(ctx, timeline);
+  paintChrome(ctx, timeline, { alpha: Math.max(nameIn, 0.55), season: timeline.season, variant });
+  if (indexLabel) {
     ctx.save();
-    clipInkWipe(ctx, timeline, 1 - reveal(time, timeline.introEnd - 0.35, 0.35, easeInOutCubic));
-    ctx.fillStyle = VOID;
-    ctx.globalAlpha = 0.2;
-    ctx.fillRect(0, 0, width, height);
+    ctx.globalAlpha = nameIn;
+    ctx.fillStyle = MUTED;
+    ctx.font = "800 15px Inter, sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText(indexLabel, type.x, timeline.safe.top + 44);
     ctx.restore();
   }
+  paintTypeStack(ctx, person, timeline, type, {
+    alpha: nameIn,
+    brushProgress: brushIn,
+    phrase,
+    phraseAlpha: phraseIn,
+    nameSize: variant === "tight" ? 68 : (timeline.format === "feed" ? 70 : 90),
+    stage,
+  });
+  composeAnnounceFx(ctx, assets?.fx?.lightSweep01, {
+    x: 0,
+    y: 0,
+    w: timeline.width,
+    h: timeline.height * 0.45,
+    alpha: photoIn * recede,
+    time,
+  });
+  composeAnnounceFx(ctx, assets?.fx?.flare01, {
+    x: timeline.width * 0.1,
+    y: timeline.height * 0.12,
+    w: timeline.width * 0.8,
+    h: 160,
+    alpha: fxEnvelope(time, 6.2, 1.1) * recede,
+    time,
+  });
+  paintGrain(ctx, timeline, time, assets);
 }
 
-function paintNameStack(ctx, person, timeline, { x, y, width, alpha, variant }) {
-  const { safe } = timeline;
-  const story = timeline.format !== "feed";
-  const nameSize = variant === "bleed" || variant === "overlap" ? (story ? 118 : 84) : (story ? 104 : 78);
-  ctx.save();
-  ctx.globalAlpha = alpha;
-  ctx.fillStyle = MUTED;
-  ctx.font = "800 18px Inter, sans-serif";
-  ctx.textAlign = "left";
-  ctx.fillText(person.position || "MC", x, y);
-  paintRoleMark(ctx, person, x + 78, y, alpha);
-  ctx.fillStyle = INK;
-  ctx.font = `700 ${nameSize}px Rajdhani, sans-serif`;
-  const name = fitText(ctx, displayName(person), width - safe.side * 2, ctx.font);
-  ctx.fillText(name, x, y + (story ? 92 : 72));
-  if (person.nick && person.nick !== person.name) {
-    ctx.fillStyle = MUTED;
-    ctx.font = "800 18px Inter, sans-serif";
-    ctx.fillText(String(person.name).toUpperCase(), x, y + (story ? 132 : 104));
-  }
-  ctx.restore();
+function individualStage(timeline, time) {
+  const scene = announceSceneAt(timeline, time);
+  return scene?.type || "hero";
 }
 
 function paintIndividual(ctx, timeline, time, assets) {
-  const { width, height, safe, person, phrase, still, format } = timeline;
-  const story = format !== "feed";
-  const local = still ? 5.4 : time;
-  const asset = assets?.byId?.[person?.id] || assets?.players?.[0];
-  const classified = classifyAnnouncePhoto(asset?.bitmap);
-  const variant = timeline.look?.variants?.[0] || "overlap";
-  if (!still && time < timeline.introEnd - 0.12) {
-    paintOpening(ctx, timeline, time, assets, { intoHero: true });
+  const { person, phrase, still } = timeline;
+  if (still) {
+    paintHeroComposition(ctx, timeline, 6.4, person, assets, {
+      variant: "center",
+      photoIn: 1,
+      nameIn: 1,
+      brushIn: 1,
+      phraseIn: 1,
+      phrase,
+      stage: "close",
+    });
     return;
   }
 
-  paintAmbient(ctx, timeline, local);
-  paintStrokes(ctx, timeline, local, still ? 1 : reveal(local, 1.4, 1.1, easeOutQuart));
-  const photoIn = still ? 1 : reveal(local, 1.55, 0.7, easeOutQuart);
-  const nameIn = still ? 1 : reveal(local, 2.1, 0.65, easeOutExpo);
-  const phraseIn = still ? 1 : reveal(local, 7.4, 0.6, easeOutExpo);
-  const close = still ? 1 : time >= (timeline.finaleStart || 9.2)
-    ? 1 - reveal(time, timeline.finaleStart, 0.7, easeInOutCubic) * 0.12
+  const introEnd = timeline.introEnd || 1.32;
+  if (time < introEnd - 0.3) {
+    paintOpening(ctx, timeline, time, assets);
+    return;
+  }
+
+  const stage = individualStage(timeline, time);
+  const photoIn = reveal(time, introEnd - 0.08, 0.8, easeOutQuart);
+  const nameIn = reveal(time, 2.15, 0.75, easeOutExpo);
+  const brushIn = reveal(time, 3.05, 0.7, easeOutQuart);
+  const phraseIn = reveal(time, timeline.finaleStart || 7.6, 0.5, easeOutExpo);
+  const recede = time >= (timeline.finaleStart || 7.6)
+    ? 1 - reveal(time, timeline.finaleStart, 0.85, easeInOutCubic) * 0.1
     : 1;
-  const ken = still ? 1.02 : 1 + Math.min(0.05, Math.max(0, local - 3) * 0.006);
+  const heroOpts = {
+    variant: "center",
+    photoIn: Math.max(photoIn, time >= introEnd - 0.3 ? 0.4 : 0),
+    nameIn: stage === "reveal" ? 0 : nameIn,
+    brushIn: stage === "reveal" || (stage === "hero" && time < 3.2) ? 0 : brushIn,
+    phraseIn,
+    phrase,
+    recede,
+    stage: stage === "intro" ? "reveal" : stage,
+  };
+  const closed = time < introEnd ? 1 - reveal(time, introEnd - 0.3, 0.3, easeInOutCubic) : 0;
 
-  ctx.save();
-  if (!still) clipInkWipe(ctx, timeline, reveal(local, 1.45, 0.55, easeOutQuart));
-  const box = photoBoxForVariant(variant, timeline, classified);
-  paintHeroPhoto(ctx, asset?.bitmap, person, box, classified, { scale: 0.92 + photoIn * 0.1 * ken, alpha: photoIn * close });
-  ctx.restore();
+  if (closed > 0.001) {
+    paintOpening(ctx, timeline, Math.min(time, introEnd - 0.31), assets);
+    const inked = paintInkReveal(ctx, timeline, closed, assets, (incoming) => {
+      paintHeroComposition(incoming, timeline, time, person, assets, heroOpts);
+    });
+    if (!inked) paintHeroComposition(ctx, timeline, time, person, assets, heroOpts);
+    paintCutCover(ctx, timeline, closed, assets, true, inked);
+  } else {
+    paintHeroComposition(ctx, timeline, time, person, assets, heroOpts);
+  }
 
-  const fade = ctx.createLinearGradient(0, 0, width * 0.58, 0);
-  fade.addColorStop(0, "rgba(5,6,7,0.42)");
-  fade.addColorStop(0.55, "rgba(5,6,7,0.08)");
-  fade.addColorStop(1, "rgba(5,6,7,0)");
-  ctx.fillStyle = fade;
-  ctx.fillRect(0, 0, width, height);
-
-  ctx.save();
-  ctx.globalAlpha = nameIn * 0.26 * close;
-  ctx.fillStyle = INK;
-  ctx.font = `800 ${Math.round(width * 0.38)}px Rajdhani, sans-serif`;
-  ctx.fillText(displayName(person), safe.side - 36, height * 0.56);
-  ctx.restore();
-
-  paintChrome(ctx, timeline, local, { alpha: close, season: timeline.season });
-  paintNameStack(ctx, person, timeline, {
-    x: safe.side,
-    y: story ? height - safe.bottom - 188 : box.h + 36,
-    width,
-    alpha: nameIn * close,
-    variant,
-  });
-
-  ctx.save();
-  ctx.globalAlpha = phraseIn * close;
-  ctx.fillStyle = RULE;
-  const phraseY = story ? height - safe.bottom - 52 : box.h + 148;
-  ctx.fillRect(safe.side, phraseY - 28, 52, 2);
-  ctx.fillStyle = INK;
-  ctx.font = story ? "600 28px Inter, sans-serif" : "600 26px Inter, sans-serif";
-  wrapPhrase(ctx, phrase, width - safe.side * 2, ctx.font).slice(0, story ? 2 : 3).forEach((line, index) => {
-    ctx.fillText(line, safe.side, phraseY + index * 34);
-  });
-  ctx.restore();
-
-  if (!still && time >= timeline.finaleStart + 0.25) {
-    const lock = reveal(time, timeline.finaleStart + 0.25, 0.7, easeOutExpo);
+  if (time >= (timeline.finaleStart || 7.6) + 0.7) {
+    const lock = reveal(time, timeline.finaleStart + 0.7, 0.5, easeOutExpo);
     ctx.save();
-    ctx.globalAlpha = lock * 0.28;
+    ctx.globalAlpha = lock * 0.18;
     ctx.fillStyle = VOID;
-    ctx.fillRect(0, 0, width, height);
+    ctx.fillRect(0, 0, timeline.width, timeline.height);
     ctx.restore();
     ctx.save();
     ctx.globalAlpha = lock;
-    drawMark(ctx, assets?.strix, width / 2, height * 0.46, 160, lock);
     ctx.fillStyle = INK;
-    ctx.textAlign = "center";
-    ctx.font = "800 20px Inter, sans-serif";
-    ctx.fillText("STRIX UNITED · FC 27", width / 2, height * 0.58);
+    ctx.textAlign = "left";
+    ctx.font = "800 18px Inter, sans-serif";
+    ctx.fillText("STRIX UNITED  ·  FC 27", timeline.safe.side, timeline.height - timeline.safe.bottom - 8);
     ctx.restore();
   }
 }
 
 function paintPlayerHero(ctx, timeline, time, scene, assets) {
-  const { width, height, safe, people } = timeline;
-  const person = scene.person;
   const local = time - scene.start;
-  const enter = reveal(local, 0, scene.enter || 0.48, easeOutQuart);
-  const exit = time > scene.end - 0.38 ? 1 - reveal(time, scene.end - 0.38, 0.38, easeInOutCubic) : 1;
-  const presence = enter * exit;
-  const asset = assets?.byId?.[person.id];
-  const classified = classifyAnnouncePhoto(asset?.bitmap);
-  const variant = scene.variant || "left";
-  const ken = 1 + Math.min(0.04, local * 0.008);
-  const box = photoBoxForVariant(variant, timeline, classified);
-
-  ctx.save();
-  ctx.globalAlpha = presence * 0.22;
-  ctx.fillStyle = INK;
-  ctx.font = `800 ${Math.round(width * (variant === "overlap" || variant === "bleed" ? 0.36 : 0.28))}px Rajdhani, sans-serif`;
-  ctx.textAlign = "left";
-  ctx.fillText(displayName(person), variant === "left" ? width * 0.22 : safe.side - 28, height * 0.54);
-  ctx.restore();
-
-  ctx.save();
-  ctx.globalAlpha = presence;
-  paintHeroPhoto(ctx, asset?.bitmap, person, box, classified, { scale: ken, alpha: presence });
-
-  ctx.fillStyle = MUTED;
-  ctx.font = "800 18px Inter, sans-serif";
-  ctx.textAlign = "left";
-  const indexLabel = `${String((scene.index || 0) + 1).padStart(2, "0")} / ${String(people.length).padStart(2, "0")}`;
-  ctx.fillText(indexLabel, safe.side, safe.top + 52);
-
-  const copyY = variant === "stack" ? Math.min(box.y + box.h + 48, height - safe.bottom - 188) : height - safe.bottom - 148;
-  ctx.fillText(person.position || "MC", safe.side, copyY);
-  paintRoleMark(ctx, person, safe.side + 78, copyY, presence);
-  ctx.fillStyle = INK;
-  ctx.font = `700 ${variant === "bleed" ? 118 : 102}px Rajdhani, sans-serif`;
-  ctx.fillText(fitText(ctx, displayName(person), width - safe.side * 2, ctx.font), safe.side, copyY + 92);
-  if (person.nick && person.nick !== person.name) {
-    ctx.fillStyle = MUTED;
-    ctx.font = "800 18px Inter, sans-serif";
-    ctx.fillText(String(person.name).toUpperCase(), safe.side, copyY + 132);
-  }
-  ctx.restore();
+  const photoIn = reveal(local, 0.22, 0.5, easeOutQuart);
+  const nameIn = reveal(local, 0.5, 0.38, easeOutExpo);
+  const brushIn = reveal(local, 0.68, 0.5, easeOutQuart);
+  const detail = reveal(local, 2.55, 0.45, easeOutExpo);
+  const exit = time > scene.end - 0.35 ? 1 - reveal(time, scene.end - 0.35, 0.35, easeInOutCubic) : 1;
+  const people = timeline.people || [];
+  const stage = local < 1.1 ? "hero" : (local < 2.5 ? "reframe" : "detail");
+  paintHeroComposition(ctx, timeline, time, scene.person, assets, {
+    variant: scene.variant || "center",
+    photoIn: photoIn * exit,
+    nameIn: nameIn * exit,
+    brushIn: brushIn * exit,
+    phraseIn: 0,
+    indexLabel: `${String((scene.index || 0) + 1).padStart(2, "0")}  /  ${String(people.length).padStart(2, "0")}`,
+    recede: 0.98 + detail * 0.03,
+    stage,
+  });
 }
 
 function paintTeamPerson(ctx, timeline, time, scene, assets) {
-  paintAmbient(ctx, timeline, time);
-  paintStrokes(ctx, timeline, time, 0.85);
-  paintChrome(ctx, timeline, time, { season: timeline.season });
   const previous = (timeline.scenes || []).find((item) => item.type === "person" && item.index === scene.index - 1);
   if (previous && time < previous.end) {
-    ctx.save();
-    clipInkWipe(ctx, timeline, 1 - reveal(time, scene.start, 0.4, easeInOutCubic));
     paintPlayerHero(ctx, timeline, Math.min(time, previous.end - 0.01), previous, assets);
-    ctx.restore();
+  } else {
+    paintBackground(ctx, timeline, null, time, 1);
   }
-  ctx.save();
-  clipInkWipe(ctx, timeline, reveal(time, scene.start, 0.46, easeOutQuart));
-  paintPlayerHero(ctx, timeline, time, scene, assets);
-  ctx.restore();
+  const open = reveal(time, scene.start, 0.32, easeInOutCubic);
+  const closed = 1 - open;
+  const inked = paintInkReveal(ctx, timeline, closed, assets, (incoming) => {
+    paintPlayerHero(incoming, timeline, time, scene, assets);
+  });
+  if (!inked) paintPlayerHero(ctx, timeline, time, scene, assets);
+  paintCutCover(ctx, timeline, closed, assets, (scene.index || 0) % 2 === 0, inked);
 }
 
 function wallMetrics(count, timeline) {
-  const { width, height, safe, format } = timeline;
-  const story = format !== "feed";
-  const cols = count <= 4 ? 2 : count <= 8 ? 2 : 3;
-  const rows = Math.ceil(count / cols);
-  const gap = story ? 18 : 12;
-  const top = safe.top + (story ? 110 : 86);
-  const bottom = height - safe.bottom + 8;
-  const availableH = bottom - top;
-  const availableW = width - safe.side * 2;
+  const spec = announceGridSpec(count, timeline.format);
+  const story = timeline.format !== "feed";
+  const cols = spec.cols;
+  const rows = Math.ceil(Math.max(1, count) / cols);
+  const gap = story ? 14 : 12;
+  const top0 = timeline.safe.top + (story ? 86 : 70);
+  const bottom = timeline.height - timeline.safe.bottom;
+  const availableH = bottom - top0;
+  const availableW = timeline.width - timeline.safe.side * 2;
   const cellW = (availableW - gap * (cols - 1)) / cols;
-  const cellH = Math.min((availableH - gap * (rows - 1)) / rows, cellW * 1.42);
-  return { cols, rows, gap, top, cellW, cellH };
+  const cellH = Math.min((availableH - gap * (rows - 1)) / rows, cellW * spec.maxAspect);
+  const used = rows * cellH + (rows - 1) * gap;
+  const top = top0 + Math.max(0, (availableH - used) * 0.18);
+  return { cols, rows, gap, top, cellW, cellH, nameReserve: spec.nameReserve };
 }
 
 function paintTeamGrid(ctx, timeline, time, scene, assets) {
@@ -524,37 +696,43 @@ function paintTeamGrid(ctx, timeline, time, scene, assets) {
   const story = format !== "feed";
   const people = scene?.people || timeline.people;
   const enter = timeline.still ? 1 : reveal(time, scene?.start || timeline.finaleStart, 0.4, easeOutExpo);
-  paintAmbient(ctx, timeline, time);
-  paintStrokes(ctx, timeline, time, 0.7);
-  paintChrome(ctx, timeline, time, { season, alpha: enter });
+  paintBackground(ctx, timeline, assets?.byId?.[people[0]?.id]?.bitmap, time, 1);
+  paintChrome(ctx, timeline, { season, alpha: enter });
   ctx.save();
   ctx.globalAlpha = enter;
   ctx.fillStyle = INK;
-  ctx.font = story ? "700 58px Rajdhani, sans-serif" : "700 48px Rajdhani, sans-serif";
+  ctx.font = story ? "700 54px Rajdhani, sans-serif" : "700 48px Rajdhani, sans-serif";
   ctx.textAlign = "left";
-  const heading = scene?.pageCount > 1
-    ? `${title || "ELENCO FC 27"}  ${scene.pageIndex + 1}/${scene.pageCount}`
-    : (title || "ELENCO FC 27");
-  ctx.fillText(fitText(ctx, heading, width - safe.side * 2, ctx.font), safe.side, safe.top + 72);
-
+  ctx.fillText(fitText(ctx, title || "ELENCO FC 27", width - safe.side * 2 - 90, ctx.font), safe.side, safe.top + 62);
+  if (scene?.pageCount > 1) {
+    ctx.fillStyle = MUTED;
+    ctx.font = "800 15px Inter, sans-serif";
+    ctx.textAlign = "right";
+    ctx.fillText(`${String(scene.pageIndex + 1).padStart(2, "0")} / ${String(scene.pageCount).padStart(2, "0")}`, width - safe.side, safe.top + 50);
+  }
   const metrics = wallMetrics(people.length, timeline);
   people.forEach((person, index) => {
     const col = index % metrics.cols;
     const row = Math.floor(index / metrics.cols);
     const x = safe.side + col * (metrics.cellW + metrics.gap);
     const y = metrics.top + row * (metrics.cellH + metrics.gap);
-    const photoH = metrics.cellH - 58;
+    const photoH = metrics.cellH - metrics.nameReserve;
     const asset = assets?.byId?.[person.id];
     const classified = classifyAnnouncePhoto(asset?.bitmap);
-    paintHeroPhoto(ctx, asset?.bitmap, person, { x, y, w: metrics.cellW, h: photoH, focusY: 0.2 }, classified, { alpha: enter });
-    ctx.fillStyle = INK;
-    ctx.font = `700 ${metrics.cellW > 200 ? 24 : 16}px Rajdhani, sans-serif`;
-    ctx.fillText(fitText(ctx, displayName(person), metrics.cellW, ctx.font), x, y + photoH + 24);
+    paintSubject(ctx, asset?.bitmap, person, { x, y, w: metrics.cellW, h: photoH, focusY: photoFocusY(classified) }, classified, { alpha: enter, assets });
+    const name = fitNameLayout(ctx, campaignName(person), metrics.cellW, metrics.cellW > 360 ? 26 : 18, 14);
+    name.lines.forEach((line, lineIndex) => {
+      ctx.fillStyle = INK;
+      ctx.font = `700 ${name.size}px Rajdhani, sans-serif`;
+      ctx.textAlign = "left";
+      ctx.fillText(line, x, y + photoH + 20 + lineIndex * (name.size * 0.9));
+    });
     ctx.fillStyle = MUTED;
-    ctx.font = "800 12px Inter, sans-serif";
-    ctx.fillText(fitText(ctx, [person.position, person.extraBadge].filter(Boolean).join("  ·  "), metrics.cellW, ctx.font), x, y + photoH + 42);
+    ctx.font = `800 ${metrics.cellW > 360 ? 13 : 11}px Inter, sans-serif`;
+    ctx.fillText(fitText(ctx, [person.position, person.extraBadge].filter(Boolean).join("  ·  "), metrics.cellW, ctx.font), x, y + photoH + metrics.nameReserve - 8);
   });
   ctx.restore();
+  paintGrain(ctx, timeline, time, assets);
 }
 
 export function paintAnnounceFrame(ctx, { timeline, time = 0, assets } = {}) {
@@ -565,7 +743,15 @@ export function paintAnnounceFrame(ctx, { timeline, time = 0, assets } = {}) {
     return;
   }
   if (!scene || scene.type === "intro") {
-    paintOpening(ctx, timeline, time, assets, { intoHero: true });
+    if (!timeline.still && time > (timeline.introEnd || 1.45) - 0.28) {
+      const first = (timeline.scenes || []).find((item) => item.type === "person");
+      if (first) {
+        paintPlayerHero(ctx, timeline, first.start + 0.01, first, assets);
+        paintShutter(ctx, timeline, 1 - reveal(time, timeline.introEnd - 0.28, 0.28, easeInOutCubic));
+        return;
+      }
+    }
+    paintOpening(ctx, timeline, time, assets);
     return;
   }
   if (scene.type === "person") {

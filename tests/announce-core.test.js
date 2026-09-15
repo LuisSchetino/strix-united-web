@@ -11,7 +11,8 @@ import {
   pickAnnouncePhrase,
   resolveAnnouncePhrase,
 } from "../src/features/media/announce-core.js";
-import { personVariant } from "../src/features/media/announce-look.js";
+import { personVariant, campaignName, fitNameLayout, announceGridSpec } from "../src/features/media/announce-look.js";
+import { composeAnnounceFx, listAnnounceFxSlots, missingAnnounceFx, ANNOUNCE_FX_SLOTS, ANNOUNCE_FX_SKIPPED } from "../src/features/media/announce-fx.js";
 import { buildAnnounceTimeline } from "../src/features/media/announce-timeline.js";
 import { announceFrameTime, describeAnnounceFrame, renderAnnounceFrame } from "../src/features/media/announce-frame.js";
 
@@ -40,6 +41,7 @@ function mockContext() {
     fillStyle: "",
     strokeStyle: "",
     globalAlpha: 1,
+    globalCompositeOperation: "source-over",
     textAlign: "left",
     textBaseline: "alphabetic",
     save() {},
@@ -47,6 +49,7 @@ function mockContext() {
     beginPath() {},
     closePath() {},
     clip() {},
+    rect() {},
     fill() {},
     stroke() {},
     fillRect(...args) { calls.push(["fillRect", ...args]); },
@@ -54,12 +57,16 @@ function mockContext() {
     moveTo() {},
     lineTo() {},
     arc() {},
+    quadraticCurveTo() {},
+    setLineDash() {},
+    ellipse() {},
     translate() {},
     scale() {},
     rotate() {},
     drawImage() {},
     measureText(text) { return { width: String(text).length * 12 }; },
     createLinearGradient() { return { addColorStop() {} }; },
+    createRadialGradient() { return { addColorStop() {} }; },
   };
 }
 
@@ -107,7 +114,14 @@ test("duração individual fica entre 8s e 12s e o time não é comprimido", () 
   assert.ok(four.beat >= 3 && four.beat <= 4);
   assert.ok(four.readable >= 2.5);
   assert.ok(eight.duration > 22);
+  assert.equal(eight.pages, 2);
   assert.ok(large.duration > eight.duration);
+  const eightPeople = Array.from({ length: 8 }, (_, index) => ({ id: `p${index + 1}`, name: `Jogador ${index + 1}` }));
+  const eightTimeline = buildAnnounceTimeline({ kind: "team", format: "story", people: eightPeople, title: "ELENCO FC 27" });
+  const eightPages = eightTimeline.scenes.filter((scene) => scene.type === "finale");
+  assert.equal(eightPages.length, 2);
+  assert.equal(eightPages[0].people.length, 4);
+  assert.equal(eightPages[1].people.length, 4);
   assert.equal(announceFileName({ kind: "individual", format: "story", name: "Oben" }), "strix-anuncio-individual-oben-reels.mp4");
   assert.equal(announceFileName({ kind: "team", format: "feed", title: "ELENCO FC 27" }), "strix-anuncio-elenco-elenco-fc-27-post.png");
 });
@@ -144,7 +158,9 @@ test("os 4 modos montam timeline e o painter escreve o nome", () => {
       assert.equal(describeAnnounceFrame(timeline, 0).sceneType === "still" || describeAnnounceFrame(timeline, 0).sceneType === "grid", true);
     } else if (mode.kind === "individual") {
       assert.equal(describeAnnounceFrame(timeline, 0.2).sceneType, "intro");
-      assert.equal(describeAnnounceFrame(timeline, 4).sceneType, "hold");
+      assert.equal(describeAnnounceFrame(timeline, 3.2).sceneType, "hero");
+      assert.equal(describeAnnounceFrame(timeline, 5).sceneType, "reframe");
+      assert.equal(describeAnnounceFrame(timeline, 7).sceneType, "detail");
       assert.equal(describeAnnounceFrame(timeline, timeline.duration - 0.2).sceneType, "close");
       assert.equal(timeline.duration, 10.6);
     } else {
@@ -154,14 +170,38 @@ test("os 4 modos montam timeline e o painter escreve o nome", () => {
       const hero = timeline.scenes.find((scene) => scene.type === "person");
       assert.ok(hero.end - hero.start >= 3 && hero.end - hero.start <= 4);
       assert.equal(timeline.look.variants[0], "left");
-      assert.equal(personVariant(1), "overlap");
-      assert.equal(personVariant(2), "bleed");
-      assert.equal(personVariant(3), "stack");
-      assert.equal(personVariant(4), "left");
+      assert.equal(personVariant(1), "center");
+      assert.equal(personVariant(2), "tight");
+      assert.equal(personVariant(3), "left");
     }
     const ctx = mockContext();
     renderAnnounceFrame(ctx, { timeline, timeSec: announceFrameTime(0, timeline), assets: { players: [], byId: {} } });
     const names = ctx.calls.filter((call) => call[0] === "fillText").map((call) => call[1]).join(" ");
     assert.ok(names.includes("STRIX") || names.includes("OBEEN") || names.includes("ELENCO") || names.includes("PLANTEL"));
   }
+});
+
+test("v3.1 names wrap, team post uses 2x4, and missing FX do not paint", () => {
+  assert.equal(campaignName({ nick: "OBEEN", name: "Oben" }), "OBEEN");
+  assert.equal(campaignName({ name: "Santozz" }), "SANTOZZ");
+  const ctx = mockContext();
+  const long = fitNameLayout(ctx, "João Pedro da Silva Extra", 240, 72, 40);
+  assert.equal(long.lines.length, 2);
+  assert.ok(long.size <= 72);
+  assert.equal(announceGridSpec(8, "feed").cols, 2);
+  assert.equal(announceGridSpec(15, "feed").cols, 3);
+  assert.equal(announceGridSpec(4, "story").cols, 2);
+  assert.equal(listAnnounceFxSlots().length, 4);
+  assert.ok(ANNOUNCE_FX_SLOTS.lightSweep01.path.includes("light-rays-sweep-01.mp4"));
+  assert.ok(ANNOUNCE_FX_SLOTS.flare01.path.includes("light-leak-warm-01.mp4"));
+  assert.equal(ANNOUNCE_FX_SLOTS.brush01, undefined);
+  assert.ok(ANNOUNCE_FX_SLOTS.inkReveal01.path.includes("ink-alpha-matte-01.mp4"));
+  assert.ok(ANNOUNCE_FX_SLOTS.smoke01.path.includes("smoke-wisps-01.mp4"));
+  assert.equal(ANNOUNCE_FX_SLOTS.inkReveal01.blendMode, "destination-in");
+  assert.ok(ANNOUNCE_FX_SKIPPED.some((item) => item.path.includes("brush-transition-01.mp4")));
+  assert.ok(ANNOUNCE_FX_SKIPPED.some((item) => item.path.includes("water-caustics-01.mp4")));
+  assert.ok(ANNOUNCE_FX_SKIPPED.some((item) => item.path.includes("smoke-black-mixkit-01.mp4")));
+  const missing = missingAnnounceFx({});
+  assert.equal(missing.length, listAnnounceFxSlots().length);
+  assert.equal(composeAnnounceFx(ctx, { bitmap: null }, { x: 0, y: 0, w: 100, h: 100, alpha: 1 }), false);
 });

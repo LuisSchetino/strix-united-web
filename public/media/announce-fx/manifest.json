@@ -1,0 +1,45 @@
+{
+  "revision": "fx-video-v1.2",
+  "note": "H.264 overlays without alpha. Black-bg clips use screen. Ink is a luma matte (inverted, destination-in). The painter composites these files; it does not invent procedural VFX.",
+  "preferredFormats": ["mp4-avc1-black-bg", "png-alpha"],
+  "connected": {
+    "lightSweep01": {
+      "path": "/media/announce-fx/light/light-rays-sweep-01.mp4",
+      "type": "video",
+      "blendMode": "screen",
+      "usage": ["opening", "reveal", "hero"],
+      "status": "connected"
+    },
+    "flare01": {
+      "path": "/media/announce-fx/light/light-leak-warm-01.mp4",
+      "type": "video",
+      "blendMode": "screen",
+      "usage": ["opening", "close"],
+      "status": "connected"
+    },
+    "inkReveal01": {
+      "path": "/media/announce-fx/ink/ink-alpha-matte-01.mp4",
+      "type": "matte-video",
+      "blendMode": "destination-in",
+      "usage": ["transition", "reveal"],
+      "status": "connected",
+      "note": "White-open matte; luma is inverted so the cut starts closed"
+    },
+    "smoke01": {
+      "path": "/media/announce-fx/smoke/smoke-wisps-01.mp4",
+      "type": "video",
+      "blendMode": "screen",
+      "usage": ["hero", "depth"],
+      "status": "connected"
+    }
+  },
+  "skipped": {
+    "brush/brush-transition-01.mp4": "4K 61s full-color plate (not a black-bg overlay). Screening it during the 0.32s cut painted the whole frame. Name accent stays a 3px type rule.",
+    "light/water-caustics-01.mp4": "caustics de água / leitura azul, fora da campanha preta Strix",
+    "smoke/smoke-black-mixkit-01.mp4": "70MB; decode por frame inviável no encode Canvas sem pré-cache gigante. smoke-wisps cobre o slot smoke01",
+    "smoke/fog-drift-dark-01.mp4": "adiado; smoke-wisps cobre profundidade nesta rodada",
+    "particles/embers-drift-01.mp4": "fora do recorte light/brush/ink/smoke",
+    "particles/sparks-float-01.mp4": "fora do recorte light/brush/ink/smoke",
+    "texture/bokeh-warm-01.mp4": "fora do recorte light/brush/ink/smoke"
+  }
+}

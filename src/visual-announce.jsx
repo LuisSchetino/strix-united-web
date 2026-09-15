@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { encodeAgendaMp4, encodeStillPng } from "./features/media/encode-mp4.js";
 import { loadAnnounceAssets } from "./features/media/media-assets.js";
 import { announceFileName, announceTeamTiming, fillAnnouncePhrase, individualAnnounceDuration } from "./features/media/announce-core.js";
+import { ANNOUNCE_FX_SKIPPED, missingAnnounceFx, presentAnnounceFxIds } from "./features/media/announce-fx.js";
 import { buildAnnounceTimeline } from "./features/media/announce-timeline.js";
 import { announceFrameTime, describeAnnounceFrame, renderAnnounceFrame } from "./features/media/announce-frame.js";
 
@@ -37,28 +38,40 @@ const modes = [
   { id: "ind-post", kind: "individual", format: "feed", people: [people[0]], phrase: fillAnnouncePhrase("Mais uma peça confirmada para o FC 27.", people[0]), title: "" },
   { id: "team-reels", kind: "team", format: "story", people: people.slice(0, 4), title: "ELENCO FC 27" },
   { id: "team-post", kind: "team", format: "feed", people, title: "PLANTEL FC 27" },
+  { id: "team-8", kind: "team", format: "story", people, title: "ELENCO FC 27" },
 ];
+
+const qaModes = modes.filter((mode) => mode.id === "ind-reels" || mode.id === "team-reels");
 
 function stillsFor(timeline) {
   if (timeline.kind === "individual") {
     return timeline.still
       ? [{ time: 0, label: "post" }]
       : [
-          { time: 0.6, label: "abertura" },
-          { time: 2.4, label: "reveal" },
-          { time: 5.4, label: "hero" },
-          { time: 8.2, label: "frase" },
-          { time: Math.max(0, timeline.duration - 0.2), label: "fecho" },
+          { time: 0.5, label: "0.5s" },
+          { time: 1.2, label: "1.2s cut" },
+          { time: 1.5, label: "1.5s" },
+          { time: 3.0, label: "3s" },
+          { time: 5.0, label: "5s" },
+          { time: 7.0, label: "7s" },
+          { time: 9.0, label: "9s" },
+          { time: 10.0, label: "10s" },
         ];
   }
-  const first = timeline.scenes.find((scene) => scene.type === "person");
+  const peopleScenes = (timeline.scenes || []).filter((scene) => scene.type === "person");
+  const finaleScenes = (timeline.scenes || []).filter((scene) => scene.type === "finale");
   return timeline.still
     ? [{ time: 0, label: "grid" }]
     : [
-        { time: 0.6, label: "abertura" },
-        { time: (first?.start || 0) + 1.4, label: "hero 1" },
-        { time: (first?.start || 0) + (first?.end - first?.start || 0) / 2, label: "leitura" },
-        { time: timeline.finaleStart + 0.6, label: "mural" },
+        { time: 0.5, label: "abertura" },
+        ...peopleScenes.map((scene, index) => ({
+          time: scene.start + 1.7,
+          label: `hero ${index + 1}`,
+        })),
+        ...finaleScenes.map((scene, index) => ({
+          time: scene.start + 0.6,
+          label: scene.pageCount > 1 ? `mural ${index + 1}` : "mural",
+        })),
       ];
 }
 
@@ -103,12 +116,10 @@ function App() {
       const four = announceTeamTiming(4);
       const eight = announceTeamTiming(8);
       const fifteen = announceTeamTiming(15);
-      setTiming(`Individual ${individualAnnounceDuration()}s · Time 4=${four.duration}s beat ${four.beat}s leitura ${four.readable}s · 8=${eight.duration}s · 15=${fifteen.duration}s`);
-      const captured = [
-        ...modes,
-        { id: "team-8", kind: "team", format: "story", people, title: "ELENCO FC 27" },
-        { id: "team-15", kind: "team", format: "feed", people: large, title: "ESTRUTURA FC 27" },
-      ].map((mode) => {
+      const present = presentAnnounceFxIds(assets.fx);
+      const missing = missingAnnounceFx(assets.fx).map((slot) => slot.id);
+      setTiming(`FX on: ${present.join(", ") || "none"} · missing: ${missing.join(", ") || "none"} · skipped ${ANNOUNCE_FX_SKIPPED.length} · Individual ${individualAnnounceDuration()}s · Time 4=${four.duration}s beat ${four.beat}s leitura ${four.readable}s · 8=${eight.duration}s · 15=${fifteen.duration}s`);
+      const captured = qaModes.map((mode) => {
         const timeline = buildAnnounceTimeline(mode);
         return {
           id: mode.id,
@@ -117,23 +128,28 @@ function App() {
         };
       });
       setFrames(captured);
-      setStatus("Stills prontos. Encode dos 4 formatos em andamento…");
+      if (new URLSearchParams(window.location.search).has("stills")) {
+        setStatus("Stills FX prontos. Encode ignorado (?stills).");
+        return;
+      }
+      setStatus("Stills prontos. Encode Individual Reel + Team Reel 4…");
       const done = [];
-      for (const mode of modes) {
+      for (const mode of qaModes) {
         setStatus(`Gerando ${mode.id}…`);
         const result = await encodeMode(mode, assets);
         const url = URL.createObjectURL(result.blob);
-        done.push({ ...result, url, id: mode.id });
+        const fileName = result.fileName.replace(/(\.\w+)$/, "-v31-fx$1");
+        done.push({ ...result, url, fileName, id: mode.id });
         setExports([...done]);
       }
-      setStatus("LOCALMENTE PRONTO · v2 gerada nesta página de QA.");
+      setStatus("LOCALMENTE PRONTO · Individual Reel + Team Reel 4 com FX reais.");
     })().catch((error) => setStatus(error.message || "Falha no QA de anúncios."));
     return () => { cancelled = true; };
   }, []);
 
   return (
     <main style={{ fontFamily: "Inter, sans-serif", background: "#050607", color: "#efece6", minHeight: "100dvh", padding: 24 }}>
-      <h1>Anúncios FC 27 · QA v2</h1>
+      <h1>Anúncios FC 27 · QA FX</h1>
       <p>{status}</p>
       <p>{timing}</p>
       {frames.map((group) => (

@@ -6,12 +6,12 @@ import {
   announceTeamTiming,
   individualAnnounceDuration,
 } from "./announce-core.js";
-import { buildAnnounceLook } from "./announce-look.js";
+import { buildAnnounceLook, finalePageSize } from "./announce-look.js";
 
 export function finalePagesFor(people = []) {
   if (!people.length) return [];
-  if (people.length <= 8) return [people];
-  const size = 8;
+  const size = finalePageSize(people.length);
+  if (people.length <= size) return [people];
   const pages = [];
   for (let index = 0; index < people.length; index += size) {
     pages.push(people.slice(index, index + size));
@@ -65,11 +65,12 @@ export function buildAnnounceTimeline({
 
   if (mode === "individual") {
     const duration = still ? 0.04 : individualAnnounceDuration();
-    const introEnd = still ? 0 : 1.7;
-    const revealEnd = still ? 0 : 3.3;
+    const introEnd = still ? 0 : 1.32;
+    const revealEnd = still ? 0 : 3.0;
+    const heroEnd = still ? 0 : 4.6;
+    const reframeEnd = still ? 0 : 6.2;
     const holdEnd = still ? 0 : 7.6;
-    const phraseEnd = still ? 0 : 9.2;
-    const heroTime = still ? 5.4 : 5.4;
+    const heroTime = still ? 5.2 : 5.2;
     return {
       ...empty,
       duration,
@@ -77,16 +78,17 @@ export function buildAnnounceTimeline({
       introEnd,
       revealEnd,
       holdStart: introEnd,
-      finaleStart: phraseEnd,
+      finaleStart: holdEnd,
       heroTime,
       scenes: still
         ? [{ id: "still", type: "still", start: 0, end: duration, person: selected[0], variant: look.variants[0] }]
         : [
             { id: "intro", type: "intro", start: 0, end: introEnd, person: selected[0] },
             { id: "reveal", type: "reveal", start: introEnd, end: revealEnd, person: selected[0] },
-            { id: "hold", type: "hold", start: revealEnd, end: holdEnd, person: selected[0] },
-            { id: "phrase", type: "phrase", start: holdEnd, end: phraseEnd, person: selected[0] },
-            { id: "close", type: "close", start: phraseEnd, end: duration, person: selected[0] },
+            { id: "hero", type: "hero", start: revealEnd, end: heroEnd, person: selected[0] },
+            { id: "reframe", type: "reframe", start: heroEnd, end: reframeEnd, person: selected[0] },
+            { id: "detail", type: "detail", start: reframeEnd, end: holdEnd, person: selected[0] },
+            { id: "close", type: "close", start: holdEnd, end: duration, person: selected[0] },
           ],
       people: selected.slice(0, 1),
       person: selected[0],

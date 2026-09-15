@@ -1,0 +1,66 @@
+{
+  "lightSweep01": {
+    "path": "/media/announce-fx/light/light-rays-sweep-01.mp4",
+    "type": "video",
+    "blendMode": "screen",
+    "defaultOpacity": 0.55,
+    "defaultScale": 1.1,
+    "usage": ["reveal", "hero"]
+  },
+  "lightLeak01": {
+    "path": "/media/announce-fx/light/light-leak-warm-01.mp4",
+    "type": "video",
+    "blendMode": "screen",
+    "defaultOpacity": 0.45,
+    "defaultScale": 1.0,
+    "usage": ["opening", "transition", "closing"]
+  },
+  "inkReveal01": {
+    "path": "/media/announce-fx/ink/ink-alpha-matte-01.mp4",
+    "type": "matte-video",
+    "blendMode": "source-over",
+    "defaultOpacity": 1.0,
+    "defaultScale": 1.0,
+    "usage": ["reveal", "transition"]
+  },
+  "brush01": {
+    "path": "/media/announce-fx/brush/brush-transition-01.mp4",
+    "type": "matte-or-overlay-video",
+    "blendMode": "source-over",
+    "defaultOpacity": 0.8,
+    "defaultScale": 1.0,
+    "usage": ["transition", "name-accent"]
+  },
+  "smoke01": {
+    "path": "/media/announce-fx/smoke/smoke-black-mixkit-01.mp4",
+    "type": "video",
+    "blendMode": "screen",
+    "defaultOpacity": 0.18,
+    "defaultScale": 1.15,
+    "usage": ["background", "depth"]
+  },
+  "fog01": {
+    "path": "/media/announce-fx/smoke/fog-drift-dark-01.mp4",
+    "type": "video",
+    "blendMode": "screen",
+    "defaultOpacity": 0.12,
+    "defaultScale": 1.1,
+    "usage": ["background", "depth"]
+  },
+  "embers01": {
+    "path": "/media/announce-fx/particles/embers-drift-01.mp4",
+    "type": "video",
+    "blendMode": "screen",
+    "defaultOpacity": 0.16,
+    "defaultScale": 1.0,
+    "usage": ["closing", "hero-accent"]
+  },
+  "sparks01": {
+    "path": "/media/announce-fx/particles/sparks-float-01.mp4",
+    "type": "video",
+    "blendMode": "screen",
+    "defaultOpacity": 0.12,
+    "defaultScale": 1.0,
+    "usage": ["transition", "hero-accent"]
+  }
+}

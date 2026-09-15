@@ -11,7 +11,7 @@ export default defineConfig({
       },
     },
     watch: {
-      ignored: ["**/qa/**", "**/*.mp4"],
+      ignored: ["**/qa/**", "**/*.mp4", "**/public/media/announce-fx/**"],
     },
   },
 });
