@@ -7,6 +7,8 @@ import { CompetitionsPage } from "./features/competitions/CompetitionsPage.jsx";
 import { STRIX_BRAND } from "./brand.js";
 import { ClubLogo } from "./ui/ClubLogo.jsx";
 import { ToastViewport } from "./ui/motion/motion.jsx";
+import { saveRosterPlayer } from "./features/squad/player-save.js";
+import { createRosterFixtureClient } from "./dev/roster-fixture-client.js";
 
 // Development-only fixture surface. No authentication bypass, live client or writes.
 function LogoReview() {
@@ -25,6 +27,9 @@ function LogoReview() {
 }
 
 function Review() {
+  const [rosterClient] = useState(() => createRosterFixtureClient(localStorage, "strix-quality-roster-v2", fixture.players.map((player, index) => ({ ...player, external_avatar_url: index === 0 ? "/brand/strix/portrait-ygo.png" : index === 1 ? "/brand/strix/portrait-joao.png" : "" }))));
+  const [players, setPlayers] = useState(() => rosterClient.rows());
+  const [emptyAgenda, setEmptyAgenda] = useState(false);
   const [active, setActive] = useState("central");
   const [compact, setCompact] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -33,8 +38,9 @@ function Review() {
     scheduled_at: new Date(Date.now() + index * 86400000).toISOString(),
     lineup: Array(11).fill(""), resolved_opponent_logo_url: index === 0 ? "https://ccbclubs.com.br/src/image/proclubs/escudodostimes/Background%20Eraser.png" : "",
   })));
-  const workspace = { ...fixture, agenda, nightRelated: [],
-    players: fixture.players.map((player, index) => ({ ...player, external_avatar_url: index === 0 ? "/brand/strix/portrait-ygo.png" : index === 1 ? "/brand/strix/portrait-joao.png" : "" })),
+  const workspace = { ...fixture, agenda: emptyAgenda ? [] : agenda, nightRelated: [], players,
+    savePlayer: async (player, file) => { const result = await saveRosterPlayer(rosterClient, profile.user_id, player, file, async () => { throw new Error("Fotos não são enviadas no QA isolado."); }); setPlayers(rosterClient.rows()); return result; },
+    removePlayer: async id => { const { error } = await rosterClient.from("club_players").update({is_active:false}).eq("id",id); if(error) throw error; setPlayers(rosterClient.rows()); },
     matches: fixture.matches.map(match => ({ ...match, played_at: new Date().toISOString() })),
     saveAgenda: async (entry, mode, original) => { setAgenda(items => items.map(item => item.id === original?.id ? {...item,lineup:entry.lineup} : item)); },
     saveNightRelated: async () => {},
@@ -42,7 +48,9 @@ function Review() {
   const navigate = (id) => { setActive(id); setMobileOpen(false); };
   return <div className={`app-shell ${compact ? "compact" : ""}`}>
     <Sidebar {...{active,navigate,compact,setCompact,mobileOpen,setMobileOpen,profile}} signOut={() => {}} />
-    <main className="workspace"><header className="topbar"><button onClick={() => setMobileOpen(!mobileOpen)} aria-label="Abrir menu">☰</button><small>REVISÃO LOCAL · DADOS DE TESTE</small><button className="secondary" onClick={()=>navigate("logos")}>Auditar logos</button></header>
+    <main className="workspace"><header className="topbar"><button className="mobile-menu" onClick={() => setMobileOpen(!mobileOpen)} aria-label="Abrir menu">☰</button><small>REVISÃO LOCAL · DADOS DE TESTE</small><button className="secondary" onClick={()=>navigate("logos")}>Auditar logos</button></header>
+      {active === "central" && <button className="secondary" style={{marginBottom:16}} onClick={()=>setEmptyAgenda(value=>!value)}>{emptyAgenda ? "QA: mostrar jogos" : "QA: agenda vazia"}</button>}
+      {active === "elenco" && <details style={{marginBottom:16,fontSize:12}}><summary>QA · registros locais persistentes ({players.length})</summary>{players.map(player=><p key={player.id}>{player.display_name} · {player.is_active ? "ATIVO" : "ARQUIVADO"} · ID {player.id}</p>)}</details>}
       {active === "logos" ? <LogoReview/> : active === "central" ? <CentralLive workspace={workspace} navigate={navigate}/> : active === "agenda" ? <AgendaLive {...{workspace,profile,navigate}}/> : active === "elenco" ? <SquadPageV3 {...{workspace,profile}}/> : active === "partidas" ? <MatchesPage {...{workspace,profile,client}}/> : active === "campeonatos" ? <CompetitionsPage {...{workspace,profile,client}}/> : <DataPage id={active} {...{workspace,profile,client}}/>}
     </main><ToastViewport/>
   </div>;

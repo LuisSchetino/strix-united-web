@@ -79,7 +79,7 @@ export function buildAnnounceTimeline({
       revealEnd,
       holdStart: introEnd,
       finaleStart: detailEnd,
-      phraseStart: still ? 0 : 3.05,
+      phraseStart: still ? 0 : 2.15,
       heroTime,
       scenes: still
         ? [{ id: "still", type: "still", start: 0, end: duration, person: selected[0], variant: look.variants[0] }]

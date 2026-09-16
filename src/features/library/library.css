@@ -386,3 +386,39 @@
 .library-tracking article small,.library-tracking time{color:#8e969f!important}
 .library-player-loading,.library-player-error{background:radial-gradient(circle at 50% 30%,#252a30,#0b0d10 65%)!important;color:#d8dce0!important}
 .library-player-loading i{border-color:#42484f!important;border-top-color:#f5f5f5!important}
+
+/* Content covers, not generated dashboard tiles. Real thumbnails take priority. */
+.library-v2 .library-grid{grid-template-columns:1fr;gap:20px}
+.library-v2 .library-editorial-card{grid-template-columns:minmax(240px,.8fr) minmax(0,1.7fr);border-radius:12px;box-shadow:none;transition:border-color 180ms ease}
+.library-v2 .editorial-cover{min-height:210px;aspect-ratio:16/10;padding:0;isolation:isolate;background:#171a1d!important;border-right:1px solid #ffffff12;overflow:hidden}
+.library-v2 .editorial-cover img{position:absolute;inset:0;transition:transform 200ms ease;object-fit:cover}
+.library-pitch-art{position:absolute;inset:0;width:100%;height:100%;fill:none;stroke:#ffffff12;stroke-width:1;transform:rotate(-12deg) scale(1.16);transition:transform 200ms ease}
+.library-pitch-art .play-route{stroke:#ffffff38;stroke-dasharray:4 6;stroke-width:2}
+.library-v2 .editorial-cover:after{content:"";position:absolute;inset:0;z-index:0;background:linear-gradient(0deg,#08090be8,transparent 65%);pointer-events:none}
+.library-v2 .library-cover-brand{position:absolute;z-index:1;top:18px;left:18px;right:18px;display:flex;justify-content:space-between;font-size:9px;letter-spacing:.13em;color:#b8bdc4;font-weight:700}
+.library-v2 .library-cover-caption{position:absolute;bottom:20px;left:20px;right:74px;z-index:1;text-align:left;color:#aaaeb5;font-size:10px;letter-spacing:.14em}
+.library-v2 .library-cover-caption b{display:block;margin-top:7px;color:#eeeef0;font-size:20px;font-weight:750;letter-spacing:-.02em;line-height:1.15;text-transform:none}
+.library-v2 .editorial-cover>.library-play-mark{left:auto;top:auto;right:18px;bottom:20px;translate:none;z-index:1;width:44px;height:44px;border:1px solid #ffffff40;background:#eeeeee;color:#121417;box-shadow:none;transition:background 180ms ease,transform 180ms ease;padding-left:2px;font-size:14px}
+.library-v2 .library-editorial-copy{padding:24px;gap:10px;align-content:center;min-width:0}
+.library-v2 .library-editorial-copy>small{font-size:10px;letter-spacing:.1em}
+.library-v2 .library-editorial-copy h2{font-size:clamp(21px,2.1vw,28px);line-height:1.15;letter-spacing:-.025em}
+.library-v2 .library-editorial-copy h2 button{font:inherit;letter-spacing:inherit;color:#efeff1;background:none;border:0;padding:0;text-align:left;min-height:44px;overflow-wrap:anywhere}
+.library-v2 .library-editorial-copy>p{font-size:13px;line-height:1.6;color:#a2a8b1;max-width:65ch}
+.library-v2 .library-tags{gap:10px;flex-wrap:wrap}
+.library-v2 .library-tags em{padding:0;border:0;background:none;font-size:11px;color:#9da4ad}
+.library-v2 .library-editorial-copy footer{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-top:5px;border-top:1px solid #ffffff0d;padding-top:8px;font-size:11px}
+.library-watch{display:flex;align-items:center;gap:12px;min-height:44px;border:0;background:none;color:#ededee;font-size:11px;font-weight:800;padding:0 8px}
+.library-watch span{font-size:18px}
+@media(hover:hover){
+  .library-v2 .library-editorial-card:hover{border-color:#ffffff30!important}
+  .library-v2 .editorial-cover:hover img{transform:scale(1.025)}
+  .library-v2 .editorial-cover:hover .library-pitch-art{transform:rotate(-12deg) scale(1.19)}
+  .library-v2 .editorial-cover:hover .library-play-mark{transform:translateY(-2px);background:#fff}
+}
+@media(max-width:700px){
+  .library-v2 .library-editorial-card{grid-template-columns:minmax(0,1fr)}
+  .library-v2 .editorial-cover{min-height:0;aspect-ratio:16/9;border-right:0;border-bottom:1px solid #ffffff12}
+  .library-v2 .library-editorial-copy{padding:18px;gap:8px}
+  .library-v2 .library-grid{min-width:0}
+}
+@media(prefers-reduced-motion:reduce){.library-v2 .editorial-cover img,.library-pitch-art,.library-v2 .editorial-cover>.library-play-mark,.library-v2 .library-editorial-card{transition:none}}

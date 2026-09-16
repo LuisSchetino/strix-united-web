@@ -29,6 +29,9 @@ import "./fc27-brand.css";
 import "./round-discovery.css";
 import "./performance-polish.css";
 import "./quality-polish.css";
+import "./ui-bugfix.css";
+import { saveRosterPlayer } from "./features/squad/player-save.js";
+import { useDialog } from "./ui/useDialog.js";
 
 const routeLoaders = {
   partidas: () => import("./features/matches/MatchesPage.jsx").then((module) => ({ default: module.MatchesPage })),
@@ -103,14 +106,15 @@ function Icon({ name, size = 20 }) {
 
 // Dialogs must live at the document root. Several pages animate their content,
 // which otherwise turns a fixed backdrop into a clipped child of that page.
-function ViewportDialog({ className = "modal-backdrop", children, ...props }) {
+function ViewportDialog({ className = "modal-backdrop", children, onClose, ...props }) {
+  const dialogRef = useDialog(onClose, { enabled: Boolean(onClose), lockScroll: false });
   useLayoutEffect(() => {
     const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => { document.body.style.overflow = previous; };
   }, []);
   return createPortal(
-    <div className={className} {...props}>{children}</div>,
+    <div ref={dialogRef} className={className} {...props}>{children}</div>,
     document.body,
   );
 }
@@ -798,31 +802,14 @@ function useFc27Workspace(client, profile) {
     await refresh();
   };
   const savePlayer = async (player, file) => {
-    let avatarPath = player.avatar_path || null;
-    if (file) {
+    const result = await saveRosterPlayer(client, profile.user_id, player, file, async (file) => {
       const path = `players/${profile.user_id}/${crypto.randomUUID()}-${safeAssetName(file.name)}`;
       const { error: uploadError } = await client.storage.from("fc27-team-assets").upload(path, file, { upsert: false, contentType: file.type || undefined });
       if (uploadError) throw uploadError;
-      avatarPath = path;
-    }
-    const payload = {
-      display_name: player.display_name.trim(),
-      avatar_path: avatarPath,
-      positions: player.positions || [],
-      member_type: player.member_type || "complete",
-      shirt_number: player.shirt_number === "" || player.shirt_number === undefined ? null : Number(player.shirt_number),
-      trial_expires_at: player.trial_expires_at || null,
-      is_active: player.is_active !== false,
-      structure_role: ["jogador", "staff", "diretoria", "conselho", "manager"].includes(player.structure_role)
-        ? player.structure_role
-        : "jogador",
-      updated_by: profile.user_id,
-    };
-    const result = player.id
-      ? await client.from("club_players").update(payload).eq("id", player.id)
-      : await client.from("club_players").insert({ ...payload, created_by: profile.user_id });
-    if (result.error) throw result.error;
+      return path;
+    });
     await refresh();
+    return result;
   };
   const removePlayer = async (id) => {
     const { error } = await client.from("club_players").update({ is_active: false, updated_by: profile.user_id }).eq("id", id);
@@ -1002,6 +989,8 @@ function Sidebar({
 }) {
   const warmRoute = (id) => () => { void preloadRoute(id); };
   const [mobile, setMobile] = useState(() => window.matchMedia("(max-width:900px)").matches);
+  const collapsed = compact && !mobile;
+  const drawerRef = useDialog(() => setMobileOpen(false), { enabled: mobile && mobileOpen });
   useEffect(() => {
     const query = window.matchMedia("(max-width:900px)");
     const update = () => setMobile(query.matches);
@@ -1010,7 +999,8 @@ function Sidebar({
   }, []);
   return (
     <aside
-      className={`sidebar ${compact ? "is-compact" : ""} ${mobileOpen ? "mobile-open" : ""}`}
+      ref={drawerRef}
+      className={`sidebar ${collapsed ? "is-compact" : ""} ${mobileOpen ? "mobile-open" : ""}`}
       inert={mobile && !mobileOpen ? true : undefined}
     >
       <div className="brand">
@@ -1023,7 +1013,9 @@ function Sidebar({
         <button
           className="collapse"
           onClick={() => setCompact(!compact)}
-          aria-label="Recolher menu"
+          aria-label={collapsed ? "Expandir menu" : "Recolher menu"}
+          title={collapsed ? "Expandir menu" : "Recolher menu"}
+          aria-expanded={!collapsed}
         >
           ‹
         </button>
@@ -1040,6 +1032,8 @@ function Sidebar({
         <button
           className={active === "central" ? "active" : ""}
           aria-current={active === "central" ? "page" : undefined}
+          aria-label="Central do time"
+          data-tooltip={collapsed ? "Central do time" : undefined}
           onClick={() => navigate("central")}
         >
           <Icon name="live" />
@@ -1053,6 +1047,8 @@ function Sidebar({
             key={id}
             className={active === id ? "active" : ""}
             aria-current={active === id ? "page" : undefined}
+            aria-label={label}
+            data-tooltip={collapsed ? label : undefined}
             onClick={() => navigate(id)}
             onPointerEnter={warmRoute(id)}
             onFocus={warmRoute(id)}
@@ -1063,8 +1059,8 @@ function Sidebar({
           </button>
         ))}
       </div>
-      <RastroSignature compact={compact} />
-      <div className="sidebar-user">
+      <RastroSignature compact={collapsed} />
+      {collapsed ? <div className="sidebar-compact-account"><button type="button" className="sidebar-signout" onClick={signOut} aria-label="Sair da conta" data-tooltip="Sair da conta"><Icon name="logout" size={19}/></button></div> : <div className="sidebar-user">
         <Avatar name={profile.display_name} logo={profile.avatar_url} kind="photo" />
         <span>
           <b>{profile.display_name}</b>
@@ -1073,7 +1069,7 @@ function Sidebar({
         <button type="button" className="sidebar-signout" onClick={signOut} title="Sair da conta" aria-label="Sair da conta">
           <Icon name="logout" size={15} />
         </button>
-      </div>
+      </div>}
     </aside>
   );
 }
@@ -2138,6 +2134,9 @@ function SquadPageV2({ workspace, profile }) {
 }
 
 function SquadPageV3({ workspace, profile }) {
+  const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
+  const returnFocusRef = useRef(null);
   const canManage = ["diretoria", "dev"].includes(profile?.access_tier);
   const emptyDraft = { display_name: "", positions: [], member_type: "elenco", shirt_number: "", trial_expires_at: "" };
   const [editing, setEditing] = useState(null);
@@ -2156,20 +2155,17 @@ function SquadPageV3({ workspace, profile }) {
     setDraft(emptyDraft);
     setPhoto(null);
     setError("");
+    requestAnimationFrame(() => returnFocusRef.current?.isConnected && returnFocusRef.current.focus({ preventScroll: true }));
   };
-  useEffect(() => {
-    if (editing === null) return undefined;
-    const onKeyDown = (event) => event.key === "Escape" && close();
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [editing]);
   const openCreate = () => {
+    returnFocusRef.current = document.activeElement;
     setEditing({});
     setDraft(emptyDraft);
     setPhoto(null);
     setError("");
   };
   const openEdit = (player) => {
+    returnFocusRef.current = document.querySelector(`[aria-label="${CSS.escape(`Ações de ${player.display_name}`)}"]`);
     setEditing(player);
     setDraft({
       display_name: player.display_name || "",
@@ -2189,13 +2185,20 @@ function SquadPageV3({ workspace, profile }) {
   }));
   const save = async (event) => {
     event.preventDefault();
+    if (savingRef.current) return;
+    savingRef.current = true;
+    setSaving(true);
     try {
       if (!draft.display_name.trim()) throw new Error("Informe o nome do jogador.");
       if (!draft.positions.length) throw new Error("Escolha ao menos uma posição.");
-      await workspace.savePlayer({ ...draft, id: editing?.id, avatar_path: editing?.avatar_path || null }, photo);
+      const result = await workspace.savePlayer({ ...draft, id: editing?.id, avatar_path: editing?.avatar_path || null }, photo);
+      notify(result?.reactivated ? "Jogador reativado. Perfil e histórico preservados." : "Jogador salvo. Elenco atualizado.");
       close();
     } catch (saveError) {
       setError(saveError.message || "Não foi possível salvar o jogador.");
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
     }
   };
   const classify = (player) => {
@@ -2242,8 +2245,8 @@ function SquadPageV3({ workspace, profile }) {
           </section>
         );
       }) : <div className="matches-empty">O elenco FC 27 começa vazio. Adicione os jogadores oficiais quando estiver pronto.</div>}
-      {editing !== null && <ViewportDialog className="match-manual-backdrop"><form className="match-manual-modal squad-modal-v2" onSubmit={save}>
-        <header><div><span>ELENCO · {editing?.id ? "EDITAR PERFIL" : "NOVO PERFIL"}</span><h2>{editing?.id ? "Editar jogador" : "Adicionar jogador"}</h2><p>O preview acompanha a ficha antes de entrar no elenco.</p></div><button type="button" className="icon-button" onClick={close} aria-label="Fechar"><Icon name="close" /></button></header>
+      {editing !== null && <ViewportDialog className="match-manual-backdrop squad-dialog-layer" onClose={() => { if (!savingRef.current) close(); }}><form className="match-manual-modal squad-modal-v2" role="dialog" aria-modal="true" aria-labelledby="squad-editor-title" aria-busy={saving} onSubmit={save}>
+        <header><div><span>ELENCO · {editing?.id ? "EDITAR PERFIL" : "NOVO PERFIL"}</span><h2 id="squad-editor-title">{editing?.id ? "Editar jogador" : "Adicionar jogador"}</h2><p>O preview acompanha a ficha antes de entrar no elenco.</p></div><button type="button" className="icon-button" onClick={close} disabled={saving} aria-label="Fechar"><Icon name="close" /></button></header>
         <div className="squad-editor"><section className="manual-form-grid">
           <label className="manual-full">NOME DE EXIBIÇÃO<input autoFocus value={draft.display_name} onChange={(event) => setDraft((current) => ({ ...current, display_name: event.target.value }))} placeholder="Como aparece no time" /></label>
           <label>NÚMERO<input type="number" min="0" max="99" value={draft.shirt_number} onChange={(event) => setDraft((current) => ({ ...current, shirt_number: event.target.value }))} placeholder="10" /></label>
@@ -2256,7 +2259,7 @@ function SquadPageV3({ workspace, profile }) {
           </fieldset>
           {draft.member_type === "teste" && <label className="manual-full">TESTE ATÉ<input type="date" value={draft.trial_expires_at} onChange={(event) => setDraft((current) => ({ ...current, trial_expires_at: event.target.value }))} /></label>}
         </section><aside className="squad-preview"><span>PREVIEW DO ELENCO</span><Avatar name={draft.display_name || "?"} logo={currentAvatar} kind="photo" /><small>{draft.positions[0] || "POSIÇÃO"}</small><h3>{draft.display_name || "NOME DO JOGADOR"}</h3><p>{draft.member_type === "teste" ? "Jogador em teste" : draft.member_type === "complete" ? "Jogador completo" : "Jogador do elenco"}</p></aside></div>
-        <footer><button type="button" className="secondary" onClick={close}>CANCELAR</button><button className="primary"><Icon name="upload" size={16} />{editing?.id ? "SALVAR ALTERAÇÕES" : "SALVAR JOGADOR"}</button></footer>
+        <footer>{error && <p className="squad-save-error" role="alert">{error}</p>}<div><button type="button" className="secondary" onClick={close} disabled={saving}>CANCELAR</button><button className="primary" disabled={saving}><Icon name="upload" size={16} />{saving ? "SALVANDO…" : editing?.id ? "SALVAR ALTERAÇÕES" : "SALVAR JOGADOR"}</button></div></footer>
       </form></ViewportDialog>}
     </section>
   );

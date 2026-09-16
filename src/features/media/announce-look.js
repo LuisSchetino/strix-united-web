@@ -227,7 +227,7 @@ export function buildNameBrush(seed, box) {
 }
 
 export function campaignName(person) {
-  return String(person?.nick || person?.name || "").toUpperCase();
+  return String(person?.name || "").toUpperCase();
 }
 
 export function fitNameLayout(ctx, name, maxWidth, prefer = 88, min = 40) {

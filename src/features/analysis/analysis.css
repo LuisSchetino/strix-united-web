@@ -45,3 +45,12 @@
 .radar-grid,.radar-axis{stroke:#ffffff1f!important}.analysis-radar text{fill:#aeb4bb!important}
 .analysis-radar-legend article{box-shadow:inset 0 1px #ffffff05}
 .analysis-empty{border-color:var(--strix-border-strong);color:#8e969f}
+.analysis-v2 .analysis-results{display:grid;gap:18px;animation:analysis-update 180ms ease-out both}
+.analysis-v2 .analysis-filters>button{position:relative;min-height:44px;transition:background 160ms ease,color 160ms ease;isolation:isolate}
+.analysis-v2 .analysis-filters>button:after{content:"";position:absolute;left:14px;right:14px;bottom:5px;height:2px;background:currentColor;opacity:0;transform:scaleX(.3);transition:opacity 160ms ease,transform 160ms ease}
+.analysis-v2 .analysis-filters>button[aria-pressed=true]:after{opacity:.55;transform:scaleX(1)}
+.analysis-v2 .analysis-context span{text-transform:uppercase;letter-spacing:.08em}
+.analysis-v2 .analysis-player-picker button,.analysis-v2 .analysis-xray-toggle button{min-height:44px;transition:background 180ms ease,border-color 180ms ease,color 180ms ease}
+.analysis-v2 .analysis-metric p{font-size:11px;line-height:1.5}
+@keyframes analysis-update{from{opacity:.72;transform:translateY(3px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.analysis-v2 .analysis-results{animation:none}.analysis-v2 .analysis-filters>button,.analysis-v2 .analysis-filters>button:after,.analysis-v2 .analysis-player-picker button,.analysis-v2 .analysis-xray-toggle button{transition:none}}

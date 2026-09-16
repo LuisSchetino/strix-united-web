@@ -5,7 +5,6 @@ import {
   asArray,
   canManageLibrary,
   canTrackLibrary,
-  libraryThumbnail,
   librarySource,
   progressPatch,
 } from "./library-core.js";
@@ -22,6 +21,18 @@ const formatTime = (seconds) => {
   const value = Math.max(0, Math.round(Number(seconds) || 0));
   return `${Math.floor(value / 60)}:${String(value % 60).padStart(2, "0")}`;
 };
+
+function LibraryCover({ item, open }) {
+  const [failed, setFailed] = useState(false);
+  const thumbnail = item.thumbnail_url;
+  const hasImage = thumbnail && !failed;
+  return <button className={`library-cover editorial-cover${hasImage ? " has-thumbnail" : ""}`} onClick={open} aria-label={`Assistir ${item.title}`}>
+    {hasImage ? <img src={thumbnail} alt="" loading="lazy" decoding="async" onError={() => setFailed(true)}/> : <svg className="library-pitch-art" viewBox="0 0 320 200" aria-hidden="true"><path d="M22 20H298V180H22Z M160 20V180 M22 55H70V145H22 M298 55H250V145H298"/><circle cx="160" cy="100" r="34"/><path className="play-route" d="M48 128L126 130L188 76L270 76"/><circle cx="48" cy="128" r="5"/><circle cx="126" cy="130" r="5"/><circle cx="188" cy="76" r="5"/></svg>}
+    <span className="library-cover-brand">STRIX UNITED <b>FC27</b></span>
+    <span className="library-cover-caption">{item.category === "review" ? "REVIEW" : "JOGADA"}<b>{asArray(item.tags)[0] || (item.category === "review" ? "Leitura de jogo" : "Biblioteca tática")}</b></span>
+    <i className="library-play-mark" aria-hidden="true">▶</i>
+  </button>;
+}
 
 let youtubeApiPromise;
 function loadYouTubeApi() {
@@ -531,21 +542,15 @@ export function LibraryPage({ client, profile }) {
                   : `Aberto em ${formatDate(own.last_accessed_at)}`
                 : "Ainda não aberto";
               return (
-                <article key={item.id}>
-                  <button
-                    className="library-cover"
-                    onClick={() => setSelected(item)}
-                  >
-                    <img src={libraryThumbnail(item)} alt="" />
-                    <i>▶</i>
-                  </button>
-                  <div>
+                <article className="library-editorial-card" key={item.id}>
+                  <LibraryCover key={`${item.id}-${item.thumbnail_url || ""}`} item={item} open={() => setSelected(item)}/>
+                  <div className="library-editorial-copy">
                     <small>
                       {source.type.toUpperCase()} ·{" "}
                       {formatDate(item.published_at)}
                     </small>
-                    <h2>{item.title}</h2>
-                    <p>{item.description || "Sem descrição."}</p>
+                    <h2><button type="button" onClick={() => setSelected(item)}>{item.title}</button></h2>
+                    {item.description && <p>{item.description}</p>}
                     <div className="library-tags">
                       {asArray(item.tags).map((tag) => (
                         <em key={tag}>{tag}</em>
@@ -553,6 +558,7 @@ export function LibraryPage({ client, profile }) {
                     </div>
                     <footer>
                       <span>{progressLabel}</span>
+                      <button type="button" className="library-watch" onClick={() => setSelected(item)}>ASSISTIR <span aria-hidden="true">↗</span></button>
                     </footer>
                   </div>
                 </article>

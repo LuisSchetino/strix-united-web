@@ -9,7 +9,7 @@ import "./ui/motion/motion.css";
 
 const workspace = {
   players: [
-    { id: "p1", display_name: "Oben", positions: ["MC"], avatar_path: "/brand/strix/portrait-nunes.png?v=3", is_active: true, member_type: "elenco", structure_role: "diretoria" },
+    { id: "p1", display_name: "OBEEN", positions: ["MC"], avatar_path: "/brand/strix/portrait-nunes.png?v=3", is_active: true, member_type: "elenco", structure_role: "diretoria" },
     { id: "p2", display_name: "Santozz", positions: ["ATA"], avatar_path: "/brand/strix/portrait-santozz.png?v=3", is_active: true, member_type: "elenco", structure_role: "jogador" },
     { id: "p3", display_name: "Cedraz", positions: ["ZAG"], is_active: true, member_type: "elenco", structure_role: "conselho" },
     { id: "p4", display_name: "Ceni", positions: ["GOL"], avatar_path: "/brand/strix/portrait-ceni.png?v=3", is_active: true, member_type: "elenco", structure_role: "staff" },

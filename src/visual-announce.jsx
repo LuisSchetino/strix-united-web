@@ -8,7 +8,7 @@ import { buildAnnounceTimeline } from "./features/media/announce-timeline.js";
 import { announceFrameTime, describeAnnounceFrame, renderAnnounceFrame } from "./features/media/announce-frame.js";
 
 const people = [
-  { id: "p1", name: "Oben", nick: "OBEEN", photo: "/brand/strix/portrait-nunes.png?v=3", position: "MC", group: "MEI", extraRole: "diretoria", extraBadge: "DIRETORIA", initials: "OB" },
+  { id: "p1", name: "OBEEN", nick: "alias-ignored", photo: "/brand/strix/portrait-nunes.png?v=3", position: "MC", group: "MEI", extraRole: "diretoria", extraBadge: "DIRETORIA", initials: "OB" },
   { id: "p2", name: "Santozz", nick: "", photo: "/brand/strix/portrait-santozz.png?v=3", position: "ATA", group: "ATA", extraRole: "jogador", extraBadge: "", initials: "SA" },
   { id: "p3", name: "Cedraz", nick: "", photo: "", position: "ZAG", group: "DEF", extraRole: "conselho", extraBadge: "CONSELHO", initials: "CE" },
   { id: "p4", name: "João Pedro da Silva Extra", nick: "", photo: "", position: "GOL", group: "GOL", extraRole: "manager", extraBadge: "MANAGER", initials: "JP" },
@@ -31,10 +31,10 @@ function stillsFor(timeline) {
     return timeline.still
       ? [{ time: 0, label: "post" }]
       : [
-          { time: 0.18, label: "0.18s opening" },
+          { time: 0.55, label: "0.55s opening" },
           { time: 1.25, label: "1.25s reveal" },
           { time: 2.4, label: "2.4s hero" },
-          { time: 3.4, label: "3.4s phrase" },
+          { time: 2.3, label: "2.3s phrase" },
           { time: 5.4, label: "5.4s reframe" },
           { time: 7.4, label: "7.4s detail" },
           { time: 9.6, label: "9.6s close" },
@@ -45,7 +45,7 @@ function stillsFor(timeline) {
   return timeline.still
     ? [{ time: 0, label: "elenco" }]
     : [
-        { time: 0.5, label: "opening" },
+        { time: 0.7, label: "opening" },
         ...peopleScenes.map((scene, index) => ({
           time: scene.start + 1.1,
           label: `hero ${index + 1}`,
@@ -128,7 +128,7 @@ function App() {
         setStatus(`Gerando ${mode.id}…`);
         const result = await encodeMode(mode, assets);
         const url = URL.createObjectURL(result.blob);
-        const fileName = (mode.id === "team-8" ? "strix-anuncio-elenco-8-reels.mp4" : result.fileName).replace(/(\.\w+)$/, "-v36$1");
+        const fileName = (mode.id === "team-8" ? "strix-anuncio-elenco-8-reels.mp4" : result.fileName).replace(/(\.\w+)$/, "-v37$1");
         done.push({ ...result, url, fileName, id: mode.id });
         setExports([...done]);
       }
@@ -139,7 +139,7 @@ function App() {
 
   return (
     <main style={{ fontFamily: "Inter, sans-serif", background: "#050607", color: "#efece6", minHeight: "100dvh", padding: 24 }}>
-      <h1>Anúncios FC 27 · polish visual v3.6</h1>
+      <h1>Anúncios FC 27 · polish visual v3.7</h1>
       <p>{status}</p>
       <p>{timing}</p>
       {frames.map((group) => (

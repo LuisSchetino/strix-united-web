@@ -4,15 +4,17 @@ const stack = [];
 let savedOverflow = "";
 
 /** Keyboard and scroll ownership for custom dialog surfaces, including nesting. */
-export function useDialog(close) {
+export function useDialog(close, { enabled = true, lockScroll = true } = {}) {
   const ref = useRef(null);
   const closeRef = useRef(close);
   closeRef.current = close;
   useEffect(() => {
+    if (!enabled) return undefined;
     const element = ref.current;
     if (!element) return undefined;
     const previous = document.activeElement;
-    if (!stack.length) { savedOverflow = document.body.style.overflow; document.body.style.overflow = "hidden"; }
+    const ownsScroll = lockScroll && !stack.length;
+    if (ownsScroll) { savedOverflow = document.body.style.overflow; document.body.style.overflow = "hidden"; }
     stack.push(element);
     const targets = () => Array.from(element.querySelectorAll('button:not(:disabled),a[href],input:not(:disabled),select:not(:disabled),textarea:not(:disabled),[tabindex="0"]')).filter(node => node.getClientRects().length);
     (targets()[0] || element).focus({ preventScroll: true });
@@ -30,9 +32,9 @@ export function useDialog(close) {
     return () => {
       element.removeEventListener("keydown", keydown);
       stack.splice(stack.indexOf(element), 1);
-      if (!stack.length) document.body.style.overflow = savedOverflow;
+      if (ownsScroll) document.body.style.overflow = savedOverflow;
       if (previous?.isConnected) previous.focus({ preventScroll: true });
     };
-  }, []);
+  }, [enabled, lockScroll]);
   return ref;
 }

@@ -178,13 +178,15 @@ test("os 4 modos montam timeline e o painter escreve o nome", () => {
     const ctx = mockContext();
     renderAnnounceFrame(ctx, { timeline, timeSec: announceFrameTime(0, timeline), assets: { players: [], byId: {} } });
     const names = ctx.calls.filter((call) => call[0] === "fillText").map((call) => call[1]).join(" ");
-    assert.ok(names.includes("STRIX") || names.includes("OBEEN") || names.includes("ELENCO") || names.includes("PLANTEL"));
+    assert.ok(names.includes("STRIX") || names.includes("OBEN") || names.includes("ELENCO") || names.includes("PLANTEL"));
   }
 });
 
 test("v3.1 names wrap, team post uses 2x4, and missing FX do not paint", () => {
-  assert.equal(campaignName({ nick: "OBEEN", name: "Oben" }), "OBEEN");
+  assert.equal(campaignName({ nick: "OBEEN", name: "Oben" }), "OBEN");
   assert.equal(campaignName({ name: "Santozz" }), "SANTOZZ");
+  assert.equal(campaignName({ nick: "39ygo", name: "YGO" }), "YGO");
+  assert.equal(campaignName({ name: "Júlio" }), "JÚLIO");
   const ctx = mockContext();
   const long = fitNameLayout(ctx, "João Pedro da Silva Extra", 240, 72, 40);
   assert.equal(long.lines.length, 2);
@@ -207,6 +209,24 @@ test("v3.1 names wrap, team post uses 2x4, and missing FX do not paint", () => {
   const missing = missingAnnounceFx({});
   assert.equal(missing.length, listAnnounceFxSlots().length);
   assert.equal(composeAnnounceFx(ctx, { bitmap: null }, { x: 0, y: 0, w: 100, h: 100, alpha: 1 }), false);
+});
+
+test("announce name follows Elencos display_name and ignores alias", () => {
+  const people = collectAnnouncePeople(workspace());
+  assert.equal(people[0].name, "Oben");
+  assert.equal(people[0].nick, "OBEEN");
+  assert.equal(campaignName(people[0]), "OBEN");
+  const ctx = mockContext();
+  const timeline = buildAnnounceTimeline({
+    kind: "individual",
+    format: "feed",
+    people: [people[0]],
+    phrase: "Mais uma peça confirmada para o FC 27.",
+  });
+  renderAnnounceFrame(ctx, { timeline, timeSec: 0, assets: { players: [], byId: {} } });
+  const names = ctx.calls.filter((call) => call[0] === "fillText").map((call) => call[1]).join(" ");
+  assert.ok(names.includes("OBEN"));
+  assert.equal(names.includes("OBEEN"), false);
 });
 
 test("subject fit never crops the head out of the photo box", () => {
