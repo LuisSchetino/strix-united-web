@@ -88,7 +88,7 @@ function getSoftPlane(bitmap) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return null;
   ctx.drawImage(bitmap, 0, 0, 180, 320);
-  ctx.fillStyle = "rgba(5,6,7,0.66)";
+  ctx.fillStyle = "rgba(5,6,7,0.48)";
   ctx.fillRect(0, 0, 180, 320);
   softPlanes.set(bitmap, canvas);
   return canvas;
@@ -133,13 +133,35 @@ function paintGrain(ctx, timeline, time, assets) {
 }
 
 function paintGrade(ctx, x, y, w, h) {
-  ctx.fillStyle = "rgba(5,6,7,0.16)";
+  const punch = ctx.createRadialGradient(x + w * 0.48, y + h * 0.32, Math.min(w, h) * 0.1, x + w * 0.5, y + h * 0.42, Math.max(w, h) * 0.82);
+  punch.addColorStop(0, "rgba(255,255,255,0.1)");
+  punch.addColorStop(0.38, "rgba(255,255,255,0)");
+  punch.addColorStop(1, "rgba(5,6,7,0.5)");
+  ctx.save();
+  ctx.globalCompositeOperation = "overlay";
+  ctx.fillStyle = punch;
   ctx.fillRect(x, y, w, h);
-  const vig = ctx.createRadialGradient(x + w / 2, y + h * 0.4, Math.min(w, h) * 0.16, x + w / 2, y + h * 0.42, Math.max(w, h) * 0.72);
-  vig.addColorStop(0, "rgba(5,6,7,0)");
-  vig.addColorStop(1, "rgba(5,6,7,0.36)");
-  ctx.fillStyle = vig;
+  ctx.restore();
+  const blacks = ctx.createLinearGradient(x, y + h * 0.52, x, y + h);
+  blacks.addColorStop(0, "rgba(5,6,7,0)");
+  blacks.addColorStop(0.55, "rgba(5,6,7,0.16)");
+  blacks.addColorStop(1, "rgba(5,6,7,0.38)");
+  ctx.fillStyle = blacks;
   ctx.fillRect(x, y, w, h);
+  const vignette = ctx.createRadialGradient(x + w * 0.5, y + h * 0.38, Math.min(w, h) * 0.22, x + w * 0.5, y + h * 0.42, Math.max(w, h) * 0.72);
+  vignette.addColorStop(0, "rgba(5,6,7,0)");
+  vignette.addColorStop(1, "rgba(5,6,7,0.14)");
+  ctx.fillStyle = vignette;
+  ctx.fillRect(x, y, w, h);
+  const rim = ctx.createLinearGradient(x + w * 0.04, y + h * 0.08, x + w * 0.55, y + h * 0.58);
+  rim.addColorStop(0, "rgba(239,236,230,0.22)");
+  rim.addColorStop(0.34, "rgba(239,236,230,0.06)");
+  rim.addColorStop(1, "rgba(239,236,230,0)");
+  ctx.save();
+  ctx.globalCompositeOperation = "screen";
+  ctx.fillStyle = rim;
+  ctx.fillRect(x, y, w, h);
+  ctx.restore();
 }
 
 function paintBackground(ctx, timeline, bitmap, time, camera = 1) {
@@ -153,7 +175,7 @@ function paintBackground(ctx, timeline, bitmap, time, camera = 1) {
     const w = width * scale;
     const h = height * scale;
     ctx.save();
-    ctx.globalAlpha = 0.32;
+    ctx.globalAlpha = 0.4;
     ctx.drawImage(plane, (width - w) / 2 + drift, (height - h) / 2 + drift * 0.22, w, h);
     ctx.restore();
   }
@@ -356,6 +378,11 @@ function paintSubject(ctx, bitmap, person, box, classified, { scale = 1, alpha =
     ctx.restore();
     return;
   }
+  const glow = ctx.createRadialGradient(w * 0.5, h * 0.4, 18, w * 0.5, h * 0.46, Math.max(w, h) * 0.62);
+  glow.addColorStop(0, "rgba(239,236,230,0.16)");
+  glow.addColorStop(1, "rgba(239,236,230,0)");
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, w, h);
   ctx.beginPath();
   ctx.rect(0, 0, w, h);
   ctx.clip();
@@ -503,14 +530,6 @@ function paintHeroComposition(ctx, timeline, time, person, assets, {
   const camera = heroCamera(time, timeline.still, stage);
   const arrive = 1.12 - photoIn * 0.12;
   paintBackground(ctx, timeline, asset?.bitmap, time, camera.bg);
-  composeAnnounceFx(ctx, assets?.fx?.smoke01, {
-    x: 0,
-    y: timeline.height * 0.28,
-    w: timeline.width,
-    h: timeline.height * 0.62,
-    alpha: photoIn,
-    time,
-  });
   paintSubject(ctx, asset?.bitmap, person, box, classified, {
     scale: arrive * camera.scale * recede,
     alpha: photoIn,
@@ -559,17 +578,17 @@ function paintHeroComposition(ctx, timeline, time, person, assets, {
 function stageCamera(stage = "hero", local = 0) {
   const ken = clamp(Number(local) / 1.7);
   const maps = {
-    reveal: { scale: 1.22, focus: 0.1, drift: 14, lift: 4, inset: 36 },
-    hero: { scale: 1.08, focus: 0.16, drift: 8, lift: 0, inset: 62 },
-    reframe: { scale: 1.34, focus: 0.07, drift: 20, lift: -12, inset: 98 },
-    detail: { scale: 1.18, focus: 0.3, drift: 6, lift: 8, inset: 52 },
-    close: { scale: 1.06, focus: 0.17, drift: 4, lift: 4, inset: 78 },
+    reveal: { scale: 1.06, focus: 0.16, drift: 7, lift: 18, inset: 40 },
+    hero: { scale: 1.15, focus: 0.17, drift: 8, lift: -4, inset: 8 },
+    reframe: { scale: 1.22, focus: 0.12, drift: 18, lift: -16, inset: 0 },
+    detail: { scale: 1.18, focus: 0.24, drift: 6, lift: 10, inset: 30 },
+    close: { scale: 1.1, focus: 0.18, drift: 3, lift: 2, inset: 16 },
   };
   const base = maps[stage] || maps.hero;
   return {
     ...base,
-    scale: base.scale + ken * 0.04,
-    focus: clamp(base.focus + ken * 0.012, 0.06, 0.34),
+    scale: base.scale + ken * 0.035,
+    focus: clamp(base.focus + ken * 0.01, 0.1, 0.28),
     drift: base.drift + Math.sin(local * 0.9) * 2,
   };
 }
@@ -579,59 +598,45 @@ function playerStageGeometry(timeline, stage = "hero", local = 0) {
   const story = format !== "feed";
   const type = typeScale(format);
   const camera = stageCamera(stage, local);
-  const typeReserve = story ? 372 : 268;
-  const gap = story ? 108 : 72;
+  const typeReserve = story ? 448 : 338;
+  const gap = story ? 108 : 96;
   const typeBox = {
     x: safe.side,
-    y: height - safe.bottom - typeReserve + (story ? 52 : 36),
+    y: height - safe.bottom - typeReserve + (story ? 36 : 28),
     w: width - safe.side * 2,
   };
-  const inset = story ? camera.inset : Math.max(24, camera.inset - 22);
-  const frameTop = safe.top + (story ? 84 : 54) + camera.lift * 0.4;
+  const inset = story ? camera.inset : Math.max(12, camera.inset - 10);
+  const frameTop = safe.top + (story ? 70 : 48) + camera.lift * 0.35;
   const frame = {
     x: safe.side + inset,
     y: frameTop,
     w: width - (safe.side + inset) * 2,
-    h: Math.max(360, typeBox.y - gap - frameTop),
+    h: Math.max(380, typeBox.y - gap - frameTop),
   };
   return { type, headerY: safe.top + (story ? 36 : 22), frame, typeBox, gap };
 }
 
-function paintAnnounceStageFx(ctx, timeline, time, assets, { leak = 0, rays = 0, smoke = 0 } = {}) {
+function paintAnnounceStageFx(ctx, timeline, time, assets, { leak = 0, rays = 0 } = {}) {
   const { width, height } = timeline;
-  const drift = Math.sin(time * 0.33) * 48;
-  const rise = Math.cos(time * 0.21) * 36;
-  if (smoke > 0.02) {
-    composeAnnounceFx(ctx, assets?.fx?.smoke01, {
-      x: -width * 0.12 + drift,
-      y: height * 0.18 + rise,
-      w: width * 1.24,
-      h: height * 0.92,
-      alpha: smoke,
-      scale: 1.1 + Math.sin(time * 0.15) * 0.05,
-      rotation: Math.sin(time * 0.08) * 0.03,
-      time: time * 0.72,
-    });
-  }
   if (rays > 0.02) {
     composeAnnounceFx(ctx, assets?.fx?.lightSweep01, {
-      x: -width * 0.06 + drift * 0.45,
-      y: -height * 0.08 + rise * 0.35,
-      w: width * 1.12,
-      h: height * 1.08,
+      x: -width * 0.04,
+      y: -height * 0.06,
+      w: width * 1.08,
+      h: height * 0.62,
       alpha: rays,
-      scale: 1.12,
-      time: time * 0.78,
+      scale: 1.06,
+      time: time * 0.65,
     });
   }
   if (leak > 0.02) {
     composeAnnounceFx(ctx, assets?.fx?.flare01, {
-      x: -width * 0.04,
-      y: -height * 0.06,
-      w: width * 1.08,
-      h: height * 0.7,
+      x: 0,
+      y: 0,
+      w: width,
+      h: height * 0.55,
       alpha: leak,
-      time: time,
+      time,
     });
   }
 }
@@ -643,21 +648,30 @@ function paintCampaignOpening(ctx, timeline, time, assets, {
   countLabel = "",
 } = {}) {
   const { width, height, safe } = timeline;
-  const type = typeScale(timeline.format);
-  const introEnd = timeline.introEnd || 1.18;
-  const fadeOut = time >= introEnd ? 1 - reveal(time, introEnd, 0.32, easeInOutCubic) : 1;
-  const logoIn = (timeline.still ? 1 : 0.94 + reveal(time, 0, 0.2, easeOutExpo) * 0.06) * fadeOut;
-  const brand = (timeline.still ? 1 : 0.92 + reveal(time, 0, 0.18, easeOutExpo) * 0.08) * fadeOut;
-  const title = (timeline.still ? 1 : 0.88 + reveal(time, 0.02, 0.28, easeOutQuart) * 0.12) * fadeOut;
-  const date = (timeline.still ? 1 : 0.4 + reveal(time, 0.08, 0.32, easeOutQuart) * 0.6) * fadeOut;
-  const bar = (timeline.still ? 1 : reveal(time, 0, 0.26, easeOutExpo)) * fadeOut;
+  const introEnd = timeline.introEnd || 1.08;
+  const fadeOut = time >= introEnd ? 1 - reveal(time, introEnd, 0.28, easeInOutCubic) : 1;
+  const logoIn = (timeline.still ? 1 : 0.96 + reveal(time, 0, 0.18, easeOutExpo) * 0.04) * fadeOut;
+  const brand = (timeline.still ? 1 : 0.94 + reveal(time, 0, 0.16, easeOutExpo) * 0.06) * fadeOut;
+  const title = (timeline.still ? 1 : 0.9 + reveal(time, 0.02, 0.26, easeOutQuart) * 0.1) * fadeOut;
+  const date = (timeline.still ? 1 : 0.48 + reveal(time, 0.06, 0.28, easeOutQuart) * 0.52) * fadeOut;
+  const bar = (timeline.still ? 1 : reveal(time, 0, 0.22, easeOutExpo)) * fadeOut;
   const x = width / 2;
   const feed = timeline.format === "feed";
-  const mark = feed ? 150 : 188;
-  const lockY = height * (feed ? 0.27 : 0.3);
-  const brandY = lockY - mark * 0.52 - (feed ? 28 : 36);
-  const titleY = lockY + mark * 0.52 + type.title * 0.88 + (feed ? 18 : 28);
-  const lineY = titleY + type.title * 1.08 + 20;
+  const mark = feed ? 176 : 268;
+  const titleSize = feed ? 138 : 208;
+  const lockY = height * (feed ? 0.29 : 0.31);
+  const brandY = lockY - mark * 0.52 - (feed ? 36 : 48);
+  const titleY = lockY + mark * 0.52 + titleSize * 0.78 + (feed ? 18 : 24);
+  const lineY = titleY + titleSize * 1.08 + 18;
+
+  ctx.save();
+  ctx.globalAlpha = logoIn * 0.22;
+  const lockGlow = ctx.createRadialGradient(x, lockY, 24, x, lockY, mark * 1.35);
+  lockGlow.addColorStop(0, "rgba(239,236,230,0.42)");
+  lockGlow.addColorStop(1, "rgba(239,236,230,0)");
+  ctx.fillStyle = lockGlow;
+  ctx.fillRect(x - mark * 1.4, lockY - mark * 1.2, mark * 2.8, mark * 2.4);
+  ctx.restore();
 
   ctx.save();
   ctx.globalAlpha = bar;
@@ -668,10 +682,10 @@ function paintCampaignOpening(ctx, timeline, time, assets, {
   ctx.lineTo(x + 230 * bar, brandY - 42);
   ctx.stroke();
   ctx.beginPath();
-  ctx.moveTo(safe.side, titleY - type.title * 0.7);
-  ctx.lineTo(safe.side + 110 * bar, titleY - type.title * 0.7);
-  ctx.moveTo(width - safe.side, titleY - type.title * 0.7);
-  ctx.lineTo(width - safe.side - 110 * bar, titleY - type.title * 0.7);
+  ctx.moveTo(safe.side, titleY - titleSize * 0.7);
+  ctx.lineTo(safe.side + 110 * bar, titleY - titleSize * 0.7);
+  ctx.moveTo(width - safe.side, titleY - titleSize * 0.7);
+  ctx.lineTo(width - safe.side - 110 * bar, titleY - titleSize * 0.7);
   ctx.stroke();
   ctx.restore();
 
@@ -684,39 +698,42 @@ function paintCampaignOpening(ctx, timeline, time, assets, {
   ctx.globalAlpha = brand;
   ctx.fillStyle = INK;
   ctx.textAlign = "center";
-  ctx.font = `800 ${type.eyebrow}px Inter, sans-serif`;
-  ctx.fillText("STRIX UNITED", x, brandY);
+  ctx.font = `800 ${feed ? 22 : 28}px Inter, sans-serif`;
+  ctx.fillText("STRIX UNITED", x, brandY - (feed ? 28 : 36));
+  ctx.fillStyle = MUTED;
+  ctx.font = `800 ${feed ? 18 : 24}px Inter, sans-serif`;
+  ctx.fillText("CAMPANHA OFICIAL", x, brandY);
   ctx.restore();
 
   ctx.save();
-  ctx.globalAlpha = title * 0.24;
-  const glow = ctx.createRadialGradient(x, titleY + type.title * 0.35, 12, x, titleY + type.title * 0.35, 460);
-  glow.addColorStop(0, "rgba(239,236,230,0.4)");
+  ctx.globalAlpha = title * 0.28;
+  const glow = ctx.createRadialGradient(x, titleY + titleSize * 0.35, 12, x, titleY + titleSize * 0.35, 520);
+  glow.addColorStop(0, "rgba(239,236,230,0.46)");
   glow.addColorStop(1, "rgba(239,236,230,0)");
   ctx.fillStyle = glow;
-  ctx.fillRect(x - 480, titleY - type.title, 960, type.title * 2.9);
+  ctx.fillRect(x - 520, titleY - titleSize, 1040, titleSize * 2.9);
   ctx.restore();
 
   ctx.save();
   ctx.globalAlpha = title;
   ctx.fillStyle = INK;
   ctx.textAlign = "center";
-  ctx.font = `700 ${type.title}px Rajdhani, sans-serif`;
-  const settle = 1.04 - title * 0.04;
+  ctx.font = `700 ${titleSize}px Rajdhani, sans-serif`;
+  const settle = 1.05 - title * 0.05;
   ctx.translate(x, titleY);
   ctx.scale(settle, settle);
   ctx.beginPath();
-  ctx.rect(-width * 0.5, -type.title, width * Math.max(title, 0.92), type.title * 2.5);
+  ctx.rect(-width * 0.5, -titleSize, width * Math.max(title, 0.94), titleSize * 2.5);
   ctx.clip();
   ctx.fillText(title1, 0, 0);
-  ctx.fillText(title2, 0, type.title * 0.94);
+  ctx.fillText(title2, 0, titleSize * 0.94);
   const sweepX = -300 + title * 680;
   const sweep = ctx.createLinearGradient(sweepX, 0, sweepX + 240, 0);
   sweep.addColorStop(0, "rgba(255,255,255,0)");
-  sweep.addColorStop(0.5, "rgba(255,255,255,0.18)");
+  sweep.addColorStop(0.5, "rgba(255,255,255,0.2)");
   sweep.addColorStop(1, "rgba(255,255,255,0)");
   ctx.fillStyle = sweep;
-  ctx.fillRect(-320, -type.title, 640, type.title * 2.3);
+  ctx.fillRect(-340, -titleSize, 680, titleSize * 2.3);
   ctx.restore();
 
   ctx.save();
@@ -729,7 +746,7 @@ function paintCampaignOpening(ctx, timeline, time, assets, {
   ctx.stroke();
   ctx.fillStyle = INK;
   ctx.textAlign = "center";
-  ctx.font = `700 ${type.date}px Inter, sans-serif`;
+  ctx.font = `700 ${feed ? 36 : 48}px Inter, sans-serif`;
   ctx.fillText(footer, x, lineY + 58);
   if (countLabel) {
     ctx.fillStyle = MUTED;
@@ -795,89 +812,99 @@ function paintPlayerVariable(ctx, timeline, time, assets, {
   ctx.rect(0, geo.headerY + 18, timeline.width, geo.typeBox.y - geo.headerY - 24);
   ctx.clip();
   paintSubject(ctx, asset?.bitmap, subject, {
-    x: geo.frame.x - 22,
-    y: geo.frame.y - 10 + float,
-    w: geo.frame.w + 44,
-    h: geo.frame.h + 8,
+    x: geo.frame.x - 36,
+    y: geo.frame.y - 16 + float,
+    w: geo.frame.w + 72,
+    h: geo.frame.h + 18,
     focusY: camera.focus,
   }, classified, {
-    scale: camera.scale + Math.sin(time * 0.18) * 0.012,
+    scale: camera.scale + Math.sin(time * 0.18) * 0.01,
     alpha: photoIn,
     drift,
     assets,
   });
-  const fadeTop = ctx.createLinearGradient(0, geo.headerY + 18, 0, geo.frame.y + 64);
+  const fadeTop = ctx.createLinearGradient(0, geo.headerY + 18, 0, geo.frame.y + 48);
   fadeTop.addColorStop(0, VOID);
   fadeTop.addColorStop(1, "rgba(5,6,7,0)");
   ctx.fillStyle = fadeTop;
-  ctx.fillRect(0, geo.headerY + 18, timeline.width, Math.max(40, geo.frame.y + 64 - geo.headerY));
-  const fade = ctx.createLinearGradient(0, geo.frame.y + geo.frame.h * 0.42, 0, geo.typeBox.y - 18);
+  ctx.fillRect(0, geo.headerY + 18, timeline.width, Math.max(36, geo.frame.y + 48 - geo.headerY));
+  const fade = ctx.createLinearGradient(0, geo.frame.y + geo.frame.h * 0.58, 0, geo.typeBox.y - 28);
   fade.addColorStop(0, "rgba(5,6,7,0)");
-  fade.addColorStop(0.48, "rgba(5,6,7,0.5)");
+  fade.addColorStop(0.55, "rgba(5,6,7,0.38)");
   fade.addColorStop(1, VOID);
   ctx.fillStyle = fade;
-  ctx.fillRect(0, geo.frame.y + geo.frame.h * 0.5, timeline.width, geo.typeBox.y - (geo.frame.y + geo.frame.h * 0.5));
-  const side = ctx.createLinearGradient(0, 0, 130, 0);
+  ctx.fillRect(0, geo.frame.y + geo.frame.h * 0.58, timeline.width, geo.typeBox.y - (geo.frame.y + geo.frame.h * 0.58));
+  const side = ctx.createLinearGradient(0, 0, 72, 0);
   side.addColorStop(0, VOID);
   side.addColorStop(1, "rgba(5,6,7,0)");
   ctx.fillStyle = side;
-  ctx.fillRect(0, geo.headerY + 18, 130, geo.typeBox.y - geo.headerY);
-  const sideR = ctx.createLinearGradient(timeline.width - 130, 0, timeline.width, 0);
+  ctx.fillRect(0, geo.headerY + 18, 72, geo.typeBox.y - geo.headerY);
+  const sideR = ctx.createLinearGradient(timeline.width - 72, 0, timeline.width, 0);
   sideR.addColorStop(0, "rgba(5,6,7,0)");
   sideR.addColorStop(1, VOID);
   ctx.fillStyle = sideR;
-  ctx.fillRect(timeline.width - 130, geo.headerY + 18, 130, geo.typeBox.y - geo.headerY);
+  ctx.fillRect(timeline.width - 72, geo.headerY + 18, 72, geo.typeBox.y - geo.headerY);
   ctx.restore();
 
   if (nameIn <= 0) return;
-  const name = fitNameLayout(ctx, campaignName(subject), geo.typeBox.w, Math.round(geo.type.kickoff * 0.88), 46);
+  const story = timeline.format !== "feed";
+  const name = fitNameLayout(ctx, campaignName(subject), geo.typeBox.w, story ? 164 : 128, story ? 62 : 52);
   const meta = [subject.position || "MC", subject.extraBadge].filter(Boolean).join("  ·  ");
+  const metaSize = story ? 42 : 32;
+  const phraseSize = story ? 44 : 36;
   ctx.save();
   ctx.globalAlpha = nameIn;
   ctx.textAlign = "left";
+  let cursor = geo.typeBox.y;
   if (indexLabel) {
     ctx.fillStyle = MUTED;
-    ctx.font = `800 ${geo.type.finaleKicker}px Inter, sans-serif`;
-    ctx.fillText(indexLabel, geo.typeBox.x, geo.typeBox.y - 10);
+    ctx.font = `800 ${story ? 24 : 18}px Inter, sans-serif`;
+    ctx.fillText(indexLabel, geo.typeBox.x, cursor);
+    cursor += 30;
   }
-  ctx.fillStyle = MUTED;
-  ctx.font = `800 ${geo.type.competition}px Inter, sans-serif`;
-  ctx.fillText(meta, geo.typeBox.x, geo.typeBox.y + (indexLabel ? 24 : 0));
   ctx.fillStyle = INK;
   name.lines.forEach((line, index) => {
     ctx.font = `700 ${name.size}px Rajdhani, sans-serif`;
-    ctx.fillText(line, geo.typeBox.x, geo.typeBox.y + (indexLabel ? 44 : 22) + name.size * (0.9 + index * 0.86));
+    ctx.fillText(line, geo.typeBox.x, cursor + name.size * (0.82 + index * 0.86));
   });
-  const ruleY = geo.typeBox.y + (indexLabel ? 58 : 38) + name.lines.length * (name.size * 0.86);
+  const nameBottom = cursor + name.size * (0.82 + (name.lines.length - 1) * 0.86);
+  ctx.fillStyle = MUTED;
+  ctx.font = `800 ${metaSize}px Inter, sans-serif`;
+  ctx.fillText(meta, geo.typeBox.x, nameBottom + 40);
+  const ruleY = nameBottom + 62;
   ctx.fillStyle = INK;
-  ctx.globalAlpha = nameIn * 0.7;
-  ctx.fillRect(geo.typeBox.x, ruleY, Math.min(160, geo.typeBox.w * 0.28), 2);
+  ctx.globalAlpha = nameIn * 0.75;
+  ctx.fillRect(geo.typeBox.x, ruleY, Math.min(200, geo.typeBox.w * 0.32), 4);
   if (phrase && phraseIn > 0) {
     ctx.globalAlpha = nameIn * phraseIn;
     ctx.fillStyle = INK;
-    ctx.font = timeline.format === "feed"
-      ? `600 ${geo.type.finaleName}px Inter, sans-serif`
-      : "600 28px Inter, sans-serif";
-    wrapPhrase(ctx, String(phrase).toUpperCase(), geo.typeBox.w, ctx.font).forEach((line, index) => {
-      ctx.fillText(line, geo.typeBox.x, ruleY + 62 + index * 36);
+    let size = phraseSize;
+    let lines = wrapPhrase(ctx, String(phrase).toUpperCase(), geo.typeBox.w, `600 ${size}px Inter, sans-serif`);
+    while (lines.length > 1 && size > (story ? 36 : 30)) {
+      size -= 2;
+      lines = wrapPhrase(ctx, String(phrase).toUpperCase(), geo.typeBox.w, `600 ${size}px Inter, sans-serif`);
+    }
+    ctx.font = `600 ${size}px Inter, sans-serif`;
+    lines.forEach((line, index) => {
+      ctx.fillText(line, geo.typeBox.x, ruleY + 58 + index * Math.round(size * 1.16));
     });
   }
   ctx.restore();
 }
 
 function paintIndividualStage(ctx, timeline, time, assets) {
-  const introEnd = timeline.introEnd || 1.18;
+  const introEnd = timeline.introEnd || 1.08;
   const still = timeline.still;
   const scene = still ? null : announceSceneAt(timeline, time);
   const stage = still ? "close" : (scene?.type || "hero");
   const local = still ? 1 : Math.max(0, time - (scene?.start || introEnd));
-  const presence = still ? 1 : reveal(time, introEnd, 0.24, easeOutExpo);
-  const photoIn = still ? 1 : reveal(time, introEnd, 0.34, easeOutQuart);
-  const nameIn = still ? 1 : reveal(time, introEnd + 0.02, 0.32, easeOutExpo);
-  const phraseIn = still ? 1 : reveal(time, timeline.phraseStart || 4.05, 0.42, easeOutExpo);
+  const presence = still ? 1 : reveal(time, introEnd, 0.22, easeOutExpo);
+  const photoIn = still ? 1 : reveal(time, introEnd, 0.28, easeOutQuart);
+  const nameIn = still ? 1 : reveal(time, introEnd + 0.01, 0.26, easeOutExpo);
+  const phraseIn = still ? 1 : reveal(time, timeline.phraseStart || 3.05, 0.36, easeOutExpo);
   paintPlayerStagePersistent(ctx, timeline, time, presence);
   if (presence <= 0) return;
-  const incoming = still ? 1 : reveal(time, introEnd, 0.24, easeInOutCubic);
+  const incoming = still ? 1 : reveal(time, introEnd, 0.22, easeInOutCubic);
   const paintVariable = (target) => {
     paintPlayerVariable(target, timeline, time, assets, {
       person: timeline.person,
@@ -902,21 +929,20 @@ function paintIndividualStage(ctx, timeline, time, assets) {
 }
 
 function paintIndividual(ctx, timeline, time, assets) {
-  const introEnd = timeline.introEnd || 1.18;
-  const finaleStart = timeline.finaleStart || 8.2;
+  const introEnd = timeline.introEnd || 1.08;
+  const finaleStart = timeline.finaleStart || 8.15;
   const still = timeline.still;
   const phase = still || time >= introEnd ? "match" : "intro";
   paintAmbient(ctx, timeline, time, assets, phase, { owl: false });
   paintAnnounceStageFx(ctx, timeline, time, assets, {
-    leak: still ? 0.08 : Math.max(fxEnvelope(time, 0, 0.9) * 0.55, fxEnvelope(time, finaleStart, 1) * 0.4),
-    rays: still ? 0.08 : (phase === "intro" ? fxEnvelope(time, 0.02, 1.05) * 0.22 : 0.05),
-    smoke: still ? 0.08 : (phase === "intro" ? 0.03 : 0.08),
+    leak: still ? 0.04 : Math.max(fxEnvelope(time, 0, 0.7) * 0.22, fxEnvelope(time, finaleStart, 0.8) * 0.16),
+    rays: still ? 0.05 : (phase === "intro" ? fxEnvelope(time, 0.02, 0.85) * 0.14 : 0.06),
   });
   paintSceneSweep(ctx, timeline, time);
-  if (!still && time < introEnd + 0.34) paintCampaignOpening(ctx, timeline, time, assets);
+  if (!still && time < introEnd + 0.3) paintCampaignOpening(ctx, timeline, time, assets);
   if (still || time >= introEnd) paintIndividualStage(ctx, timeline, time, assets);
-  if (!still && time >= finaleStart + 0.28) {
-    const lock = reveal(time, finaleStart + 0.28, 0.4, easeOutQuart);
+  if (!still && time >= finaleStart + 0.22) {
+    const lock = reveal(time, finaleStart + 0.22, 0.36, easeOutQuart);
     ctx.save();
     ctx.globalAlpha = lock * 0.9;
     ctx.fillStyle = MUTED;
@@ -925,12 +951,14 @@ function paintIndividual(ctx, timeline, time, assets) {
     ctx.fillText("STRIX UNITED  ·  FC 27", timeline.width / 2, timeline.height - timeline.safe.bottom + 52);
     ctx.restore();
   }
+  paintGrain(ctx, timeline, time, assets);
 }
 
 function teamBeatStage(local) {
-  if (local < 0.72) return "reveal";
-  if (local < 1.85) return "hero";
-  return "reframe";
+  if (local < 0.55) return "reveal";
+  if (local < 1.55) return "hero";
+  if (local < 2.55) return "reframe";
+  return "detail";
 }
 
 function paintTeamPersonStage(ctx, timeline, time, scene, assets, alpha = 1) {
@@ -938,8 +966,8 @@ function paintTeamPersonStage(ctx, timeline, time, scene, assets, alpha = 1) {
   const local = time - scene.start;
   const people = timeline.people || [];
   const stage = teamBeatStage(local);
-  const photoIn = reveal(local, 0.02, 0.3, easeOutQuart) * alpha;
-  const nameIn = reveal(local, 0.06, 0.28, easeOutExpo) * alpha;
+  const photoIn = reveal(local, 0.01, 0.24, easeOutQuart) * alpha;
+  const nameIn = reveal(local, 0.04, 0.22, easeOutExpo) * alpha;
   const exit = time > scene.end - 0.32 ? 1 - reveal(time, scene.end - 0.32, 0.32, easeInOutCubic) : 1;
   ctx.save();
   ctx.globalAlpha = exit;
@@ -1027,15 +1055,15 @@ function paintTeamRoster(ctx, timeline, time, scene, assets) {
     fade.addColorStop(1, "rgba(5,6,7,0.55)");
     ctx.fillStyle = fade;
     ctx.fillRect(x, y + photoH * 0.72, metrics.cellW, photoH * 0.28);
-    const name = fitNameLayout(ctx, campaignName(person), metrics.cellW, metrics.cellW > 360 ? 28 : 18, 14);
+    const name = fitNameLayout(ctx, campaignName(person), metrics.cellW, metrics.cellW > 360 ? 34 : 22, 16);
     name.lines.forEach((line, lineIndex) => {
       ctx.fillStyle = INK;
       ctx.font = `700 ${name.size}px Rajdhani, sans-serif`;
       ctx.textAlign = "left";
-      ctx.fillText(line, x, y + photoH + 24 + lineIndex * (name.size * 0.9));
+      ctx.fillText(line, x, y + photoH + 26 + lineIndex * (name.size * 0.88));
     });
     ctx.fillStyle = MUTED;
-    ctx.font = `800 ${metrics.cellW > 360 ? 13 : 11}px Inter, sans-serif`;
+    ctx.font = `800 ${metrics.cellW > 360 ? 15 : 12}px Inter, sans-serif`;
     ctx.fillText(fitText(ctx, [person.position, person.extraBadge].filter(Boolean).join("  ·  "), metrics.cellW, ctx.font), x, y + photoH + metrics.nameReserve - 6);
   });
   ctx.restore();
@@ -1049,12 +1077,11 @@ function paintTeam(ctx, timeline, time, assets) {
   const phase = still || time >= finaleStart ? "finale" : time >= introEnd ? "match" : "intro";
   paintAmbient(ctx, timeline, time, assets, phase === "intro" ? "intro" : "match", { owl: false });
   paintAnnounceStageFx(ctx, timeline, time, assets, {
-    leak: still ? 0.07 : Math.max(fxEnvelope(time, 0, 0.9) * 0.5, fxEnvelope(time, finaleStart, 0.85) * 0.32),
-    rays: still ? 0.07 : (phase === "intro" ? fxEnvelope(time, 0.02, 1.05) * 0.2 : 0.05),
-    smoke: still ? 0.07 : (phase === "intro" ? 0.03 : 0.07),
+    leak: still ? 0.04 : Math.max(fxEnvelope(time, 0, 0.7) * 0.2, fxEnvelope(time, finaleStart, 0.8) * 0.14),
+    rays: still ? 0.05 : (phase === "intro" ? fxEnvelope(time, 0.02, 0.85) * 0.14 : 0.06),
   });
   paintSceneSweep(ctx, timeline, time);
-  if (!still && time < introEnd + 0.34) {
+  if (!still && time < introEnd + 0.3) {
     const count = timeline.people?.length || 0;
     paintCampaignOpening(ctx, timeline, time, assets, {
       countLabel: `${String(count).padStart(2, "0")} ${count === 1 ? "JOGADOR" : "JOGADORES"}`,
@@ -1062,6 +1089,7 @@ function paintTeam(ctx, timeline, time, assets) {
   }
   if (still) {
     paintTeamRoster(ctx, timeline, time, scene, assets);
+    paintGrain(ctx, timeline, time, assets);
     return;
   }
   if (time >= introEnd && time < finaleStart) {
@@ -1077,7 +1105,10 @@ function paintTeam(ctx, timeline, time, assets) {
       return { persistent: enter * exit, current: now, incoming: now.index > 0 ? reveal(local, 0, 0.28, easeInOutCubic) : 1 };
     })();
     paintPlayerStagePersistent(ctx, timeline, time, persistent);
-    if (!current || persistent <= 0) return;
+    if (!current || persistent <= 0) {
+      paintGrain(ctx, timeline, time, assets);
+      return;
+    }
     const prev = current.index > 0
       ? (timeline.scenes || []).find((item) => item.type === "person" && item.index === current.index - 1)
       : null;
@@ -1095,12 +1126,15 @@ function paintTeam(ctx, timeline, time, assets) {
       ctx.clip();
       paintTeamPersonStage(ctx, timeline, time, current, assets, persistent);
       ctx.restore();
+      paintGrain(ctx, timeline, time, assets);
       return;
     }
     paintTeamPersonStage(ctx, timeline, time, current, assets, persistent);
+    paintGrain(ctx, timeline, time, assets);
     return;
   }
   if (time >= finaleStart) paintTeamRoster(ctx, timeline, time, scene, assets);
+  paintGrain(ctx, timeline, time, assets);
 }
 
 export function paintAnnounceFrame(ctx, { timeline, time = 0, assets } = {}) {

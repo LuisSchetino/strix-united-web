@@ -72,7 +72,7 @@ export function fitAnnounceSubject(bitmap, destW, destH, classified = {}, option
   const cover = Math.max(boxW / srcW, boxH / srcH);
   const contain = Math.min(boxW / srcW, boxH / srcH);
   const preferContain = crop === "cutout" || crop === "fullbody" || alphaRatio > 0.18;
-  const zoomCap = crop === "cutout" ? 1.1 : crop === "fullbody" ? 1.12 : 1.16;
+  const zoomCap = crop === "cutout" ? 1.12 : crop === "fullbody" ? 1.14 : 1.22;
   let scale = (preferContain ? contain : cover) * Math.min(cameraScale, zoomCap);
   const requestedFocus = Number.isFinite(options.focusY) ? options.focusY : photoFocusY(classified);
   const focus = preferContain
@@ -263,17 +263,17 @@ export function announceGridSpec(count = 0, format = "story") {
   const n = Math.max(0, Number(count) || 0);
   const story = format !== "feed";
   if (story) {
-    if (n <= 1) return { cols: 1, maxAspect: 1.52, nameReserve: 78 };
-    if (n === 2) return { cols: 2, maxAspect: 1.5, nameReserve: 74 };
-    if (n <= 4) return { cols: 2, maxAspect: 1.48, nameReserve: 70 };
-    if (n <= 6) return { cols: 2, maxAspect: 1.4, nameReserve: 66 };
-    return { cols: 2, maxAspect: 1.45, nameReserve: 68 };
+    if (n <= 1) return { cols: 1, maxAspect: 1.52, nameReserve: 92 };
+    if (n === 2) return { cols: 2, maxAspect: 1.5, nameReserve: 88 };
+    if (n <= 4) return { cols: 2, maxAspect: 1.48, nameReserve: 84 };
+    if (n <= 6) return { cols: 2, maxAspect: 1.4, nameReserve: 78 };
+    return { cols: 2, maxAspect: 1.45, nameReserve: 76 };
   }
-  if (n <= 1) return { cols: 1, maxAspect: 1.28, nameReserve: 86 };
-  if (n === 2) return { cols: 2, maxAspect: 1.22, nameReserve: 82 };
-  if (n <= 4) return { cols: 2, maxAspect: 1.18, nameReserve: 80 };
-  if (n <= 6) return { cols: 2, maxAspect: 1.08, nameReserve: 76 };
-  if (n <= 8) return { cols: 2, maxAspect: 1.0, nameReserve: 74 };
+  if (n <= 1) return { cols: 1, maxAspect: 1.28, nameReserve: 98 };
+  if (n === 2) return { cols: 2, maxAspect: 1.22, nameReserve: 94 };
+  if (n <= 4) return { cols: 2, maxAspect: 1.18, nameReserve: 90 };
+  if (n <= 6) return { cols: 2, maxAspect: 1.08, nameReserve: 84 };
+  if (n <= 8) return { cols: 2, maxAspect: 1.0, nameReserve: 80 };
   if (n <= 12) return { cols: 3, maxAspect: 1.12, nameReserve: 62 };
   return { cols: 3, maxAspect: 1.02, nameReserve: 58 };
 }

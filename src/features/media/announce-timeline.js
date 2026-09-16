@@ -65,12 +65,12 @@ export function buildAnnounceTimeline({
 
   if (mode === "individual") {
     const duration = still ? 0.04 : individualAnnounceDuration();
-    const introEnd = still ? 0 : 1.18;
-    const revealEnd = still ? 0 : 2.22;
-    const heroEnd = still ? 0 : 4.55;
-    const reframeEnd = still ? 0 : 6.45;
-    const detailEnd = still ? 0 : 8.2;
-    const heroTime = still ? 5.2 : 3.15;
+    const introEnd = still ? 0 : 1.08;
+    const revealEnd = still ? 0 : 2.18;
+    const heroEnd = still ? 0 : 4.45;
+    const reframeEnd = still ? 0 : 6.4;
+    const detailEnd = still ? 0 : 8.15;
+    const heroTime = still ? 5.2 : 2.9;
     return {
       ...empty,
       duration,
@@ -79,7 +79,7 @@ export function buildAnnounceTimeline({
       revealEnd,
       holdStart: introEnd,
       finaleStart: detailEnd,
-      phraseStart: still ? 0 : 4.05,
+      phraseStart: still ? 0 : 3.05,
       heroTime,
       scenes: still
         ? [{ id: "still", type: "still", start: 0, end: duration, person: selected[0], variant: look.variants[0] }]

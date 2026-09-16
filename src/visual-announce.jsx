@@ -31,13 +31,13 @@ function stillsFor(timeline) {
     return timeline.still
       ? [{ time: 0, label: "post" }]
       : [
-          { time: 0.12, label: "0.12s opening" },
-          { time: 1.5, label: "1.5s" },
-          { time: 2.5, label: "2.5s" },
-          { time: 3.5, label: "3.5s" },
-          { time: 5, label: "5s" },
-          { time: 7, label: "7s" },
-          { time: 9, label: "9s" },
+          { time: 0.18, label: "0.18s opening" },
+          { time: 1.25, label: "1.25s reveal" },
+          { time: 2.4, label: "2.4s hero" },
+          { time: 3.4, label: "3.4s phrase" },
+          { time: 5.4, label: "5.4s reframe" },
+          { time: 7.4, label: "7.4s detail" },
+          { time: 9.6, label: "9.6s close" },
         ];
   }
   const peopleScenes = (timeline.scenes || []).filter((scene) => scene.type === "person");
@@ -128,7 +128,7 @@ function App() {
         setStatus(`Gerando ${mode.id}…`);
         const result = await encodeMode(mode, assets);
         const url = URL.createObjectURL(result.blob);
-        const fileName = (mode.id === "team-8" ? "strix-anuncio-elenco-8-reels.mp4" : result.fileName).replace(/(\.\w+)$/, "-v35$1");
+        const fileName = (mode.id === "team-8" ? "strix-anuncio-elenco-8-reels.mp4" : result.fileName).replace(/(\.\w+)$/, "-v36$1");
         done.push({ ...result, url, fileName, id: mode.id });
         setExports([...done]);
       }
@@ -139,7 +139,7 @@ function App() {
 
   return (
     <main style={{ fontFamily: "Inter, sans-serif", background: "#050607", color: "#efece6", minHeight: "100dvh", padding: 24 }}>
-      <h1>Anúncios FC 27 · crop hotfix v3.5</h1>
+      <h1>Anúncios FC 27 · polish visual v3.6</h1>
       <p>{status}</p>
       <p>{timing}</p>
       {frames.map((group) => (
@@ -148,7 +148,7 @@ function App() {
           <div style={{ display: "flex", gap: 12, overflowX: "auto" }}>
             {group.marks.map((mark) => (
               <figure key={mark.label} style={{ margin: 0 }}>
-                <img src={mark.image} alt={mark.label} width={160} />
+                <img src={mark.image} alt={mark.label} width={220} style={{ background: "#050607", display: "block" }} />
                 <figcaption>{mark.label} · {mark.scene.sceneType}</figcaption>
               </figure>
             ))}
@@ -160,8 +160,8 @@ function App() {
           <article key={item.id}>
             <h3>{item.fileName}</h3>
             {item.fileName.endsWith(".png")
-              ? <img src={item.url} alt={item.fileName} width={260} />
-              : <video src={item.url} controls playsInline width={260} />}
+              ? <img src={item.url} alt={item.fileName} width={320} />
+              : <video src={item.url} controls playsInline width={320} />}
             <div><a href={item.url} download={item.fileName}>baixar</a></div>
           </article>
         ))}
