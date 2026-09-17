@@ -1,13 +1,14 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { IconArrowDownRight, IconArrowUpRight, IconArrowsExchange, IconBallFootball, IconHandStop, IconMinus, IconRadar2, IconShieldCheck, IconTargetArrow } from "@tabler/icons-react";
-import { AnimatedNumber } from "../../ui/motion/motion.jsx";
+import { AnimatedNumber, SegmentedControl } from "../../ui/motion/motion.jsx";
+import { canViewAnalysis } from "../../access.js";
+import { AccessDenied } from "../../ui/AccessDenied.jsx";
 import { RastroDataSignature } from "../../ui/RastroBrand.jsx";
 import { SelectControl } from "../../ui/SelectControl.jsx";
 import { buildAnalysis, buildPlayerComparison, comparePeriods, selectAnalysisPeriod } from "./analysis-core.js";
 import "./analysis.css";
 
-const allowed = new Set(["conselho", "diretoria", "dev"]);
-const radarColors = ["#2F80FF", "#ffca68", "#8d7cff", "#63dfa9"];
+const radarColors = ["#c8ccd0", "#ffca68", "#8d7cff", "#63dfa9"];
 const Trend = ({ value }) => value === "up" ? <span className="is-up"><IconArrowUpRight/>MELHORA</span> : value === "down" ? <span className="is-down"><IconArrowDownRight/>QUEDA</span> : <span><IconMinus/>ESTÁVEL</span>;
 
 function Metric({ icon: Icon, label, value, suffix = "", note, tooltip, trend }) {
@@ -60,11 +61,11 @@ function PlayerComparison({ matches, workspace, competitions }) {
 
 export function AnalysisPage({ workspace, profile, matches = workspace.matches || [] }) {
   const [period, setPeriod] = useState("last5");
-  if (!allowed.has(profile?.access_tier)) return <section className="placeholder page-enter"><span>ÁREA RESTRITA</span><h1>Análise</h1><p>A leitura estratégica está disponível para Conselho, Diretoria e Desenvolvimento.</p></section>;
   const competitions = [...new Set(matches.map((match) => match.competition_name || "Amistoso"))].sort();
   const selected = useMemo(() => selectAnalysisPeriod(matches, period), [matches, period]);
   const { team, insights } = useMemo(() => buildAnalysis(selected, workspace.players), [selected, workspace.players]);
   const trends = useMemo(() => comparePeriods(matches, period), [matches, period]);
+  if (!canViewAnalysis(profile)) return <AccessDenied page="analise" />;
   const groups = [
     ["OFENSIVO", IconBallFootball, [["GOLS / JOGO", team.averageGoalsFor, "", `${team.goalsFor} gols no período`, null, trends?.goals], ["CHUTES / JOGO", team.shotsPerGame, "", `${team.shots} finalizações registradas`], ["CONVERSÃO", team.shotConversion, "%", "gols ÷ finalizações", "Gols marcados ÷ finalizações registradas"]]],
     ["POSSE E PASSE", IconTargetArrow, [["PRECISÃO", team.passAccuracy, "%", `${team.passesMade} / ${team.passAttempts || "—"}`, "Passes certos ÷ passes tentados", trends?.passing], ["PASSES CERTOS / JOGO", team.passesMadePerGame, "", `${team.passesMade} no período`], ["VOLUME / JOGO", team.passAttemptsPerGame, "", "passes tentados"]]],
@@ -74,8 +75,14 @@ export function AnalysisPage({ workspace, profile, matches = workspace.matches |
   const periodLabel = ({ last5: "Últimos 5 jogos", last10: "Últimos 10 jogos", season: "Temporada" })[period] || period.replace("competition:", "");
   return <section className="data-page page-enter analysis-v2">
     <header className="data-page-header"><div><span>ANÁLISE · CONSELHO</span><h1>O que o jogo está dizendo.</h1><p>Leituras determinísticas para apoiar decisões, sem completar lacunas com suposições.</p></div><RastroDataSignature label="Data by" /></header>
-    <div className="analysis-filters" role="group" aria-label="Recorte da análise">
-      {[["last5", "ÚLTIMOS 5"], ["last10", "ÚLTIMOS 10"], ["season", "TEMPORADA"]].map(([id, label]) => <button key={id} type="button" aria-pressed={period === id} aria-controls="analysis-results" className={period === id ? "selected" : ""} onClick={() => setPeriod(id)}>{label}</button>)}
+    <div className="analysis-filters">
+      <SegmentedControl
+        className="statistics-tabs-v3"
+        items={[["last5", "ÚLTIMOS 5"], ["last10", "ÚLTIMOS 10"], ["season", "TEMPORADA"]]}
+        active={["last5", "last10", "season"].includes(period) ? period : "season"}
+        onChange={setPeriod}
+        label="Recorte da análise"
+      />
       {competitions.length > 0 && <SelectControl value={period.startsWith("competition:") ? period : ""} onChange={(value) => value && setPeriod(value)} label="Filtrar por competição" options={[["", "COMPETIÇÃO"], ...competitions.map((competition) => [`competition:${competition}`, competition])]} />}
     </div>
     <section className="analysis-context"><IconArrowsExchange/><div role="status" aria-live="polite"><span>{periodLabel}</span><strong>{team.games} partida(s)</strong></div><p>{trends ? "Comparação com o período imediatamente anterior." : "Sem amostra anterior suficiente para tendência."}</p></section>

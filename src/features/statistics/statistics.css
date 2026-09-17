@@ -51,7 +51,7 @@
   right: 18px;
   left: 18px;
   height: 1px;
-  background: linear-gradient(90deg, transparent, #53caff48, transparent);
+  background: linear-gradient(90deg, transparent, #ffffff18, transparent);
 }
 .statistics-stat-card > span {
   z-index: 1;
@@ -94,7 +94,7 @@
 }
 .statistics-section-heading span,
 .statistics-team-identity span {
-  color: #53caff;
+  color: #b7bdc4;
   font-size: 8px;
   font-weight: 950;
   letter-spacing: 0.13em;
@@ -590,8 +590,8 @@
 .statistics-ranking-list article.is-top{background:linear-gradient(90deg,var(--rastro-blue-subtle),#101318)}
 .statistics-ranking-modal{box-shadow:0 28px 90px #000}.statistics-ranking-list article{border-color:var(--strix-border)}
 .statistics-stat-card,.statistics-ranking-card,.statistics-goalkeeper-card,.statistics-team-metric{background:linear-gradient(145deg,#101318,#0b0d10)}
-.statistics-stat-card:after{background:linear-gradient(90deg,transparent,rgba(47,128,255,.3),transparent)}
-.statistics-team-identity{background:radial-gradient(circle at 8% 15%,rgba(47,128,255,.08),transparent 34%),linear-gradient(135deg,#101318,#0b0d10)}
+.statistics-stat-card:after{background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent)}
+.statistics-team-identity{background:radial-gradient(circle at 8% 15%,rgba(255,255,255,.04),transparent 34%),linear-gradient(135deg,#101318,#0b0d10)}
 
 /* Analytics keeps Rastro in data accents, never in structural surfaces. */
 .statistics-tabs-v3{padding:5px;border-radius:15px;background:#0b0d10}
@@ -625,7 +625,7 @@
 .statistics-sort>.rastro-data-signature,.statistics-sort>div>.rastro-data-signature{display:none!important}
 .statistics-sort>span,.statistics-sort>div>span{color:#aeb4bb!important}
 .statistics-stat-card,.statistics-ranking-card,.statistics-goalkeeper-card,.statistics-team-identity,.statistics-player-table{background:#0b0d10!important;border-color:var(--strix-border)!important}
-.statistics-stat-card:after{background:linear-gradient(90deg,transparent,rgba(47,128,255,.2),transparent)}
+.statistics-stat-card:after{background:linear-gradient(90deg,transparent,rgba(255,255,255,.08),transparent)}
 .statistics-team-identity{background:linear-gradient(135deg,#101318,#0b0d10)!important}
 .statistics-ranking-card>button{border-color:var(--strix-border)!important;background:#111419!important;color:#d8dce0!important}
 .statistics-ranking-card>button:hover,.statistics-ranking-card>button:focus-visible{background:#1a1f24!important;color:#fff!important}

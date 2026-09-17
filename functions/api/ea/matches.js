@@ -103,8 +103,8 @@ function eaError(error) {
 async function authorize(request, env) {
   const session = await authenticateDiscordMember(request, env);
   if (session.error) return session;
-  if (!requireTier(session, "diretoria")) {
-    return { error: json({ error: "insufficient_permission", message: "Sincronização EA restrita a Diretoria e Desenvolvimento." }, 403) };
+  if (!requireTier(session, "dev")) {
+    return { error: json({ error: "insufficient_permission", message: "Sincronização EA restrita a Desenvolvimento." }, 403) };
   }
   return session;
 }

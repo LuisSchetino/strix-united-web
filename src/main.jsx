@@ -16,7 +16,6 @@ import "./fc27-data.css";
 import "./fc27-fixes.css";
 import { nextAgendaSlot } from "./features/agenda/agenda-slots.js";
 import { activeAgendaMatches, agendaHeroSelection, nextAgendaMatches, todayAgendaMatches } from "./features/agenda/agenda-time.js";
-import { NightRelatedEditor } from "./features/agenda/NightRelatedEditor.jsx";
 import { agendaStandingComparison } from "./features/agenda/agenda-standings.js";
 import { resolveAgendaTeamIdentity, resolveTeamIdentity } from "./features/teams/team-identity.js";
 import { notify, RollingLabel, ToastViewport } from "./ui/motion/motion.jsx";
@@ -32,6 +31,29 @@ import "./quality-polish.css";
 import "./ui-bugfix.css";
 import { saveRosterPlayer } from "./features/squad/player-save.js";
 import { useDialog } from "./ui/useDialog.js";
+import { CloseButton } from "./ui/CloseButton.jsx";
+import { AccessDenied } from "./ui/AccessDenied.jsx";
+import {
+  NAV_CATALOG,
+  canArchivePlayer,
+  canCreatePlayer,
+  canEditLineup,
+  canEditPlayerNumber,
+  canEditPlayerPhoto,
+  canManageAgenda,
+  canManageClubMatches,
+  canManageCompetitions,
+  canManageMedia,
+  canManagePlayers,
+  canUseDeveloperTools,
+  canViewMedia,
+  canViewPage,
+  locationForPage,
+  pageFromLocation,
+  permissionDenied,
+  visibleNavItems,
+} from "./access.js";
+import { commandItems, filterCommandItems } from "./command-palette.js";
 
 const routeLoaders = {
   partidas: () => import("./features/matches/MatchesPage.jsx").then((module) => ({ default: module.MatchesPage })),
@@ -118,17 +140,7 @@ function ViewportDialog({ className = "modal-backdrop", children, onClose, ...pr
     document.body,
   );
 }
-const nav = [
-  ["agenda", "Agenda", "calendar"],
-  ["partidas", "Partidas", "game"],
-  ["elenco", "Elenco", "squad"],
-  ["campeonatos", "Campeonatos", "trophy"],
-  ["estatisticas", "Estatísticas", "stats"],
-  ["analise", "Análise", "brain"],
-  ["biblioteca", "Biblioteca", "library"],
-  ["midia", "Mídia", "media"],
-  ["desenvolvedor", "Desenvolvedor", "details"],
-];
+const nav = NAV_CATALOG;
 const games = [
   ["21:10", "Sinceridade FC", "Amistoso", "SF"],
   ["21:40", "SC Rebirth 2025", "Superliga Yeshua · Rodada 9", "SR"],
@@ -710,6 +722,7 @@ function useFc27Workspace(client, profile) {
     };
   };
   const saveAgenda = async (payload, mode, existing) => {
+    if (!canManageAgenda(profile)) throw permissionDenied("Sem permissão para alterar a Agenda.");
     const entries = Array.isArray(payload) ? payload : [payload];
     if (existing) {
       const data = await agendaPayload(entries[0], mode === "swap" ? {
@@ -729,6 +742,7 @@ function useFc27Workspace(client, profile) {
     await refresh();
   };
   const setAgendaStatus = async (id, status) => {
+    if (!canManageAgenda(profile)) throw permissionDenied("Sem permissão para alterar a Agenda.");
     const update = { status, updated_by: profile.user_id };
     if (status === "cancelled") update.cancelled_at = new Date().toISOString();
     const { error } = await client.from("agenda_matches").update(update).eq("id", id);
@@ -736,11 +750,17 @@ function useFc27Workspace(client, profile) {
     await refresh();
   };
   const removeAgenda = async (id) => {
+    if (!canManageAgenda(profile)) throw permissionDenied("Sem permissão para alterar a Agenda.");
+    const match = state.agenda.find((item) => item.id === id);
+    if (match && match.source !== "manual" && !canUseDeveloperTools(profile)) {
+      return setAgendaStatus(id, "cancelled");
+    }
     const { error } = await client.from("agenda_matches").delete().eq("id", id);
     if (error) throw error;
     await refresh();
   };
   const upsertClubMatch = async (match, source = "manual", shouldRefresh = true) => {
+    if (!canManageClubMatches(profile)) throw permissionDenied("A gestão do histórico de partidas é exclusiva de Desenvolvimento.");
     const existing = match.dbId
       ? state.matches.find((item) => item.id === match.dbId)
       : state.matches.find((item) => item.external_match_id && item.external_match_id === String(match.id));
@@ -775,6 +795,7 @@ function useFc27Workspace(client, profile) {
     return result.data;
   };
   const savePlayerAliases = async (aliases, shouldRefresh = true) => {
+    if (!canManagePlayers(profile)) throw permissionDenied("Sem permissão para gerenciar aliases.");
     const rows = aliases
       .filter((item) => item.eaName && item.playerId)
       .map((item) => ({ ea_name: item.eaName.trim(), player_id: item.playerId, updated_by: profile.user_id }));
@@ -797,26 +818,30 @@ function useFc27Workspace(client, profile) {
     if (shouldRefresh) await refresh();
   };
   const removeClubMatch = async (id) => {
+    if (!canManageClubMatches(profile)) throw permissionDenied("A gestão do histórico de partidas é exclusiva de Desenvolvimento.");
     const { error } = await client.from("club_matches").delete().eq("id", id);
     if (error) throw error;
     await refresh();
   };
   const savePlayer = async (player, file) => {
+    const existing = player.id ? (state.players || []).find((item) => item.id === player.id) : null;
     const result = await saveRosterPlayer(client, profile.user_id, player, file, async (file) => {
       const path = `players/${profile.user_id}/${crypto.randomUUID()}-${safeAssetName(file.name)}`;
       const { error: uploadError } = await client.storage.from("fc27-team-assets").upload(path, file, { upsert: false, contentType: file.type || undefined });
       if (uploadError) throw uploadError;
       return path;
-    });
+    }, { profile, existing });
     await refresh();
     return result;
   };
   const removePlayer = async (id) => {
+    if (!canArchivePlayer(profile)) throw permissionDenied("Sem permissão para arquivar jogadores.");
     const { error } = await client.from("club_players").update({ is_active: false, updated_by: profile.user_id }).eq("id", id);
     if (error) throw error;
     await refresh();
   };
   const importLegacyRoster = async (entries = []) => {
+    if (!canUseDeveloperTools(profile)) throw permissionDenied("A importação técnica de elenco é exclusiva de Desenvolvimento.");
     const normalize = (value) => String(value || "").toLocaleLowerCase("pt-BR").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
     const { data: remotePlayers, error: playersError } = await client.from("club_players").select("*");
     if (playersError) throw playersError;
@@ -896,6 +921,7 @@ function useFc27Workspace(client, profile) {
       }
     },
     saveNightRelated: async (nightDate, playerIds) => {
+      if (!canManageMedia(profile)) throw permissionDenied("Relacionados da noite são exclusivos de Desenvolvimento.");
       const ids = [...new Set((playerIds || []).map((id) => String(id || "")).filter(Boolean))];
       const existing = (state.nightRelated || []).find((row) => String(row.night_date).slice(0, 10) === nightDate);
       const payload = {
@@ -1042,7 +1068,7 @@ function Sidebar({
       </div>
       <div className="menu-group">
         <p>Time</p>
-        {nav.map(([id, label, icon]) => (
+        {visibleNavItems(profile).map(([id, label, icon]) => (
           <button
             key={id}
             className={active === id ? "active" : ""}
@@ -2031,8 +2057,8 @@ function AgendaLive({ navigate, workspace, profile }) {
       <header className="agenda-hero">
         <div><span>AGENDA DO TIME</span><h1>A noite começa aqui.</h1><p>Organize os jogos e deixe a escalação pronta antes da bola rolar.</p></div>
         <div className="agenda-hero-actions">
-          <button className="secondary preset-trigger" onClick={() => setShowPresets(true)}>PREDEFINIÇÕES</button>
-          <button className="primary" onClick={() => setModal({ mode: "new" })}><Icon name="plus" size={17} />NOVO JOGO</button>
+          {canManageAgenda(profile) && <button className="secondary preset-trigger" onClick={() => setShowPresets(true)}>PREDEFINIÇÕES</button>}
+          {canManageAgenda(profile) && <button className="primary" onClick={() => setModal({ mode: "new" })}><Icon name="plus" size={17} />NOVO JOGO</button>}
         </div>
       </header>
       <nav className="agenda-tabs">
@@ -2041,7 +2067,6 @@ function AgendaLive({ navigate, workspace, profile }) {
         <button onClick={() => navigate("partidas")}>Concluídos <Icon name="arrow" size={13} /></button>
       </nav>
       {(workspace.error || feedback) && <p className="matches-error">{feedback || workspace.error}</p>}
-      {tab === "today" && <NightRelatedEditor workspace={workspace} profile={profile} />}
       <section className="agenda-list" aria-busy={workspace.loading}>
         <div className="agenda-list-heading"><span>{tab === "next" ? "DATA · HORÁRIO" : "HORÁRIO"}</span><span>PARTIDA</span><span>CAMPEONATO</span><span>STATUS</span></div>
         {visible.length ? visible.map((item) => (
@@ -2058,8 +2083,8 @@ function AgendaLive({ navigate, workspace, profile }) {
               <span className="game-competition">{item.competition}</span>
               <em className={item.status === "EM BREVE" ? "soon" : ""}>{item.status}</em>
             </button>
-            <button data-agenda-menu-trigger aria-haspopup="menu" aria-expanded={actions === item.id} aria-label={`Ações para ${item.opponent}`} onClick={(event) => { event.stopPropagation(); setActions(actions === item.id ? null : item.id); }}>•••</button>
-            {actions === item.id && <div className="agenda-actions" role="menu" onClick={(event) => event.stopPropagation()} onKeyDown={(event) => {
+            {canManageAgenda(profile) && <button data-agenda-menu-trigger aria-haspopup="menu" aria-expanded={actions === item.id} aria-label={`Ações para ${item.opponent}`} onClick={(event) => { event.stopPropagation(); setActions(actions === item.id ? null : item.id); }}>•••</button>}
+            {canManageAgenda(profile) && actions === item.id && <div className="agenda-actions" role="menu" onClick={(event) => event.stopPropagation()} onKeyDown={(event) => {
               if (!["ArrowDown", "ArrowUp"].includes(event.key)) return;
               event.preventDefault();
               const buttons = [...event.currentTarget.querySelectorAll("button")];
@@ -2075,12 +2100,12 @@ function AgendaLive({ navigate, workspace, profile }) {
         )) : <div className="agenda-empty">{workspace.loading ? "Sincronizando agenda..." : "Nenhuma partida programada."}</div>}
       </section>
       {showPresets && <PresetPanel presets={presets} setPresets={setPresets} roster={workspace.players} assetUrl={workspace.assetUrl} onClose={() => setShowPresets(false)} />}
-      {modal && <AgendaModal entry={modal.entry} mode={modal.mode} presets={presets} roster={workspace.players} assetUrl={workspace.assetUrl} standings={agendaStandingComparison(modal.entry?.db, workspace.competitionSources, workspace.competitionTeams)} defaultDate={defaultNewDate} suggestTimeForDate={suggestTimeForDate} onClose={() => setModal(null)} onEdit={modal.entry ? () => setModal({ entry: modal.entry, mode: "edit" }) : undefined} logoForOpponent={(name) => { const logo = matchingLogo(workspace.logos, name); return logo?.storage_path ? workspace.assetUrl(logo.storage_path) : catalogLogo(name); }} onSave={(payload, mode) => void run(async () => { await workspace.saveAgenda(payload, mode, modal.entry?.db); setModal(null); })} />}
+      {modal && <AgendaModal entry={modal.entry} mode={modal.mode} presets={presets} roster={workspace.players} assetUrl={workspace.assetUrl} standings={agendaStandingComparison(modal.entry?.db, workspace.competitionSources, workspace.competitionTeams)} defaultDate={defaultNewDate} suggestTimeForDate={suggestTimeForDate} onClose={() => setModal(null)} onEdit={modal.entry && canEditLineup(profile) ? () => setModal({ entry: modal.entry, mode: "edit" }) : undefined} logoForOpponent={(name) => { const logo = matchingLogo(workspace.logos, name); return logo?.storage_path ? workspace.assetUrl(logo.storage_path) : catalogLogo(name); }} onSave={(payload, mode) => void run(async () => { await workspace.saveAgenda(payload, mode, modal.entry?.db); setModal(null); })} />}
       {pendingAction && <ViewportDialog className="modal-backdrop" onMouseDown={() => setPendingAction(null)}>
         <article className="agenda-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="agenda-confirm-title" onMouseDown={(event) => event.stopPropagation()}>
           <header>
             <div><span>CONFIRMAR AÇÃO</span><h2 id="agenda-confirm-title">{pendingAction.type === "delete" ? "Excluir partida?" : "Cancelar jogo?"}</h2></div>
-            <button type="button" className="modal-close" onClick={() => setPendingAction(null)} aria-label="Fechar"><Icon name="close" /></button>
+            <CloseButton onClick={() => setPendingAction(null)} />
           </header>
           <p>{pendingAction.type === "delete" ? `A partida contra ${pendingAction.item.opponent} será removida da Agenda.` : `A partida contra ${pendingAction.item.opponent} será marcada como cancelada.`}</p>
           <footer>
@@ -2137,7 +2162,9 @@ function SquadPageV3({ workspace, profile }) {
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false);
   const returnFocusRef = useRef(null);
-  const canManage = ["diretoria", "dev"].includes(profile?.access_tier);
+  const canCreate = canCreatePlayer(profile);
+  const canEdit = canManagePlayers(profile);
+  const canArchive = canArchivePlayer(profile);
   const emptyDraft = { display_name: "", positions: [], member_type: "elenco", shirt_number: "", trial_expires_at: "" };
   const [editing, setEditing] = useState(null);
   const [draft, setDraft] = useState(emptyDraft);
@@ -2227,7 +2254,7 @@ function SquadPageV3({ workspace, profile }) {
     <section className="data-page page-enter squad-page-v3">
       <header className="data-page-header">
         <div><span>ELENCO DO CLUBE</span><h1>Squad FC 27.</h1><p>Posições e vínculos organizados para escalar sem procurar jogador.</p></div>
-        {canManage && <div className="squad-header-actions"><Suspense fallback={<span className="roster-tools-loading">CARREGANDO FERRAMENTAS…</span>}><RosterTools workspace={workspace} /></Suspense><button className="primary" onClick={openCreate}><Icon name="plus" size={16} />ADICIONAR JOGADOR</button></div>}
+        {canCreate && <div className="squad-header-actions"><Suspense fallback={<span className="roster-tools-loading">CARREGANDO FERRAMENTAS…</span>}><RosterTools workspace={workspace} /></Suspense><button className="primary" onClick={openCreate}><Icon name="plus" size={16} />ADICIONAR JOGADOR</button></div>}
       </header>
       {(workspace.error || error) && <p className="matches-error">{error || workspace.error}</p>}
       {activePlayers.length ? groups.map(([id, title, description]) => {
@@ -2240,17 +2267,19 @@ function SquadPageV3({ workspace, profile }) {
               <div className="squad-card-identity"><b>{player.display_name}</b><small>{player.positions?.join(" · ") || "Posição não definida"}</small><span>{gamesForPlayer(player)} jogo(s)</span></div>
               <strong className="squad-shirt-number">{player.shirt_number === null || player.shirt_number === undefined ? "—" : `#${String(player.shirt_number).padStart(2, "0")}`}</strong>
               <em className={`member-tag ${player.member_type || "elenco"}`}>{player.member_type === "teste" ? `TESTE${player.trial_expires_at ? ` · até ${datePart(player.trial_expires_at)}` : ""}` : player.member_type === "complete" ? "COMPLETE" : "ELENCO"}</em>
-              {canManage && <div className="squad-context"><button className="squad-more" aria-label={`Ações de ${player.display_name}`} aria-expanded={actionMenu === player.id} onClick={() => setActionMenu((current) => current === player.id ? "" : player.id)}>•••</button>{actionMenu === player.id && <div className="squad-context-menu"><button onClick={() => { setActionMenu(""); openEdit(player); }}><Icon name="edit" size={14} />Editar</button><button className="danger" onClick={() => { setActionMenu(""); void workspace.removePlayer(player.id).catch((removeError) => setError(removeError.message)); }}><Icon name="trash" size={14} />Remover</button></div>}</div>}
+              {(canEdit || canArchive) && <div className="squad-context"><button className="squad-more" aria-label={`Ações de ${player.display_name}`} aria-expanded={actionMenu === player.id} onClick={() => setActionMenu((current) => current === player.id ? "" : player.id)}>•••</button>{actionMenu === player.id && <div className="squad-context-menu">{canEdit && <button onClick={() => { setActionMenu(""); openEdit(player); }}><Icon name="edit" size={14} />Editar</button>}{canArchive && <button className="danger" onClick={() => { setActionMenu(""); void workspace.removePlayer(player.id).catch((removeError) => setError(removeError.message)); }}><Icon name="trash" size={14} />Arquivar</button>}</div>}</div>}
             </article>)}</div> : <p className="squad-sector-empty">Nenhum jogador nesta faixa.</p>}
           </section>
         );
       }) : <div className="matches-empty">O elenco FC 27 começa vazio. Adicione os jogadores oficiais quando estiver pronto.</div>}
       {editing !== null && <ViewportDialog className="match-manual-backdrop squad-dialog-layer" onClose={() => { if (!savingRef.current) close(); }}><form className="match-manual-modal squad-modal-v2" role="dialog" aria-modal="true" aria-labelledby="squad-editor-title" aria-busy={saving} onSubmit={save}>
-        <header><div><span>ELENCO · {editing?.id ? "EDITAR PERFIL" : "NOVO PERFIL"}</span><h2 id="squad-editor-title">{editing?.id ? "Editar jogador" : "Adicionar jogador"}</h2><p>O preview acompanha a ficha antes de entrar no elenco.</p></div><button type="button" className="icon-button" onClick={close} disabled={saving} aria-label="Fechar"><Icon name="close" /></button></header>
+        <header><div><span>ELENCO · {editing?.id ? "EDITAR PERFIL" : "NOVO PERFIL"}</span><h2 id="squad-editor-title">{editing?.id ? "Editar jogador" : "Adicionar jogador"}</h2><p>O preview acompanha a ficha antes de entrar no elenco.</p></div><CloseButton onClick={close} disabled={saving} /></header>
         <div className="squad-editor"><section className="manual-form-grid">
           <label className="manual-full">NOME DE EXIBIÇÃO<input autoFocus value={draft.display_name} onChange={(event) => setDraft((current) => ({ ...current, display_name: event.target.value }))} placeholder="Como aparece no time" /></label>
-          <label>NÚMERO<input type="number" min="0" max="99" value={draft.shirt_number} onChange={(event) => setDraft((current) => ({ ...current, shirt_number: event.target.value }))} placeholder="10" /></label>
-          <label className="manual-full logo-drop">FOTO DO JOGADOR<input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => setPhoto(event.target.files?.[0] || null)} /><span><Icon name="upload" size={17} />{photo ? photo.name : editing?.avatar_path ? "Trocar foto do computador" : "Enviar foto do computador"}</span></label>
+          <label>NÚMERO<input type="number" min="0" max="99" value={draft.shirt_number} onChange={(event) => setDraft((current) => ({ ...current, shirt_number: event.target.value }))} placeholder="10" disabled={Boolean(editing?.id) && !canEditPlayerNumber(profile)} /></label>
+          <label className={`manual-full logo-drop${editing?.id && !canEditPlayerPhoto(profile) ? " is-locked" : ""}`}>{editing?.id && !canEditPlayerPhoto(profile)
+            ? <><span>FOTO DO JOGADOR</span><span>Somente Desenvolvimento altera a foto depois do cadastro.</span></>
+            : <><input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => setPhoto(event.target.files?.[0] || null)} /><span><Icon name="upload" size={17} />{photo ? photo.name : editing?.avatar_path ? "Trocar foto do computador" : "Enviar foto do computador"}</span></>}</label>
           <fieldset className="position-picker manual-full"><legend>POSIÇÕES EM QUE JOGA</legend>{positions.map((position) => <button type="button" className={draft.positions.includes(position) ? "selected" : ""} key={position} onClick={() => togglePosition(position)}>{position}</button>)}</fieldset>
           <fieldset className="member-picker member-picker-three manual-full"><legend>VÍNCULO COM O TIME</legend>
             <button type="button" className={draft.member_type === "elenco" ? "selected" : ""} onClick={() => setDraft((current) => ({ ...current, member_type: "elenco", trial_expires_at: "" }))}><b>ELENCO</b><small>Jogador do elenco</small></button>
@@ -2269,11 +2298,11 @@ function FeatureBoundary({ children, type = "table" }) {
 }
 
 function DataPage({ id, workspace, profile, client }) {
+  if (!canViewPage(profile, id)) return <AccessDenied page={id} />;
   const statisticalMatches = (workspace.matches || []).map((match) => ({ ...match, performance: currentMatchPerformance(match) }));
   if (id === "estatisticas") return <FeatureBoundary type="statistics"><StatisticsPage workspace={workspace} matches={statisticalMatches}/></FeatureBoundary>;
   if (id === "analise") return <FeatureBoundary type="analysis"><AnalysisPage workspace={workspace} profile={profile} matches={statisticalMatches}/></FeatureBoundary>;
   if (id === "biblioteca") return <FeatureBoundary type="library"><LibraryPage client={client} profile={profile}/></FeatureBoundary>;
-  if (id === "desenvolvedor" && profile?.access_tier !== "dev") return <section className="placeholder page-enter"><span>ÁREA RESTRITA</span><h1>Desenvolvedor</h1><p>Esta área é exclusiva para Desenvolvimento.</p></section>;
   if (id === "desenvolvedor") return <FeatureBoundary><DeveloperPage client={client} profile={profile} workspace={workspace}/></FeatureBoundary>;
   if (id === "midia") return <FeatureBoundary><MediaPage profile={profile} client={client} workspace={workspace}/></FeatureBoundary>;
   const matches = workspace.matches;
@@ -2647,37 +2676,10 @@ function Command({ close, navigate, workspace, profile }) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const resultsRef = useRef(null);
   const [selection, setSelection] = useState({ left: 0, top: 0, width: 0, height: 0, ready: false });
-  const list = useMemo(() => {
-    const pages = [["central", "Central do time", "live"], ...nav].map(([id, label, icon]) => ({
-      id: `page-${id}`, label, meta: "Página", icon, run: () => navigate(id),
-    }));
-    const players = workspace.players.map((player) => ({
-      id: `player-${player.id}`, label: player.display_name, meta: "Elenco", icon: "squad", run: () => navigate("elenco"),
-    }));
-    const matches = workspace.matches.map((match) => ({
-      id: `match-${match.id}`, label: match.opponent_name, meta: match.competition_name || "Partida", icon: "game", run: () => navigate("partidas"),
-    }));
-    const agenda = workspace.agenda.map((item) => ({
-      id: `agenda-${item.id}`, label: item.opponent_name, meta: item.competition_name || "Agenda", icon: "calendar", run: () => navigate("agenda"),
-    }));
-    const competitions = workspace.competitions.map((item) => ({
-      id: `competition-${item.id}`, label: item.name, meta: item.organization || "Competição", icon: "trophy", run: () => navigate("campeonatos"),
-    }));
-    const manager = ["diretoria", "dev"].includes(profile?.access_tier)
-      ? [
-          { id: "action-agenda", kind: "action", label: "Nova partida na Agenda", meta: "Ação", icon: "plus", run: () => navigate("agenda") },
-          { id: "action-import", kind: "action", label: "Buscar partidas pelo meu PC", meta: "Ação", icon: "game", run: () => navigate("partidas") },
-          { id: "action-gameday", kind: "action", label: "Abrir Game Day", meta: "Ação", icon: "media", run: () => navigate("midia") },
-        ]
-      : [];
-    const developer = profile?.access_tier === "dev"
-      ? [{ id: "action-competition", kind: "action", label: "Adicionar campeonato", meta: "Ação Dev", icon: "trophy", run: () => navigate("campeonatos") }]
-      : [];
-    const normalized = query.trim().toLocaleLowerCase("pt-BR");
-    return [...manager, ...developer, ...pages, ...players, ...matches, ...agenda, ...competitions]
-      .filter((item) => !normalized || `${item.label} ${item.meta}`.toLocaleLowerCase("pt-BR").includes(normalized))
-      .slice(0, 18);
-  }, [navigate, profile?.access_tier, query, workspace]);
+  const list = useMemo(
+    () => filterCommandItems(commandItems({ profile, workspace, navigate }), query).slice(0, 18),
+    [navigate, profile, query, workspace],
+  );
   useEffect(() => setSelectedIndex(0), [query]);
   useLayoutEffect(() => {
     const root = resultsRef.current;
@@ -2835,17 +2837,31 @@ function MaintenanceScreen({ signOut }) {
 function App() {
   const auth = useTeamAuth();
   const workspace = useFc27Workspace(auth.client, auth.profile);
-  const [active, setActive] = useState("central"),
+  const [active, setActive] = useState(() => pageFromLocation()),
     [compact, setCompact] = useState(false),
     [mobileOpen, setMobileOpen] = useState(false),
     [command, setCommand] = useState(false),
     [createOpen, setCreateOpen] = useState(false),
     [player, setPlayer] = useState(null);
   const navigate = (id) => {
-    setActive(id);
+    const page = id || "central";
+    setActive(page);
     setMobileOpen(false);
     setCreateOpen(false);
+    const next = locationForPage(page);
+    if (`${window.location.pathname}${window.location.search}${window.location.hash}` !== next) {
+      window.history.pushState({ page }, "", next);
+    }
   };
+  useEffect(() => {
+    const sync = () => setActive(pageFromLocation());
+    window.addEventListener("popstate", sync);
+    window.addEventListener("hashchange", sync);
+    return () => {
+      window.removeEventListener("popstate", sync);
+      window.removeEventListener("hashchange", sync);
+    };
+  }, []);
   useEffect(() => {
     const listener = (event) => {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
@@ -2908,7 +2924,7 @@ function App() {
   if (!workspace.loading && auth.profile.access_tier !== "dev" && workspace.systemFlags.some((flag) => flag.key === "site_maintenance" && flag.enabled)) {
     return <MaintenanceScreen signOut={auth.signOut}/>;
   }
-  const title = nav.find((item) => item[0] === active)?.[1] || "Central";
+  const title = [["central", "Central", "live"], ...nav].find((item) => item[0] === active)?.[1] || "Central";
   return (
     <div className="app-shell">
       {mobileOpen && (
@@ -2949,16 +2965,18 @@ function App() {
             <button aria-label="Notificações">
               <Icon name="bell" />
             </button>
+            {(canManageAgenda(auth.profile) || canCreatePlayer(auth.profile) || canViewMedia(auth.profile) || canManageCompetitions(auth.profile)) && (
             <button className={`add-button create-trigger${createOpen ? " is-open" : ""}`} onClick={() => setCreateOpen((value) => !value)} aria-expanded={createOpen} aria-haspopup="menu">
               <Icon name="plus" size={16} />
               <RollingLabel>NOVO</RollingLabel>
             </button>
+            )}
             {createOpen && (
               <div className="create-menu" role="menu">
-                <button role="menuitem" onClick={() => navigate("agenda")}><Icon name="calendar" size={16}/><span><b>Nova partida</b><small>Adicionar à Agenda</small></span></button>
-                <button role="menuitem" onClick={() => navigate("elenco")}><Icon name="squad" size={16}/><span><b>Elenco</b><small>Gerenciar jogadores</small></span></button>
-                {["diretoria", "dev"].includes(auth.profile.access_tier) && <button role="menuitem" onClick={() => navigate("midia")}><Icon name="media" size={16}/><span><b>Game Day</b><small>Abrir editor</small></span></button>}
-                {auth.profile.access_tier === "dev" && <button role="menuitem" onClick={() => navigate("campeonatos")}><Icon name="trophy" size={16}/><span><b>Campeonato</b><small>Adicionar ou sincronizar</small></span></button>}
+                {canManageAgenda(auth.profile) && <button role="menuitem" onClick={() => navigate("agenda")}><Icon name="calendar" size={16}/><span><b>Nova partida</b><small>Adicionar à Agenda</small></span></button>}
+                {canCreatePlayer(auth.profile) && <button role="menuitem" onClick={() => navigate("elenco")}><Icon name="squad" size={16}/><span><b>Elenco</b><small>Gerenciar jogadores</small></span></button>}
+                {canViewMedia(auth.profile) && <button role="menuitem" onClick={() => navigate("midia")}><Icon name="media" size={16}/><span><b>Mídia</b><small>Agenda do Dia e estúdio</small></span></button>}
+                {canManageCompetitions(auth.profile) && <button role="menuitem" onClick={() => navigate("campeonatos")}><Icon name="trophy" size={16}/><span><b>Campeonato</b><small>Adicionar ou sincronizar</small></span></button>}
               </div>
             )}
           </div>

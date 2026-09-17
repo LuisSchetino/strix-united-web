@@ -23,8 +23,7 @@ import "./match-import.css";
 import "./match-fixes.css";
 import "../../partidas.css";
 
-const canManageMatches = (profile) =>
-  ["diretoria", "dev"].includes(profile?.access_tier);
+import { canAddManualMatch, canSearchEa } from "../../access.js";
 const safeRows = (value) => Array.isArray(value) ? value : [];
 const matchTypeLabel = (value) => ({ friendlyMatch: "AMISTOSO EA", leagueMatch: "LIGA EA", playoffMatch: "PLAYOFF EA" })[value] || String(value || "PARTIDA EA").toUpperCase();
 const formatDate = (value) =>
@@ -783,7 +782,8 @@ function MatchHistory({ workspace, canManage, detail, edit, remove }) {
 }
 
 export function MatchesPage({ profile, workspace, client }) {
-  const canManage = canManageMatches(profile);
+  const canManage = canAddManualMatch(profile);
+  const canImportEa = canSearchEa(profile);
   const [found, setFound] = useState([]);
   const [selected, setSelected] = useState(new Set());
   const [step, setStep] = useState("review");
@@ -814,7 +814,7 @@ export function MatchesPage({ profile, workspace, client }) {
   );
 
   const load = async () => {
-    if (!canManage || loadingSource) return;
+    if (!canImportEa || loadingSource) return;
     const started = performance.now();
     setLoadingSource("ea");
     setError("");
@@ -874,6 +874,7 @@ export function MatchesPage({ profile, workspace, client }) {
       ),
     );
   const confirm = async () => {
+    if (!canImportEa) return setError("A publicação de partidas da EA é exclusiva de Desenvolvimento.");
     const validation = validateImport(chosen, aliases);
     if (!validation.valid) return;
     const importedCount = chosen.length;
@@ -941,6 +942,7 @@ export function MatchesPage({ profile, workspace, client }) {
       importSource: match.source || "manual",
     });
   const saveEdit = async (match) => {
+    if (!canManage) return setError("Somente Desenvolvimento altera o histórico de partidas.");
     try {
       await workspace.upsertClubMatch(match, match.importSource || "manual");
       setEditing(null);
@@ -950,7 +952,8 @@ export function MatchesPage({ profile, workspace, client }) {
       setError(saveError.message);
     }
   };
-  const addManual = () =>
+  const addManual = () => {
+    if (!canManage) return;
     setEditing({
       id: `manual-${Date.now()}`,
       date: new Date().toISOString(),
@@ -965,6 +968,7 @@ export function MatchesPage({ profile, workspace, client }) {
       goalScorers: [],
       importSource: "manual",
     });
+  };
   const validation = validateImport(chosen, aliases);
 
   return (
@@ -975,8 +979,9 @@ export function MatchesPage({ profile, workspace, client }) {
           <h1>Histórico de jogo.</h1>
           <p>Encontre, revise e conecte cada partida ao ecossistema FC27.</p>
         </div>
-        {canManage && (
+        {(canImportEa || canManage) && (
           <div className="matches-actions">
+            {canImportEa && (
             <button
               className="secondary"
               onClick={() => void load()}
@@ -984,9 +989,12 @@ export function MatchesPage({ profile, workspace, client }) {
             >
               {loadingSource === "ea" ? "BUSCANDO NA EA…" : "BUSCAR NA EA"}
             </button>
+            )}
+            {canManage && (
             <button className="secondary" onClick={addManual}>
               ADICIONAR MANUAL
             </button>
+            )}
           </div>
         )}
       </header>

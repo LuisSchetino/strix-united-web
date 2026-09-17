@@ -1,3 +1,7 @@
+import { canManageLibrary, canTrackLibrary, permissionDenied } from "../../access.js";
+
+export { canManageLibrary, canTrackLibrary };
+
 export const asArray = (value) => Array.isArray(value) ? value : [];
 
 export function librarySource(value) {
@@ -49,10 +53,15 @@ export function progressPatch(position, duration, previous = {}) {
   };
 }
 
-export const tierWeight = (tier) => ({ teste: 10, player: 20, conselho: 30, diretoria: 40, dev: 50 })[tier] || 0;
-
-export const canTrackLibrary = (tier) => tierWeight(tier) >= tierWeight("conselho");
-export const canManageLibrary = (tier) => tierWeight(tier) >= tierWeight("diretoria");
+export async function archiveLibraryItem(client, profile, item) {
+  if (!canManageLibrary(profile)) throw permissionDenied("Sem permissão para remover material da Biblioteca.");
+  if (!item?.id) throw new Error("Material inválido.");
+  const { error } = await client.from("library_items").update({
+    status: "archived",
+    updated_by: profile.user_id,
+  }).eq("id", item.id);
+  if (error) throw error;
+}
 
 export const libraryThumbnail = (item = {}) => item.thumbnail_url
   || (item.category === "review" ? "/assets/library-review.svg" : "/assets/library-jogada.svg");

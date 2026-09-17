@@ -6,6 +6,7 @@ import {
   IconScale, IconUsers, IconX,
 } from "@tabler/icons-react";
 import { ClubLogo } from "../../ui/ClubLogo.jsx";
+import { CloseButton } from "../../ui/CloseButton.jsx";
 import { useDialog } from "../../ui/useDialog.js";
 import { STRIX_BRAND } from "../../brand.js";
 import { AnimatedNumber, SegmentedControl } from "../../ui/motion/motion.jsx";
@@ -37,7 +38,7 @@ function RankingModal({ ranking, metric, title, suffix = "", close }) {
   const leader = Number(ranking[0]?.[metric] || 0);
   return createPortal(<div className="statistics-modal-layer" onMouseDown={(event) => event.target === event.currentTarget && close()}>
     <section ref={dialogRef} tabIndex={-1} className="statistics-ranking-modal" role="dialog" aria-modal="true" aria-label={`Ranking completo de ${title}`}>
-      <header><div><span>ESTATÍSTICAS · FC27</span><h2>Ranking completo</h2><p>{title}</p><RastroDataSignature label="Analytics by" /></div><button type="button" onClick={close} aria-label="Fechar"><IconX/></button></header>
+      <header><div><span>ESTATÍSTICAS · FC27</span><h2>Ranking completo</h2><p>{title}</p><RastroDataSignature label="Analytics by" /></div><CloseButton onClick={close} /></header>
       <div className="statistics-ranking-list">{ranking.map((player, index) => <article className={index < 3 ? `is-top is-top-${index + 1}` : ""} key={player.handle}>
         <strong>{index + 1}</strong><div><b>{player.name}</b>{player.handle !== player.name && <small>@{player.handle}</small>}<em>{player.positions?.join(" · ") || "EA FC"}{player.memberType ? ` · ${player.memberType}` : ""}</em></div><div className="statistics-ranking-value"><span>{display(player[metric], suffix)}</span>{index > 0 && leader > Number(player[metric] || 0) && <small>-{Number((leader - Number(player[metric] || 0)).toFixed(1))} do líder</small>}</div>
       </article>)}</div>

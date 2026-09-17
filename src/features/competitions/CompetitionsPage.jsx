@@ -31,6 +31,7 @@ import {
 } from "./competition-core.js";
 import { extractPalette } from "./palette-core.js";
 import { sortBracketFixtures } from "../../../shared/bracket-slots.js";
+import { canManageCompetitions } from "../../access.js";
 import "./competitions.css";
 import "./competitions-inline.css";
 
@@ -46,7 +47,6 @@ const dateTime = (value) =>
         timeZone: "America/Sao_Paulo",
       }).format(new Date(value))
     : "Nunca";
-const canDevelop = (profile) => profile?.access_tier === "dev";
 
 async function analyzeCompetition(client, url) {
   const { data } = await client.auth.getSession();
@@ -893,7 +893,7 @@ function CompetitionExplorer({
         <aside>
           <span>ÚLTIMA ATUALIZAÇÃO</span>
           <b>{dateTime(view.lastSyncedAt)}</b>
-          {canDevelop(profile) && sources[0] && (
+          {canManageCompetitions(profile) && sources[0] && (
             <button className="rolling-action" disabled={!!busy} onClick={() => void sync()}>
               {syncState ? <MotionBadge state={syncState} /> : <RollingLabel>ATUALIZAR</RollingLabel>}
             </button>
@@ -943,7 +943,7 @@ function CompetitionExplorer({
               <p>A fase atual terminou e a fonte oficial ainda não publicou o chaveamento.</p>
             </section>
           )}
-          {canDevelop(profile) && edition?.status !== "historical" && (
+          {canManageCompetitions(profile) && edition?.status !== "historical" && (
             <section className="archive-callout">
               <div>
                 <span>ENCERRAMENTO</span>
@@ -963,7 +963,7 @@ function CompetitionExplorer({
           groups={view.standings.groups || []}
           accent={competition.accent_color}
           slots={view.qualificationSlots}
-          canEdit={canDevelop(profile)}
+          canEdit={canManageCompetitions(profile)}
           onSlotsChange={(value) => void setQualificationSlots(value)}
         />
         </div>
@@ -1094,7 +1094,7 @@ export function CompetitionsPage({ profile, workspace, client }) {
         </div>
         <div className="competitions-header-actions">
           <NextClubsSignature />
-          {canDevelop(profile) && (
+          {canManageCompetitions(profile) && (
             <button className="primary" onClick={() => setModal(true)}>
               + ADICIONAR CAMPEONATO
             </button>
@@ -1128,7 +1128,7 @@ export function CompetitionsPage({ profile, workspace, client }) {
                   <small>{edition.label}</small>
                 </div>
               </button>
-              {canDevelop(profile) && <button type="button" className="competition-delete-trigger" aria-label={`Excluir ${competition.name} · ${edition.label}`} title="Excluir competição" onClick={() => { setDeleteError(""); setPendingDelete({ competition, edition }); }}>⌫</button>}
+              {canManageCompetitions(profile) && <button type="button" className="competition-delete-trigger" aria-label={`Excluir ${competition.name} · ${edition.label}`} title="Excluir competição" onClick={() => { setDeleteError(""); setPendingDelete({ competition, edition }); }}>⌫</button>}
               </div>
             ))}
           </div>

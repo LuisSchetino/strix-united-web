@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { MotionTabs, notify } from "../../ui/motion/motion.jsx";
+import { CloseButton } from "../../ui/CloseButton.jsx";
 import {
+  archiveLibraryItem,
   asArray,
   canManageLibrary,
   canTrackLibrary,
@@ -141,9 +143,7 @@ function LibraryPlayer({ item, progress, close, saveProgress }) {
             <h2>{item.title}</h2>
             <p>{item.description || "Material do Strix FC27."}</p>
           </div>
-          <button type="button" onClick={close} aria-label="Fechar">
-            ×
-          </button>
+          <CloseButton onClick={close} />
         </header>
         <div className={`library-player-frame is-${playerState}`}>
           {playerState === "loading" && (
@@ -246,6 +246,7 @@ function LibraryItemModal({ client, profile, close, refresh }) {
   const [error, setError] = useState("");
   const submit = async (event) => {
     event.preventDefault();
+    if (!canManageLibrary(profile)) return setError("Sem permissão para adicionar material.");
     const source = librarySource(draft.source_url);
     if (!draft.title.trim() || !/^https?:\/\//i.test(draft.source_url))
       return setError("Informe título e uma URL válida.");
@@ -282,9 +283,7 @@ function LibraryItemModal({ client, profile, close, refresh }) {
             <h2>Adicionar vídeo</h2>
             <p>YouTube, Google Drive ou arquivo MP4 direto.</p>
           </div>
-          <button type="button" onClick={close}>
-            ×
-          </button>
+          <CloseButton onClick={close} />
         </header>
         <div className="library-item-fields">
           <label>
@@ -385,6 +384,8 @@ export function LibraryPage({ client, profile }) {
   const [progress, setProgress] = useState([]);
   const [selected, setSelected] = useState(null);
   const [adding, setAdding] = useState(false);
+  const [menuId, setMenuId] = useState("");
+  const [pendingRemove, setPendingRemove] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const canManage = canManageLibrary(profile?.access_tier);
@@ -401,7 +402,7 @@ export function LibraryPage({ client, profile }) {
         .order("last_accessed_at", { ascending: false }),
     ]);
     const missing = ["42P01", "PGRST205"].includes(itemsResult.error?.code);
-    setItems(asArray(itemsResult.data));
+    setItems(asArray(itemsResult.data).filter((item) => item.status !== "archived"));
     setProgress(asArray(progressResult.data));
     setLoading(false);
     setError(
@@ -549,6 +550,22 @@ export function LibraryPage({ client, profile }) {
                       {source.type.toUpperCase()} ·{" "}
                       {formatDate(item.published_at)}
                     </small>
+                    {canManage && (
+                      <div className="library-card-manage">
+                        <button
+                          type="button"
+                          className="library-more"
+                          aria-label={`Gerenciar ${item.title}`}
+                          aria-expanded={menuId === item.id}
+                          onClick={() => setMenuId((current) => current === item.id ? "" : item.id)}
+                        >•••</button>
+                        {menuId === item.id && (
+                          <div className="library-context-menu" role="menu">
+                            <button type="button" className="danger" onClick={() => { setMenuId(""); setPendingRemove(item); }}>Remover material</button>
+                          </div>
+                        )}
+                      </div>
+                    )}
                     <h2><button type="button" onClick={() => setSelected(item)}>{item.title}</button></h2>
                     {item.description && <p>{item.description}</p>}
                     <div className="library-tags">
@@ -613,13 +630,33 @@ export function LibraryPage({ client, profile }) {
           saveProgress={(patch) => saveProgress(selected.id, patch)}
         />
       )}{" "}
-      {adding && (
-        <LibraryItemModal
-          client={client}
-          profile={profile}
-          close={() => setAdding(false)}
-          refresh={refresh}
-        />
+      {pendingRemove && createPortal(
+        <div className="library-player-layer" onMouseDown={(event) => event.target === event.currentTarget && setPendingRemove(null)}>
+          <section className="library-item-modal" role="alertdialog" aria-modal="true" aria-labelledby="library-remove-title">
+            <header>
+              <div>
+                <span>BIBLIOTECA</span>
+                <h2 id="library-remove-title">Remover {pendingRemove.title}?</h2>
+                <p>O material sai da Biblioteca publicada. O histórico de acompanhamento permanece.</p>
+              </div>
+              <CloseButton onClick={() => setPendingRemove(null)} />
+            </header>
+            <footer>
+              <button type="button" className="secondary" onClick={() => setPendingRemove(null)}>CANCELAR</button>
+              <button type="button" className="primary" onClick={async () => {
+                try {
+                  await archiveLibraryItem(client, profile, pendingRemove);
+                  notify("Material removido da Biblioteca.");
+                  setPendingRemove(null);
+                  await refresh();
+                } catch (cause) {
+                  notify(cause.message || "Não foi possível remover o material.", "error");
+                }
+              }}>REMOVER</button>
+            </footer>
+          </section>
+        </div>,
+        document.body,
       )}
     </section>
   );

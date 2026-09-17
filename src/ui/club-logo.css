@@ -1,8 +1,8 @@
-.club-logo{position:relative;display:grid;place-items:center;flex:0 0 auto;overflow:hidden;aspect-ratio:1;contain:layout paint}
+.club-logo{position:relative;display:grid;place-items:center;flex:0 0 auto;overflow:hidden;aspect-ratio:1/1;width:var(--avatar-size,100%);height:auto;contain:layout paint}
 .club-logo picture{display:contents}
 .club-logo img{display:block;width:100%;height:100%;object-fit:contain;opacity:1;transition:opacity 160ms ease}
-.club-logo.is-photo{border-radius:50%}
-.club-logo.is-photo img{object-fit:cover;object-position:center;border-radius:inherit}
+.club-logo.is-photo{width:var(--avatar-size,100%);height:auto;min-width:0;aspect-ratio:1/1;flex-shrink:0;border-radius:50%;overflow:hidden}
+.club-logo.is-photo img{width:100%;height:100%;object-fit:cover;object-position:center;border-radius:inherit}
 .club-logo.is-loading img{opacity:0}
 .club-logo-placeholder{position:absolute;inset:0;display:grid!important;place-items:center;width:100%!important;height:100%!important;border-radius:inherit;background:#15191e;color:#8f969e;font:900 .62em/1 Inter,system-ui,sans-serif!important;animation:club-logo-pulse 1.2s ease-in-out infinite}
 .club-logo.has-image.is-logo{border-color:transparent!important;border-radius:0!important;background:transparent!important;box-shadow:none!important}

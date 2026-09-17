@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { MotionTabs, RollingLabel, notify, useReducedMotion } from "../../ui/motion/motion.jsx";
 import {
@@ -39,9 +39,8 @@ import {
   subscribeMediaJob,
 } from "./media-jobs.js";
 import { AnnounceStudio } from "./AnnounceStudio.jsx";
+import { AccessDenied } from "../../ui/AccessDenied.jsx";
 import "./media.css";
-
-const GameDayEditor = lazy(() => import("../../gameday/GameDayEditor.jsx").then((module) => ({ default: module.GameDayEditor })));
 
 function PreviewCanvas({
   timeline,
@@ -322,15 +321,7 @@ export function MediaPage({ profile, client, workspace }) {
   };
 
   if (!allowed) {
-    return (
-      <section className="media-page page-enter">
-        <div className="media-forbidden">
-          <span>MÍDIA</span>
-          <h1>Acesso de criação restrito.</h1>
-          <p>O gerador automático da Agenda do Dia é liberado para Diretoria e Desenvolvimento.</p>
-        </div>
-      </section>
-    );
+    return <AccessDenied page="midia" />;
   }
 
   const latest = (id) => cache.find((row) => row.format === id) || null;
@@ -350,19 +341,12 @@ export function MediaPage({ profile, client, workspace }) {
           ["summary-day", "RESUMO DO DIA"],
           ["summary-week", "RESUMO DA SEMANA"],
           ["announce", "ANÚNCIOS FC 27"],
-          ["gameday", "GAME DAY"],
         ]}
         active={tab}
         onChange={setTab}
         label="Área de mídia"
       />
-      {tab === "gameday" ? (
-        <div className="media-gameday">
-          <Suspense fallback={<p>Carregando o editor Game Day…</p>}>
-            <GameDayEditor profile={profile} client={client} workspace={workspace} />
-          </Suspense>
-        </div>
-      ) : tab === "announce" ? (
+      {tab === "announce" ? (
         <AnnounceStudio workspace={workspace} />
       ) : tab === "summary-day" || tab === "summary-week" ? (
         <>
@@ -457,103 +441,65 @@ export function MediaPage({ profile, client, workspace }) {
         <>
           <header className="media-hero">
             <div>
-              <span>CONTEÚDO DO STRIX</span>
-              <h1>Relacionados da noite.</h1>
-              <p>Uma peça vertical com todos os relacionados do dia no mesmo campo, sem titulares nem reservas.</p>
+              <span>RELACIONADOS DA NOITE</span>
+              <h1>{day.label}</h1>
+              <p>Salve a lista para gerar o vídeo.</p>
             </div>
             <div className="media-hero-meta">
-              <span>{day.label}</span>
               <b>{relatedState.saved ? related.length : 0}</b>
-              <small>{relatedState.saved
-                ? (related.length === 1 ? "relacionado salvo" : "relacionados salvos")
-                : "sugestão ainda não salva"}</small>
+              <small>{related.length === 1 ? "relacionado" : "relacionados"}</small>
             </div>
           </header>
           <NightRelatedEditor workspace={workspace} profile={profile} compact />
-          {!hasRelated ? (
-            <div className="media-empty">
-              <span>RELACIONADOS DA NOITE</span>
-              <h1>Nenhum relacionado salvo para hoje.</h1>
-              <p>As escalações só sugerem. Salve a lista oficial para gerar o vídeo. O jogador relacionado que não entrar em nenhum jogo continua na mídia.</p>
-              <button type="button" className="primary" disabled>GERAR STORY</button>
-            </div>
-          ) : (
-            <div className="media-layout">
-              <section className="media-preview-card">
-                <header>
-                  <span>PREVIEW</span>
-                  <h2>Story / Reels 9:16</h2>
-                </header>
-                <div className={`media-preview-frame${relatedAssets ? "" : " is-empty"}`}>
-                  {relatedAssets ? (
-                    <PreviewCanvas
-                      timeline={relatedTimeline}
-                      assets={relatedAssets}
-                      dayLabel={day.label}
-                      format="story"
-                      frameTime={relatedNightFrameTime}
-                      renderFrame={renderRelatedNightFrame}
-                      label="Preview dos relacionados da noite"
-                    />
-                  ) : (
-                    <p>{relatedAssetError || "Carregando fotos antes do preview…"}</p>
-                  )}
-                </div>
-                <div className="media-actions">
-                  <button
-                    type="button"
-                    className="primary"
-                    disabled={!relatedAssets || running}
-                    onClick={() => void generateRelated(false)}
-                  >
-                    <RollingLabel>{running ? "GERANDO…" : "GERAR STORY"}</RollingLabel>
-                  </button>
-                  <button
-                    type="button"
-                    className="secondary"
-                    disabled={!relatedAssets || running}
-                    onClick={() => void generateRelated(true)}
-                  >
-                    GERAR NOVAMENTE
-                  </button>
-                </div>
-                {running && (
-                  <div className="media-progress">
-                    <b>{progressLabel(job.progress)}</b>
-                    <i>{determinate && <em style={{ transform: `scaleX(${ratio})` }} />}</i>
-                  </div>
-                )}
-                {job?.status === "ready" && job.result && job.result.template === RELATED_NIGHT_TEMPLATE_ID && (
-                  <div className="media-actions">
-                    <p>✓ Vídeo gerado</p>
-                    <button type="button" className="primary" onClick={() => downloadBlob(job.result.blob, job.result.fileName || relatedNightFileName({ day: day.iso, format: "story" }))}>
-                      BAIXAR MP4
-                    </button>
-                    <button type="button" className="secondary" onClick={() => setViewer(job.result)}>VISUALIZAR</button>
-                  </div>
-                )}
-                {job?.status === "error" && <p className="media-error">{job.error}</p>}
-              </section>
-              <aside className="media-side">
-                <h2>Vídeo disponível</h2>
-                <div className="media-cache">
-                  <CacheCard
-                    title="STORY"
-                    record={relatedCache.find((row) => row.format === "story") || null}
-                    currentFingerprint={relatedPrint}
-                    unit="relacionado"
-                    disabled={running}
-                    onView={() => setViewer(relatedCache.find((row) => row.format === "story") || null)}
-                    onDownload={() => {
-                      const record = relatedCache.find((row) => row.format === "story");
-                      if (record) downloadBlob(record.blob, record.fileName);
-                    }}
-                    onRegen={() => void generateRelated(true)}
+          <div className="media-layout">
+            <section className="media-preview-card">
+              <header>
+                <span>PREVIEW</span>
+                <h2>Story / Reels 9:16</h2>
+              </header>
+              <div className={`media-preview-frame${relatedAssets && hasRelated ? "" : " is-empty"}`}>
+                {hasRelated && relatedAssets ? (
+                  <PreviewCanvas
+                    timeline={relatedTimeline}
+                    assets={relatedAssets}
+                    dayLabel={day.label}
+                    format="story"
+                    frameTime={relatedNightFrameTime}
+                    renderFrame={renderRelatedNightFrame}
+                    label="Preview dos relacionados da noite"
                   />
+                ) : (
+                  <p>{hasRelated ? (relatedAssetError || "Carregando fotos antes do preview…") : "Salve a lista para gerar o vídeo."}</p>
+                )}
+              </div>
+              <div className="media-actions">
+                <button
+                  type="button"
+                  className="primary"
+                  disabled={!hasRelated || !relatedAssets || running}
+                  onClick={() => void generateRelated(false)}
+                >
+                  <RollingLabel>{running ? "GERANDO…" : "GERAR STORY"}</RollingLabel>
+                </button>
+              </div>
+              {running && (
+                <div className="media-progress">
+                  <b>{progressLabel(job.progress)}</b>
+                  <i>{determinate && <em style={{ transform: `scaleX(${ratio})` }} />}</i>
                 </div>
-              </aside>
-            </div>
-          )}
+              )}
+              {job?.status === "ready" && job.result && job.result.template === RELATED_NIGHT_TEMPLATE_ID && (
+                <div className="media-actions">
+                  <p>✓ Vídeo gerado</p>
+                  <button type="button" className="primary" onClick={() => downloadBlob(job.result.blob, job.result.fileName || relatedNightFileName({ day: day.iso, format: "story" }))}>
+                    BAIXAR MP4
+                  </button>
+                  <button type="button" className="secondary" onClick={() => setViewer(job.result)}>VISUALIZAR</button>
+                </div>
+              )}
+              {job?.status === "error" && <p className="media-error">{job.error}</p>}
+            </section>
+          </div>
         </>
       ) : (
         <>

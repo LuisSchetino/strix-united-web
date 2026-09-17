@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { saoPauloDay } from "./agenda-time.js";
+import { canManageMedia } from "../../access.js";
 import { describeTonightRelated } from "../media/related-night-core.js";
 import "./night-related.css";
 
 export function NightRelatedEditor({ workspace, profile, compact = false }) {
-  const canEdit = ["diretoria", "dev"].includes(profile?.access_tier);
+  const canEdit = canManageMedia(profile);
   const snapshot = useMemo(
     () => describeTonightRelated(workspace),
     [workspace.nightRelated, workspace.agenda, workspace.players],
@@ -73,16 +73,16 @@ export function NightRelatedEditor({ workspace, profile, compact = false }) {
 
   return (
     <section className={`night-related${compact ? " is-compact" : ""}`}>
+      {!compact && (
       <header>
         <div>
           <span>RELACIONADOS DA NOITE</span>
-          <h2>{snapshot.saved ? `${snapshot.players.length} salvos` : "Sugestão ainda não salva"}</h2>
-          <p>{snapshot.saved
-            ? "Esta lista é a fonte oficial da mídia."
-            : "As escalações só sugerem. Salve para gerar o vídeo."}</p>
+          <h2>{snapshot.day || saoPauloDay()}</h2>
+          <p>Salve a lista para gerar o vídeo.</p>
         </div>
         <b>{selected.length}</b>
       </header>
+      )}
       {snapshot.saved && snapshot.missingFromSaved.length > 0 && (
         <div className="night-related-warn">
           <p>Escalação contém {snapshot.missingFromSaved.map((player) => player.name).join(", ")} fora desta lista.</p>

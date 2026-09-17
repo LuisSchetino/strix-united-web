@@ -62,6 +62,18 @@ test("night related migration is additive and keyed by Sao Paulo date", async ()
   assert.match(sql, /private\.has_minimum_tier\('diretoria'\)/);
 });
 
+test("ACL local migration locks photo/number and DEV-only match writes without dropping data", async () => {
+  const sql = await readFile(new URL("../supabase/migrations/20260916093000_fc27_acl_player_identity_and_match_dev.sql", import.meta.url), "utf8");
+  assert.doesNotMatch(sql, /\b(drop\s+table|truncate|delete\s+from)\b/i);
+  assert.match(sql, /guard_club_player_locked_fields/);
+  assert.match(sql, /player_photo_or_number_locked/);
+  assert.match(sql, /old\.is_active/);
+  assert.match(sql, /developers delete FC27 squad/);
+  assert.match(sql, /developers create FC27 matches/);
+  assert.match(sql, /private\.has_minimum_tier\('dev'\)/);
+  assert.match(sql, /developers create night related/);
+});
+
 test("structure_role is additive on club_players and covers manager/staff", async () => {
   const sql = await readFile(new URL("../supabase/migrations/20260914220000_fc27_club_structure_role.sql", import.meta.url), "utf8");
   assert.doesNotMatch(sql, /\b(drop\s+table|truncate|delete\s+from)\b/i);

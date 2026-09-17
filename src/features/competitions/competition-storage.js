@@ -1,3 +1,4 @@
+import { canManageCompetitions, permissionDenied } from "../../access.js";
 import { normalizeName } from "../matches/import-core.js";
 import { expandKnockoutSlots, selectPreferredKnockoutPreview } from "../../../shared/bracket-slots.js";
 import { dedupeCompetitionRows, fixtureConflictKey, teamConflictKey } from "../../../shared/competition-sync-rows.js";
@@ -169,6 +170,7 @@ async function normalizeFixtures(client, edition, source, preview) {
 }
 
 export async function saveCompetitionPreview(client, profile, preview, palette, accent, options = {}) {
+  if (!canManageCompetitions(profile)) throw permissionDenied("A gestão estrutural de campeonatos é exclusiva de Desenvolvimento.");
   const candidates = [preview, ...(preview.relatedPreviews || [])];
   const preferredKnockout = selectPreferredKnockoutPreview(candidates);
   const previews = candidates.filter((item) => item.sourceKind !== "knockout" || item === preferredKnockout);
@@ -203,12 +205,14 @@ export async function saveCompetitionPreview(client, profile, preview, palette, 
 }
 
 export async function archiveCompetitionEdition(client, profile, edition, outcome) {
+  if (!canManageCompetitions(profile)) throw permissionDenied("A gestão estrutural de campeonatos é exclusiva de Desenvolvimento.");
   const updated = ensure(await client.from("competition_editions").update({ status: "historical", archived_at: new Date().toISOString(), outcome, updated_by: profile.user_id }).eq("id", edition.id).select().single());
   ensure(await client.from("competition_audit_log").insert({ competition_id: edition.competition_id, edition_id: edition.id, actor_user_id: profile.user_id, action: "competition_archived", result: { outcome } }));
   return updated;
 }
 
 export async function deleteCompetitionEdition(client, profile, edition) {
+  if (!canManageCompetitions(profile)) throw permissionDenied("A gestão estrutural de campeonatos é exclusiva de Desenvolvimento.");
   ensure(await client.from("competition_audit_log").insert({
     competition_id: edition.competition_id,
     edition_id: edition.id,

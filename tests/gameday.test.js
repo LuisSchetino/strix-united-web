@@ -11,8 +11,8 @@ test("projeto Game Day nasce pronto para Story e Feed sem perder vinculos", () =
   assert.ok(project.createdAt);
 });
 
-test("Game Day respeita a permissao de Diretoria e Dev", () => {
-  assert.equal(canManageGameDay({ access_tier: "diretoria" }), true);
+test("Game Day isolado permanece DEV-only e fora da Mídia", () => {
+  assert.equal(canManageGameDay({ access_tier: "diretoria" }), false);
   assert.equal(canManageGameDay({ access_tier: "dev" }), true);
   assert.equal(canManageGameDay({ access_tier: "conselho" }), false);
 });

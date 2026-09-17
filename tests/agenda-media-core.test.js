@@ -94,9 +94,10 @@ test("duração respira no opening e no finale sem estourar o formato social", (
   assert.equal(agendaFileName({ day: "2026-09-02", format: "feed" }), "strix-agenda-2026-09-02-feed.mp4");
 });
 
-test("iniciais e permissão seguem o padrão Diretoria/Dev", () => {
+test("iniciais e permissão de Mídia são DEV-only", () => {
   assert.equal(opponentInitials("Winner Elevens"), "WE");
   assert.equal(opponentInitials("CTX"), "CT");
-  assert.equal(canManageMedia({ access_tier: "diretoria" }), true);
+  assert.equal(canManageMedia({ access_tier: "diretoria" }), false);
+  assert.equal(canManageMedia({ access_tier: "dev" }), true);
   assert.equal(canManageMedia({ access_tier: "player" }), false);
 });

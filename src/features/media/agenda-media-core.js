@@ -9,7 +9,7 @@ export const MEDIA_FORMATS = Object.freeze({
   feed: { id: "feed", label: "Feed 4:5", width: 1080, height: 1350, suffix: "feed" },
 });
 
-export const canManageMedia = (profile) => ["diretoria", "dev"].includes(profile?.access_tier);
+export { canManageMedia } from "../../access.js";
 
 export function formatKickoff(scheduledAt) {
   if (!scheduledAt) return "";

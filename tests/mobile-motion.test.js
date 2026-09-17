@@ -76,11 +76,12 @@ test("global mobile shell reserves safe area and prevents global horizontal over
 });
 
 test("command, toast, menu and sheet keep their accessible interaction contracts", async () => {
-  const [main, motion, motionCss, matches] = await Promise.all([
+  const [main, motion, motionCss, matches, dialog] = await Promise.all([
     read("src/main.jsx"),
     read("src/ui/motion/motion.jsx"),
     read("src/ui/motion/motion.css"),
     read("src/features/matches/MatchesPage.jsx"),
+    read("src/ui/useDialog.js"),
   ]);
   assert.match(main, /role="dialog"/);
   assert.match(main, /role="listbox"/);
@@ -89,7 +90,14 @@ test("command, toast, menu and sheet keep their accessible interaction contracts
   assert.match(main, /event\.key === "Escape"/);
   assert.match(main, /command-selection-indicator/);
   assert.match(main, /data-command-index/);
-  assert.match(main, /if \(editing === null\) return undefined;[\s\S]*event\.key === "Escape" && close\(\)/);
+  assert.match(main, /function ViewportDialog/);
+  assert.match(main, /useDialog\(onClose/);
+  assert.match(main, /editing !== null && <ViewportDialog[\s\S]*onClose=\{\(\) => \{ if \(!savingRef\.current\) close\(\); \}\}/);
+  assert.match(main, /<CloseButton onClick=\{close\} disabled=\{saving\} \/>/);
+  assert.match(dialog, /event\.key === "Escape"/);
+  assert.match(dialog, /closeRef\.current\(\)/);
+  assert.match(dialog, /previous\?\.isConnected\) previous\.focus/);
+  assert.match(dialog, /button:not\(:disabled\)/);
   assert.match(main, /<ToastViewport\s*\/>/);
   assert.match(main, /addEventListener\("pointerdown", closeMenu\)/);
   assert.match(motion, /setPointerCapture\?\.\(event\.pointerId\)/);

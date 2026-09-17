@@ -66,7 +66,7 @@
   padding: 17px;
 }
 .library-grid small {
-  color: #55c9ff;
+  color: #b7bdc4;
   font-size: 8px;
   font-weight: 900;
   letter-spacing: 0.1em;
@@ -422,3 +422,11 @@
   .library-v2 .library-grid{min-width:0}
 }
 @media(prefers-reduced-motion:reduce){.library-v2 .editorial-cover img,.library-pitch-art,.library-v2 .editorial-cover>.library-play-mark,.library-v2 .library-editorial-card{transition:none}}
+.library-v2 .library-editorial-copy{position:relative}
+.library-card-manage{position:absolute;top:14px;right:14px;z-index:2}
+.library-more{display:grid;place-items:center;width:36px;height:36px;border:1px solid #ffffff1f;border-radius:10px;background:#14181d;color:#e8eaec;letter-spacing:.12em}
+.library-context-menu{position:absolute;right:0;top:calc(100% + 6px);min-width:180px;padding:6px;border:1px solid #ffffff22;border-radius:12px;background:#101318;box-shadow:0 16px 40px #0008}
+.library-context-menu button{width:100%;min-height:40px;border:0;border-radius:8px;background:transparent;color:#e8eaec;text-align:left;padding:0 10px}
+.library-context-menu button.danger{color:#ff9bab}
+.library-context-menu button:hover{background:#1c2128}
+

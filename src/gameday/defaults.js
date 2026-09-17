@@ -145,5 +145,4 @@ export const safeFileName = (name = "asset") =>
     .replace(/[^a-zA-Z0-9._-]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .toLowerCase() || "asset";
-export const canManageGameDay = (profile) =>
-  ["diretoria", "dev"].includes(profile?.access_tier);
+export { canUseDeveloperTools as canManageGameDay } from "../access.js";
