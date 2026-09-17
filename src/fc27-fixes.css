@@ -25,7 +25,7 @@
 .agenda-modal-body,.modal-lineup,.modal-game-queue{flex:0 0 auto}.agenda-modal footer{margin-top:auto;flex:0 0 auto}
 .match-details-modal .match-player-data{min-height:160px}.squad-modal-v2 .squad-editor{min-height:0}
 .avatar{overflow:hidden;isolation:isolate}.avatar img{display:block;width:100%;height:100%;max-width:100%;object-fit:cover;border-radius:inherit}
-.squad-preview .avatar.has-logo{border:0!important;background:transparent!important;border-radius:50%}.squad-preview .avatar.has-logo img{border-radius:50%;object-fit:cover}
+.squad-preview .avatar.is-photo,.squad-preview .avatar.has-logo{border:0!important;background:#15191e!important;border-radius:50%;overflow:hidden}.squad-preview .avatar.is-photo img,.squad-preview .avatar.has-logo img{border-radius:50%;object-fit:cover;object-position:center 18%;width:100%;height:100%;display:block}
 .import-cards{max-height:none;overflow:visible;background:#143047}.import-cards>article{grid-template-columns:34px minmax(270px,1fr) minmax(185px,.65fr) minmax(250px,.85fr);gap:12px;padding:12px 18px;align-items:start}
 .import-match-main{grid-template-columns:minmax(0,1fr) 154px;column-gap:14px;align-items:center}.import-match-main>small,.import-match-main h3{grid-column:1}.import-match-main label{grid-column:2;grid-row:1/3;margin:0}.import-match-main input{min-height:36px}
 .import-players{max-height:122px;overflow:auto;padding-right:5px;overscroll-behavior:contain}.import-players>div{grid-template-columns:minmax(106px,1fr) minmax(146px,1fr);min-height:30px}

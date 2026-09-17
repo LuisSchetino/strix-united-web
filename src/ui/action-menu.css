@@ -1,0 +1,82 @@
+.action-menu{position:relative;display:inline-flex;flex-shrink:0}
+.action-menu-trigger{
+  display:grid;
+  place-items:center;
+  width:42px;
+  height:42px;
+  margin:0;
+  padding:0;
+  border:1px solid var(--strix-border-strong,#ffffff1f);
+  border-radius:11px;
+  background:#14181d;
+  color:#d8dce0;
+  line-height:0;
+}
+.action-menu-trigger svg{display:block;flex-shrink:0}
+.action-menu-trigger:hover{
+  border-color:#6a727b;
+  background:#1a1f24;
+  color:#fff;
+}
+.action-menu-trigger:focus-visible{
+  outline:0;
+  box-shadow:0 0 0 3px #ffffff18;
+  border-color:#8a929b;
+}
+.action-menu-trigger[aria-expanded=true]{
+  border-color:#8a929b;
+  background:#1a1f24;
+  color:#fff;
+}
+.action-menu-popover{
+  position:fixed;
+  z-index:4200;
+  min-width:198px;
+  padding:6px;
+  border:1px solid var(--strix-border-strong,#ffffff22);
+  border-radius:12px;
+  background:#101318;
+  box-shadow:0 22px 58px #000c;
+  transform-origin:top right;
+  animation:action-menu-in 160ms var(--motion-ease,cubic-bezier(.2,.8,.2,1)) both;
+}
+.action-menu-popover.is-leaving{animation:action-menu-out 140ms ease both}
+.action-menu-popover>button{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  width:100%;
+  min-height:40px;
+  margin:0;
+  padding:0 10px;
+  border:0;
+  border-radius:8px;
+  background:transparent;
+  color:#e8eaec;
+  font:800 11px/1 Inter,sans-serif;
+  text-align:left;
+}
+.action-menu-popover>button svg{flex:0 0 auto;color:currentColor}
+.action-menu-popover>button:hover,
+.action-menu-popover>button:focus-visible{
+  background:#1c2128;
+  color:#fff;
+  outline:0;
+}
+.action-menu-popover>button.is-danger{color:#e88996}
+.action-menu-popover>button.is-danger:hover,
+.action-menu-popover>button.is-danger:focus-visible{
+  background:#2a1518;
+  color:#ffb4be;
+}
+@keyframes action-menu-in{
+  from{opacity:0;transform:translateY(-4px) scale(.97)}
+  to{opacity:1;transform:none}
+}
+@keyframes action-menu-out{
+  from{opacity:1;transform:none}
+  to{opacity:0;transform:translateY(-4px) scale(.97)}
+}
+@media(prefers-reduced-motion:reduce){
+  .action-menu-popover,.action-menu-popover.is-leaving{animation:none}
+}

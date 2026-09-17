@@ -141,7 +141,7 @@ body{background:var(--strix-bg)}
 .statistics-stat-card>span,.statistics-ranking-card>header>span,.statistics-goalkeeper-card>header>span{
   border-color:var(--strix-border-strong)!important;background:#171b20!important;color:#f2f3f4!important;
 }
-.statistics-tabs-v3,.analysis-filters{border-color:var(--strix-border)!important;background:#0a0c0f!important}
+.statistics-tabs-v3{border-color:var(--strix-border)!important;background:#0a0c0f!important}
 .statistics-tabs-v3 button.active,.statistics-tabs-v3 button[aria-selected="true"],.analysis-filters button.selected{
   background:transparent!important;color:#090a0b!important;
 }

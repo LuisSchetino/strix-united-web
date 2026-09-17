@@ -20,6 +20,9 @@ import { agendaStandingComparison } from "./features/agenda/agenda-standings.js"
 import { resolveAgendaTeamIdentity, resolveTeamIdentity } from "./features/teams/team-identity.js";
 import { notify, RollingLabel, ToastViewport } from "./ui/motion/motion.jsx";
 import { ClubLogo } from "./ui/ClubLogo.jsx";
+import { ActionMenu } from "./ui/ActionMenu.jsx";
+import { LaunchGate } from "./features/launch/LaunchGate.jsx";
+import { LAUNCH_CONFIG, consumeLaunchReturn, launchGateDecision } from "./launch.js";
 import { preloadClubLogos } from "./ui/provider-assets.js";
 import { STRIX_BRAND } from "./brand.js";
 import { RastroSignature } from "./ui/RastroBrand.jsx";
@@ -385,9 +388,11 @@ function rememberLogo(name, logo) {
   catalog[normalizeTeamName(name)] = logo;
   localStorage.setItem(logoCatalogKey, JSON.stringify(catalog));
 }
-function Avatar({ name, logo, kind = "logo", priority = false }) {
+const AVATAR_PX = { sm: 36, md: 46, lg: 116 };
+function Avatar({ name, logo, kind = "logo", priority = false, size }) {
   const resolvedLogo = logo || catalogLogo(name);
-  return <ClubLogo name={name} url={resolvedLogo} kind={kind} priority={priority} sizes="75px" className="avatar"/>;
+  const px = AVATAR_PX[size];
+  return <ClubLogo name={name} url={resolvedLogo} kind={kind} priority={priority} size={px} sizes={px ? `${px}px` : "75px"} className={`avatar${size ? ` avatar-${size}` : ""}`}/>;
 }
 function tierLabel(tier) {
   return (
@@ -1087,7 +1092,7 @@ function Sidebar({
       </div>
       <RastroSignature compact={collapsed} />
       {collapsed ? <div className="sidebar-compact-account"><button type="button" className="sidebar-signout" onClick={signOut} aria-label="Sair da conta" data-tooltip="Sair da conta"><Icon name="logout" size={19}/></button></div> : <div className="sidebar-user">
-        <Avatar name={profile.display_name} logo={profile.avatar_url} kind="photo" />
+        <Avatar name={profile.display_name} logo={profile.avatar_url} kind="photo" size="sm" />
         <span>
           <b>{profile.display_name}</b>
           <small>{tierLabel(profile.access_tier)}</small>
@@ -2170,7 +2175,6 @@ function SquadPageV3({ workspace, profile }) {
   const [draft, setDraft] = useState(emptyDraft);
   const [photo, setPhoto] = useState(null);
   const [error, setError] = useState("");
-  const [actionMenu, setActionMenu] = useState("");
   const positions = ["GOL", "ZAG", "ALA", "VOL", "MC", "MEI", "ATA"];
   const previewUrl = useMemo(() => photo ? URL.createObjectURL(photo) : "", [photo]);
   const currentAvatar = previewUrl || (editing?.avatar_path ? workspace.assetUrl(editing.avatar_path) : editing?.external_avatar_url || "");
@@ -2260,14 +2264,14 @@ function SquadPageV3({ workspace, profile }) {
       {activePlayers.length ? groups.map(([id, title, description]) => {
         const players = activePlayers.filter((player) => classify(player) === id);
         return (
-          <section className={`squad-sector ${players.some((player) => player.id === actionMenu) ? "has-open-menu" : ""}`} key={id}>
+          <section className="squad-sector" key={id}>
             <header><div><span>{title}</span><small>{description}</small></div><b>{players.length}</b></header>
-            {players.length ? <div className="squad-list squad-compact-list">{players.map((player) => <article className={`squad-player-card ${actionMenu === player.id ? "has-open-menu" : ""}`} key={player.id}>
-              <Avatar name={player.display_name} logo={player.avatar_path ? workspace.assetUrl(player.avatar_path) : player.external_avatar_url || ""} kind="photo" />
+            {players.length ? <div className="squad-list squad-compact-list">{players.map((player) => <article className="squad-player-card" key={player.id}>
+              <Avatar name={player.display_name} logo={player.avatar_path ? workspace.assetUrl(player.avatar_path) : player.external_avatar_url || ""} kind="photo" size="md" />
               <div className="squad-card-identity"><b>{player.display_name}</b><small>{player.positions?.join(" · ") || "Posição não definida"}</small><span>{gamesForPlayer(player)} jogo(s)</span></div>
               <strong className="squad-shirt-number">{player.shirt_number === null || player.shirt_number === undefined ? "—" : `#${String(player.shirt_number).padStart(2, "0")}`}</strong>
               <em className={`member-tag ${player.member_type || "elenco"}`}>{player.member_type === "teste" ? `TESTE${player.trial_expires_at ? ` · até ${datePart(player.trial_expires_at)}` : ""}` : player.member_type === "complete" ? "COMPLETE" : "ELENCO"}</em>
-              {(canEdit || canArchive) && <div className="squad-context"><button className="squad-more" aria-label={`Ações de ${player.display_name}`} aria-expanded={actionMenu === player.id} onClick={() => setActionMenu((current) => current === player.id ? "" : player.id)}>•••</button>{actionMenu === player.id && <div className="squad-context-menu">{canEdit && <button onClick={() => { setActionMenu(""); openEdit(player); }}><Icon name="edit" size={14} />Editar</button>}{canArchive && <button className="danger" onClick={() => { setActionMenu(""); void workspace.removePlayer(player.id).catch((removeError) => setError(removeError.message)); }}><Icon name="trash" size={14} />Arquivar</button>}</div>}</div>}
+              {(canEdit || canArchive) && <div className="squad-context"><ActionMenu className="squad-more" label={`Ações de ${player.display_name}`} items={[canEdit && { id: "edit", icon: "edit", label: "Editar", onSelect: () => openEdit(player) }, canArchive && { id: "archive", icon: "trash", label: "Arquivar", tone: "danger", onSelect: () => { void workspace.removePlayer(player.id).catch((removeError) => setError(removeError.message)); } }].filter(Boolean)} /></div>}
             </article>)}</div> : <p className="squad-sector-empty">Nenhum jogador nesta faixa.</p>}
           </section>
         );
@@ -2287,7 +2291,7 @@ function SquadPageV3({ workspace, profile }) {
             <button type="button" className={draft.member_type === "complete" ? "selected" : ""} onClick={() => setDraft((current) => ({ ...current, member_type: "complete", trial_expires_at: "" }))}><b>COMPLETE</b><small>Fixo no time</small></button>
           </fieldset>
           {draft.member_type === "teste" && <label className="manual-full">TESTE ATÉ<input type="date" value={draft.trial_expires_at} onChange={(event) => setDraft((current) => ({ ...current, trial_expires_at: event.target.value }))} /></label>}
-        </section><aside className="squad-preview"><span>PREVIEW DO ELENCO</span><Avatar name={draft.display_name || "?"} logo={currentAvatar} kind="photo" /><small>{draft.positions[0] || "POSIÇÃO"}</small><h3>{draft.display_name || "NOME DO JOGADOR"}</h3><p>{draft.member_type === "teste" ? "Jogador em teste" : draft.member_type === "complete" ? "Jogador completo" : "Jogador do elenco"}</p></aside></div>
+        </section><aside className="squad-preview"><span>PREVIEW DO ELENCO</span><Avatar name={draft.display_name || "?"} logo={currentAvatar} kind="photo" size="lg" /><small>{draft.positions[0] || "POSIÇÃO"}</small><h3>{draft.display_name || "NOME DO JOGADOR"}</h3><p>{draft.member_type === "teste" ? "Jogador em teste" : draft.member_type === "complete" ? "Jogador completo" : "Jogador do elenco"}</p></aside></div>
         <footer>{error && <p className="squad-save-error" role="alert">{error}</p>}<div><button type="button" className="secondary" onClick={close} disabled={saving}>CANCELAR</button><button className="primary" disabled={saving}><Icon name="upload" size={16} />{saving ? "SALVANDO…" : editing?.id ? "SALVAR ALTERAÇÕES" : "SALVAR JOGADOR"}</button></div></footer>
       </form></ViewportDialog>}
     </section>
@@ -2837,6 +2841,14 @@ function MaintenanceScreen({ signOut }) {
 function App() {
   const auth = useTeamAuth();
   const workspace = useFc27Workspace(auth.client, auth.profile);
+  const [launchTick, setLaunchTick] = useState(() => Date.now());
+  const launchDecision = launchGateDecision({
+    hostname: window.location.hostname,
+    now: launchTick,
+    profile: auth.profile,
+    authLoading: auth.loading,
+    config: LAUNCH_CONFIG,
+  });
   const [active, setActive] = useState(() => pageFromLocation()),
     [compact, setCompact] = useState(false),
     [mobileOpen, setMobileOpen] = useState(false),
@@ -2913,6 +2925,18 @@ function App() {
       .slice(0, 12)
       .map((match) => match.resolved_opponent_logo_url || (match.opponent_logos?.storage_path ? workspace.assetUrl(match.opponent_logos.storage_path) : "")));
   }, [workspace.agenda, workspace.loading]);
+  useEffect(() => {
+    if (auth.loading) return undefined;
+    const next = consumeLaunchReturn();
+    if (!next) return undefined;
+    const current = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    if (current === next) return undefined;
+    window.history.replaceState(window.history.state, "", next);
+    setActive(pageFromLocation());
+  }, [auth.loading]);
+  if (launchDecision !== "app") {
+    return <LaunchGate mode={launchDecision} config={LAUNCH_CONFIG} onUnlock={() => setLaunchTick(Date.now())} onInternalAccess={auth.signIn} />;
+  }
   if (!auth.profile)
     return (
       <LoginScreen

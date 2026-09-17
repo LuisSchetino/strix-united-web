@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { MotionTabs, notify } from "../../ui/motion/motion.jsx";
 import { CloseButton } from "../../ui/CloseButton.jsx";
+import { ActionMenu } from "../../ui/ActionMenu.jsx";
+import { SelectControl } from "../../ui/SelectControl.jsx";
 import {
   archiveLibraryItem,
   asArray,
@@ -379,12 +381,10 @@ function LibraryItemModal({ client, profile, close, refresh }) {
 export function LibraryPage({ client, profile }) {
   const [tab, setTab] = useState("plays");
   const [playFilter, setPlayFilter] = useState("all");
-  const [filterOpen, setFilterOpen] = useState(false);
   const [items, setItems] = useState([]);
   const [progress, setProgress] = useState([]);
   const [selected, setSelected] = useState(null);
   const [adding, setAdding] = useState(false);
-  const [menuId, setMenuId] = useState("");
   const [pendingRemove, setPendingRemove] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -522,12 +522,7 @@ export function LibraryPage({ client, profile }) {
         <>
         {tab === "plays" && <div className="library-play-filter">
           <span>FILTRAR JOGADAS</span>
-          <button type="button" aria-haspopup="listbox" aria-expanded={filterOpen} onClick={() => setFilterOpen((value) => !value)}>
-            {playFilters.find(([value]) => value === playFilter)?.[1]} <i aria-hidden="true">⌄</i>
-          </button>
-          {filterOpen && <div className="library-play-filter-menu" role="listbox" aria-label="Categoria da jogada">
-            {playFilters.map(([value, label]) => <button type="button" role="option" aria-selected={playFilter === value} className={playFilter === value ? "selected" : ""} key={value} onClick={() => { setPlayFilter(value); setFilterOpen(false); }}>{label}</button>)}
-          </div>}
+          <SelectControl value={playFilter} onChange={setPlayFilter} label="Filtrar jogadas" options={playFilters} />
         </div>}
         <section className="library-grid">
           {visibleItems.length ? (
@@ -552,18 +547,11 @@ export function LibraryPage({ client, profile }) {
                     </small>
                     {canManage && (
                       <div className="library-card-manage">
-                        <button
-                          type="button"
+                        <ActionMenu
                           className="library-more"
-                          aria-label={`Gerenciar ${item.title}`}
-                          aria-expanded={menuId === item.id}
-                          onClick={() => setMenuId((current) => current === item.id ? "" : item.id)}
-                        >•••</button>
-                        {menuId === item.id && (
-                          <div className="library-context-menu" role="menu">
-                            <button type="button" className="danger" onClick={() => { setMenuId(""); setPendingRemove(item); }}>Remover material</button>
-                          </div>
-                        )}
+                          label={`Gerenciar ${item.title}`}
+                          items={[{ id: "remove", icon: "trash", label: "Remover material", tone: "danger", onSelect: () => setPendingRemove(item) }]}
+                        />
                       </div>
                     )}
                     <h2><button type="button" onClick={() => setSelected(item)}>{item.title}</button></h2>

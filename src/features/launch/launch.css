@@ -1,0 +1,178 @@
+.launch-gate{
+  position:relative;
+  isolation:isolate;
+  overflow:hidden;
+  display:grid;
+  place-items:center;
+  width:100%;
+  min-height:100dvh;
+  min-height:100svh;
+  padding:max(28px,env(safe-area-inset-top)) 20px max(32px,env(safe-area-inset-bottom));
+  background:#050607;
+  color:#f2f3f4;
+}
+.launch-grain,
+.launch-stripes,
+.launch-vignette,
+.launch-wordmark{
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+}
+.launch-grain{
+  z-index:1;
+  opacity:.18;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='.55'/%3E%3C/svg%3E");
+  mix-blend-mode:overlay;
+}
+.launch-stripes{
+  z-index:0;
+  background:
+    repeating-linear-gradient(105deg,transparent 0 46px,#ffffff05 46px 47px),
+    linear-gradient(180deg,#14181d 0%,#050607 42%,#050607 100%);
+}
+.launch-vignette{
+  z-index:2;
+  background:radial-gradient(ellipse 70% 58% at 50% 42%,transparent 36%,#050607f2 100%);
+}
+.launch-wordmark{
+  z-index:1;
+  display:grid;
+  place-items:center;
+  margin:0;
+  color:#ffffff0a;
+  font:900 clamp(92px,28vw,280px)/.82 Rajdhani,Inter,sans-serif;
+  letter-spacing:-.08em;
+  user-select:none;
+}
+.launch-panel{
+  position:relative;
+  z-index:3;
+  display:grid;
+  justify-items:center;
+  width:min(720px,100%);
+  text-align:center;
+}
+.launch-crest{
+  --avatar-size:112px;
+  width:112px;
+  height:112px;
+  margin-bottom:22px;
+  filter:none;
+}
+.launch-panel>span{
+  color:#b7bdc4;
+  font:800 11px/1 Inter,sans-serif;
+  letter-spacing:.22em;
+}
+.launch-panel h1{
+  margin:10px 0 18px;
+  font:900 clamp(52px,12vw,92px)/.82 Rajdhani,Inter,sans-serif;
+  letter-spacing:-.07em;
+  color:#f5f5f5;
+}
+.launch-panel>p{
+  margin:0 0 28px;
+  max-width:min(38ch,100%);
+  color:#c5c9ce;
+  font:750 13px/1.5 Inter,sans-serif;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+.launch-counter{
+  display:flex;
+  align-items:end;
+  justify-content:center;
+  gap:clamp(8px,2.4vw,18px);
+  width:100%;
+}
+.launch-counter>i{
+  padding-bottom:28px;
+  color:#6a727b;
+  font:800 clamp(28px,7vw,48px)/1 Rajdhani,sans-serif;
+}
+.launch-unit{
+  display:grid;
+  gap:10px;
+  min-width:0;
+}
+.launch-unit>b{
+  display:flex;
+  justify-content:center;
+  color:#f5f5f5;
+  font:900 clamp(40px,11vw,84px)/.9 Rajdhani,Inter,sans-serif;
+  letter-spacing:-.06em;
+  font-variant-numeric:tabular-nums;
+}
+.launch-unit>small{
+  color:#8e969f;
+  font:800 9px/1 Inter,sans-serif;
+  letter-spacing:.16em;
+}
+.launch-digit{
+  display:inline-grid;
+  height:1em;
+  overflow:hidden;
+}
+.launch-digit-track{
+  display:flex;
+  flex-direction:column;
+  transition:transform 160ms cubic-bezier(.2,.8,.2,1);
+}
+.launch-digit-track>span{
+  display:block;
+  height:1em;
+  line-height:1;
+}
+.launch-config-note{
+  margin-top:22px;
+  color:#6a727b;
+  font:800 9px/1 Inter,sans-serif;
+  letter-spacing:.14em;
+}
+.launch-sr-time{
+  position:absolute;
+  width:1px;
+  height:1px;
+  overflow:hidden;
+  clip:rect(0 0 0 0);
+}
+.launch-internal{
+  position:absolute;
+  z-index:4;
+  left:50%;
+  bottom:max(18px,env(safe-area-inset-bottom));
+  translate:-50% 0;
+  margin:0;
+  padding:8px 10px;
+  border:0;
+  background:none;
+  color:#4d545c;
+  font:700 10px/1 Inter,sans-serif;
+  letter-spacing:.12em;
+  cursor:pointer;
+}
+.launch-internal:hover,
+.launch-internal:focus-visible{
+  color:#8e969f;
+  outline:0;
+}
+.launch-internal:disabled{cursor:wait;opacity:.7}
+.launch-internal-error{
+  position:absolute;
+  z-index:4;
+  left:50%;
+  bottom:max(44px,calc(env(safe-area-inset-bottom) + 36px));
+  translate:-50% 0;
+  color:#a88989;
+  font:700 10px/1 Inter,sans-serif;
+}
+.launch-gate.is-checking .launch-panel>p{color:#aeb4bb}
+@media(max-width:430px){
+  .launch-crest{--avatar-size:84px;width:84px;height:84px}
+  .launch-counter{gap:6px}
+  .launch-counter>i{padding-bottom:22px}
+}
+@media(prefers-reduced-motion:reduce){
+  .launch-digit-track{transition:none}
+}
