@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import {
   LAUNCH_CONFIG,
+  canShowInternalAccess,
   consumeLaunchReturn,
   countdownParts,
   displayRemainingMs,
@@ -135,24 +136,31 @@ test("post-launch unlocks every role on the official domain", () => {
   }
 });
 
+test("internal access stays off the official public landing", async () => {
+  assert.equal(canShowInternalAccess(official), false);
+  assert.equal(canShowInternalAccess(www), false);
+  assert.equal(canShowInternalAccess("localhost"), true);
+  assert.equal(canShowInternalAccess(qa), true);
+  const [main, gate] = await Promise.all([
+    readFile(new URL("../src/main.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/features/launch/LaunchGate.jsx", import.meta.url), "utf8"),
+  ]);
+  assert.match(gate, /canShowInternalAccess/);
+  assert.match(gate, /showInternal/);
+  assert.match(main, /onInternalAccess=\{auth\.signIn\}/);
+  assert.doesNotMatch(gate, /TODO\/CONFIG/);
+  assert.doesNotMatch(gate, /DATA EM REVISÃO/);
+});
+
 test("deep link is remembered across internal access and not rewritten to central", async () => {
   const storage = memoryStorage();
   assert.equal(rememberLaunchReturn("/agenda", storage), "/agenda");
   assert.equal(consumeLaunchReturn(storage), "/agenda");
   assert.equal(consumeLaunchReturn(storage), "");
-  const [main, gate] = await Promise.all([
-    readFile(new URL("../src/main.jsx", import.meta.url), "utf8"),
-    readFile(new URL("../src/features/launch/LaunchGate.jsx", import.meta.url), "utf8"),
-  ]);
-  assert.match(gate, /Acesso interno/);
-  assert.match(gate, /rememberLaunchReturn/);
-  assert.match(gate, /onInternalAccess/);
-  assert.match(main, /onInternalAccess=\{auth\.signIn\}/);
+  const main = await readFile(new URL("../src/main.jsx", import.meta.url), "utf8");
   assert.match(main, /consumeLaunchReturn/);
   assert.match(main, /pageFromLocation/);
   assert.doesNotMatch(main, /LaunchGate[\s\S]{0,400}navigate\("central"\)/);
-  assert.doesNotMatch(gate, /TODO\/CONFIG/);
-  assert.doesNotMatch(gate, /DATA EM REVISÃO/);
 });
 
 test("session check renders bootstrap, never login, while auth is loading on official host", () => {

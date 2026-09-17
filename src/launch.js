@@ -30,6 +30,11 @@ export function isOfficialLaunchHost(hostname) {
   return OFFICIAL_HOSTS.has(normalizeHostname(hostname));
 }
 
+export function canShowInternalAccess(hostname) {
+  if (isOfficialLaunchHost(hostname)) return false;
+  return isQaPreviewHost(hostname) || isLocalReviewHost(hostname);
+}
+
 function isLocalReviewHost(hostname) {
   const host = normalizeHostname(hostname);
   return (

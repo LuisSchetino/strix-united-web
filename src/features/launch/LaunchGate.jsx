@@ -4,6 +4,7 @@ import { STRIX_BRAND } from "../../brand.js";
 import { useReducedMotion } from "../../ui/motion/motion.jsx";
 import {
   LAUNCH_CONFIG,
+  canShowInternalAccess,
   countdownParts,
   displayRemainingMs,
   isLaunchUnlocked,
@@ -51,6 +52,8 @@ export function LaunchGate({ mode = "countdown", config = LAUNCH_CONFIG, onUnloc
   const [signingIn, setSigningIn] = useState(false);
   const [signInError, setSignInError] = useState("");
   const parts = countdownParts(displayRemainingMs(now, config));
+  const hostname = typeof window === "undefined" ? "" : window.location.hostname;
+  const showInternal = mode === "countdown" && Boolean(onInternalAccess) && canShowInternalAccess(hostname);
 
   useEffect(() => {
     const tick = () => {
@@ -67,42 +70,52 @@ export function LaunchGate({ mode = "countdown", config = LAUNCH_CONFIG, onUnloc
 
   return (
     <main
-      className={`launch-gate${checking ? " is-checking" : ""}`}
+      className={`launch-gate${checking ? " is-checking" : ""}${reduced ? " is-reduced" : ""}`}
       aria-busy={checking || undefined}
       aria-label="Lançamento FC 27"
     >
-      <div className="launch-grain" aria-hidden="true" />
+      <div className="launch-ambient" aria-hidden="true" />
       <div className="launch-stripes" aria-hidden="true" />
+      <div className="launch-sweep" aria-hidden="true" />
+      <div className="launch-beam launch-beam-left" aria-hidden="true" />
+      <div className="launch-beam launch-beam-right" aria-hidden="true" />
+      <div className="launch-grain" aria-hidden="true" />
       <div className="launch-vignette" aria-hidden="true" />
       <p className="launch-wordmark" aria-hidden="true">STRIX</p>
+      <div className="launch-frame" aria-hidden="true">
+        <i /><i /><i /><i />
+      </div>
       <section className="launch-panel">
+        <span className="launch-kicker">STRIX UNITED</span>
         <ClubLogo
           name="Strix United"
           url={STRIX_BRAND.logo}
           className="launch-crest"
           kind="logo"
           priority
-          size={112}
-          sizes="(max-width:580px) 88px, 128px"
+          sizes="(max-width:430px) 108px, (max-width:900px) 128px, 148px"
           decorative
         />
-        <span>STRIX UNITED</span>
         <h1>FC 27</h1>
-        <p>{checking ? "Preparando o vestiário." : "O próximo capítulo começa em"}</p>
+        <p className="launch-line">
+          <i />
+          <span>{checking ? "Preparando o vestiário." : "O próximo capítulo começa em"}</span>
+          <i />
+        </p>
         <div className="launch-counter" aria-hidden="true">
           <LaunchUnit value={parts.days} label="DIAS" reduced={reduced} />
-          <i>:</i>
+          <em>:</em>
           <LaunchUnit value={parts.hours} label="HORAS" reduced={reduced} />
-          <i>:</i>
+          <em>:</em>
           <LaunchUnit value={parts.minutes} label="MIN" reduced={reduced} />
-          <i>:</i>
+          <em>:</em>
           <LaunchUnit value={parts.seconds} label="SEG" reduced={reduced} />
         </div>
         <time className="launch-sr-time" dateTime={config.launchAt}>
           Lançamento FC 27 em {config.launchAt}
         </time>
       </section>
-      {mode === "countdown" && onInternalAccess && (
+      {showInternal && (
         <button
           type="button"
           className="launch-internal"
@@ -122,7 +135,7 @@ export function LaunchGate({ mode = "countdown", config = LAUNCH_CONFIG, onUnloc
           {signingIn ? "Abrindo acesso…" : "Acesso interno"}
         </button>
       )}
-      {signInError && <small className="launch-internal-error">{signInError}</small>}
+      {showInternal && signInError && <small className="launch-internal-error">{signInError}</small>}
     </main>
   );
 }
