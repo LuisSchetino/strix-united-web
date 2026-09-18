@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import {
   ANNOUNCE_PHRASES,
   announceDurationSeconds,
@@ -11,7 +12,7 @@ import {
   pickAnnouncePhrase,
   resolveAnnouncePhrase,
 } from "../src/features/media/announce-core.js";
-import { personVariant, campaignName, fitNameLayout, announceGridSpec, fitAnnounceSubject, headVisibleInDest } from "../src/features/media/announce-look.js";
+import { personVariant, campaignName, fitNameLayout, announceGridSpec, fitAnnounceSubject, headVisibleInDest, announceRoleInk } from "../src/features/media/announce-look.js";
 import { composeAnnounceFx, listAnnounceFxSlots, missingAnnounceFx, ANNOUNCE_FX_SLOTS, ANNOUNCE_FX_SKIPPED } from "../src/features/media/announce-fx.js";
 import { buildAnnounceTimeline } from "../src/features/media/announce-timeline.js";
 import { announceFrameTime, describeAnnounceFrame, renderAnnounceFrame } from "../src/features/media/announce-frame.js";
@@ -261,4 +262,16 @@ test("subject fit never crops the head out of the photo box", () => {
   assert.equal(headVisibleInDest(portrait, destH), true);
   const eyeY = portrait.dy + portrait.dh * 0.22;
   assert.ok(eyeY > destH * 0.12 && eyeY < destH * 0.48);
+});
+
+test("role accents stay quiet and camera does not pan sideways", async () => {
+  assert.equal(announceRoleInk("diretoria"), "#d4c4a0");
+  assert.equal(announceRoleInk("conselho"), "#c5cbc6");
+  assert.equal(announceRoleInk("staff"), "#c9ced4");
+  assert.equal(announceRoleInk("jogador"), "#9aa0a6");
+  const paint = await readFile(new URL("../src/features/media/announce-paint.js", import.meta.url), "utf8");
+  assert.doesNotMatch(paint, /Math\.sin\([^)]*\) \* 20/);
+  assert.doesNotMatch(paint, /drift: Math\.sin/);
+  assert.match(paint, /announceRoleInk/);
+  assert.match(paint, /paintPhotoFlash/);
 });

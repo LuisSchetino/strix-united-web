@@ -115,8 +115,9 @@
 }
 .special-state-actions .primary,
 .special-state-actions .secondary{
-  min-height:44px;
-  padding:11px 16px;
+  min-height:46px;
+  min-width:148px;
+  padding:12px 18px;
 }
 .special-state-hint{
   margin:18px 0 0;

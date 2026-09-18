@@ -29,7 +29,13 @@ test("mobile sheets keep header body footer and iPhone safe area", async () => {
   assert.match(css, /env\(safe-area-inset-bottom\)/);
   assert.match(css, /env\(safe-area-inset-top/);
   assert.match(css, /\.match-preview \.avatar img[\s\S]*object-fit:contain/);
+  assert.match(css, /\.match-preview-mark/);
+  assert.match(css, /--vv-bottom/);
+  assert.match(css, /min\(100dvh, 100svh\)|min\(100dvh,100svh\)/);
+  assert.match(css, /font-size:16px!important/);
   assert.match(css, /\.formation-picker-field \.slot-10/);
+  assert.match(main, /visualViewport/);
+  assert.match(main, /match-preview-mark/);
   assert.match(css, /overflow:hidden!important/);
   assert.match(css, /100dvh/);
   assert.match(html, /viewport-fit=cover/);

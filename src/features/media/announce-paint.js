@@ -4,6 +4,7 @@ import { easeInOutCubic, easeOutExpo, easeOutQuart, reveal } from "./agenda-time
 import { composeAnnounceFx, fxEnvelope } from "./announce-fx.js";
 import {
   announceGridSpec,
+  announceRoleInk,
   campaignName,
   classifyAnnouncePhoto,
   fitAnnounceSubject,
@@ -407,35 +408,41 @@ function paintTypeStack(ctx, person, timeline, box, {
   const story = timeline.format !== "feed";
   const prefer = nameSize || (story ? 88 : 72);
   const layout = fitNameLayout(ctx, campaignName(person), box.w, prefer, story ? 44 : 40);
-  const meta = [person.position || "MC", person.extraBadge].filter(Boolean).join("  ·  ");
-  const metaSize = stage === "detail" || stage === "close" || !story ? 16 : 14;
+  const roleInk = announceRoleInk(person.extraRole);
+  const metaSize = stage === "detail" || stage === "close" || !story ? 15 : 13;
   ctx.save();
   ctx.globalAlpha = alpha;
   ctx.textAlign = "left";
-  ctx.fillStyle = MUTED;
-  ctx.font = `800 ${metaSize}px Inter, sans-serif`;
-  ctx.fillText(meta, box.x, box.y);
-  const nameY = box.y + (story ? 70 : 58);
+  ctx.fillStyle = INK;
+  const nameY = box.y + (layout.size * 0.86);
   layout.lines.forEach((line, index) => {
-    ctx.fillStyle = INK;
     ctx.font = `700 ${layout.size}px Rajdhani, sans-serif`;
-    ctx.fillText(line, box.x, nameY + index * (layout.size * 0.86));
+    ctx.fillText(line, box.x, nameY + index * (layout.size * 0.9));
   });
-  const accentY = nameY + layout.lines.length * (layout.size * 0.86) - layout.size * 0.18;
+  const nameBottom = nameY + (layout.lines.length - 1) * (layout.size * 0.9);
+  ctx.fillStyle = roleInk;
+  ctx.font = `800 ${metaSize}px Inter, sans-serif`;
+  ctx.fillText((person.position || "MC").toUpperCase(), box.x, nameBottom + layout.size * 0.42);
+  if (person.extraBadge) {
+    ctx.fillStyle = roleInk;
+    ctx.font = `800 ${metaSize - 1}px Inter, sans-serif`;
+    ctx.fillText(person.extraBadge, box.x, nameBottom + layout.size * 0.42 + metaSize + 14);
+  }
+  const accentY = nameBottom + layout.size * 0.42 + (person.extraBadge ? metaSize + 28 : 18);
   paintNameAccent(ctx, box, brushProgress, accentY);
   if (stage === "detail" || stage === "close" || timeline.format === "feed") {
     ctx.fillStyle = MUTED;
     ctx.font = "800 13px Inter, sans-serif";
-    ctx.fillText(timeline.season || "FC 27", box.x, accentY + 28);
+    ctx.fillText(timeline.season || "FC 27", box.x, accentY + 26);
   }
   if (phrase && phraseAlpha > 0) {
     ctx.globalAlpha = alpha * phraseAlpha;
     ctx.fillStyle = RULE;
-    ctx.fillRect(box.x, accentY + 46, 36, 2);
+    ctx.fillRect(box.x, accentY + 44, 36, 2);
     ctx.fillStyle = INK;
-    ctx.font = story ? "600 26px Inter, sans-serif" : "600 25px Inter, sans-serif";
+    ctx.font = story ? "600 24px Inter, sans-serif" : "600 23px Inter, sans-serif";
     wrapPhrase(ctx, phrase, box.w, ctx.font).forEach((line, index) => {
-      ctx.fillText(line, box.x, accentY + 84 + index * 32);
+      ctx.fillText(line, box.x, accentY + 86 + index * 32);
     });
   }
   ctx.restore();
@@ -503,12 +510,13 @@ function paintOpening(ctx, timeline, time, assets) {
 }
 
 function heroCamera(time, still, stage = "hero") {
-  if (still) return { scale: 1.05, drift: 0, bg: 1.03, focusShift: 0, plateLift: 0.35 };
-  if (stage === "reveal") return { scale: 1.1, drift: Math.sin(time * 0.35) * 12, bg: 1.07, focusShift: 0.03, plateLift: 0 };
-  if (stage === "hero") return { scale: 1.03, drift: Math.sin(time * 0.15) * 8, bg: 1.02, focusShift: 0, plateLift: 0 };
-  if (stage === "reframe") return { scale: 1.15, drift: Math.sin(time * 0.22) * 20, bg: 1.09, focusShift: -0.055, plateLift: 0.2 };
-  if (stage === "detail") return { scale: 1.08, drift: Math.sin(time * 0.13) * 10, bg: 1.04, focusShift: -0.02, plateLift: 0.35 };
-  return { scale: 1.02, drift: Math.sin(time * 0.1) * 5, bg: 1.02, focusShift: 0, plateLift: 0.45 };
+  if (still) return { scale: 1.06, drift: 0, bg: 1.03, focusShift: 0, plateLift: 0.35 };
+  const breath = Math.sin(time * 0.18) * 0.012;
+  if (stage === "reveal") return { scale: 1.04 + breath, drift: 0, bg: 1.05, focusShift: 0.02, plateLift: 0 };
+  if (stage === "hero") return { scale: 1.08 + breath, drift: 0, bg: 1.03, focusShift: 0, plateLift: 0 };
+  if (stage === "reframe") return { scale: 1.14 + breath, drift: 0, bg: 1.07, focusShift: -0.04, plateLift: 0.2 };
+  if (stage === "detail") return { scale: 1.18 + breath, drift: 0, bg: 1.05, focusShift: -0.055, plateLift: 0.35 };
+  return { scale: 1.1 + breath, drift: 0, bg: 1.03, focusShift: -0.02, plateLift: 0.45 };
 }
 
 function paintHeroComposition(ctx, timeline, time, person, assets, {
@@ -602,36 +610,36 @@ function alongKeys(keys, t) {
 }
 
 function cinematicCamera(timeline, time = 0, local = 0) {
-  if (timeline?.still) return { scale: 1.14, focus: 0.17, lift: 0, inset: 4, drift: 0 };
+  if (timeline?.still) return { scale: 1.1, focus: 0.17, lift: 0, inset: 4, drift: 0 };
   const live = Number(time) || 0;
-  const drift = Math.sin(live * 0.11) * 6;
-  const breath = Math.sin(live * 0.19) * 0.004;
+  const breath = Math.sin(live * 0.16) * 0.01;
   if (timeline?.kind === "team") {
     const beat = Math.max(2.4, Number(timeline.beat) || 3.65);
     const cam = alongKeys([
-      { t: 0, scale: 1.08, focus: 0.165, lift: 2, inset: 8 },
-      { t: 0.4, scale: 1.13, focus: 0.17, lift: 0, inset: 5 },
-      { t: 0.74, scale: 1.18, focus: 0.16, lift: -2, inset: 3 },
-      { t: 1, scale: 1.14, focus: 0.175, lift: 0, inset: 6 },
+      { t: 0, scale: 1.05, focus: 0.18, lift: 2, inset: 10 },
+      { t: 0.28, scale: 1.1, focus: 0.17, lift: 0, inset: 6 },
+      { t: 0.62, scale: 1.16, focus: 0.155, lift: -2, inset: 3 },
+      { t: 1, scale: 1.12, focus: 0.165, lift: 0, inset: 5 },
     ], clamp(local / beat));
-    return { ...cam, scale: cam.scale + breath, drift };
+    return { ...cam, scale: cam.scale + breath, drift: 0 };
   }
   const introEnd = timeline?.introEnd || 1.08;
   const duration = timeline?.duration || 10.6;
   const cam = alongKeys([
-    { t: 0, scale: 1.08, focus: 0.165, lift: 4, inset: 10 },
-    { t: 0.26, scale: 1.13, focus: 0.17, lift: 1, inset: 6 },
-    { t: 0.58, scale: 1.18, focus: 0.16, lift: -3, inset: 2 },
-    { t: 1, scale: 1.14, focus: 0.175, lift: 0, inset: 5 },
+    { t: 0, scale: 1.04, focus: 0.18, lift: 4, inset: 10 },
+    { t: 0.22, scale: 1.09, focus: 0.17, lift: 1, inset: 6 },
+    { t: 0.52, scale: 1.16, focus: 0.15, lift: -3, inset: 2 },
+    { t: 0.78, scale: 1.2, focus: 0.14, lift: -1, inset: 4 },
+    { t: 1, scale: 1.12, focus: 0.16, lift: 0, inset: 5 },
   ], clamp((live - introEnd) / Math.max(0.01, duration - introEnd)));
-  return { ...cam, scale: cam.scale + breath, drift };
+  return { ...cam, scale: cam.scale + breath, drift: 0 };
 }
 
 function playerStageGeometry(timeline, camera) {
   const { width, height, safe, format } = timeline;
   const story = format !== "feed";
   const type = typeScale(format);
-  const typeReserve = story ? 470 : 352;
+  const typeReserve = story ? 540 : 390;
   const gap = story ? 90 : 82;
   const typeBox = {
     x: safe.side,
@@ -887,45 +895,50 @@ function paintPlayerVariable(ctx, timeline, time, assets, {
 
   if (nameIn <= 0) return;
   const story = timeline.format !== "feed";
-  const name = fitNameLayout(ctx, campaignName(subject), geo.typeBox.w, story ? 186 : 140, story ? 68 : 56);
-  const meta = [subject.position || "MC", subject.extraBadge].filter(Boolean).join("  ·  ");
-  const metaSize = story ? 50 : 36;
-  const phraseSize = story ? 46 : 38;
+  const name = fitNameLayout(ctx, campaignName(subject), geo.typeBox.w, story ? 176 : 132, story ? 68 : 56);
+  const roleInk = announceRoleInk(subject.extraRole);
+  const metaSize = story ? 28 : 22;
+  const phraseSize = story ? 42 : 34;
   ctx.save();
   ctx.globalAlpha = nameIn;
   ctx.textAlign = "left";
   let cursor = geo.typeBox.y;
   if (indexLabel) {
     ctx.fillStyle = MUTED;
-    ctx.font = `800 ${story ? 24 : 18}px Inter, sans-serif`;
+    ctx.font = `800 ${story ? 22 : 16}px Inter, sans-serif`;
     ctx.fillText(indexLabel, geo.typeBox.x, cursor);
-    cursor += 36;
+    cursor += 40;
   }
   ctx.fillStyle = INK;
   name.lines.forEach((line, index) => {
     ctx.font = `700 ${name.size}px Rajdhani, sans-serif`;
-    ctx.fillText(line, geo.typeBox.x, cursor + name.size * (0.82 + index * 0.9));
+    ctx.fillText(line, geo.typeBox.x, cursor + name.size * (0.82 + index * 0.92));
   });
-  const nameBottom = cursor + name.size * (0.82 + (name.lines.length - 1) * 0.9);
-  ctx.fillStyle = MUTED;
+  const nameBottom = cursor + name.size * (0.82 + (name.lines.length - 1) * 0.92);
+  ctx.fillStyle = roleInk;
   ctx.font = `800 ${metaSize}px Inter, sans-serif`;
-  ctx.fillText(meta, geo.typeBox.x, nameBottom + 52);
-  const ruleY = nameBottom + 78;
+  ctx.fillText((subject.position || "MC").toUpperCase(), geo.typeBox.x, nameBottom + 56);
+  let ruleY = nameBottom + 78;
+  if (subject.extraBadge) {
+    ctx.font = `800 ${Math.max(14, metaSize - 8)}px Inter, sans-serif`;
+    ctx.fillText(subject.extraBadge, geo.typeBox.x, nameBottom + 88);
+    ruleY = nameBottom + 112;
+  }
   ctx.fillStyle = INK;
   ctx.globalAlpha = nameIn * 0.78;
-  ctx.fillRect(geo.typeBox.x, ruleY, Math.min(220, geo.typeBox.w * 0.34), 4);
+  ctx.fillRect(geo.typeBox.x, ruleY, Math.min(180, geo.typeBox.w * 0.28), 3);
   if (phrase && phraseIn > 0) {
     ctx.globalAlpha = nameIn * phraseIn;
     ctx.fillStyle = INK;
     let size = phraseSize;
     let lines = wrapPhrase(ctx, String(phrase).toUpperCase(), geo.typeBox.w, `600 ${size}px Inter, sans-serif`);
-    while (lines.length > 1 && size > (story ? 36 : 30)) {
+    while (lines.length > 1 && size > (story ? 32 : 28)) {
       size -= 2;
       lines = wrapPhrase(ctx, String(phrase).toUpperCase(), geo.typeBox.w, `600 ${size}px Inter, sans-serif`);
     }
     ctx.font = `600 ${size}px Inter, sans-serif`;
     lines.forEach((line, index) => {
-      ctx.fillText(line, geo.typeBox.x, ruleY + 64 + index * Math.round(size * 1.22));
+      ctx.fillText(line, geo.typeBox.x, ruleY + 56 + index * Math.round(size * 1.22));
     });
   }
   ctx.restore();
@@ -962,9 +975,23 @@ function paintIndividualStage(ctx, timeline, time, assets) {
     ctx.clip();
     paintVariable(ctx);
     ctx.restore();
-    return;
+  } else {
+    paintVariable(ctx);
   }
-  paintVariable(ctx);
+  if (!still && stage === "reveal") {
+    const pulse = Math.sin(clamp(local / 0.2) * Math.PI);
+    if (pulse > 0.05) paintPhotoFlash(ctx, timeline, pulse * 0.22, assets);
+  }
+  if (!still && stage === "detail" && local < 0.28) {
+    composeAnnounceFx(ctx, assets?.fx?.flare01, {
+      x: timeline.width * 0.12,
+      y: timeline.height * 0.18,
+      w: timeline.width * 0.76,
+      h: 140,
+      alpha: fxEnvelope(local, 0, 0.28) * 0.35,
+      time,
+    });
+  }
 }
 
 function paintIndividual(ctx, timeline, time, assets) {

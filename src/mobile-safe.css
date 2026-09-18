@@ -1,4 +1,5 @@
 /* Last-layer mobile Safari shell: docked sidebar, sheet header/body/footer, safe area. */
+:root{--fc27-label:#aeb4bb}
 
 .sidebar{
   display:flex;
@@ -94,14 +95,14 @@
 }
 .preset-panel-footer,
 .preset-panel>form{
-  position:sticky;
-  bottom:0;
+  position:relative;
+  bottom:auto;
   z-index:3;
   display:grid;
   gap:9px;
   margin-top:12px;
-  padding-top:12px;
-  padding-bottom:max(8px,env(safe-area-inset-bottom));
+  padding-top:14px;
+  padding-bottom:calc(12px + env(safe-area-inset-bottom, 0px) + var(--vv-bottom, 0px));
   border-top:1px solid var(--strix-border,rgba(255,255,255,.08));
   background:#0b0d10;
 }
@@ -109,7 +110,7 @@
 .match-preview{
   display:grid;
   justify-items:center;
-  gap:10px;
+  gap:12px;
   min-height:220px;
   padding:22px 18px;
   text-align:center;
@@ -121,25 +122,78 @@
   gap:clamp(12px,4vw,28px);
   width:100%;
 }
+.match-preview-mark{
+  display:grid;
+  place-items:center;
+  width:84px;
+  height:84px;
+  min-width:84px;
+  min-height:84px;
+  max-width:84px;
+  max-height:84px;
+  flex:0 0 84px;
+  overflow:hidden;
+}
+.match-preview-mark .crest,
+.match-preview-mark .club-logo,
+.match-preview-mark .avatar,
 .match-preview .crest,
 .match-preview .club-logo,
 .match-preview .avatar{
-  width:72px!important;
-  height:72px!important;
-  min-width:72px;
-  min-height:72px;
-  flex:0 0 72px;
+  width:84px!important;
+  height:84px!important;
+  min-width:84px!important;
+  min-height:84px!important;
+  max-width:84px!important;
+  max-height:84px!important;
+  flex:0 0 84px!important;
+  --avatar-size:84px;
   overflow:hidden;
   background:transparent!important;
   border:0!important;
+  filter:none!important;
 }
+.match-preview-mark img,
 .match-preview .crest img,
 .match-preview .club-logo img,
 .match-preview .avatar img{
-  width:100%;
-  height:100%;
-  object-fit:contain;
-  object-position:center;
+  width:100%!important;
+  height:100%!important;
+  object-fit:contain!important;
+  object-position:center!important;
+}
+.match-preview em{
+  display:inline-flex;
+  align-items:center;
+  min-height:32px;
+  margin-top:4px;
+  padding:7px 14px;
+  border:1px solid var(--strix-border-strong,#3f454c);
+  border-radius:999px;
+  background:#161a1f;
+  color:#e8eaec!important;
+  font-size:12px;
+  font-weight:800;
+  font-style:normal;
+  letter-spacing:.08em;
+}
+.agenda-form label,
+.preset-panel header span,
+.modal-lineup header span,
+.logo-drop{
+  color:#c7ccd1!important;
+}
+.agenda-form input,
+.agenda-form select,
+.agenda-preset-select,
+.preset-panel-footer input,
+.preset-panel-footer select{
+  min-height:48px;
+  font-size:16px!important;
+}
+.agenda-preset-select{
+  min-height:52px;
+  border-width:1.5px!important;
 }
 
 .formation-picker-field{
@@ -177,8 +231,8 @@
   .preset-panel,
   .squad-dialog-layer .squad-modal-v2{
     width:100%!important;
-    height:calc(100dvh - env(safe-area-inset-top,0px))!important;
-    max-height:calc(100dvh - env(safe-area-inset-top,0px))!important;
+    height:min(100dvh, 100svh)!important;
+    max-height:min(100dvh, 100svh)!important;
     margin:0!important;
     border-radius:18px 18px 0 0!important;
   }
@@ -203,36 +257,65 @@
     min-height:0!important;
     overflow-y:auto!important;
     overscroll-behavior:contain;
+    -webkit-overflow-scrolling:touch;
+    padding-bottom:8px;
   }
   .agenda-modal>form>footer,
   .squad-dialog-layer .squad-modal-v2>footer,
   .preset-panel-footer,
   .preset-panel>form,
   .match-manual-modal>footer{
-    position:sticky!important;
-    bottom:0;
+    position:relative!important;
+    bottom:auto;
     z-index:6;
     flex:0 0 auto!important;
     margin:0!important;
-    padding:12px 16px calc(16px + env(safe-area-inset-bottom))!important;
+    padding:14px 16px calc(18px + env(safe-area-inset-bottom, 0px) + var(--vv-bottom, 0px))!important;
     background:#0b0d10!important;
+    box-shadow:0 -12px 24px #0b0d10;
+  }
+  .agenda-modal>form>footer .primary,
+  .agenda-modal>form>footer .secondary,
+  .preset-panel-footer .primary,
+  .squad-dialog-layer footer .primary,
+  .squad-dialog-layer footer .secondary,
+  .match-manual-modal>footer .primary,
+  .match-manual-modal>footer .secondary{
+    min-height:48px;
   }
   .agenda-modal-body{
     display:grid;
     gap:16px;
   }
   .match-preview{
-    min-height:240px;
+    min-height:232px;
     order:-1;
   }
+  .match-preview-mark,
+  .match-preview-mark .crest,
+  .match-preview-mark .club-logo,
+  .match-preview-mark .avatar,
   .match-preview .crest,
   .match-preview .club-logo,
   .match-preview .avatar{
     width:88px!important;
     height:88px!important;
-    min-width:88px;
-    min-height:88px;
-    flex-basis:88px;
+    min-width:88px!important;
+    min-height:88px!important;
+    max-width:88px!important;
+    max-height:88px!important;
+    flex-basis:88px!important;
+    --avatar-size:88px;
+  }
+  .agenda-form input,
+  .agenda-form select,
+  .agenda-preset-select,
+  .preset-panel-footer input,
+  .preset-panel-footer select,
+  .squad-dialog-layer input,
+  .squad-dialog-layer select{
+    min-height:52px!important;
+    font-size:16px!important;
   }
   .formation-picker-field{
     height:clamp(320px,52svh,460px)!important;

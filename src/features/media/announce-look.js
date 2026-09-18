@@ -226,6 +226,14 @@ export function buildNameBrush(seed, box) {
   };
 }
 
+export function announceRoleInk(role = "jogador") {
+  const id = String(role || "").trim().toLowerCase();
+  if (id === "diretoria") return "#d4c4a0";
+  if (id === "conselho") return "#c5cbc6";
+  if (id === "staff" || id === "manager") return "#c9ced4";
+  return "#9aa0a6";
+}
+
 export function campaignName(person) {
   return String(person?.name || "").toUpperCase();
 }

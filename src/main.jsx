@@ -142,6 +142,22 @@ function ViewportDialog({ className = "modal-backdrop", children, onClose, ...pr
     document.body.style.overflow = "hidden";
     return () => { document.body.style.overflow = previous; };
   }, []);
+  useLayoutEffect(() => {
+    const node = dialogRef.current;
+    const viewport = window.visualViewport;
+    if (!node || !viewport) return undefined;
+    const sync = () => {
+      const covered = Math.max(0, window.innerHeight - (viewport.height + viewport.offsetTop));
+      node.style.setProperty("--vv-bottom", `${Math.round(covered)}px`);
+    };
+    sync();
+    viewport.addEventListener("resize", sync);
+    viewport.addEventListener("scroll", sync);
+    return () => {
+      viewport.removeEventListener("resize", sync);
+      viewport.removeEventListener("scroll", sync);
+    };
+  }, []);
   return createPortal(
     <div ref={dialogRef} className={className} {...props}>{children}</div>,
     document.body,
@@ -1614,6 +1630,7 @@ function AgendaModal({ entry, mode = "new", presets, roster = [], assetUrl, stan
               <label>
                 PREDEFINIÇÃO DA ESCALAÇÃO
                 <select
+                  className="agenda-preset-select"
                   name="presetId"
                   value={form.presetId || ""}
                   onChange={change}
@@ -1645,7 +1662,15 @@ function AgendaModal({ entry, mode = "new", presets, roster = [], assetUrl, stan
               <header><span>CLASSIFICAÇÃO</span><small>{standings?.competition || form.competition}</small></header>
               {standings?.available ? <div><StandingTeam row={standings.strix} label="STRIX"/><StandingTeam row={standings.opponent} label="ADVERSÁRIO"/></div> : <p>Sem classificação disponível para esta partida.</p>}
             </aside> : <aside className="match-preview">
-              <span>PREVIEW DA AGENDA</span><div><Crest /><b>VS</b><Avatar name={form.opponent || "?"} logo={form.logo} /></div><strong>{form.opponent || "ADVERSÁRIO"}</strong><small>{form.date} · {form.time}</small><em>{form.competition}</em>
+              <span>PREVIEW DA AGENDA</span>
+              <div>
+                <span className="match-preview-mark"><Crest /></span>
+                <b>VS</b>
+                <span className="match-preview-mark"><Avatar name={form.opponent || "?"} logo={form.logo} /></span>
+              </div>
+              <strong>{form.opponent || "ADVERSÁRIO"}</strong>
+              <small>{form.date} · {form.time}</small>
+              <em>{form.competition}</em>
             </aside>}
           </div>
           <section className="modal-lineup">

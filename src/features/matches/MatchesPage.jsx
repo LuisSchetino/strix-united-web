@@ -1000,8 +1000,10 @@ export function MatchesPage({ profile, workspace, client }) {
       </header>
       {metrics && (
         <div className="performance-note" aria-live="polite">
-          <span>Resposta visual: {metrics.feedbackMs ?? "…"} ms</span>
-          <span>
+          <span className={metrics.status === "error" ? "is-error" : metrics.status === "loading" ? "is-pending" : "is-ok"}>
+            Resposta visual: {metrics.feedbackMs ?? "…"} ms
+          </span>
+          <span className={metrics.status === "error" ? "is-error" : metrics.status === "loading" ? "is-pending" : "is-ok"}>
             Consulta: {metrics.status === "error" ? "falhou em " : ""}
             {metrics.totalMs ?? "em andamento"}
             {metrics.totalMs !== null ? " ms" : ""}
@@ -1011,7 +1013,11 @@ export function MatchesPage({ profile, workspace, client }) {
       )}
       {(error || workspace.error) && (
         <p className="matches-error" role="alert">
-          {error || workspace.error}
+          <svg className="matches-error-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 3 2.5 20h19L12 3z" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinejoin="round" />
+            <path d="M12 9v5M12 17.2h.01" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
+          </svg>
+          <span>{error || workspace.error}</span>
         </p>
       )}
       {success && (

@@ -36,6 +36,14 @@
 .announce-studio .media-preview-card>.media-progress,
 .announce-studio .media-preview-card>.media-error{order:3}
 .announce-studio .media-preview-card>.media-cache{order:4}
+.announce-studio .media-preview-frame{
+  padding:18px;border-color:#2a2e33;background:
+    radial-gradient(ellipse 70% 46% at 50% 18%,#ffffff0d,transparent 58%),
+    #070809
+}
+.announce-studio .media-preview-frame canvas{
+  border-radius:10px;box-shadow:0 24px 60px #000c,0 0 0 1px #ffffff10
+}
 .announce-studio .media-viewer img{
   width:100%;max-height:calc(100dvh - 240px);object-fit:contain;border-radius:12px;background:#000
 }
