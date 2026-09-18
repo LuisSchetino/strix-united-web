@@ -1,18 +1,6 @@
 import React from "react";
-import { deniedPageCopy } from "../access.js";
+import { SpecialState } from "./special-state/SpecialState.jsx";
 
-export function AccessDenied({ page, onBack }) {
-  const copy = deniedPageCopy(page);
-  return (
-    <section className="placeholder page-enter" role="alert">
-      <span>ACESSO NEGADO</span>
-      <h1>{copy.title}</h1>
-      <p>{copy.message}</p>
-      {onBack && (
-        <button type="button" className="secondary" onClick={onBack}>
-          VOLTAR À CENTRAL
-        </button>
-      )}
-    </section>
-  );
+export function AccessDenied({ page, onBack, onHome }) {
+  return <SpecialState kind="forbidden" page={page} embedded onBack={onBack} onHome={onHome} />;
 }

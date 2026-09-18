@@ -1,0 +1,159 @@
+.special-state{
+  --ss-ink:#f4f4f2;
+  --ss-mute:#a8adb4;
+  --ss-line:#ffffff14;
+  position:relative;
+  isolation:isolate;
+  overflow:hidden;
+  display:grid;
+  place-items:center;
+  width:100%;
+  min-height:100dvh;
+  min-height:100svh;
+  padding:max(28px,env(safe-area-inset-top)) 22px max(32px,env(safe-area-inset-bottom));
+  background:#050607;
+  color:var(--ss-ink);
+  text-align:center;
+}
+.special-state-ambient,
+.special-state-stripes,
+.special-state-vignette,
+.special-state-wordmark,
+.special-state-frame{
+  position:absolute;
+  pointer-events:none;
+}
+.special-state-ambient{
+  z-index:0;
+  inset:-10%;
+  background:
+    radial-gradient(ellipse 46% 34% at 50% 18%,#2a2e3330,transparent 62%),
+    radial-gradient(ellipse 70% 58% at 50% 108%,#15181d 0%,transparent 58%);
+  animation:special-state-drift 28s ease-in-out infinite alternate;
+}
+.special-state-stripes{
+  z-index:0;
+  inset:-18% -26%;
+  background:
+    repeating-linear-gradient(108deg,transparent 0 54px,#ffffff06 54px 55px),
+    linear-gradient(180deg,#12151a 0%,#050607 46%,#050607 100%);
+  animation:special-state-stripe 48s linear infinite;
+}
+.special-state-vignette{
+  z-index:2;
+  inset:0;
+  background:
+    radial-gradient(ellipse 62% 52% at 50% 44%,transparent 28%,#050607e8 100%),
+    linear-gradient(#050607 0%,transparent 14%,transparent 86%,#050607 100%);
+}
+.special-state-wordmark{
+  z-index:1;
+  inset:10% 0 auto;
+  margin:0;
+  color:#ffffff0c;
+  font:900 clamp(96px,28vw,380px)/.78 Rajdhani,Inter,sans-serif;
+  letter-spacing:-.08em;
+  user-select:none;
+}
+.special-state-frame{
+  z-index:3;
+  inset:max(12px,env(safe-area-inset-top)) max(14px,env(safe-area-inset-right)) max(14px,env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left));
+}
+.special-state-frame>i{
+  position:absolute;
+  width:34px;
+  height:34px;
+  border:1px solid #ffffff22;
+}
+.special-state-frame>i:nth-child(1){top:0;left:0;border-right:0;border-bottom:0}
+.special-state-frame>i:nth-child(2){top:0;right:0;border-left:0;border-bottom:0}
+.special-state-frame>i:nth-child(3){bottom:0;left:0;border-right:0;border-top:0}
+.special-state-frame>i:nth-child(4){bottom:0;right:0;border-left:0;border-top:0}
+.special-state-panel{
+  position:relative;
+  z-index:4;
+  display:grid;
+  justify-items:center;
+  width:min(560px,100%);
+  gap:0;
+}
+.special-state-kicker{
+  color:var(--ss-mute);
+  font:800 11px/1 Inter,sans-serif;
+  letter-spacing:.32em;
+}
+.special-state-mark{
+  --avatar-size:72px;
+  width:var(--avatar-size);
+  height:var(--avatar-size);
+  margin:22px 0 8px;
+  filter:drop-shadow(0 16px 32px #000a);
+}
+.special-state-code{
+  margin:6px 0 0;
+  color:#8e969f;
+  font:800 11px/1 Inter,sans-serif;
+  letter-spacing:.22em;
+}
+.special-state-panel h1{
+  margin:14px 0 10px;
+  font:900 clamp(36px,8vw,64px)/.88 Rajdhani,Inter,sans-serif;
+  letter-spacing:-.06em;
+}
+.special-state-panel p{
+  margin:0 0 28px;
+  max-width:38ch;
+  color:#c5c9ce;
+  font:500 15px/1.55 Inter,sans-serif;
+}
+.special-state-actions{
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:center;
+  gap:10px;
+  width:100%;
+}
+.special-state-actions .primary,
+.special-state-actions .secondary{
+  min-height:44px;
+  padding:11px 16px;
+}
+.special-state-hint{
+  margin:18px 0 0;
+  border:0;
+  background:none;
+  color:#6a727b;
+  font:700 11px/1 Inter,sans-serif;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  cursor:pointer;
+}
+.special-state-hint:hover,
+.special-state-hint:focus-visible{color:#a8adb4;outline:0}
+.special-state.is-embedded{
+  min-height:calc(100dvh - 180px);
+  padding:48px 18px 80px;
+  background:transparent;
+}
+.special-state.is-embedded .special-state-wordmark{font-size:clamp(72px,18vw,220px)}
+.special-state.is-reduced .special-state-ambient,
+.special-state.is-reduced .special-state-stripes{animation:none}
+@media(max-width:430px){
+  .special-state{padding:max(22px,env(safe-area-inset-top)) 16px max(24px,env(safe-area-inset-bottom))}
+  .special-state-mark{width:64px;height:64px}
+  .special-state-actions{flex-direction:column}
+  .special-state-actions .primary,
+  .special-state-actions .secondary{width:100%}
+}
+@media(prefers-reduced-motion:reduce){
+  .special-state-ambient,
+  .special-state-stripes{animation:none}
+}
+@keyframes special-state-drift{
+  from{transform:translate3d(0,0,0) scale(1)}
+  to{transform:translate3d(0,-2%,0) scale(1.03)}
+}
+@keyframes special-state-stripe{
+  from{transform:translate3d(0,0,0)}
+  to{transform:translate3d(-3%,1%,0)}
+}

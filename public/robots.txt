@@ -1,5 +1,26 @@
 User-agent: *
 Allow: /
-Disallow: /api/
+Allow: /brand/
 
-Sitemap: https://strix-united-fc27.pages.dev/sitemap.xml
+# Product pages after login. Indexing them is harmless; crawling /api is not.
+Disallow: /desenvolvedor
+Disallow: /developer
+Disallow: /dev
+Disallow: /midia
+Disallow: /media
+Disallow: /analise
+Disallow: /analysis
+Disallow: /api/
+Disallow: /functions
+Disallow: /internal
+Disallow: /auth
+Disallow: /quality
+Disallow: /qa
+Disallow: /services
+Disallow: /supabase
+Disallow: /tools
+
+# robots.txt is a crawler hint, not access control.
+# Real protection remains in ACL, auth and backend routes.
+
+Sitemap: https://strixunited.com.br/sitemap.xml

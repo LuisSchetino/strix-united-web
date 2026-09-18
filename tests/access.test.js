@@ -24,6 +24,7 @@ import {
   locationForPage,
   normalizePageId,
   pageFromLocation,
+  resolveLocation,
   visibleNavItems,
 } from "../src/access.js";
 import { applyRosterWritePolicy } from "../src/features/squad/player-save.js";
@@ -110,6 +111,11 @@ test("deep-link aliases resolve and restricted pages stay denied", () => {
   assert.equal(canViewPage(roles.player, "analise"), false);
   assert.equal(canViewPage(roles.diretoria, "media"), false);
   assert.equal(canViewPage(roles.dev, "dev"), true);
+  assert.equal(resolveLocation({ pathname: "/pagina-que-nao-existe", hash: "" }).kind, "not-found");
+  assert.equal(resolveLocation({ pathname: "/api/auth/session", hash: "" }).kind, "not-found");
+  assert.equal(resolveLocation({ pathname: "/internal", hash: "" }).kind, "restricted");
+  assert.equal(resolveLocation({ pathname: "/desenvolvedor", hash: "" }).kind, "page");
+  assert.equal(pageFromLocation({ pathname: "/pagina-que-nao-existe", hash: "" }), "central");
 });
 
 test("edit photo/number policy blocks Diretoria after create, not during create", () => {

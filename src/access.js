@@ -112,12 +112,42 @@ export function visibleNavItems(source) {
   return NAV_CATALOG.filter(([id]) => canViewPage(source, id));
 }
 
-export function pageFromLocation(location = typeof window === "undefined" ? { pathname: "/", hash: "" } : window.location) {
-  const hash = String(location.hash || "").replace(/^#\/?/, "").split(/[/?#]/)[0];
+const RESTRICTED_SEGMENTS = new Set([
+  "functions",
+  "internal",
+  "auth",
+  "cdn-cgi",
+  "quality",
+  "qa",
+  "services",
+  "supabase",
+  "tools",
+]);
+
+export function firstLocationSegment(value = "") {
+  return String(value || "")
+    .replace(/^#\/?/, "")
+    .split(/[/?#]/)
+    .filter(Boolean)[0] || "";
+}
+
+export function resolveLocation(location = typeof window === "undefined" ? { pathname: "/", hash: "" } : window.location) {
+  const hash = firstLocationSegment(location.hash);
+  const path = firstLocationSegment(location.pathname);
   const fromHash = normalizePageId(hash);
-  if (fromHash) return fromHash;
-  const path = String(location.pathname || "/").split("/").filter(Boolean)[0];
-  return normalizePageId(path) || "central";
+  if (fromHash) return { kind: "page", page: fromHash, segment: hash };
+  if (!path) return { kind: "page", page: "central", segment: "" };
+  if (RESTRICTED_SEGMENTS.has(path) || path.startsWith("_")) {
+    return { kind: "restricted", page: "", segment: path };
+  }
+  const fromPath = normalizePageId(path);
+  if (fromPath) return { kind: "page", page: fromPath, segment: path };
+  return { kind: "not-found", page: "", segment: path };
+}
+
+export function pageFromLocation(location = typeof window === "undefined" ? { pathname: "/", hash: "" } : window.location) {
+  const resolved = resolveLocation(location);
+  return resolved.page || "central";
 }
 
 export function locationForPage(id) {

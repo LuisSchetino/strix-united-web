@@ -32,10 +32,13 @@ import "./round-discovery.css";
 import "./performance-polish.css";
 import "./quality-polish.css";
 import "./ui-bugfix.css";
+import "./mobile-safe.css";
 import { saveRosterPlayer } from "./features/squad/player-save.js";
 import { useDialog } from "./ui/useDialog.js";
 import { CloseButton } from "./ui/CloseButton.jsx";
 import { AccessDenied } from "./ui/AccessDenied.jsx";
+import { AppErrorBoundary, SpecialState } from "./ui/special-state/SpecialState.jsx";
+import { classifyAuthFailure } from "./ui/special-state/classify-auth-failure.js";
 import {
   NAV_CATALOG,
   canArchivePlayer,
@@ -54,6 +57,7 @@ import {
   locationForPage,
   pageFromLocation,
   permissionDenied,
+  resolveLocation,
   visibleNavItems,
 } from "./access.js";
 import { commandItems, filterCommandItems } from "./command-palette.js";
@@ -335,13 +339,26 @@ function Crest({ small = false, priority = false }) {
   return <ClubLogo name="Strix United" url={STRIX_BRAND.logo} priority={priority} sizes={small ? "33px" : "(max-width:580px) 72px, 196px"} className={`crest ${small ? "crest-small" : ""}`}/>;
 }
 const logoCatalogKey = "strix-fc27-logo-catalog";
+const AUTH_FETCH_MS = 8000;
+async function fetchJson(url, options = {}, timeoutMs = AUTH_FETCH_MS) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(url, { ...options, signal: controller.signal, cache: options.cache || "no-store" });
+    const payload = await response.json().catch(() => ({}));
+    return { response, payload };
+  } finally {
+    clearTimeout(timer);
+  }
+}
 let browserSupabase = null;
 async function getBrowserSupabase() {
   if (browserSupabase) return browserSupabase;
-  const response = await fetch("/api/public-config", { cache: "no-store" });
-  const config = await response.json();
+  const { response, payload: config } = await fetchJson("/api/public-config");
   if (!response.ok || !config.url || !config.publishableKey) {
-    throw new Error(config.error || "supabase_not_configured");
+    const failed = new Error(config.error || "supabase_not_configured");
+    failed.status = response.status;
+    throw failed;
   }
   browserSupabase = createClient(config.url, config.publishableKey, {
     auth: {
@@ -412,6 +429,7 @@ function useTeamAuth() {
     session: null,
     profile: null,
     error: "",
+    failureKind: "",
     syncWarning: "",
   });
   useEffect(() => {
@@ -426,6 +444,7 @@ function useTeamAuth() {
             session: null,
             profile: null,
             error: "",
+            failureKind: "",
             syncWarning: "",
           });
         return;
@@ -433,13 +452,14 @@ function useTeamAuth() {
       if (alive)
         setState((current) => ({ ...current, loading: true, client, session }));
       try {
-        const response = await fetch("/api/auth/session", {
+        const { response, payload } = await fetchJson("/api/auth/session", {
           headers: { authorization: `Bearer ${session.access_token}` },
-          cache: "no-store",
         });
-        const payload = await response.json();
-        if (!response.ok)
-          throw new Error(payload.error || "access_check_failed");
+        if (!response.ok || !payload?.profile) {
+          const failed = new Error(payload.error || "access_check_failed");
+          failed.status = response.ok ? 401 : response.status;
+          throw failed;
+        }
         if (alive)
           setState({
             loading: false,
@@ -447,6 +467,7 @@ function useTeamAuth() {
             session,
             profile: payload.profile,
             error: "",
+            failureKind: "",
             syncWarning: payload.sync_warning || "",
           });
       } catch (error) {
@@ -457,6 +478,7 @@ function useTeamAuth() {
             session: null,
             profile: null,
             error: error.message || "access_check_failed",
+            failureKind: classifyAuthFailure(error, { hadSession: Boolean(session), status: error.status }),
             syncWarning: "",
           });
       }
@@ -481,6 +503,7 @@ function useTeamAuth() {
             session: null,
             profile: null,
             error: error.message || "auth_setup_failed",
+            failureKind: classifyAuthFailure(error, { status: error.status }),
             syncWarning: "",
           });
       });
@@ -1058,6 +1081,7 @@ function Sidebar({
           <Icon name="close" />
         </button>
       </div>
+      <div className="sidebar-scroll">
       <div className="menu-group">
         <p>Central</p>
         <button
@@ -1090,6 +1114,8 @@ function Sidebar({
           </button>
         ))}
       </div>
+      </div>
+      <div className="sidebar-dock">
       <RastroSignature compact={collapsed} />
       {collapsed ? <div className="sidebar-compact-account"><button type="button" className="sidebar-signout" onClick={signOut} aria-label="Sair da conta" data-tooltip="Sair da conta"><Icon name="logout" size={19}/></button></div> : <div className="sidebar-user">
         <Avatar name={profile.display_name} logo={profile.avatar_url} kind="photo" size="sm" />
@@ -1101,6 +1127,7 @@ function Sidebar({
           <Icon name="logout" size={15} />
         </button>
       </div>}
+      </div>
     </aside>
   );
 }
@@ -1718,23 +1745,8 @@ function PresetPanel({ presets, setPresets, roster = [], assetUrl, onClose }) {
             <Icon name="close" />
           </button>
         </header>
+        <div className="preset-panel-body">
         <FormationPicker compact lineup={lineup} onChange={setLineup} roster={roster} assetUrl={assetUrl} />
-        <form onSubmit={add}>
-          <input
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            placeholder="Ex.: Time da noite"
-          />
-          <select
-            value={duration}
-            onChange={(event) => setDuration(event.target.value)}
-          >
-            <option value="1">1 dia</option>
-            <option value="3">3 dias</option>
-            <option value="5">5 dias</option>
-          </select>
-          <button className="primary">{editingId ? "ATUALIZAR PREDEFINIÇÃO" : "SALVAR PREDEFINIÇÃO"}</button>
-        </form>
         <div>
           {presets.length ? (
             presets.map((preset) => (
@@ -1751,6 +1763,23 @@ function PresetPanel({ presets, setPresets, roster = [], assetUrl, onClose }) {
             <p>Nenhuma predefinição ativa.</p>
           )}
         </div>
+        </div>
+        <form className="preset-panel-footer" onSubmit={add}>
+          <input
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            placeholder="Ex.: Time da noite"
+          />
+          <select
+            value={duration}
+            onChange={(event) => setDuration(event.target.value)}
+          >
+            <option value="1">1 dia</option>
+            <option value="3">3 dias</option>
+            <option value="5">5 dias</option>
+          </select>
+          <button className="primary">{editingId ? "ATUALIZAR PREDEFINIÇÃO" : "SALVAR PREDEFINIÇÃO"}</button>
+        </form>
         {pendingDelete && <div className="preset-confirm" role="alertdialog" aria-modal="true" aria-label="Confirmar exclusão">
           <p>Excluir a predefinição <b>{pendingDelete.name}</b>? Jogos já criados não serão alterados.</p>
           <div><button type="button" className="secondary" onClick={() => setPendingDelete(null)}>VOLTAR</button><button type="button" className="agenda-confirm-danger" onClick={() => { setPresets((current) => current.filter((preset) => preset.id !== pendingDelete.id)); if (editingId === pendingDelete.id) { setEditingId(""); setName(""); setLineup(emptyLineup()); } setPendingDelete(null); }}>EXCLUIR</button></div>
@@ -2835,12 +2864,39 @@ function WorkspaceSkeleton({ type = "central" }) {
     </section>
   );
 }
-function MaintenanceScreen({ signOut }) {
-  return <main className="maintenance-screen"><Crest/><span>STRIX UNITED · FC27</span><h1>Voltamos já.</h1><p>O FC27 está em manutenção programada. Nenhum dado foi perdido.</p><button className="secondary" onClick={signOut}>SAIR DA CONTA</button></main>;
+function MaintenanceScreen({ onRetry, onBack }) {
+  return (
+    <SpecialState
+      kind="unavailable"
+      onRetry={onRetry}
+      onBack={onBack}
+    />
+  );
+}
+
+function useOnline() {
+  const [online, setOnline] = useState(() => typeof navigator === "undefined" || navigator.onLine !== false);
+  useEffect(() => {
+    const on = () => setOnline(true);
+    const off = () => setOnline(false);
+    window.addEventListener("online", on);
+    window.addEventListener("offline", off);
+    return () => {
+      window.removeEventListener("online", on);
+      window.removeEventListener("offline", off);
+    };
+  }, []);
+  return online;
+}
+function currentRoute() {
+  return { pathname: window.location.pathname, hash: window.location.hash };
 }
 function App() {
   const auth = useTeamAuth();
   const workspace = useFc27Workspace(auth.client, auth.profile);
+  const online = useOnline();
+  const [route, setRoute] = useState(currentRoute);
+  const locationState = resolveLocation(route);
   const [launchTick, setLaunchTick] = useState(() => Date.now());
   const launchDecision = launchGateDecision({
     hostname: window.location.hostname,
@@ -2855,6 +2911,14 @@ function App() {
     [command, setCommand] = useState(false),
     [createOpen, setCreateOpen] = useState(false),
     [player, setPlayer] = useState(null);
+  const syncRoute = () => {
+    setActive(pageFromLocation());
+    setRoute((current) => {
+      const next = currentRoute();
+      if (current.pathname === next.pathname && current.hash === next.hash) return current;
+      return next;
+    });
+  };
   const navigate = (id) => {
     const page = id || "central";
     setActive(page);
@@ -2864,9 +2928,10 @@ function App() {
     if (`${window.location.pathname}${window.location.search}${window.location.hash}` !== next) {
       window.history.pushState({ page }, "", next);
     }
+    setRoute(currentRoute());
   };
   useEffect(() => {
-    const sync = () => setActive(pageFromLocation());
+    const sync = () => syncRoute();
     window.addEventListener("popstate", sync);
     window.addEventListener("hashchange", sync);
     return () => {
@@ -2932,10 +2997,19 @@ function App() {
     const current = `${window.location.pathname}${window.location.search}${window.location.hash}`;
     if (current === next) return undefined;
     window.history.replaceState(window.history.state, "", next);
-    setActive(pageFromLocation());
+    syncRoute();
   }, [auth.loading]);
+  if (!online) {
+    return <SpecialState kind="offline" onRetry={() => window.location.reload()} />;
+  }
   if (launchDecision !== "app") {
     return <LaunchGate mode={launchDecision} config={LAUNCH_CONFIG} onUnlock={() => setLaunchTick(Date.now())} onInternalAccess={auth.signIn} />;
+  }
+  if (auth.failureKind === "unavailable") {
+    return <SpecialState kind="unavailable" onRetry={() => window.location.reload()} />;
+  }
+  if (auth.failureKind === "session") {
+    return <SpecialState kind="session" onLogin={auth.signIn} />;
   }
   if (!auth.profile)
     return (
@@ -2946,9 +3020,13 @@ function App() {
       />
     );
   if (!workspace.loading && auth.profile.access_tier !== "dev" && workspace.systemFlags.some((flag) => flag.key === "site_maintenance" && flag.enabled)) {
-    return <MaintenanceScreen signOut={auth.signOut}/>;
+    return <MaintenanceScreen onRetry={() => window.location.reload()} onBack={auth.signOut} />;
   }
-  const title = [["central", "Central", "live"], ...nav].find((item) => item[0] === active)?.[1] || "Central";
+  const title = locationState.kind === "not-found"
+    ? "Não encontrada"
+    : locationState.kind === "restricted"
+      ? "Área restrita"
+      : [["central", "Central", "live"], ...nav].find((item) => item[0] === active)?.[1] || "Central";
   return (
     <div className="app-shell">
       {mobileOpen && (
@@ -3005,7 +3083,11 @@ function App() {
             )}
           </div>
         </header>
-        {workspace.loading ? <WorkspaceSkeleton /> : active === "central" ? (
+        {workspace.loading ? <WorkspaceSkeleton /> : locationState.kind === "not-found" ? (
+          <SpecialState kind="not-found" embedded onHome={() => navigate("central")} />
+        ) : locationState.kind === "restricted" ? (
+          <SpecialState kind="restricted" embedded onHome={() => navigate("central")} />
+        ) : active === "central" ? (
           <CentralLive workspace={workspace} navigate={navigate} />
         ) : active === "agenda" ? (
           <AgendaLive navigate={navigate} workspace={workspace} profile={auth.profile} />
@@ -3032,6 +3114,8 @@ export { Sidebar, CentralLive, AgendaLive, FormationPicker, SquadPageV3, DataPag
 
 if (document.getElementById("root")) createRoot(document.getElementById("root")).render(
   <StrictMode>
-    <App />
+    <AppErrorBoundary>
+      <App />
+    </AppErrorBoundary>
   </StrictMode>,
 );
