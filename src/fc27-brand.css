@@ -10,9 +10,9 @@
   --strix-text:#f5f5f5;
   --strix-muted:#8e969f;
   --strix-subtle:#606872;
-  --rastro-blue:#d8dce0;
-  --rastro-blue-soft:rgba(245,245,245,.12);
-  --rastro-blue-subtle:rgba(245,245,245,.06);
+  --rastro-blue:#2F80FF;
+  --rastro-blue-soft:rgba(47,128,255,.16);
+  --rastro-blue-subtle:rgba(47,128,255,.08);
   --strix-blue:#f5f5f5;
   --strix-deep:#15181c;
   --strix-glow:#ffffff1f;
@@ -170,7 +170,7 @@ html .gameday-editor-page .gd-dashed{border-color:#454c54;color:#d6d9dc}html .ga
   border-top:1px solid var(--strix-border);color:#727d8b;font-size:9px;letter-spacing:.08em;text-transform:uppercase;
 }
 .rastro-signature img{width:24px;height:24px;object-fit:contain;flex:0 0 24px}
-.rastro-signature b{color:#d8dce0;font-weight:900}
+.rastro-signature b{color:var(--rastro-blue);font-weight:900}
 .rastro-signature.is-compact{left:10px;right:10px;justify-content:center;padding-inline:0}
 .rastro-signature.is-compact span{display:none}
 .rastro-watermark{position:absolute;z-index:-1;right:32px;top:110px;display:grid;justify-items:center;pointer-events:none;opacity:.04;color:var(--rastro-blue)}

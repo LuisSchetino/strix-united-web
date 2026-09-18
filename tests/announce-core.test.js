@@ -12,7 +12,7 @@ import {
   pickAnnouncePhrase,
   resolveAnnouncePhrase,
 } from "../src/features/media/announce-core.js";
-import { personVariant, campaignName, fitNameLayout, announceGridSpec, fitAnnounceSubject, headVisibleInDest, announceRoleInk } from "../src/features/media/announce-look.js";
+import { personVariant, campaignName, fitNameLayout, announceGridSpec, fitAnnounceSubject, headVisibleInDest, announceRoleInk, announceRoleLook } from "../src/features/media/announce-look.js";
 import { composeAnnounceFx, listAnnounceFxSlots, missingAnnounceFx, ANNOUNCE_FX_SLOTS, ANNOUNCE_FX_SKIPPED } from "../src/features/media/announce-fx.js";
 import { buildAnnounceTimeline } from "../src/features/media/announce-timeline.js";
 import { announceFrameTime, describeAnnounceFrame, renderAnnounceFrame } from "../src/features/media/announce-frame.js";
@@ -54,6 +54,7 @@ function mockContext() {
     fill() {},
     stroke() {},
     fillRect(...args) { calls.push(["fillRect", ...args]); },
+    strokeRect() {},
     fillText(text) { calls.push(["fillText", text]); },
     moveTo() {},
     lineTo() {},
@@ -264,14 +265,47 @@ test("subject fit never crops the head out of the photo box", () => {
   assert.ok(eyeY > destH * 0.12 && eyeY < destH * 0.48);
 });
 
-test("role accents stay quiet and camera does not pan sideways", async () => {
+test("role looks change the piece language, not only the badge ink", async () => {
   assert.equal(announceRoleInk("diretoria"), "#d4c4a0");
-  assert.equal(announceRoleInk("conselho"), "#c5cbc6");
-  assert.equal(announceRoleInk("staff"), "#c9ced4");
+  assert.equal(announceRoleLook("diretoria").grade, "warm");
+  assert.equal(announceRoleLook("diretoria").mark, "gold");
+  assert.equal(announceRoleLook("conselho").grade, "stone");
+  assert.equal(announceRoleLook("conselho").mark, "stone");
+  assert.equal(announceRoleLook("staff").grade, "steel");
+  assert.equal(announceRoleLook("manager").mark, "steel");
+  assert.equal(announceRoleLook("jogador").grade, "mono");
   assert.equal(announceRoleInk("jogador"), "#9aa0a6");
   const paint = await readFile(new URL("../src/features/media/announce-paint.js", import.meta.url), "utf8");
   assert.doesNotMatch(paint, /Math\.sin\([^)]*\) \* 20/);
   assert.doesNotMatch(paint, /drift: Math\.sin/);
-  assert.match(paint, /announceRoleInk/);
+  assert.match(paint, /announceRoleLook/);
+  assert.match(paint, /paintRoleAtmosphere/);
+  assert.match(paint, /paintRoleMarks/);
+  assert.match(paint, /paintRoleSweep/);
   assert.match(paint, /paintPhotoFlash/);
+  assert.match(paint, /cinematicCamera\(timeline, time, local, stage\)/);
+});
+
+test("diretoria still preview paints cargo without collapsing it into position", () => {
+  const ctx = mockContext();
+  const person = {
+    id: "p1",
+    name: "Oben",
+    nick: "OBEEN",
+    position: "MC",
+    extraRole: "diretoria",
+    extraBadge: "DIRETORIA",
+  };
+  const timeline = buildAnnounceTimeline({
+    kind: "individual",
+    format: "feed",
+    people: [person],
+    phrase: "Direção alinhada.",
+  });
+  renderAnnounceFrame(ctx, { timeline, timeSec: 0, assets: { players: [], byId: {} } });
+  const names = ctx.calls.filter((call) => call[0] === "fillText").map((call) => call[1]);
+  assert.ok(names.includes("OBEN"));
+  assert.ok(names.includes("MC"));
+  assert.ok(names.includes("DIRETORIA"));
+  assert.equal(names.some((text) => String(text).includes("MC") && String(text).includes("DIRETORIA")), false);
 });

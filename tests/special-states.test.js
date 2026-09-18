@@ -31,6 +31,7 @@ test("special states cover the product error screens without raw stacks", async 
   assert.match(main, /AUTH_FETCH_MS/);
   assert.match(main, /setRoute/);
   assert.match(developer, /AccessDenied page="desenvolvedor"/);
+  assert.match(developer, /import \{ MotionTabs, notify \} from "\.\.\/\.\.\/ui\/motion\/motion\.jsx"/);
 });
 
 test("auth failure classification keeps Discord ACL errors off the session screen", () => {

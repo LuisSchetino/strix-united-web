@@ -16,7 +16,7 @@
 .select-control-menu>button{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:38px;padding:0 10px;border:0;border-radius:8px;background:transparent;color:#aeb4bb;font:800 9px/1 Inter,sans-serif;text-align:left}
 .select-control-menu>button:hover,.select-control-menu>button.is-highlighted{background:#1a1f24;color:#fff}
 .select-control-menu>button[aria-selected=true]{color:#fff}
-.select-control-menu>button[aria-selected=true] svg{color:var(--rastro-blue)}
+.select-control-menu>button[aria-selected=true] svg{color:#090a0b}
 @media(max-width:700px){.select-control{width:100%}.select-control-menu{left:0;right:auto;width:100%}}
 
 /* Custom selectors stay readable in both institutional and analytical contexts. */
@@ -26,4 +26,4 @@
 .select-control-menu>button{color:#b7bdc4}
 .select-control-menu>button:hover,.select-control-menu>button.is-highlighted{background:#1a1f24;color:#fff}
 .select-control-menu>button[aria-selected=true]{background:#f2f2f2;color:#090a0b}
-.select-control-menu>button[aria-selected=true] svg{color:var(--rastro-blue)}
+.select-control-menu>button[aria-selected=true] svg{color:#090a0b}

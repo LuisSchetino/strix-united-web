@@ -226,12 +226,76 @@ export function buildNameBrush(seed, box) {
   };
 }
 
-export function announceRoleInk(role = "jogador") {
+const PLAYER_ROLE_LOOK = Object.freeze({
+  id: "jogador",
+  ink: "#9aa0a6",
+  paper: "#efece6",
+  ambient: "rgba(239,236,230,0.08)",
+  wash: "",
+  flash: "rgba(239,236,230,0.58)",
+  flashGain: 0.16,
+  rule: "rgba(239,236,230,0.34)",
+  sweep: "rgba(239,236,230,0.10)",
+  border: "",
+  grade: "mono",
+  mark: "",
+});
+
+export function announceRoleLook(role = "jogador") {
   const id = String(role || "").trim().toLowerCase();
-  if (id === "diretoria") return "#d4c4a0";
-  if (id === "conselho") return "#c5cbc6";
-  if (id === "staff" || id === "manager") return "#c9ced4";
-  return "#9aa0a6";
+  if (id === "diretoria") {
+    return {
+      id,
+      ink: "#d4c4a0",
+      paper: "#f0e6d2",
+      ambient: "rgba(212,196,160,0.16)",
+      wash: "rgba(92,70,36,0.16)",
+      flash: "rgba(244,226,190,0.48)",
+      flashGain: 0.2,
+      rule: "rgba(212,196,160,0.46)",
+      sweep: "rgba(232,214,170,0.22)",
+      border: "rgba(212,196,160,0.30)",
+      grade: "warm",
+      mark: "gold",
+    };
+  }
+  if (id === "conselho") {
+    return {
+      id,
+      ink: "#b8c2c6",
+      paper: "#dce3e6",
+      ambient: "rgba(168,180,186,0.13)",
+      wash: "rgba(48,58,62,0.22)",
+      flash: "rgba(214,222,226,0.36)",
+      flashGain: 0.14,
+      rule: "rgba(168,180,186,0.42)",
+      sweep: "rgba(196,206,210,0.14)",
+      border: "rgba(150,162,168,0.34)",
+      grade: "stone",
+      mark: "stone",
+    };
+  }
+  if (id === "staff" || id === "manager") {
+    return {
+      id: id === "manager" ? "manager" : "staff",
+      ink: "#c9ced4",
+      paper: "#e6e9ee",
+      ambient: "rgba(201,206,212,0.10)",
+      wash: "rgba(70,76,84,0.14)",
+      flash: "rgba(230,234,238,0.34)",
+      flashGain: 0.12,
+      rule: "rgba(201,206,212,0.38)",
+      sweep: "rgba(220,224,228,0.12)",
+      border: "rgba(186,192,200,0.26)",
+      grade: "steel",
+      mark: "steel",
+    };
+  }
+  return PLAYER_ROLE_LOOK;
+}
+
+export function announceRoleInk(role = "jogador") {
+  return announceRoleLook(role).ink;
 }
 
 export function campaignName(person) {
