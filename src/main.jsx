@@ -34,6 +34,7 @@ import "./quality-polish.css";
 import "./ui-bugfix.css";
 import "./mobile-safe.css";
 import { saveRosterPlayer } from "./features/squad/player-save.js";
+import { FC27_CLUB_ID as EA_CLUB_ID, isStrixClubId, readStrixKeyed } from "../shared/fc27-club.js";
 import { useDialog } from "./ui/useDialog.js";
 import { CloseButton } from "./ui/CloseButton.jsx";
 import { AccessDenied } from "./ui/AccessDenied.jsx";
@@ -170,7 +171,6 @@ const games = [
   ["22:10", "Old Skull", "Master League · Rodada 6", "OS"],
   ["22:40", "Wraith Gaming", "Amistoso", "WG"],
 ];
-const EA_CLUB_ID = "15686";
 const eaImportedKey = "strix-fc27-ea-imported-matches";
 
 function asClubEntries(raw) {
@@ -223,10 +223,10 @@ const asEntries = (value) =>
       : [];
 
 function eaPlayerRows(raw) {
-  const team = raw?.players?.[EA_CLUB_ID]
-    || raw?.playerStats?.[EA_CLUB_ID]
-    || raw?.details?.players?.[EA_CLUB_ID]
-    || raw?.details?.[EA_CLUB_ID]?.players
+  const team = readStrixKeyed(raw?.players)
+    || readStrixKeyed(raw?.playerStats)
+    || readStrixKeyed(raw?.details?.players)
+    || readStrixKeyed(raw?.details)?.players
     || raw?.players;
   return asEntries(team)
     .filter((player) => player && typeof player === "object")
@@ -260,9 +260,9 @@ function eaPlayerRows(raw) {
 }
 
 function eaPerformance(raw, strix) {
-  const stats = raw?.aggregateStats?.[EA_CLUB_ID]
-    || raw?.aggregate?.[EA_CLUB_ID]
-    || raw?.stats?.[EA_CLUB_ID]
+  const stats = readStrixKeyed(raw?.aggregateStats)
+    || readStrixKeyed(raw?.aggregate)
+    || readStrixKeyed(raw?.stats)
     || strix?.stats
     || strix?.details
     || {};
@@ -295,7 +295,7 @@ function currentMatchPerformance(match) {
   const raw = match?.raw_ea;
   if (!raw || typeof raw !== "object" || !Object.keys(raw).length) return saved;
   const clubs = asClubEntries(raw);
-  const strix = clubs.find((club) => String(club?.clubId || club?.id || club?._clubKey) === EA_CLUB_ID) || clubs[0] || {};
+  const strix = clubs.find((club) => isStrixClubId(club?.clubId || club?.id || club?._clubKey)) || clubs[0] || {};
   const fresh = eaPerformance(raw, strix);
   return {
     ...saved,
@@ -306,7 +306,7 @@ function currentMatchPerformance(match) {
 function normalizeEaMatch(raw, index) {
   const clubs = asClubEntries(raw);
   const strix =
-    clubs.find((club) => String(club?.clubId || club?.id || club?._clubKey) === EA_CLUB_ID) ||
+    clubs.find((club) => isStrixClubId(club?.clubId || club?.id || club?._clubKey)) ||
     clubs[0] ||
     {};
   const opponent = clubs.find((club) => club !== strix) || {};
@@ -1998,6 +1998,7 @@ function Agenda({ navigate }) {
           <span>PARTIDA</span>
           <span>CAMPEONATO</span>
           <span>STATUS</span>
+          <span aria-hidden="true" />
         </div>
         {visible.length ? (
           visible.map((item) => (
@@ -2151,7 +2152,7 @@ function AgendaLive({ navigate, workspace, profile }) {
       </nav>
       {(workspace.error || feedback) && <p className="matches-error">{feedback || workspace.error}</p>}
       <section className="agenda-list" aria-busy={workspace.loading}>
-        <div className="agenda-list-heading"><span>{tab === "next" ? "DATA · HORÁRIO" : "HORÁRIO"}</span><span>PARTIDA</span><span>CAMPEONATO</span><span>STATUS</span></div>
+        <div className="agenda-list-heading"><span>{tab === "next" ? "DATA · HORÁRIO" : "HORÁRIO"}</span><span>PARTIDA</span><span>CAMPEONATO</span><span>STATUS</span><span aria-hidden="true" /></div>
         {visible.length ? visible.map((item) => (
           <article
             key={item.id}

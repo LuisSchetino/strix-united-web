@@ -148,6 +148,8 @@ export function collectAnnouncePeople(workspace = {}, roles = {}) {
           : String(player.external_avatar_url || ""),
         extraRole: role,
         extraBadge: announceRoleBadge(role),
+        number: player.shirt_number ?? "",
+        shirt_number: player.shirt_number ?? "",
         initials: opponentInitials(player.display_name),
         memberType: player.member_type || "elenco",
       };

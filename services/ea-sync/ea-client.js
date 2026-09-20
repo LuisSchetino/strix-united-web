@@ -1,5 +1,13 @@
-const EA_BASE_URL = "https://proclubs.ea.com/api/fc/clubs/matches";
-const MATCH_TYPES = ["friendlyMatch", "leagueMatch", "playoffMatch"];
+import {
+  FC27_CLUB_ID,
+  FC27_MATCH_TYPES,
+  FC27_MAX_RESULTS,
+  FC27_PLATFORM,
+  eaMatchesUrl,
+  parseEaMatchesPayload,
+} from "./fc27-club.js";
+
+const MATCH_TYPES = FC27_MATCH_TYPES;
 
 const USER_AGENTS = [
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
@@ -47,11 +55,7 @@ export function createEaGateway({
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), timeoutMs);
         try {
-          const url = new URL(EA_BASE_URL);
-          url.searchParams.set("platform", platform);
-          url.searchParams.set("clubIds", clubId);
-          url.searchParams.set("matchType", matchType);
-          url.searchParams.set("maxResultCount", String(maxResultCount));
+          const url = eaMatchesUrl({ clubId, platform, matchType, maxResultCount });
           const response = await fetchImpl(url, {
             headers: eaHeaders(random),
             signal: controller.signal,
@@ -59,13 +63,14 @@ export function createEaGateway({
           const text = await response.text();
           let payload;
           try { payload = JSON.parse(text); } catch { payload = null; }
-          if (response.ok && Array.isArray(payload)) {
-            cache.set(key, { savedAt: now(), matches: payload });
-            return { matches: payload, cached: false };
+          const matches = parseEaMatchesPayload(payload);
+          if (response.ok && matches) {
+            cache.set(key, { savedAt: now(), matches });
+            return { matches, cached: false };
           }
           const error = new Error(`EA respondeu HTTP ${response.status || 502} para ${matchType}.`);
           error.status = response.status || 502;
-          error.code = payload ? "ea_http_error" : "ea_invalid_payload";
+          error.code = payload && !matches ? "ea_invalid_payload" : payload ? "ea_http_error" : "ea_invalid_payload";
           lastError = error;
           const retryable = [403, 404, 429, 500, 502, 503, 504].includes(error.status) || !payload;
           if (!retryable || attempt === retries) throw error;
@@ -85,9 +90,9 @@ export function createEaGateway({
   }
 
   return async function loadClubMatches({
-    clubId = "15686",
-    platform = "common-gen5",
-    maxResultCount = 10,
+    clubId = FC27_CLUB_ID,
+    platform = FC27_PLATFORM,
+    maxResultCount = FC27_MAX_RESULTS,
   } = {}) {
     const startedAt = now();
     const results = await Promise.all(MATCH_TYPES.map(async (matchType) => ({

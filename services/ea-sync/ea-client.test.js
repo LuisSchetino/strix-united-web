@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createEaGateway, eaHeaders } from "./ea-client.js";
+import { FC27_CLUB_ID, FC27_PLATFORM, parseEaMatchesPayload } from "./fc27-club.js";
 
 test("usa a origem oficial da EA e agrega os três tipos", async () => {
   const calls = [];
@@ -14,10 +15,11 @@ test("usa a origem oficial da EA e agrega os três tipos", async () => {
       });
     },
   });
-  const result = await gateway({ clubId: "15686" });
+  const result = await gateway();
   assert.equal(result.matches.length, 3);
   assert.deepEqual(result.matches.map((item) => item._fc27MatchType).sort(), ["friendlyMatch", "leagueMatch", "playoffMatch"]);
-  assert.ok(calls.every((call) => call.url.includes("clubIds=15686")));
+  assert.ok(calls.every((call) => call.url.includes(`clubIds=${FC27_CLUB_ID}`)));
+  assert.ok(calls.every((call) => call.url.includes(`platform=${FC27_PLATFORM}`)));
   assert.ok(calls.every((call) => call.headers.origin === "https://www.ea.com"));
 });
 
@@ -39,4 +41,33 @@ test("headers não carregam qualquer segredo", () => {
   const headers = eaHeaders(() => 0);
   assert.equal(headers.referer, "https://www.ea.com/games/ea-sports-fc/clubs/rankings");
   assert.equal("authorization" in headers, false);
+});
+
+test("aceita array ou {matches} e não cacheia erro/HTML", async () => {
+  assert.deepEqual(parseEaMatchesPayload([{ matchId: "1" }]), [{ matchId: "1" }]);
+  assert.deepEqual(parseEaMatchesPayload({ matches: [{ matchId: "2" }] }), [{ matchId: "2" }]);
+  assert.equal(parseEaMatchesPayload({ ok: true }), null);
+  let calls = 0;
+  let phase = "html";
+  const gateway = createEaGateway({
+    retries: 0,
+    cacheMs: 60_000,
+    fetchImpl: async () => {
+      calls += 1;
+      if (phase === "html") return new Response("<html>blocked</html>", { status: 200, headers: { "content-type": "text/html" } });
+      if (phase === "forbidden") return new Response("{}", { status: 403, headers: { "content-type": "application/json" } });
+      return new Response(JSON.stringify({ matches: [{ matchId: "ok" }] }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    },
+  });
+  await assert.rejects(gateway());
+  phase = "forbidden";
+  await assert.rejects(gateway());
+  phase = "ok";
+  const result = await gateway();
+  assert.equal(result.matches.length, 3);
+  assert.equal(result.matches[0].matchId, "ok");
+  assert.equal(calls, 9);
 });

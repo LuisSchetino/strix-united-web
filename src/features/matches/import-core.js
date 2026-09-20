@@ -1,4 +1,6 @@
-export const EA_CLUB_ID = "15686";
+import { FC27_CLUB_ID, isStrixClubId, readStrixKeyed } from "../../../shared/fc27-club.js";
+
+export const EA_CLUB_ID = FC27_CLUB_ID;
 
 export const normalizeName = (value) => String(value || "")
   .trim()
@@ -55,10 +57,10 @@ const matchDate = (raw) => {
 };
 
 export function eaPlayerRows(raw, clubId = EA_CLUB_ID) {
-  const team = raw?.players?.[clubId]
-    || raw?.playerStats?.[clubId]
-    || raw?.details?.players?.[clubId]
-    || raw?.details?.[clubId]?.players
+  const team = readStrixKeyed(raw?.players, clubId)
+    || readStrixKeyed(raw?.playerStats, clubId)
+    || readStrixKeyed(raw?.details?.players, clubId)
+    || readStrixKeyed(raw?.details, clubId)?.players
     || raw?.players;
   return asEntries(team)
     .filter((player) => player && typeof player === "object")
@@ -89,9 +91,9 @@ export function eaPlayerRows(raw, clubId = EA_CLUB_ID) {
 }
 
 export function eaPerformance(raw, strix, clubId = EA_CLUB_ID) {
-  const stats = raw?.aggregateStats?.[clubId]
-    || raw?.aggregate?.[clubId]
-    || raw?.stats?.[clubId]
+  const stats = readStrixKeyed(raw?.aggregateStats, clubId)
+    || readStrixKeyed(raw?.aggregate, clubId)
+    || readStrixKeyed(raw?.stats, clubId)
     || strix?.stats
     || strix?.details
     || {};
@@ -119,7 +121,7 @@ export function normalizeEaMatch(raw, index = 0, clubId = EA_CLUB_ID) {
   const clubs = asClubEntries(raw);
   // EA does not guarantee array order. Club identity is the only safe anchor;
   // silently treating clubs[0] as Strix can invert score and player data.
-  const strix = clubs.find((club) => String(club?.clubId || club?.id || club?._clubKey) === String(clubId));
+  const strix = clubs.find((club) => isStrixClubId(club?.clubId || club?.id || club?._clubKey));
   if (!strix) return null;
   const opponent = clubs.find((club) => club !== strix) || {};
   const date = matchDate(raw);

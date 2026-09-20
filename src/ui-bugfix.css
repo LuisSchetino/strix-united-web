@@ -69,3 +69,49 @@
   .squad-dialog-layer footer button{padding-inline:10px;font-size:11px}
 }
 @media(prefers-reduced-motion:reduce){.sidebar [data-tooltip]::after{transition:none}}
+
+/* Agenda crests: fixed box, contain, room for stars/ornaments. */
+.agenda-match{grid-template-columns:56px minmax(0,1fr)!important;align-items:center}
+.agenda-match .avatar,
+.agenda-match .crest,
+.agenda-match .club-logo{
+  --avatar-size:56px;
+  width:56px!important;
+  height:56px!important;
+  min-width:56px!important;
+  min-height:56px!important;
+  max-width:56px!important;
+  max-height:56px!important;
+  flex:0 0 56px;
+  padding:5px;
+  box-sizing:border-box;
+  overflow:hidden;
+  contain:none;
+  aspect-ratio:1/1;
+  border-radius:0!important;
+  background:transparent!important;
+}
+.agenda-match .club-logo img,
+.agenda-match .avatar img,
+.agenda-match .crest img{
+  display:block;
+  width:100%!important;
+  height:100%!important;
+  object-fit:contain!important;
+  object-position:center!important;
+}
+@media(max-width:760px){
+  .agenda-match{grid-template-columns:48px minmax(0,1fr)!important}
+  .agenda-match .avatar,
+  .agenda-match .crest,
+  .agenda-match .club-logo{
+    --avatar-size:48px;
+    width:48px!important;
+    height:48px!important;
+    min-width:48px!important;
+    min-height:48px!important;
+    max-width:48px!important;
+    max-height:48px!important;
+    flex:0 0 48px;
+  }
+}

@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  EA_CLUB_ID,
   aliasLookup,
   dedupeImportedMatches,
   normalizeEaMatch,
@@ -12,6 +13,7 @@ import {
   suggestAgendaMatches,
   validateImport,
 } from "../src/features/matches/import-core.js";
+import { FC27_CLUB_ID } from "../shared/fc27-club.js";
 
 const eaFixture = {
   matchId: "poa-0708",
@@ -126,4 +128,62 @@ test("payload parcial da ponte não lança erro com listas nulas", () => {
   assert.equal(suggestAgendaMatches(null, null).size, 0);
   assert.deepEqual(resolvePlayerAliases(null, null, null), {});
   assert.deepEqual(dedupeImportedMatches(null, null), []);
+});
+
+test("clube FC27 atual e legado 15686 alimentam o mesmo parser", () => {
+  assert.equal(EA_CLUB_ID, FC27_CLUB_ID);
+  assert.equal(FC27_CLUB_ID, "30428");
+  const current = normalizeEaMatch({
+    matchId: "fc27-now",
+    timestamp: 1786924800,
+    clubs: {
+      "30428": { clubId: "30428", name: "STRIX UNITED", goals: 4 },
+      "900": { clubId: "900", name: "MÁQUINA", goals: 1 },
+    },
+    players: {
+      "30428": [{ playerId: "p1", playername: "Oben", goals: 2 }],
+    },
+  });
+  assert.equal(current.strixScore, 4);
+  assert.equal(current.opponent, "MÁQUINA");
+  assert.equal(current.performance.players[0].eaName, "Oben");
+  const legacy = normalizeEaMatch(eaFixture);
+  assert.equal(legacy.strixScore, 2);
+  assert.equal(legacy.opponent, "POA CITY FC");
+  assert.equal(legacy.performance.players.length, 3);
+});
+
+test("payload FC27 real usa clubs.details.name, goals string e players por persona", () => {
+  const match = normalizeEaMatch({
+    matchId: "10830089460337",
+    timestamp: 1789880366,
+    clubs: {
+      "30428": {
+        goals: "1",
+        score: "1",
+        details: { name: "STRIX UNITED", clubId: 30428 },
+      },
+      "50008": {
+        goals: "1",
+        score: "1",
+        details: { name: "Waves 013", clubId: 50008 },
+      },
+    },
+    players: {
+      "30428": {
+        "1772207578": { playername: "Nunesdgz", goals: "0", assists: "0", passesmade: "12", passattempts: "16", pos: "forward", rating: "6.30" },
+        "1817198477": { playername: "B7N_FELIPE", goals: "1", assists: "0", passesmade: "23", passattempts: "27", pos: "midfielder", rating: "8.10" },
+      },
+    },
+    aggregate: {
+      "30428": { goals: 1, passattempts: 121, passesmade: 95, shots: 1, tacklesmade: 12, saves: 5 },
+    },
+  });
+  assert.equal(match.opponent, "Waves 013");
+  assert.equal(match.strixScore, 1);
+  assert.equal(match.opponentScore, 1);
+  assert.equal(resultLabel(match), "EMPATE");
+  assert.deepEqual(match.goalScorers, ["B7N_FELIPE"]);
+  assert.equal(match.performance.players.length, 2);
+  assert.equal(match.performance.passes, "95/121");
 });

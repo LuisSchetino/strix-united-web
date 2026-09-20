@@ -1,7 +1,6 @@
 import { authenticateDiscordMember, json, requireTier } from "../../_lib/auth.js";
 import { normalizeEaMatches, suggestAgendaMatches } from "../../../src/features/matches/import-core.js";
-
-const EA_CLUB_ID = "15686";
+import { FC27_CLUB_ID } from "../../../shared/fc27-club.js";
 
 const serviceHeaders = (env) => ({
   apikey: env.SUPABASE_SERVICE_ROLE_KEY,
@@ -18,7 +17,7 @@ async function fetchAllMatches(env) {
   const base = new URL(env.EA_SYNC_API_URL);
   if (base.protocol !== "https:") throw new Error("EA Sync API must use HTTPS.");
   const url = new URL("/v1/matches", base);
-  url.searchParams.set("clubId", EA_CLUB_ID);
+  url.searchParams.set("clubId", FC27_CLUB_ID);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 25_000);
   try {
@@ -34,7 +33,7 @@ async function fetchAllMatches(env) {
     const text = await response.text();
     let payload;
     try { payload = JSON.parse(text); } catch { payload = null; }
-    if (!response.ok || !payload?.ok || payload.club_id !== EA_CLUB_ID || !Array.isArray(payload.matches)) {
+    if (!response.ok || !payload?.ok || payload.club_id !== FC27_CLUB_ID || !Array.isArray(payload.matches)) {
       const error = new Error(payload?.message || `EA Sync API respondeu HTTP ${response.status}.`);
       error.status = response.status || 502;
       error.code = payload?.error || "ea_sync_invalid_response";
@@ -114,7 +113,7 @@ export async function onRequestGet({ request, env }) {
   if (session.error) return session.error;
   try {
     const result = await fetchAllMatches(env);
-    const normalized = normalizeEaMatches(result.raw, EA_CLUB_ID);
+    const normalized = normalizeEaMatches(result.raw, FC27_CLUB_ID);
     const [agenda, importedIds] = await Promise.all([
       loadAgenda(env),
       loadImportedMatchIds(env),
@@ -127,7 +126,7 @@ export async function onRequestGet({ request, env }) {
       ok: true,
       matches,
       fetched_at: new Date().toISOString(),
-      club_id: EA_CLUB_ID,
+      club_id: FC27_CLUB_ID,
       duration_ms: result.durationMs,
       cached: result.cached,
     });
@@ -151,10 +150,10 @@ export async function onRequestPost({ request, env }) {
       method: "POST",
       body: JSON.stringify({ p_matches: matches, p_actor: session.user.id }),
     });
-    console.log(JSON.stringify({ event: "fc27_ea_publish", club_id: EA_CLUB_ID, selected: matches.length, inserted: report?.inserted || 0, updated: report?.updated || 0, skipped: report?.skipped || 0, duration_ms: Date.now() - startedAt }));
-    return json({ ok: true, club_id: EA_CLUB_ID, published_at: new Date().toISOString(), duration_ms: Date.now() - startedAt, selected: matches.length, ...report });
+    console.log(JSON.stringify({ event: "fc27_ea_publish", club_id: FC27_CLUB_ID, selected: matches.length, inserted: report?.inserted || 0, updated: report?.updated || 0, skipped: report?.skipped || 0, duration_ms: Date.now() - startedAt }));
+    return json({ ok: true, club_id: FC27_CLUB_ID, published_at: new Date().toISOString(), duration_ms: Date.now() - startedAt, selected: matches.length, ...report });
   } catch (error) {
-    console.error(JSON.stringify({ event: "fc27_ea_publish_error", club_id: EA_CLUB_ID, message: error?.message, duration_ms: Date.now() - startedAt }));
+    console.error(JSON.stringify({ event: "fc27_ea_publish_error", club_id: FC27_CLUB_ID, message: error?.message, duration_ms: Date.now() - startedAt }));
     return eaError(error);
   }
 }

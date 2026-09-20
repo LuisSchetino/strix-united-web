@@ -1,6 +1,7 @@
 import { createServer } from "node:http";
 import { timingSafeEqual } from "node:crypto";
 import { createEaGateway } from "./ea-client.js";
+import { FC27_CLUB_ID, FC27_PLATFORM } from "./fc27-club.js";
 
 const PORT = Number(process.env.PORT || 3000);
 const API_TOKEN = String(process.env.EA_SYNC_API_TOKEN || "");
@@ -33,16 +34,16 @@ const server = createServer(async (request, response) => {
   }
   if (!authorized(request)) return json(response, 401, { error: "unauthorized" });
 
-  const clubId = url.searchParams.get("clubId") || "15686";
-  if (clubId !== "15686") return json(response, 400, { error: "unsupported_club" });
+  const clubId = url.searchParams.get("clubId") || FC27_CLUB_ID;
+  if (clubId !== FC27_CLUB_ID) return json(response, 400, { error: "unsupported_club", club_id: clubId });
   const startedAt = Date.now();
   try {
-    const result = await loadClubMatches({ clubId, platform: "common-gen5", maxResultCount: 10 });
+    const result = await loadClubMatches({ clubId, platform: FC27_PLATFORM, maxResultCount: 10 });
     console.log(JSON.stringify({ event: "ea_fetch", club_id: clubId, fetched: result.matches.length, cached: result.cached, duration_ms: Date.now() - startedAt }));
     return json(response, 200, {
       ok: true,
       club_id: clubId,
-      platform: "common-gen5",
+      platform: FC27_PLATFORM,
       fetched_at: new Date().toISOString(),
       duration_ms: Date.now() - startedAt,
       cached: result.cached,

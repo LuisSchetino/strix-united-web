@@ -5,6 +5,7 @@ import {
   collectTonightRelated,
   describeTonightRelated,
   fingerprintRelatedNightRender,
+  hydrateRelatedPlayers,
   positionGroup,
   relatedNightDurationSeconds,
   relatedNightFileName,
@@ -153,4 +154,15 @@ test("duração cabe no formato social para 11, 13 e 15", () => {
     assert.ok(duration >= 18 && duration <= 24, `${count} -> ${duration}`);
   }
   assert.equal(relatedNightFileName({ day: "2026-09-02", format: "story" }), "strix-relacionados-2026-09-02-story.mp4");
+});
+
+test("número da camisa vem do Elenco e não é inventado", () => {
+  const workspace = workspaceWith();
+  const joao = hydrateRelatedPlayers(["p1"], workspace)[0];
+  const arruda = hydrateRelatedPlayers(["p2"], workspace)[0];
+  assert.equal(joao.name, "João");
+  assert.equal(joao.number, 1);
+  assert.equal(joao.position, "GOL");
+  assert.equal(arruda.name, "Arruda");
+  assert.equal(arruda.number, "");
 });
