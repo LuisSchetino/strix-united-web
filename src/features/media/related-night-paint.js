@@ -413,7 +413,7 @@ function paintHero(ctx, timeline, scene, time, assets) {
   const player = scene.player;
   const asset = assets?.byId?.[player.id] || assets?.players?.[player.index];
   const hasPhoto = Boolean(asset?.bitmap);
-  const seq = String((scene.index || 0) + 1).padStart(2, "0");
+  const seq = shirtLabel(player);
   const slide = (1 - presence) * 84;
   const x = stage.left + slide;
   const y = stage.portraitTop;
@@ -466,6 +466,13 @@ function paintHero(ctx, timeline, scene, time, assets) {
   paintLowerThird(ctx, timeline, player, seq, lowerThirdPresence(scene, time), stage, slide);
 }
 
+function shirtLabel(player) {
+  const raw = player?.number ?? player?.shirt_number;
+  if (raw === "" || raw == null) return "";
+  const numeric = Number(raw);
+  return Number.isFinite(numeric) ? String(numeric).padStart(2, "0") : String(raw);
+}
+
 function paintLowerThird(ctx, timeline, player, seq, presence, stage, slide = 0) {
   if (presence <= 0.01) return;
   const story = timeline.format !== "feed";
@@ -477,7 +484,7 @@ function paintLowerThird(ctx, timeline, player, seq, presence, stage, slide = 0)
   ctx.textAlign = "left";
   ctx.fillStyle = MUTED;
   ctx.font = "800 20px Inter, sans-serif";
-  ctx.fillText(`${seq}  ·  ${player.position || "MEI"}`, x, y + 22);
+  ctx.fillText(seq ? `${seq}  ·  ${player.position || "MEI"}` : (player.position || "MEI"), x, y + 22);
   ctx.strokeStyle = "rgba(239,236,230,0.7)";
   ctx.lineWidth = 1.5;
   ctx.beginPath();
@@ -487,9 +494,6 @@ function paintLowerThird(ctx, timeline, player, seq, presence, stage, slide = 0)
   ctx.fillStyle = INK;
   ctx.font = `700 ${story ? 76 : 56}px Rajdhani, sans-serif`;
   ctx.fillText(name, x, y + 98);
-  ctx.fillStyle = MUTED;
-  ctx.font = "800 13px Inter, sans-serif";
-  ctx.fillText("STRIX UNITED", x, y + 118);
   ctx.restore();
 }
 

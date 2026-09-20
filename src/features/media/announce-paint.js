@@ -438,32 +438,36 @@ function paintRoleMarks(ctx, timeline, look, alpha = 1) {
   ctx.restore();
 }
 
-function paintRoleSweep(ctx, timeline, look, local = 0, still = false) {
+function paintRoleSweep(ctx, timeline, look, time = 0, still = false) {
   if (!look?.sweep || look.id === "jogador") return;
   const { width, height } = timeline;
-  const t = still ? 0.42 : clamp(local / 1.15);
+  const cycle = 5.4;
+  const wrap = still ? 0.38 : ((Number(time) % cycle) / cycle);
+  const edge = wrap < 0.12 ? wrap / 0.12 : wrap > 0.88 ? (1 - wrap) / 0.12 : 1;
+  if (edge <= 0.02) return;
   ctx.save();
   ctx.globalCompositeOperation = "screen";
+  ctx.globalAlpha = 0.5 * edge;
   if (look.mark === "stone") {
-    const y = height * (0.08 + t * 0.46);
-    const sweep = ctx.createLinearGradient(0, y - 70, 0, y + 90);
+    const y = height * (0.1 + wrap * 0.5);
+    const sweep = ctx.createLinearGradient(0, y - 80, 0, y + 110);
     sweep.addColorStop(0, "rgba(255,255,255,0)");
     sweep.addColorStop(0.5, look.sweep);
     sweep.addColorStop(1, "rgba(255,255,255,0)");
     ctx.fillStyle = sweep;
-    ctx.fillRect(0, 0, width, height * 0.7);
+    ctx.fillRect(0, 0, width, height * 0.72);
   } else if (look.mark === "steel") {
-    const y = height * (0.16 + t * 0.28);
-    ctx.fillStyle = fadeRgba(look.sweep, still ? 0.55 : Math.sin(t * Math.PI) * 0.85);
+    const y = height * (0.18 + wrap * 0.36);
+    ctx.fillStyle = look.sweep;
     ctx.fillRect(0, y, width, 2);
   } else {
-    const x = -width * 0.25 + t * width * 1.28;
-    const sweep = ctx.createLinearGradient(x, 0, x + width * 0.32, height * 0.18);
+    const x = -width * 0.3 + wrap * width * 1.4;
+    const sweep = ctx.createLinearGradient(x, 0, x + width * 0.34, height * 0.2);
     sweep.addColorStop(0, "rgba(255,255,255,0)");
     sweep.addColorStop(0.5, look.sweep);
     sweep.addColorStop(1, "rgba(255,255,255,0)");
     ctx.fillStyle = sweep;
-    ctx.fillRect(0, 0, width, height * 0.62);
+    ctx.fillRect(0, 0, width, height * 0.64);
   }
   ctx.restore();
 }
@@ -549,8 +553,8 @@ function paintTypeStack(ctx, person, timeline, box, {
   if (person.extraBadge) {
     ctx.fillStyle = look.ink;
     ctx.font = `800 ${metaSize - 1}px Inter, sans-serif`;
-    ctx.fillText(person.extraBadge, box.x, positionY + metaSize + 12);
-    accentY = positionY + metaSize + 26;
+    ctx.fillText(person.extraBadge, box.x, positionY + metaSize + 22);
+    accentY = positionY + metaSize + 40;
   }
   paintNameAccent(ctx, box, brushProgress, accentY, look);
   if (stage === "detail" || stage === "close" || timeline.format === "feed") {
@@ -735,17 +739,27 @@ function alongKeys(keys, t) {
 function cinematicCamera(timeline, time = 0, local = 0, stage = "hero") {
   if (timeline?.still) return { scale: 1.12, focus: 0.16, lift: 0, inset: 4, drift: 0 };
   const live = Number(time) || 0;
-  const breath = Math.sin(live * 0.15) * 0.007;
-  const punch = local < 0.2 ? Math.sin((local / 0.2) * Math.PI) * 0.03 : 0;
-  const table = {
-    reveal: { scale: 1.045, focus: 0.195, lift: 4, inset: 10 },
-    hero: { scale: 1.1, focus: 0.165, lift: 0, inset: 6 },
-    reframe: { scale: 1.17, focus: 0.138, lift: -3, inset: 3 },
-    detail: { scale: 1.23, focus: 0.118, lift: -5, inset: 2 },
-    close: { scale: 1.12, focus: 0.155, lift: 0, inset: 5 },
-  };
-  const cam = table[stage] || table.hero;
-  return { ...cam, scale: cam.scale + breath + punch, drift: 0 };
+  const breath = Math.sin(live * 0.11) * 0.004;
+  if (timeline?.kind === "team") {
+    const beat = Math.max(2.4, Number(timeline.beat) || 3.65);
+    const cam = alongKeys([
+      { t: 0, scale: 1.05, focus: 0.19, lift: 3, inset: 8 },
+      { t: 0.34, scale: 1.1, focus: 0.168, lift: 0.4, inset: 5 },
+      { t: 0.7, scale: 1.18, focus: 0.132, lift: -3, inset: 2 },
+      { t: 1, scale: 1.12, focus: 0.155, lift: 0, inset: 4 },
+    ], clamp(local / beat));
+    return { ...cam, scale: cam.scale + breath, drift: 0, stage };
+  }
+  const introEnd = timeline?.introEnd || 1.08;
+  const duration = timeline?.duration || 10.6;
+  const cam = alongKeys([
+    { t: 0, scale: 1.04, focus: 0.195, lift: 4, inset: 10 },
+    { t: 0.2, scale: 1.09, focus: 0.172, lift: 1.2, inset: 7 },
+    { t: 0.46, scale: 1.15, focus: 0.148, lift: -2, inset: 4 },
+    { t: 0.72, scale: 1.21, focus: 0.122, lift: -4, inset: 2 },
+    { t: 1, scale: 1.11, focus: 0.158, lift: 0, inset: 5 },
+  ], clamp((live - introEnd) / Math.max(0.01, duration - introEnd)));
+  return { ...cam, scale: cam.scale + breath, drift: 0, stage };
 }
 
 function playerStageGeometry(timeline, camera) {
@@ -1014,7 +1028,7 @@ function paintPlayerVariable(ctx, timeline, time, assets, {
 
   paintRoleAtmosphere(ctx, timeline, look, photoIn * 0.9);
   paintRoleMarks(ctx, timeline, look, Math.max(nameIn, photoIn) * 0.9);
-  paintRoleSweep(ctx, timeline, look, local, timeline.still);
+  paintRoleSweep(ctx, timeline, look, time, timeline.still);
 
   if (nameIn <= 0 && posIn <= 0) return;
   const story = timeline.format !== "feed";
@@ -1053,7 +1067,7 @@ function paintPlayerVariable(ctx, timeline, time, assets, {
   ctx.fillText((subject.position || "MC").toUpperCase(), geo.typeBox.x, positionY);
   let ruleY = positionY + 22;
   if (subject.extraBadge) {
-    const cargoY = positionY + metaSize + Math.max(16, Math.round(metaSize * 0.7));
+    const cargoY = positionY + metaSize + Math.max(28, Math.round(metaSize * 1.2));
     ctx.globalAlpha = cargoIn;
     ctx.fillStyle = look.ink;
     ctx.font = `800 ${cargoSize}px Inter, sans-serif`;
@@ -1119,10 +1133,9 @@ function paintIndividualStage(ctx, timeline, time, assets) {
   } else {
     paintVariable(ctx);
   }
-  if (!still && (stage === "reveal" || stage === "reframe" || stage === "detail") && local < 0.18) {
+  if (!still && stage === "reveal" && local < 0.16) {
     const pulse = Math.sin(clamp(local / 0.16) * Math.PI);
-    const gain = stage === "reveal" ? look.flashGain : look.flashGain * 0.55;
-    if (pulse > 0.05) paintPhotoFlash(ctx, timeline, pulse * gain, assets, look);
+    if (pulse > 0.08) paintPhotoFlash(ctx, timeline, pulse * look.flashGain * 0.45, assets, look);
   }
   if (!still && stage === "detail" && local < 0.28) {
     composeAnnounceFx(ctx, assets?.fx?.flare01, {

@@ -26,8 +26,11 @@ export function preloadClubLogos(values = []) {
     preloadedAssets.add(url);
     const image = new Image();
     image.decoding = "async";
+    image.fetchPriority = "low";
     image.onerror = () => preloadedAssets.delete(url);
     image.src = url;
-    image.decode?.().catch(() => preloadedAssets.delete(url));
+    image.decode?.().catch(() => {});
   }
 }
+
+export const preloadPlayerPhotos = preloadClubLogos;

@@ -2,7 +2,7 @@ import { saoPauloDay, todayAgendaMatches } from "../agenda/agenda-time.js";
 import { formatAgendaDay, MEDIA_FORMATS } from "./agenda-media-core.js";
 
 export const RELATED_NIGHT_TEMPLATE_ID = "related-night";
-export const RELATED_NIGHT_TEMPLATE_VERSION = "related-night-v5";
+export const RELATED_NIGHT_TEMPLATE_VERSION = "related-night-v6";
 export const RELATED_NIGHT_FPS = 30;
 
 export const LINEUP_SLOT_POSITIONS = Object.freeze([
@@ -83,6 +83,7 @@ export function hydrateRelatedPlayers(playerIds = [], workspace = {}, extras = [
         : String(player?.external_avatar_url || extra.photo || ""),
       position,
       group: positionGroup(position),
+      number: player?.shirt_number ?? extra.number ?? extra.shirt_number ?? "",
     });
   }
   return orderRelated(hydrated.filter((player) => player.name));
@@ -149,6 +150,8 @@ export function relatedNightIdentityPayload({
   format,
   players = [],
   saved = true,
+  look = "campaign",
+  mediaLook = "",
   templateVersion = RELATED_NIGHT_TEMPLATE_VERSION,
 } = {}) {
   return {
@@ -158,12 +161,14 @@ export function relatedNightIdentityPayload({
     templateVersion,
     source: "night_related",
     saved: Boolean(saved),
+    look: String(mediaLook || look || "campaign"),
     players: players.map((player) => ({
       id: player.id || "",
       name: player.name || "",
       photo: player.photo || "",
       position: player.position || "",
       group: player.group || "",
+      number: player.number ?? player.shirt_number ?? "",
     })),
   };
 }

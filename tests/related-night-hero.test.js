@@ -13,10 +13,10 @@ import { paintRelatedNightFrame } from "../src/features/media/related-night-pain
 
 function players() {
   return [
-    { id: "g1", name: "Ceni", photo: "", position: "GOL", group: "GOL" },
-    { id: "d1", name: "Cedraz", photo: "", position: "ZAG", group: "DEF" },
-    { id: "m1", name: "Nunes", photo: "", position: "MC", group: "MEI" },
-    { id: "a1", name: "Santozz", photo: "", position: "ATA", group: "ATA" },
+    { id: "g1", name: "Ceni", photo: "", position: "GOL", group: "GOL", number: 1 },
+    { id: "d1", name: "Cedraz", photo: "", position: "ZAG", group: "DEF", number: 4 },
+    { id: "m1", name: "Nunes", photo: "", position: "MC", group: "MEI", number: 8 },
+    { id: "a1", name: "Santozz", photo: "", position: "ATA", group: "ATA", number: 9 },
   ];
 }
 
@@ -46,11 +46,11 @@ function cutout(width, height) {
   return data;
 }
 
-test("hero stage fica na direita e ocupa 34–40% da largura", () => {
+test("hero stage fica na direita sem esmagar o campo", () => {
   const timeline = buildRelatedNightTimeline(players(), { format: "story" });
   const stage = heroStageBox(timeline);
   const ratio = stage.width / timeline.width;
-  assert.ok(ratio >= 0.34 && ratio <= 0.4);
+  assert.ok(ratio >= 0.26 && ratio <= 0.34);
   assert.ok(stage.left > timeline.width * 0.5);
   assert.ok(stage.right > timeline.width * 0.9);
   assert.ok(stage.plateY > stage.portraitTop);
@@ -69,16 +69,17 @@ test("classifica recorte transparente e foto com fundo forte", () => {
   assert.equal(crest.contentBottom, 1);
 });
 
-test("câmera desloca o campo à esquerda só durante o hero", () => {
+test("câmera mantém o campo centralizado com o hero na direita", () => {
   const timeline = buildRelatedNightTimeline(players(), { format: "story" });
   const scene = timeline.scenes.find((item) => item.type === "player");
   const rest = relatedNightCamera(timeline, scene.start + 0.4, { hero: 0 });
   const hero = relatedNightCamera(timeline, scene.start + 0.4, { hero: 1 });
   const finale = relatedNightCamera(timeline, timeline.duration - 0.15, { hero: 0 });
-  assert.ok(hero.x < rest.x);
-  assert.ok(hero.originN < rest.originN);
+  assert.equal(hero.originN, rest.originN);
+  assert.ok(Math.abs(hero.originN - 0.5) < 0.04);
+  assert.equal(hero.x, rest.x);
   assert.ok(finale.zoom < rest.zoom);
-  assert.ok(finale.originN > hero.originN);
+  assert.ok(finale.originN >= hero.originN - 0.02);
 });
 
 test("lower third entra depois do hero e os dois saem juntos", () => {
@@ -132,6 +133,7 @@ test("painter ancora nome e posição no hero sem card de reserva", () => {
   };
   paintRelatedNightFrame(ctx, { timeline, time: scene.start + 0.45, assets: { players: [], byId: {} }, dayLabel: "03 SET 2026" });
   assert.ok(calls.includes("CEDRAZ"));
-  assert.ok(calls.some((text) => /·\s+ZAG/.test(text)));
+  assert.ok(calls.some((text) => /04\s+·\s+ZAG/.test(text)));
+  assert.ok(!calls.some((text) => text === "STRIX UNITED" && calls[calls.indexOf("CEDRAZ") + 1] === "STRIX UNITED"));
   assert.ok(!calls.some((text) => /RESERVA|BANCO|SUPLENTE|TITULAR/i.test(text)));
 });

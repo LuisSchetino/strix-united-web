@@ -14,7 +14,7 @@ import {
 const day = "2026-09-02T18:00:00-03:00";
 
 const roster = [
-  { id: "p1", display_name: "João", positions: ["GOL"], avatar_path: "joao.png", is_active: true },
+  { id: "p1", display_name: "João", positions: ["GOL"], avatar_path: "joao.png", is_active: true, shirt_number: 1 },
   { id: "p2", display_name: "Arruda", positions: ["GOL"], avatar_path: "arruda.png", is_active: true },
   { id: "p3", display_name: "Ygo", positions: ["ZAG"], avatar_path: "ygo.png", is_active: true },
   { id: "p4", display_name: "Sampaio", positions: ["ZAG"], avatar_path: "sampaio.png", is_active: true },
@@ -81,6 +81,7 @@ test("PREENCHER PELAS ESCALAÇÕES une lineups de hoje e ignora amanhã", () => 
   assert.equal(suggested.filter((row) => row.name === "João").length, 1);
   assert.ok(suggested.some((row) => row.name === "Nunes"));
   assert.equal(suggested.find((row) => row.name === "João").group, "GOL");
+  assert.equal(suggested.find((row) => row.name === "João").number, 1);
 });
 
 test("13 relacionados salvos prevalecem mesmo com só 12 nas escalações", () => {

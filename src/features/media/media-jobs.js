@@ -118,7 +118,12 @@ export async function startAgendaRender({
   force = false,
 } = {}) {
   if (job.status === "running") return job;
-  const fingerprint = await fingerprintAgendaRender({ day, format, matches });
+  const fingerprint = await fingerprintAgendaRender({
+    day,
+    format,
+    matches,
+    look: timeline?.mediaLook || "campaign",
+  });
   const fileName = agendaFileName({ day, format });
   if (!force) {
     const cached = await findCachedRender(fingerprint, format);
@@ -203,7 +208,12 @@ export async function startRelatedNightRender({
   force = false,
 } = {}) {
   if (job.status === "running") return job;
-  const fingerprint = await fingerprintRelatedNightRender({ day, format, players });
+  const fingerprint = await fingerprintRelatedNightRender({
+    day,
+    format,
+    players,
+    look: timeline?.mediaLook || "campaign",
+  });
   const fileName = relatedNightFileName({ day, format });
   if (!force) {
     const cached = await findCachedRender(fingerprint, format);
@@ -292,7 +302,13 @@ export async function startSummaryRender({
   if (job.status === "running") return job;
   const mode = period?.mode === "week" ? "week" : "day";
   const matches = period?.matches || [];
-  const fingerprint = await fingerprintSummaryRender({ mode, day, format, matches });
+  const fingerprint = await fingerprintSummaryRender({
+    mode,
+    day,
+    format,
+    matches,
+    look: timeline?.mediaLook || "campaign",
+  });
   const fileName = summaryFileName({ day, mode, format });
   if (!force) {
     const cached = await findCachedRender(fingerprint, format);
@@ -391,6 +407,7 @@ export async function startAnnounceRender({
     phraseId,
     title,
     announceType,
+    look: timeline?.mediaLook || "campaign",
   });
   const fileName = announceFileName({
     kind,

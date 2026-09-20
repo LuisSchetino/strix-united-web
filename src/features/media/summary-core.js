@@ -106,6 +106,8 @@ export function summaryIdentityPayload({
   day,
   format = "story",
   matches = [],
+  look = "campaign",
+  mediaLook = "",
   templateVersion = SUMMARY_TEMPLATE_VERSION,
 } = {}) {
   return {
@@ -114,6 +116,7 @@ export function summaryIdentityPayload({
     template: SUMMARY_TEMPLATE_ID,
     templateVersion,
     mode: mode === "week" ? "week" : "day",
+    look: String(mediaLook || look || "campaign"),
     matches: matches.map((match) => ({
       id: match.id || "",
       opponent: match.opponent || "",

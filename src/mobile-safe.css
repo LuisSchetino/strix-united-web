@@ -22,6 +22,8 @@
   display:grid;
   gap:10px;
   width:100%;
+  min-height:136px;
+  align-content:end;
   margin-top:auto;
   padding:12px 10px max(16px,env(safe-area-inset-bottom));
   border-top:1px solid var(--strix-border,rgba(255,255,255,.08));
@@ -54,6 +56,9 @@
 .sidebar.is-compact .sidebar-dock{
   justify-items:center;
   padding-inline:6px;
+  min-height:136px;
+  padding-top:12px;
+  padding-bottom:max(16px,env(safe-area-inset-bottom));
 }
 .sidebar.is-compact .sidebar-user,
 .sidebar.is-compact .sidebar-compact-account{
@@ -201,7 +206,7 @@
   clip-path:polygon(9% 0,91% 0,100% 100%,0 100%);
 }
 .formation-picker-field .slot-10{
-  bottom:12%;
+  bottom:2%;
 }
 
 @media(max-width:900px){
@@ -327,7 +332,7 @@
   .formation-picker-field .slot-7{top:58%}
   .formation-picker-field .slot-8{top:62%}
   .formation-picker-field .slot-9{top:58%}
-  .formation-picker-field .slot-10{bottom:14%}
+  .formation-picker-field .slot-10{bottom:6%}
   .squad-dialog-layer footer>div{
     display:grid;
     grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);

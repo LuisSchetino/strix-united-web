@@ -40,6 +40,8 @@ import {
 } from "./media-jobs.js";
 import { AnnounceStudio } from "./AnnounceStudio.jsx";
 import { AccessDenied } from "../../ui/AccessDenied.jsx";
+import { MediaLookBadge, MediaLookSwitch } from "./MediaLookSwitch.jsx";
+import { readStoredMediaLook, withMediaLook, writeStoredMediaLook } from "./media-look.js";
 import "./media.css";
 
 function PreviewCanvas({
@@ -153,6 +155,8 @@ export function MediaPage({ profile, client, workspace }) {
   const [viewer, setViewer] = useState(null);
   const [assetError, setAssetError] = useState("");
   const [relatedAssetError, setRelatedAssetError] = useState("");
+  const [mediaLook, setMediaLook] = useState(readStoredMediaLook);
+  const setLook = (value) => setMediaLook(writeStoredMediaLook(value));
   const day = useMemo(() => formatAgendaDay(), []);
   const matches = useMemo(() => collectTodayAgenda(workspace), [workspace.agenda, workspace.competitions, workspace.competitionFixtures]);
   const relatedState = useMemo(
@@ -165,12 +169,21 @@ export function MediaPage({ profile, client, workspace }) {
     () => collectPeriodSummary(workspace, { mode: summaryMode }),
     [workspace.matches, summaryMode],
   );
-  const summaryTimeline = useMemo(() => buildSummaryTimeline(summary, { format: "story" }), [summary]);
+  const summaryTimeline = useMemo(
+    () => withMediaLook(buildSummaryTimeline(summary, { format: "story" }), mediaLook),
+    [summary, mediaLook],
+  );
   const hasSummary = summary.matches.length > 0;
   const matchKey = matches.map((match) => `${match.id}:${match.scheduled_at}:${match.opponent_logo}:${match.competition_logo}`).join("|");
-  const relatedKey = related.map((player) => `${player.id}:${player.name}:${player.photo}:${player.position}:${player.group}`).join("|");
-  const timeline = useMemo(() => buildAgendaTimeline(matches, { format }), [matches, format]);
-  const relatedTimeline = useMemo(() => buildRelatedNightTimeline(related, { format: "story" }), [related]);
+  const relatedKey = related.map((player) => `${player.id}:${player.name}:${player.photo}:${player.position}:${player.group}:${player.number || ""}`).join("|");
+  const timeline = useMemo(
+    () => withMediaLook(buildAgendaTimeline(matches, { format }), mediaLook),
+    [matches, format, mediaLook],
+  );
+  const relatedTimeline = useMemo(
+    () => withMediaLook(buildRelatedNightTimeline(related, { format: "story" }), mediaLook),
+    [related, mediaLook],
+  );
   const hasGames = matches.length > 0;
   const hasRelated = relatedState.saved && related.length > 0;
   const running = job?.status === "running";
@@ -198,26 +211,26 @@ export function MediaPage({ profile, client, workspace }) {
   useEffect(() => {
     let alive = true;
     Promise.all([
-      fingerprintAgendaRender({ day: day.iso, format: "story", matches }),
-      fingerprintAgendaRender({ day: day.iso, format: "feed", matches }),
+      fingerprintAgendaRender({ day: day.iso, format: "story", matches, look: mediaLook }),
+      fingerprintAgendaRender({ day: day.iso, format: "feed", matches, look: mediaLook }),
     ]).then(([story, feed]) => { if (alive) setPrints({ story, feed }); });
     return () => { alive = false; };
-  }, [day.iso, matchKey]);
+  }, [day.iso, matchKey, mediaLook]);
 
   useEffect(() => {
     let alive = true;
-    fingerprintRelatedNightRender({ day: day.iso, format: "story", players: related, saved: relatedState.saved })
+    fingerprintRelatedNightRender({ day: day.iso, format: "story", players: related, saved: relatedState.saved, look: mediaLook })
       .then((value) => { if (alive) setRelatedPrint(value); });
     return () => { alive = false; };
-  }, [day.iso, relatedKey, relatedState.saved]);
+  }, [day.iso, relatedKey, relatedState.saved, mediaLook]);
 
   const summaryKey = summary.matches.map((match) => `${match.id}:${match.strix_score}:${match.opponent_score}:${match.opponent_logo}`).join("|");
   useEffect(() => {
     let alive = true;
-    fingerprintSummaryRender({ mode: summary.mode, day: day.iso, format: "story", matches: summary.matches })
+    fingerprintSummaryRender({ mode: summary.mode, day: day.iso, format: "story", matches: summary.matches, look: mediaLook })
       .then((value) => { if (alive) setSummaryPrint(value); });
     return () => { alive = false; };
-  }, [day.iso, summary.mode, summaryKey]);
+  }, [day.iso, summary.mode, summaryKey, mediaLook]);
 
   useEffect(() => {
     if (!hasSummary || (tab !== "summary-day" && tab !== "summary-week")) {
@@ -266,7 +279,7 @@ export function MediaPage({ profile, client, workspace }) {
 
   const generate = async (targetFormat, force = false) => {
     if (!hasGames || running) return;
-    const nextTimeline = buildAgendaTimeline(matches, { format: targetFormat });
+    const nextTimeline = withMediaLook(buildAgendaTimeline(matches, { format: targetFormat }), mediaLook);
     const started = await startAgendaRender({
       matches,
       format: targetFormat,
@@ -347,7 +360,7 @@ export function MediaPage({ profile, client, workspace }) {
         label="Área de mídia"
       />
       {tab === "announce" ? (
-        <AnnounceStudio workspace={workspace} />
+        <AnnounceStudio workspace={workspace} mediaLook={mediaLook} onMediaLook={setLook} />
       ) : tab === "summary-day" || tab === "summary-week" ? (
         <>
           <header className="media-hero">
@@ -375,7 +388,9 @@ export function MediaPage({ profile, client, workspace }) {
                 <header>
                   <span>PREVIEW</span>
                   <h2>Story / Reels 9:16</h2>
+                  <MediaLookBadge value={mediaLook} />
                 </header>
+                <MediaLookSwitch value={mediaLook} onChange={setLook} />
                 <div className={`media-preview-frame${summaryAssets ? "" : " is-empty"}`}>
                   {summaryAssets ? (
                     <PreviewCanvas
@@ -456,7 +471,9 @@ export function MediaPage({ profile, client, workspace }) {
               <header>
                 <span>PREVIEW</span>
                 <h2>Story / Reels 9:16</h2>
+                <MediaLookBadge value={mediaLook} />
               </header>
+              <MediaLookSwitch value={mediaLook} onChange={setLook} />
               <div className={`media-preview-frame${relatedAssets && hasRelated ? "" : " is-empty"}`}>
                 {hasRelated && relatedAssets ? (
                   <PreviewCanvas
@@ -529,7 +546,9 @@ export function MediaPage({ profile, client, workspace }) {
                 <header>
                   <span>PREVIEW</span>
                   <h2>{format === "feed" ? "Feed 4:5" : "Story / Reels 9:16"}</h2>
+                  <MediaLookBadge value={mediaLook} />
                 </header>
+                <MediaLookSwitch value={mediaLook} onChange={setLook} />
                 <div className={`media-preview-frame${format === "feed" ? " is-feed" : ""}${assets ? "" : " is-empty"}`}>
                   {assets ? (
                     <PreviewCanvas timeline={timeline} assets={assets} dayLabel={day.label} format={format} />

@@ -5,14 +5,14 @@ const photoClass = new WeakMap();
 export function heroStageBox(timeline) {
   const { width, height, safe } = timeline;
   const story = timeline.format !== "feed";
-  const stageW = Math.round(width * (story ? 0.37 : 0.32));
+  const stageW = Math.round(width * (story ? 0.3 : 0.26));
   const right = width - Math.max(18, safe.side * 0.28);
   const left = right - stageW;
   const top = safe.top + (story ? 28 : 12);
-  const plateH = story ? 124 : 102;
-  const bottom = height - safe.bottom + (story ? 12 : 4);
-  const portraitH = Math.round(stageW * 1.36);
-  const portraitTop = top + (story ? 48 : 24);
+  const plateH = story ? 118 : 96;
+  const bottom = height - safe.bottom + (story ? 28 : 8);
+  const portraitH = Math.round(stageW * 1.22);
+  const portraitTop = top + (story ? 64 : 28);
   return {
     left,
     right,
@@ -21,7 +21,7 @@ export function heroStageBox(timeline) {
     width: stageW,
     height: bottom - top,
     plateH,
-    plateY: Math.min(portraitTop + portraitH + 8, bottom - plateH),
+    plateY: Math.min(portraitTop + portraitH + 28, bottom - plateH),
     portraitTop,
     portraitH,
     portraitW: stageW,

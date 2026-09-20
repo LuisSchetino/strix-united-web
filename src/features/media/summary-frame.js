@@ -1,4 +1,5 @@
 import { paintSummaryFrame } from "./summary-paint.js";
+import { paintCollageSummary, isCollageLook } from "./collage-paint.js";
 import { summarySceneAt } from "./summary-timeline.js";
 
 export function summaryFrameTime(frameIndex, timeline) {
@@ -15,6 +16,10 @@ export function renderSummaryFrame(ctx, {
   dayLabel,
 } = {}) {
   const resolved = Number.isFinite(timeSec) ? timeSec : time;
+  if (isCollageLook(timeline)) {
+    paintCollageSummary(ctx, { timeline, time: resolved, assets, dayLabel });
+    return;
+  }
   paintSummaryFrame(ctx, { timeline, time: resolved, assets, dayLabel });
 }
 

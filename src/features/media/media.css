@@ -118,6 +118,15 @@ dialog.media-viewer::backdrop{background:#0009}
   dialog.media-viewer{padding:12px 12px max(12px,env(safe-area-inset-bottom));align-items:end}
   .media-viewer section{max-height:calc(100dvh - 24px)}
 }
+.media-preview-card>header{display:flex;flex-wrap:wrap;align-items:end;justify-content:space-between;gap:10px}
+.media-look-switch{display:grid;gap:8px;margin:2px 0 10px}
+.media-look-switch>span{color:#aeb4bb;font-size:10px;font-weight:900;letter-spacing:.14em}
+.media-look-switch>div{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:4px;border:1px solid var(--strix-border);border-radius:12px;background:#08090b}
+.media-look-switch button{min-height:40px;padding:8px 10px;border:0;border-radius:9px;background:transparent;color:#aeb4bb;font:800 11px/1.25 Inter,sans-serif;letter-spacing:.03em}
+.media-look-switch button.is-active{background:#efece6;color:#111}
+.media-look-badge{margin:0 0 2px;font:800 10px/1 Inter,sans-serif;letter-spacing:.14em;color:#aeb4bb}
+.media-look-badge.is-collage{color:#efece6}
+.media-preview-card:has(.media-look-badge.is-collage) .media-preview-frame{background:#12110f}
 @media(prefers-reduced-motion:reduce){.media-progress i em{transition:none}}
 @media(min-width:901px){
   .media-page:has(.media-layout){grid-template-columns:minmax(250px,.65fr) minmax(0,1fr);column-gap:32px;align-items:start}

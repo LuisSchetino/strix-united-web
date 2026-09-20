@@ -284,6 +284,8 @@ test("role looks change the piece language, not only the badge ink", async () =>
   assert.match(paint, /paintRoleSweep/);
   assert.match(paint, /paintPhotoFlash/);
   assert.match(paint, /cinematicCamera\(timeline, time, local, stage\)/);
+  assert.match(paint, /alongKeys/);
+  assert.match(paint, /time % cycle|% cycle/);
 });
 
 test("diretoria still preview paints cargo without collapsing it into position", () => {

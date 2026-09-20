@@ -1285,13 +1285,29 @@ function CentralLive({ workspace, navigate }) {
   const nextLogo = heroMatch?.resolved_opponent_logo_url || (heroMatch?.opponent_logos?.storage_path ? workspace.assetUrl(heroMatch.opponent_logos.storage_path) : "");
   return (
     <section className="page-home page-enter">
-      <section className="match-hero">
+      <section className={`match-hero${heroMatch ? "" : " is-free-night"}`}>
         <div className="stadium-light stadium-left" /><div className="stadium-light stadium-right" /><div className="smoke smoke-a" /><div className="smoke smoke-b" />
-        <div className="hero-meta"><span>{heroMatch ? (hero.isToday ? "TRANSMISSÃO · NOITE DE JOGO" : "PRÓXIMA PARTIDA") : "AGENDA LIVRE"}</span><b>{heroMatch ? `${datePart(heroMatch.scheduled_at)} · ${timePart(heroMatch.scheduled_at)}` : "SEM COMPROMISSO"}</b></div>
-        <div className="hero-teams">
+        <div className="hero-meta"><span>{heroMatch ? (hero.isToday ? "TRANSMISSÃO · NOITE DE JOGO" : "PRÓXIMA PARTIDA") : "AGENDA LIVRE"}</span><b>{heroMatch ? `${datePart(heroMatch.scheduled_at)} · ${timePart(heroMatch.scheduled_at)}` : "SEM JOGOS HOJE"}</b></div>
+        <div className={`hero-teams${heroMatch ? "" : " is-free-night"}`}>
           <div><Crest /><strong>STRIX UNITED</strong></div>
-          <div className="versus"><small>{heroMatch?.competition_name || "SEM PARTIDA"}</small><b>VS</b><i>{heroMatch ? timePart(heroMatch.scheduled_at) : "—"}</i></div>
-          <div><Avatar name={heroMatch?.opponent_name || "?"} logo={nextLogo} priority /><strong>{heroMatch?.opponent_name || "AGUARDANDO ADVERSÁRIO"}</strong></div>
+          {heroMatch ? (
+            <>
+              <div className="versus"><small>{heroMatch.competition_name || "PARTIDA"}</small><b>VS</b><i>{timePart(heroMatch.scheduled_at)}</i></div>
+              <div><Avatar name={heroMatch.opponent_name} logo={nextLogo} priority /><strong>{heroMatch.opponent_name}</strong></div>
+            </>
+          ) : (
+            <>
+              <div className="versus is-free">
+                <small>SEM JOGOS HOJE</small>
+                <b>NOITE LIVRE</b>
+                <i>Nenhum compromisso programado</i>
+              </div>
+              <div>
+                <span className="free-night-mark" aria-hidden="true" />
+                <strong>AGENDA LIVRE</strong>
+              </div>
+            </>
+          )}
         </div>
         <div className="hero-actions"><button className="primary" onClick={() => navigate("agenda")}><Icon name="squad" size={17} />ABRIR ESCALAÇÃO</button><button className="secondary" onClick={() => navigate("agenda")}>DETALHES DA PARTIDA <Icon name="arrow" size={16} /></button></div>
         <div className="stadium-caption"><span>ARENA STRIX · SÃO PAULO</span><i>{heroMatch?.status === "live" && hero.isToday ? "AO VIVO" : hero.isToday ? "HOJE" : heroMatch ? "PRÓXIMO COMPROMISSO" : "AGENDA LIVRE"}</i></div>
@@ -1357,10 +1373,18 @@ function FormationPicker({ lineup, onChange, compact = false, readOnly = false, 
   const improvised = activeRoster.filter((player) => !(player.positions || []).includes(desiredPosition));
   const avatarFor = (player) => player?.avatar_path ? assetUrl(player.avatar_path) : player?.external_avatar_url || "";
   const lineupPlayer = (name) => activeRoster.find((player) => normalizeTeamName(player.display_name) === normalizeTeamName(name));
+  useEffect(() => {
+    preloadClubLogos(activeRoster.slice(0, 24).map(avatarFor));
+  }, [activeRoster.length]);
+  useEffect(() => {
+    if (slot === null) return undefined;
+    preloadClubLogos([...natural, ...improvised].map(avatarFor));
+    return undefined;
+  }, [slot]);
   const playerButton = (player) => (
     <button type="button" key={player.id || player.display_name} onClick={() => choose(player)}>
       <b>{player.member_type === "teste" ? "TESTE" : "ELENCO"}</b>
-      <Avatar name={player.display_name} logo={avatarFor(player)} kind="photo" />
+      <Avatar name={player.display_name} logo={avatarFor(player)} kind="photo" priority />
       <span>{player.display_name}<small>{(player.positions || []).join(" · ") || "SEM POSIÇÃO"}</small></span>
     </button>
   );
@@ -1378,7 +1402,7 @@ function FormationPicker({ lineup, onChange, compact = false, readOnly = false, 
             tabIndex={readOnly ? -1 : 0}
             aria-disabled={readOnly}
           >
-            <i className={player ? "has-player-photo" : ""}>{lineup[index] ? <Avatar name={lineup[index]} logo={avatarFor(player)} kind="photo" /> : "+"}</i>
+            <i className={player ? "has-player-photo" : ""}>{lineup[index] ? <Avatar name={lineup[index]} logo={avatarFor(player)} kind="photo" priority /> : "+"}</i>
             <b>{lineup[index] || "Livre"}</b>
             <small>{position}</small>
           </button>
@@ -3014,7 +3038,11 @@ function App() {
       .filter((match) => !["cancelled", "completed"].includes(match.status))
       .slice(0, 12)
       .map((match) => match.resolved_opponent_logo_url || (match.opponent_logos?.storage_path ? workspace.assetUrl(match.opponent_logos.storage_path) : "")));
-  }, [workspace.agenda, workspace.loading]);
+    preloadClubLogos((workspace.players || [])
+      .filter((player) => player?.is_active)
+      .slice(0, 36)
+      .map((player) => player.avatar_path ? workspace.assetUrl(player.avatar_path) : player.external_avatar_url || ""));
+  }, [workspace.agenda, workspace.players, workspace.loading]);
   useEffect(() => {
     if (auth.loading) return undefined;
     const next = consumeLaunchReturn();

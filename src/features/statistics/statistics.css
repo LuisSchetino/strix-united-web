@@ -59,13 +59,13 @@
   place-items: center;
   width: 38px;
   height: 38px;
-  border: 1px solid #297097;
+  border: 1px solid var(--rastro-blue-subtle);
   border-radius: 11px;
-  background: #0d2c43;
-  color: #62d4ff;
+  background: #101318;
+  color: var(--rastro-blue);
 }
 .statistics-stat-card small {
-  color: #7598ae;
+  color: #aeb4bb;
   font-size: 8px;
   font-weight: 950;
   letter-spacing: 0.12em;
@@ -284,17 +284,17 @@
   gap: 10px;
 }
 .statistics-sort span {
-  color: #6d8ea5;
+  color: #aeb4bb;
   font-size: 8px;
   font-weight: 950;
   letter-spacing: 0.1em;
 }
 .statistics-sort select {
   min-height: 39px;
-  border: 1px solid #28536f;
+  border: 1px solid var(--strix-border-strong);
   border-radius: 9px;
-  background: #061521;
-  color: #dff3ff;
+  background: #111419;
+  color: #f2f3f4;
   padding: 0 11px;
 }
 .statistics-player-table {
@@ -624,6 +624,18 @@
 .statistics-v3>.data-page-header>.rastro-data-signature{color:#8e969f}.statistics-v3>.data-page-header>.rastro-data-signature b{color:var(--rastro-blue)}
 .statistics-sort>.rastro-data-signature,.statistics-sort>div>.rastro-data-signature{display:none!important}
 .statistics-sort>span,.statistics-sort>div>span{color:#aeb4bb!important}
+.statistics-sort .select-control,
+.statistics-sort .select-control>button,
+.statistics-sort .select-control>button span,
+.statistics-sort .select-control-menu>button,
+.statistics-sort .select-control-menu>button span{
+  color:#d8dce0!important;
+}
+.statistics-sort .select-control>button{border-color:var(--strix-border-strong);background:#111419}
+.statistics-sort .select-control-menu>button[aria-selected=true],
+.statistics-sort .select-control-menu>button[aria-selected=true] span{
+  color:#090a0b!important;
+}
 .statistics-stat-card,.statistics-ranking-card,.statistics-goalkeeper-card,.statistics-team-identity,.statistics-player-table{background:#0b0d10!important;border-color:var(--strix-border)!important}
 .statistics-stat-card:after{background:linear-gradient(90deg,transparent,rgba(255,255,255,.08),transparent)}
 .statistics-team-identity{background:linear-gradient(135deg,#101318,#0b0d10)!important}

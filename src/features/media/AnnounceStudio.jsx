@@ -21,6 +21,8 @@ import {
 import { announceFrameTime, renderAnnounceFrame } from "./announce-frame.js";
 import { buildAnnounceTimeline } from "./announce-timeline.js";
 import { loadAnnounceAssets } from "./media-assets.js";
+import { MediaLookBadge, MediaLookSwitch } from "./MediaLookSwitch.jsx";
+import { withMediaLook } from "./media-look.js";
 import {
   downloadBlob,
   listCachedRenders,
@@ -130,7 +132,7 @@ function moveItem(ids, index, offset) {
   return next;
 }
 
-export function AnnounceStudio({ workspace }) {
+export function AnnounceStudio({ workspace, mediaLook = "campaign", onMediaLook }) {
   const draft = useMemo(() => readAnnounceDraft() || {}, []);
   const [kind, setKind] = useState(draft.kind === "team" ? "team" : "individual");
   const [format, setFormat] = useState(draft.format === "feed" ? "feed" : "story");
@@ -189,14 +191,14 @@ export function AnnounceStudio({ workspace }) {
     });
   }, [kind, selected, announceType, phraseId, customPhrase, usedPhraseIds]);
 
-  const timeline = useMemo(() => buildAnnounceTimeline({
+  const timeline = useMemo(() => withMediaLook(buildAnnounceTimeline({
     kind,
     format,
     people: selected,
     phrase: phrase.text,
     title,
     announceType,
-  }), [kind, format, selected, phrase.text, title, announceType]);
+  }), mediaLook), [kind, format, selected, phrase.text, title, announceType, mediaLook]);
 
   const fingerprintKey = selected.map((person) => person.id).join(",");
 
@@ -358,6 +360,7 @@ export function AnnounceStudio({ workspace }) {
           onChange={setFormat}
           label="Formato"
         />
+        <MediaLookSwitch value={mediaLook} onChange={(value) => onMediaLook?.(value)} />
       </div>
 
       <div className="media-layout announce-layout">
@@ -464,6 +467,7 @@ export function AnnounceStudio({ workspace }) {
           <header>
             <span>PREVIEW</span>
             <h2>{format === "feed" ? "Post 1080×1350" : "Reels 1080×1920"}</h2>
+            <MediaLookBadge value={mediaLook} />
           </header>
           <div className={`media-preview-frame ${format === "feed" ? "is-feed" : ""} ${selected.length ? "" : "is-empty"}`}>
             {selected.length && assets && timeline.totalFrames ? (

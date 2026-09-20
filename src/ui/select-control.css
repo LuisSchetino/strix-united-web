@@ -14,6 +14,7 @@
   .select-control-menu,.select-control-menu.is-leaving{animation:none}
 }
 .select-control-menu>button{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:38px;padding:0 10px;border:0;border-radius:8px;background:transparent;color:#aeb4bb;font:800 9px/1 Inter,sans-serif;text-align:left}
+.select-control-menu>button span{color:inherit}
 .select-control-menu>button:hover,.select-control-menu>button.is-highlighted{background:#1a1f24;color:#fff}
 .select-control-menu>button[aria-selected=true]{color:#fff}
 .select-control-menu>button[aria-selected=true] svg{color:#090a0b}

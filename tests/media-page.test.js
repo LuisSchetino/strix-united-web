@@ -20,6 +20,8 @@ test("Mídia vira gerador automático da Agenda do Dia sem misturar EA Sync", as
   assert.match(page, /RELACIONADOS DA NOITE/);
   assert.match(page, /ANÚNCIOS FC 27/);
   assert.match(page, /AnnounceStudio/);
+  assert.match(page, /MediaLookSwitch/);
+  assert.match(page, /withMediaLook/);
   assert.match(page, /GERAR STORY/);
   assert.match(page, /Salve a lista para gerar o vídeo/);
   assert.match(page, /NightRelatedEditor/);

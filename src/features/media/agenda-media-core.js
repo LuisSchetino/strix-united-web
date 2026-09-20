@@ -74,12 +74,13 @@ export function collectTodayAgenda(workspace = {}, now = new Date()) {
   });
 }
 
-export function renderIdentityPayload({ day, format, matches = [], templateVersion = AGENDA_TEMPLATE_VERSION } = {}) {
+export function renderIdentityPayload({ day, format, matches = [], look = "campaign", mediaLook = "", templateVersion = AGENDA_TEMPLATE_VERSION } = {}) {
   return {
     day: String(day || ""),
     format: String(format || "story"),
     template: AGENDA_TEMPLATE_ID,
     templateVersion,
+    look: String(mediaLook || look || "campaign"),
     matches: matches.map((match) => ({
       id: match.id || "",
       scheduled_at: match.scheduled_at || "",
