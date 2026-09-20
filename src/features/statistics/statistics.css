@@ -59,10 +59,10 @@
   place-items: center;
   width: 38px;
   height: 38px;
-  border: 1px solid var(--rastro-blue-subtle);
+  border: 1px solid var(--strix-border-strong);
   border-radius: 11px;
   background: #101318;
-  color: var(--rastro-blue);
+  color: #d8dce0;
 }
 .statistics-stat-card small {
   color: #aeb4bb;
@@ -172,7 +172,7 @@
   border: 0;
 }
 .statistics-ranking-card li > em {
-  color: var(--rastro-blue);
+  color: #f4f5f6;
   font: 800 13px Rajdhani;
   font-style: normal;
 }
@@ -578,16 +578,16 @@
 }
 
 /* Rastro signs metrics, while all structural surfaces stay graphite. */
-.statistics-v3{--statistics-accent:var(--rastro-blue)}
+.statistics-v3{--statistics-accent:#f4f5f6}
 .statistics-tabs-v3{border-color:var(--strix-border);background:#0b0d10}
 .statistics-summary-grid article,.statistics-stat-card,.statistics-ranking-card,.statistics-goalkeeper-card,
 .statistics-team-identity,.statistics-player-table,.statistics-ranking-modal,.statistics-ranking-list article{
   border-color:var(--strix-border);background-color:#0b0d10;
 }
-.statistics-stat-card>span,.statistics-ranking-card>header>span,.statistics-goalkeeper-card>header>span{border-color:var(--rastro-blue-subtle);background:#101318;color:var(--rastro-blue)}
-.statistics-stat-card svg,.statistics-ranking-card svg,.statistics-team-metric svg{color:var(--rastro-blue)}
-.statistics-stat-card strong,.statistics-team-metric strong,.statistics-ranking-card>ol>li>strong{color:var(--rastro-blue)}
-.statistics-ranking-list article.is-top{background:linear-gradient(90deg,var(--rastro-blue-subtle),#101318)}
+.statistics-stat-card>span,.statistics-ranking-card>header>span,.statistics-goalkeeper-card>header>span{border-color:var(--strix-border);background:#101318;color:#aeb4bb}
+.statistics-stat-card svg,.statistics-ranking-card svg,.statistics-team-metric svg{color:#d8dce0}
+.statistics-stat-card strong,.statistics-team-metric strong,.statistics-ranking-card>ol>li>strong{color:#f4f5f6}
+.statistics-ranking-list article.is-top{background:linear-gradient(90deg,#1a1f24,#101318)}
 .statistics-ranking-modal{box-shadow:0 28px 90px #000}.statistics-ranking-list article{border-color:var(--strix-border)}
 .statistics-stat-card,.statistics-ranking-card,.statistics-goalkeeper-card,.statistics-team-metric{background:linear-gradient(145deg,#101318,#0b0d10)}
 .statistics-stat-card:after{background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent)}
@@ -609,14 +609,14 @@
 .statistics-ranking-modal header button{display:grid;place-items:center;width:38px;height:38px;border:1px solid var(--strix-border-strong);border-radius:11px;background:#111419;color:#d8dce0}
 .statistics-ranking-list{padding:10px 18px 18px}
 .statistics-ranking-list article{grid-template-columns:40px minmax(0,1fr) minmax(92px,auto);min-height:68px;padding-inline:8px;background:#0b0d10!important}
-.statistics-ranking-list article>strong{display:grid;place-items:center;width:30px;height:30px;border-radius:9px;background:#15191e;color:var(--rastro-blue);font-size:17px;line-height:1}
-.statistics-ranking-list article.is-top{background:linear-gradient(90deg,var(--rastro-blue-subtle),#0b0d10 72%)!important}
-.statistics-ranking-list article.is-top:before{background:var(--rastro-blue)}
+.statistics-ranking-list article>strong{display:grid;place-items:center;width:30px;height:30px;border-radius:9px;background:#15191e;color:#f4f5f6;font-size:17px;line-height:1}
+.statistics-ranking-list article.is-top{background:linear-gradient(90deg,#1a1f24,#0b0d10 72%)!important}
+.statistics-ranking-list article.is-top:before{background:#d8dce0}
 .statistics-ranking-list article.is-top-1>strong{background:#2c2718;color:#f0ca65}
 .statistics-ranking-list article.is-top-2>strong{background:#23272c;color:#d7dce1}
 .statistics-ranking-list article.is-top-3>strong{background:#2b211c;color:#d89b73}
 .statistics-ranking-value{align-self:center;justify-items:end;line-height:1.1}
-.statistics-ranking-value>span{color:var(--rastro-blue)}
+.statistics-ranking-value>span{color:#f4f5f6}
 @media(max-width:760px){.statistics-v3>.data-page-header>.rastro-data-signature{align-self:start}.statistics-ranking-list{padding-inline:12px}.statistics-ranking-list article{grid-template-columns:34px minmax(0,1fr) minmax(78px,auto);padding-inline:4px}}
 
 /* Final FC27 analytics pass: graphite structure, exact Rastro blue for data only. */
@@ -644,7 +644,7 @@
 .statistics-ranking-modal,.statistics-ranking-modal>header{border-color:var(--strix-border-strong)!important;background:#0b0d10!important}
 .statistics-ranking-modal>header>div>span{color:#c7ccd1!important}
 .statistics-ranking-list article{background:#0b0d10!important;border-color:var(--strix-border)!important}
-.statistics-ranking-list article.is-top{background:linear-gradient(90deg,var(--rastro-blue-subtle),#0b0d10)!important;border-color:var(--strix-border)!important}
-.statistics-ranking-list article>strong,.statistics-ranking-value>span{color:var(--rastro-blue)!important}
-.statistics-ranking-list article.is-top:before{background:var(--rastro-blue)!important;box-shadow:none}
+.statistics-ranking-list article.is-top{background:linear-gradient(90deg,#1a1f24,#0b0d10)!important;border-color:var(--strix-border)!important}
+.statistics-ranking-list article>strong,.statistics-ranking-value>span{color:#f4f5f6!important}
+.statistics-ranking-list article.is-top:before{background:#d8dce0!important;box-shadow:none}
 @media(max-width:760px){.statistics-player-table>article{background:#0b0d10!important;border-color:var(--strix-border)!important}}

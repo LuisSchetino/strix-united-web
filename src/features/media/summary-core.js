@@ -1,3 +1,4 @@
+import { collageFingerprintToken } from "../../assets/collage/index.js";
 import { saoPauloDay } from "../agenda/agenda-time.js";
 import { uniqueMatches, aggregateTeamStatistics } from "../statistics/statistics-core.js";
 import { formatAgendaDay, formatKickoff, MEDIA_FORMATS, opponentInitials } from "./agenda-media-core.js";
@@ -117,6 +118,7 @@ export function summaryIdentityPayload({
     templateVersion,
     mode: mode === "week" ? "week" : "day",
     look: String(mediaLook || look || "campaign"),
+    collageAssets: String(mediaLook || look || "campaign") === "collage" ? collageFingerprintToken() : "",
     matches: matches.map((match) => ({
       id: match.id || "",
       opponent: match.opponent || "",

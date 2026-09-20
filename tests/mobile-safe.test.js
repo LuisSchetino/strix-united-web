@@ -14,7 +14,7 @@ test("sidebar footer stays docked open or collapsed", async () => {
   assert.match(css, /\.sidebar-dock\{/);
   assert.match(css, /margin-top:auto/);
   assert.match(css, /min-height:136px/);
-  assert.match(css, /\.formation-picker-field \.slot-10\{\s*bottom:2%/);
+  assert.match(css, /\.formation-picker-field \.slot-10\{\s*bottom:4%/);
   assert.match(css, /\.sidebar \.rastro-signature[\s\S]*position:static!important/);
   assert.match(css, /\.sidebar-user[\s\S]*position:static!important/);
 });

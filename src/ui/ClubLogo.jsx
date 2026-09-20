@@ -45,8 +45,11 @@ function LogoAsset({ name, url, resolvedUrl, className, kind, priority, sizes, d
     height: 512,
     loading: priority ? "eager" : "lazy",
     fetchPriority: priority ? "high" : "auto",
-    decoding: priority ? "sync" : "async",
-    onLoad: () => setLoaded(true),
+    decoding: "async",
+    onLoad: async (event) => {
+      try { await event.currentTarget.decode?.(); } catch { /* cached or already decoded */ }
+      setLoaded(true);
+    },
     onError: () => setFailed(true),
   };
   return (

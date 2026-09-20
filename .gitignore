@@ -17,6 +17,8 @@ test-results/
 *.temp
 *.bak
 *.zip
+design-assets/source/
+design-assets/working/
 backups/
 qa/
 

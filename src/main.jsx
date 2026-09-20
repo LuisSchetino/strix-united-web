@@ -62,6 +62,7 @@ import {
   visibleNavItems,
 } from "./access.js";
 import { commandItems, filterCommandItems } from "./command-palette.js";
+import { readApiJson, parseApiJson } from "./lib/read-api-json.js";
 
 const routeLoaders = {
   partidas: () => import("./features/matches/MatchesPage.jsx").then((module) => ({ default: module.MatchesPage })),
@@ -361,7 +362,16 @@ async function fetchJson(url, options = {}, timeoutMs = AUTH_FETCH_MS) {
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const response = await fetch(url, { ...options, signal: controller.signal, cache: options.cache || "no-store" });
-    const payload = await response.json().catch(() => ({}));
+    const text = await response.text();
+    let payload = {};
+    try {
+      payload = parseApiJson(text, {
+        status: response.status,
+        contentType: response.headers?.get?.("content-type") || "",
+      });
+    } catch {
+      payload = {};
+    }
     return { response, payload };
   } finally {
     clearTimeout(timer);
@@ -2452,8 +2462,7 @@ function Partidas({ profile }) {
         headers: { authorization: `Bearer ${accessToken}` },
         cache: "no-store",
       });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.message || payload.error || "Nao foi possivel consultar a EA.");
+      const payload = await readApiJson(response);
       const normalized = (payload.matches || []).map(normalizeEaMatch);
       setMatches(normalized);
       setSelected(new Set(normalized.map((match) => match.id)));
@@ -2472,10 +2481,8 @@ function Partidas({ profile }) {
     setError("");
     try {
       const response = await fetch("http://127.0.0.1:8789/api/ea/matches", { cache: "no-store" });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.message || "A ponte local nao conseguiu consultar a EA.");
+      const payload = await readApiJson(response);
       const normalized = (payload.matches || []).map(normalizeEaMatch);
-      if (!normalized.length) throw new Error("A EA respondeu, mas nao retornou partidas para este clube.");
       setMatches(normalized);
       setSelected(new Set(normalized.map((match) => match.id)));
     } catch (requestError) {
@@ -2669,10 +2676,8 @@ function PartidasLiveV2({ profile, workspace }) {
       let response;
       if (source === "computer") response = await fetch("http://127.0.0.1:8789/api/ea/matches", { cache: "no-store" });
       else { const client = await getBrowserSupabase(); const { data } = await client.auth.getSession(); response = await fetch("/api/ea/matches", { headers: { authorization: `Bearer ${data.session?.access_token || ""}` }, cache: "no-store" }); }
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.message || payload.error || "A fonte não retornou partidas.");
+      const payload = await readApiJson(response);
       const normalized = (payload.matches || []).map((match, index) => ({ ...normalizeEaMatch(match, index), raw: match }));
-      if (!normalized.length) throw new Error("A fonte respondeu, mas não retornou partidas para este clube.");
       applyFound(normalized, source === "computer" ? "local_bridge" : "ea_api");
     } catch (requestError) { setError(requestError.message || "Não foi possível consultar as partidas."); }
     finally { setLoadingSource(""); }
@@ -2719,10 +2724,8 @@ function PartidasLive({ profile, workspace }) {
         const client = await getBrowserSupabase(); const { data } = await client.auth.getSession();
         response = await fetch("/api/ea/matches", { headers: { authorization: `Bearer ${data.session?.access_token || ""}` }, cache: "no-store" });
       }
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.message || payload.error || "A fonte não retornou partidas.");
+      const payload = await readApiJson(response);
       const normalized = (payload.matches || []).map((match, index) => ({ ...normalizeEaMatch(match, index), raw: match }));
-      if (!normalized.length) throw new Error("A fonte respondeu, mas não retornou partidas para este clube.");
       setFound(normalized); setFoundSource(source === "computer" ? "local_bridge" : "ea_api"); setSelected(new Set(normalized.map((match) => match.id)));
     } catch (requestError) {
       setError(requestError.message || "Não foi possível consultar as partidas.");

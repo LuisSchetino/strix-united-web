@@ -38,7 +38,7 @@ export default defineConfig({
       },
     },
     watch: {
-      ignored: ["**/qa/**", "**/*.mp4", "**/public/media/announce-fx/**"],
+      ignored: ["**/qa/**", "**/*.mp4", "**/public/media/announce-fx/**", "**/design-assets/source/**", "**/design-assets/working/**"],
     },
   },
 });

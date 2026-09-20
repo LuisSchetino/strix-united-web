@@ -108,13 +108,13 @@
 .match-detail-score .team-mark{border-color:var(--strix-border-strong);background:#111419;color:#c8cdd2}
 .match-detail-analytics{position:relative;isolation:isolate;display:grid;gap:10px;padding:15px;border:1px solid var(--rastro-blue-subtle);border-radius:15px;background:#0b0d10;overflow:hidden}
 .match-detail-analytics>.rastro-watermark{z-index:-1;right:14px;top:0;opacity:.025}.match-detail-analytics>.rastro-watermark img{width:150px;height:150px}.match-detail-analytics>.rastro-data-signature{justify-self:end}
-.match-detail-metrics article{border-color:var(--rastro-blue-subtle);background:#101318}.match-detail-metrics small{color:#99a3ad}.match-detail-metrics strong{color:var(--rastro-blue)}
-.match-stat-icon{stroke:var(--rastro-blue)}
-.match-player-performance{border-color:var(--strix-border)}.match-player-performance>header{background:#101318}.match-player-performance>header span{color:var(--rastro-blue)}
-.match-player-table>header{background:#0b0d10;color:#8e969f}.match-player-table>article{border-color:var(--strix-border)}.match-player-table>article.is-best{background:linear-gradient(90deg,var(--rastro-blue-subtle),#101318)}.match-player-table>article>strong{color:var(--rastro-blue)}
+.match-detail-metrics article{border-color:var(--strix-border);background:#101318}.match-detail-metrics small{color:#99a3ad}.match-detail-metrics strong{color:#f4f5f6}
+.match-stat-icon{stroke:#d8dce0}
+.match-player-performance{border-color:var(--strix-border)}.match-player-performance>header{background:#101318}.match-player-performance>header span{color:#aeb4bb}
+.match-player-table>header{background:#0b0d10;color:#8e969f}.match-player-table>article{border-color:var(--strix-border)}.match-player-table>article.is-best{background:linear-gradient(90deg,#1a1f24,#101318)}.match-player-table>article>strong{color:#f4f5f6}
 .match-player-performance{background:#0b0d10}.match-player-performance>header{background:#101318}
 .match-player-table>article{background:#0b0d10}.match-player-table>article.is-best{background:linear-gradient(90deg,#15191e,#0b0d10)!important}
-.match-player-table>article em{border:1px solid rgba(47,128,255,.2);background:rgba(47,128,255,.1);color:var(--rastro-blue)}
+.match-player-table>article em{border:1px solid var(--strix-border);background:#15191e;color:#d8dce0}
 
 /* Operational match/import UI remains Strix monochrome. */
 .matches-source-empty,.import-stage,.match-review-list article,.resolve-list>article,.import-summary>article,.match-review-modal,.match-live-preview{border-color:var(--strix-border);background:#0b0d10;color:var(--strix-text)}

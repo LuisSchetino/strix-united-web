@@ -17,7 +17,7 @@
   object-fit:contain;
   object-position:center;
   opacity:1;
-  transition:opacity 160ms ease;
+  transition:opacity 220ms ease;
 }
 .club-logo.is-photo{
   flex-shrink:0;

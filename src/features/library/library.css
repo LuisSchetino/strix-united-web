@@ -16,7 +16,7 @@
   gap: 13px;
 }
 .library-grid > article {
-  overflow: visible;
+  overflow: hidden;
   display: grid;
   grid-template-columns: 136px minmax(0, 1fr);
   min-height: 184px;
@@ -390,9 +390,9 @@
 /* Content covers, not generated dashboard tiles. Real thumbnails take priority. */
 .library-v2 .library-grid{grid-template-columns:1fr;gap:20px}
 .library-v2 .library-editorial-card{grid-template-columns:minmax(240px,.8fr) minmax(0,1.7fr);border-radius:12px;box-shadow:none;transition:border-color 180ms ease}
-.library-v2 .editorial-cover{min-height:210px;aspect-ratio:16/10;padding:0;isolation:isolate;background:#171a1d!important;border-right:1px solid #ffffff12;overflow:hidden}
+.library-v2 .editorial-cover{min-height:210px;aspect-ratio:16/10;padding:0;isolation:isolate;background:#171a1d!important;border-right:1px solid #ffffff12;overflow:hidden;border-radius:inherit}
 .library-v2 .editorial-cover img{position:absolute;inset:0;transition:transform 200ms ease;object-fit:cover}
-.library-pitch-art{position:absolute;inset:0;width:100%;height:100%;fill:none;stroke:#ffffff12;stroke-width:1;transform:rotate(-12deg) scale(1.16);transition:transform 200ms ease}
+.library-pitch-art{position:absolute;inset:0;width:100%;height:100%;fill:none;stroke:#ffffff12;stroke-width:1;transform:rotate(-8deg) scale(1.04);transform-origin:center;transition:transform 200ms ease;clip-path:inset(0 round 0)}
 .library-pitch-art .play-route{stroke:#ffffff38;stroke-dasharray:4 6;stroke-width:2}
 .library-v2 .editorial-cover:after{content:"";position:absolute;inset:0;z-index:0;background:linear-gradient(0deg,#08090be8,transparent 65%);pointer-events:none}
 .library-v2 .library-cover-brand{position:absolute;z-index:1;top:18px;left:18px;right:18px;display:flex;justify-content:space-between;font-size:9px;letter-spacing:.13em;color:#b8bdc4;font-weight:700}
@@ -412,7 +412,7 @@
 @media(hover:hover){
   .library-v2 .library-editorial-card:hover{border-color:#ffffff30!important}
   .library-v2 .editorial-cover:hover img{transform:scale(1.025)}
-  .library-v2 .editorial-cover:hover .library-pitch-art{transform:rotate(-12deg) scale(1.19)}
+  .library-v2 .editorial-cover:hover .library-pitch-art{transform:rotate(-8deg) scale(1.06)}
   .library-v2 .editorial-cover:hover .library-play-mark{transform:translateY(-2px);background:#fff}
 }
 @media(max-width:700px){

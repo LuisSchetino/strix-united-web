@@ -20,4 +20,9 @@ test("Rastro brand blue stays on analytics tokens, not on generic UI tokens", as
   const statisticsCss = await read("../src/features/statistics/statistics.css");
   assert.match(statisticsCss, /select-control-menu>button span\{\s*color:#d8dce0!important/);
   assert.doesNotMatch(statisticsCss, /#62d4ff|#377ed6|#6d8ea5/);
+  const sortBlock = statisticsCss.slice(statisticsCss.indexOf(".statistics-sort"));
+  assert.doesNotMatch(sortBlock.slice(0, 1800), /var\(--rastro-blue\)|#2F80FF/);
+  const matchesPage = await read("../src/features/matches/MatchesPage.jsx");
+  assert.match(matchesPage, /readApiJson/);
+  assert.doesNotMatch(matchesPage, /await response\.json\(\)/);
 });

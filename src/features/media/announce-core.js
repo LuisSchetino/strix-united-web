@@ -1,3 +1,4 @@
+import { collageFingerprintToken } from "../../assets/collage/index.js";
 import { MEDIA_FORMATS, opponentInitials } from "./agenda-media-core.js";
 import { ANNOUNCE_FX_REVISION } from "./announce-fx.js";
 import { positionGroup } from "./related-night-core.js";
@@ -304,6 +305,7 @@ export function announceIdentityPayload({
     phraseId: String(phraseId || ""),
     phrase: String(phrase || ""),
     look: String(mediaLook || look || "campaign"),
+    collageAssets: String(mediaLook || look || "campaign") === "collage" ? collageFingerprintToken() : "",
     people: people.map((person) => ({
       id: person.id || "",
       name: person.name || "",

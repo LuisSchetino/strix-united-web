@@ -206,7 +206,7 @@
   clip-path:polygon(9% 0,91% 0,100% 100%,0 100%);
 }
 .formation-picker-field .slot-10{
-  bottom:2%;
+  bottom:4%;
 }
 
 @media(max-width:900px){
@@ -329,10 +329,10 @@
   .preset-panel .formation-picker-field{
     height:clamp(300px,48svh,420px)!important;
   }
-  .formation-picker-field .slot-7{top:58%}
-  .formation-picker-field .slot-8{top:62%}
-  .formation-picker-field .slot-9{top:58%}
-  .formation-picker-field .slot-10{bottom:6%}
+  .formation-picker-field .slot-7{top:56%}
+  .formation-picker-field .slot-8{top:58%}
+  .formation-picker-field .slot-9{top:56%}
+  .formation-picker-field .slot-10{bottom:8%}
   .squad-dialog-layer footer>div{
     display:grid;
     grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);

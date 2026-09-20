@@ -15,6 +15,7 @@ test("unmatched /api routes stay JSON 404 instead of an SPA page", async () => {
   assert.match(catchall, /404/);
   assert.match(vite, /application\/json/);
   assert.match(vite, /strix-api-json-404/);
+  assert.match(redirects, /\/api\/\* +\/api\/:splat +200/);
   assert.match(redirects, /\/\* +\/index\.html +200/);
   assert.match(auth, /invalid_session/);
   assert.match(auth, /authentication_required/);

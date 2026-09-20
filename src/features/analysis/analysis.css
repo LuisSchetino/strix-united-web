@@ -10,9 +10,9 @@
 .analysis-xray-filters select,.analysis-xray-toggle,.analysis-player-picker button,.analysis-radar-shell,.analysis-radar-legend article{
   border-color:var(--strix-border);background-color:#0b0d10;color:#aeb4bb;
 }
-.analysis-filters button.selected,.analysis-xray-toggle button.selected{border-color:var(--rastro-blue-soft);background:var(--rastro-blue-subtle);color:#f5f5f5}
+.analysis-filters button.selected,.analysis-xray-toggle button.selected{border-color:var(--strix-border-strong);background:#15191e;color:#f5f5f5}
 .analysis-context>svg,.analysis-group>header>svg,.analysis-metric header>svg,.analysis-xray>header>svg,
-.analysis-context span,.analysis-group>header span,.analysis-insights span,.analysis-xray>header span{color:var(--rastro-blue)}
+.analysis-context span,.analysis-group>header span,.analysis-insights span,.analysis-xray>header span{color:#aeb4bb}
 .analysis-insights p{background:#101318;color:#c2c7cc}.analysis-insights p:before{background:var(--rastro-blue);box-shadow:0 0 12px var(--rastro-blue)}
 .radar-grid,.radar-axis{stroke:rgba(47,128,255,.2)}.analysis-radar text{fill:#9ca6b0}
 .analysis-context,.analysis-group,.analysis-xray,.analysis-radar-legend article{background:linear-gradient(145deg,#101318,#0b0d10)}
@@ -32,7 +32,7 @@
 .analysis-v2 .analysis-filters .motion-tabs button{border:0!important;background:transparent!important;box-shadow:none!important;min-height:40px}
 .analysis-context,.analysis-group,.analysis-insights,.analysis-xray,.analysis-radar-shell,.analysis-radar-legend article{border-color:var(--strix-border)!important;background:#0b0d10!important}
 .analysis-xray>header,.analysis-xray-filters{border-color:var(--strix-border)}
-.analysis-xray>header span,.analysis-xray>header>svg,.analysis-context>svg,.analysis-group>header>svg,.analysis-metric header>svg{color:var(--rastro-blue)!important}
+.analysis-xray>header span,.analysis-xray>header>svg,.analysis-context>svg,.analysis-group>header>svg,.analysis-metric header>svg{color:#aeb4bb!important}
 .analysis-xray-toggle{border-color:var(--strix-border-strong)!important;background:#111419!important}
 .analysis-xray-toggle button{color:#9ca3ab}
 .analysis-xray-toggle button.selected{background:#f2f2f2!important;color:#090a0b!important}

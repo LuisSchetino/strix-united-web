@@ -1,3 +1,4 @@
+import { getCollageBitmap, pickCollageAsset } from "../../assets/collage/index.js";
 import { easeInOutCubic, easeOutExpo, reveal } from "./agenda-timeline.js";
 import { campaignName } from "./announce-look.js";
 import { opponentInitials } from "./agenda-media-core.js";
@@ -11,6 +12,7 @@ const MUTED = "#9a958b";
 const TAPE = "rgba(226,214,186,0.82)";
 const VOID = "#070706";
 const STAMP = "#cfc6b4";
+const PAPER_IDS = ["noise-paper-1", "cut-fill", "noise-paper-2", "street-10", "street-26"];
 
 function clamp(value, min = 0, max = 1) {
   return Math.max(min, Math.min(max, Number(value) || 0));
@@ -33,51 +35,58 @@ export function collageBeat(time, start, dur = 0.36) {
   return easeOutExpo(local);
 }
 
-let grainTile = null;
-function grain() {
-  if (grainTile) return grainTile;
-  if (typeof document === "undefined") return null;
-  const canvas = document.createElement("canvas");
-  canvas.width = 128;
-  canvas.height = 128;
-  const ctx = canvas.getContext("2d");
-  const image = ctx.createImageData(128, 128);
-  let seed = 2166136261;
-  for (let index = 0; index < image.data.length; index += 4) {
-    seed = Math.imul(seed ^ (seed >>> 13), 1274126177) >>> 0;
-    const value = 64 + (seed & 110);
-    image.data[index] = value;
-    image.data[index + 1] = value - 6;
-    image.data[index + 2] = value - 14;
-    image.data[index + 3] = 34;
-  }
-  ctx.putImageData(image, 0, 0);
-  grainTile = canvas;
-  return grainTile;
+function coverImage(ctx, image, x, y, w, h) {
+  if (!image) return false;
+  const scale = Math.max(w / Math.max(1, image.width), h / Math.max(1, image.height));
+  ctx.drawImage(image, x + (w - image.width * scale) / 2, y + (h - image.height * scale) / 2, image.width * scale, image.height * scale);
+  return true;
+}
+
+function paintPaperSheet(ctx, x, y, w, h, id, alpha = 1) {
+  const image = getCollageBitmap(id) || pickCollageAsset("papers", PAPER_IDS.indexOf(id));
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.beginPath();
+  ctx.rect(x, y, w, h);
+  ctx.clip();
+  ctx.fillStyle = SHEET;
+  ctx.fillRect(x, y, w, h);
+  coverImage(ctx, image, x, y, w, h);
+  ctx.restore();
 }
 
 function paintPaper(ctx, width, height, time = 0) {
   ctx.fillStyle = VOID;
   ctx.fillRect(0, 0, width, height);
-  ctx.fillStyle = PAPER;
-  ctx.fillRect(18, 22, width - 36, height - 44);
-  const wash = ctx.createRadialGradient(width * 0.42, height * 0.22, 10, width * 0.5, height * 0.4, Math.max(width, height) * 0.78);
-  wash.addColorStop(0, "rgba(244,241,234,0.07)");
-  wash.addColorStop(1, "rgba(0,0,0,0.38)");
-  ctx.fillStyle = wash;
-  ctx.fillRect(0, 0, width, height);
-  const tile = grain();
-  if (tile) {
+  const board = getCollageBitmap("noise-paper-1") || getCollageBitmap("cut-fill");
+  ctx.save();
+  ctx.globalAlpha = 0.92;
+  if (!coverImage(ctx, board, 10, 14, width - 20, height - 28)) {
+    ctx.fillStyle = PAPER;
+    ctx.fillRect(18, 22, width - 36, height - 44);
+  }
+  ctx.restore();
+  const street = pickCollageAsset("textures", 2);
+  if (street) {
     ctx.save();
-    ctx.globalAlpha = 0.28;
-    ctx.drawImage(tile, -20, -20, width + 40, height + 40);
+    ctx.globalAlpha = 0.18;
+    ctx.globalCompositeOperation = "multiply";
+    coverImage(ctx, street, 0, 0, width, height);
     ctx.restore();
   }
-  ctx.save();
-  ctx.globalAlpha = 0.09;
-  ctx.fillStyle = INK;
-  for (let y = 24; y < height; y += 6) ctx.fillRect(0, y, width, 1);
-  ctx.restore();
+  const grain = getCollageBitmap("grain-3") || getCollageBitmap("wave-noise");
+  if (grain) {
+    ctx.save();
+    ctx.globalAlpha = 0.22;
+    ctx.globalCompositeOperation = "multiply";
+    coverImage(ctx, grain, -24, -24, width + 48, height + 48);
+    ctx.restore();
+  }
+  const wash = ctx.createRadialGradient(width * 0.42, height * 0.22, 10, width * 0.5, height * 0.4, Math.max(width, height) * 0.78);
+  wash.addColorStop(0, "rgba(244,241,234,0.05)");
+  wash.addColorStop(1, "rgba(0,0,0,0.42)");
+  ctx.fillStyle = wash;
+  ctx.fillRect(0, 0, width, height);
   const flash = Math.sin(clamp(time / 0.14) * Math.PI) * (time < 0.16 ? 0.1 : 0);
   if (flash > 0) {
     ctx.fillStyle = `rgba(244,241,234,${flash})`;
@@ -102,8 +111,13 @@ function paintTape(ctx, x, y, w = 86, rot = -0.18, alpha = 1) {
   ctx.translate(x, y);
   ctx.rotate(rot);
   ctx.globalAlpha = alpha;
+  const tapePaper = getCollageBitmap("noise-paper-2") || getCollageBitmap("cut-fill");
   ctx.fillStyle = TAPE;
   ctx.fillRect(-w / 2, -9, w, 18);
+  if (tapePaper) {
+    ctx.globalAlpha = alpha * 0.72;
+    ctx.drawImage(tapePaper, -w / 2, -9, w, 18);
+  }
   ctx.globalAlpha = alpha * 0.22;
   ctx.fillStyle = "#fff8e8";
   ctx.fillRect(-w / 2, -9, w, 5);
@@ -141,6 +155,7 @@ export function collageLetterPlan(text, seed = 7) {
     pad: 8 + rand() * 10,
     invert: rand() > 0.62,
     delay: index * 0.045,
+    paper: PAPER_IDS[Math.floor(rand() * PAPER_IDS.length)],
   }));
 }
 
@@ -175,6 +190,15 @@ export function paintCollageWord(ctx, text, x, y, {
     ctx.globalAlpha = enter;
     ctx.fillStyle = item.invert ? INK : SHEET;
     ctx.fillRect(-bw / 2, -bh / 2, bw, bh);
+    const scrap = getCollageBitmap(item.invert ? "cut-fill" : item.paper) || getCollageBitmap("cut-01");
+    if (scrap) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(-bw / 2, -bh / 2, bw, bh);
+      ctx.clip();
+      coverImage(ctx, scrap, -bw / 2, -bh / 2, bw, bh);
+      ctx.restore();
+    }
     ctx.strokeStyle = "rgba(0,0,0,0.28)";
     ctx.lineWidth = 1.2;
     ctx.strokeRect(-bw / 2, -bh / 2, bw, bh);
@@ -192,6 +216,7 @@ export function paintCollageWord(ctx, text, x, y, {
 function paintTornPhoto(ctx, bitmap, box, { seed = 3, rot = -0.04, alpha = 1, time = 1 } = {}) {
   if (alpha <= 0.01) return;
   const { x, y, w, h } = box;
+  const mask = pickCollageAsset("tornPaper", seed);
   ctx.save();
   ctx.globalAlpha = alpha;
   ctx.translate(x + w / 2, y + h / 2);
@@ -200,18 +225,28 @@ function paintTornPhoto(ctx, bitmap, box, { seed = 3, rot = -0.04, alpha = 1, ti
   ctx.fillStyle = SHEET;
   tornPath(ctx, -8, -8, w + 16, h + 16, seed);
   ctx.fill();
+  paintPaperSheet(ctx, -6, -6, w + 12, h + 12, "cut-fill", 0.9);
   ctx.save();
-  tornPath(ctx, 0, 0, w, h, seed + 4);
-  ctx.clip();
+  if (mask) {
+    ctx.beginPath();
+    ctx.rect(-4, -4, w + 8, h + 8);
+    ctx.clip();
+  } else {
+    tornPath(ctx, 0, 0, w, h, seed + 4);
+    ctx.clip();
+  }
   if (bitmap) {
-    const scale = Math.max(w / bitmap.width, h / bitmap.height);
     ctx.filter = "grayscale(1) contrast(1.18) brightness(1.02)";
-    ctx.drawImage(bitmap, (w - bitmap.width * scale) / 2, (h - bitmap.height * scale) / 2, bitmap.width * scale, bitmap.height * scale);
+    coverImage(ctx, bitmap, 0, 0, w, h);
     ctx.filter = "none";
     paintHalftone(ctx, 0, 0, w, h, seed, 0.12);
   } else {
     ctx.fillStyle = "#1c1a16";
     ctx.fillRect(0, 0, w, h);
+  }
+  if (mask) {
+    ctx.globalCompositeOperation = "destination-in";
+    coverImage(ctx, mask, -w * 0.08, -h * 0.08, w * 1.16, h * 1.16);
   }
   ctx.restore();
   ctx.strokeStyle = "rgba(0,0,0,0.45)";
@@ -234,7 +269,13 @@ function paintSticker(ctx, label, x, y, { size = 22, rot = 0.08, fill = INK, tim
   ctx.globalAlpha = enter;
   ctx.fillStyle = fill;
   ctx.fillRect(-8, -size, w, size + 18);
-  ctx.fillStyle = fill === INK ? VOID : INK;
+  const scrap = getCollageBitmap(fill === INK ? "cut-fill" : "noise-paper-2");
+  if (scrap) {
+    ctx.globalAlpha = enter * 0.85;
+    ctx.drawImage(scrap, -8, -size, w, size + 18);
+  }
+  ctx.globalAlpha = enter;
+  ctx.fillStyle = fill === INK ? VOID : "#16140f";
   ctx.fillText(text, 6, 4);
   ctx.restore();
 }
@@ -242,14 +283,23 @@ function paintSticker(ctx, label, x, y, { size = 22, rot = 0.08, fill = INK, tim
 function paintMark(ctx, x1, y1, x2, y2, time, start) {
   const enter = collageEnter(time, start, 0.28);
   if (enter <= 0.01) return;
+  const marker = pickCollageAsset("markers", 0);
   ctx.save();
-  ctx.strokeStyle = "rgba(244,241,234,0.55)";
-  ctx.lineWidth = 6;
-  ctx.lineCap = "round";
-  ctx.beginPath();
-  ctx.moveTo(x1, y1);
-  ctx.lineTo(x1 + (x2 - x1) * enter, y1 + (y2 - y1) * enter);
-  ctx.stroke();
+  if (marker) {
+    ctx.globalAlpha = enter * 0.72;
+    const w = Math.hypot(x2 - x1, y2 - y1);
+    ctx.translate(x1, y1);
+    ctx.rotate(Math.atan2(y2 - y1, x2 - x1));
+    ctx.drawImage(marker, 0, -18, w * enter, 36);
+  } else {
+    ctx.strokeStyle = "rgba(244,241,234,0.55)";
+    ctx.lineWidth = 6;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x1 + (x2 - x1) * enter, y1 + (y2 - y1) * enter);
+    ctx.stroke();
+  }
   ctx.restore();
 }
 
@@ -299,6 +349,7 @@ export function paintCollagePitch(ctx, timeline, time) {
   ctx.save();
   poly(ctx, quad, true);
   ctx.clip();
+  paintPaperSheet(ctx, 0, 0, timeline.width, timeline.height, "noise-paper-2", 0.9);
   paintHalftone(ctx, 0, 0, timeline.width, timeline.height, 44, 0.14);
   const ink = (uvs) => uvs.map(([u, v]) => projectFieldPoint(u, v, timeline, cam));
   ctx.strokeStyle = "#1a1814";
@@ -373,25 +424,25 @@ export function paintCollageAnnounce(ctx, { timeline, time = 0, assets } = {}) {
   ctx.restore();
 
   paintTornPhoto(ctx, asset?.bitmap, {
-    x: width * 0.08,
-    y: height * 0.16,
-    w: width * 0.58,
-    h: height * 0.52,
+    x: width * 0.04,
+    y: height * 0.12,
+    w: width * 0.62,
+    h: height * 0.58,
   }, {
     seed: 14,
     rot: -0.055,
     alpha: collageEnter(t, 0.08, 0.34),
     time: t,
   });
-  paintTape(ctx, width * 0.22, height * 0.17, 120, -0.28, collageEnter(t, 0.22, 0.18));
-  paintTape(ctx, width * 0.55, height * 0.64, 96, 0.2, collageEnter(t, 0.3, 0.18));
+  paintTape(ctx, width * 0.22, height * 0.14, 120, -0.28, collageEnter(t, 0.22, 0.18));
+  paintTape(ctx, width * 0.52, height * 0.66, 96, 0.2, collageEnter(t, 0.3, 0.18));
 
   if (asset?.bitmap) {
     paintTornPhoto(ctx, asset.bitmap, {
-      x: width * 0.62,
-      y: height * 0.12,
-      w: width * 0.28,
-      h: height * 0.22,
+      x: width * 0.66,
+      y: height * 0.1,
+      w: width * 0.26,
+      h: height * 0.2,
     }, {
       seed: 29,
       rot: 0.08,
@@ -430,8 +481,7 @@ export function paintCollageAnnounce(ctx, { timeline, time = 0, assets } = {}) {
     ctx.globalAlpha = collageEnter(t, 0.36, 0.22);
     ctx.translate(width - safe.side - 20, height * 0.34);
     ctx.rotate(0.12);
-    ctx.fillStyle = SHEET;
-    ctx.fillRect(-70, -70, 140, 140);
+    paintPaperSheet(ctx, -70, -70, 140, 140, "cut-fill", 1);
     ctx.fillStyle = VOID;
     ctx.font = "800 72px Rajdhani, sans-serif";
     ctx.textAlign = "center";
@@ -455,20 +505,20 @@ export function paintCollageAgenda(ctx, { timeline, time = 0, assets, dayLabel }
   const t = still ? 2 : Number(time) || 0;
   const matches = timeline.matches || [];
   paintPaper(ctx, width, height, still ? 1 : t);
-  paintCollageWord(ctx, "AGENDA", safe.side - 8, safe.top + 58, {
-    size: 96,
+  paintCollageWord(ctx, "AGENDA", safe.side - 8, safe.top + 86, {
+    size: 118,
     seed: 2,
     time: t,
     maxWidth: width - safe.side * 2 + 20,
   });
-  paintSticker(ctx, dayLabel || "HOJE", width - safe.side - 210, safe.top + 118, {
+  paintSticker(ctx, dayLabel || "HOJE", width - safe.side - 210, safe.top + 168, {
     size: 18,
     rot: 0.07,
     fill: STAMP,
     time: t,
     start: 0.16,
   });
-  paintSticker(ctx, `${String(matches.length).padStart(2, "0")} JOGOS`, safe.side, safe.top + 128, {
+  paintSticker(ctx, `${String(matches.length).padStart(2, "0")} JOGOS`, safe.side, safe.top + 176, {
     size: 16,
     rot: -0.08,
     fill: INK,
@@ -476,38 +526,36 @@ export function paintCollageAgenda(ctx, { timeline, time = 0, assets, dayLabel }
     start: 0.2,
   });
 
-  matches.slice(0, 6).forEach((match, index) => {
-    const y = safe.top + 168 + index * 126;
+  const rowH = Math.min(168, Math.max(118, (height - safe.top - 240) / Math.max(1, matches.slice(0, 5).length)));
+  matches.slice(0, 5).forEach((match, index) => {
+    const y = safe.top + 220 + index * rowH;
     const enter = collageEnter(t, 0.18 + index * 0.08, 0.28);
+    const stripW = width - safe.side * 2;
     ctx.save();
     ctx.globalAlpha = enter;
-    ctx.translate(safe.side + (index % 2 ? 10 : -6), y);
+    ctx.translate(safe.side + (index % 2 ? 14 : -10), y);
     ctx.rotate(index % 2 ? 0.018 : -0.02);
-    ctx.fillStyle = index % 2 ? "rgba(244,241,234,0.08)" : "rgba(20,18,16,0.55)";
-    ctx.fillRect(0, 0, width - safe.side * 2, 108);
-    ctx.strokeStyle = "rgba(244,241,234,0.18)";
-    ctx.strokeRect(0, 0, width - safe.side * 2, 108);
-    ctx.fillStyle = INK;
-    ctx.font = "800 34px Rajdhani, sans-serif";
-    ctx.fillText(match.kickoff || "", 18, 42);
+    paintPaperSheet(ctx, 0, 0, stripW, rowH - 16, PAPER_IDS[index % PAPER_IDS.length], 0.94);
+    ctx.strokeStyle = "rgba(20,18,16,0.35)";
+    ctx.strokeRect(0, 0, stripW, rowH - 16);
+    ctx.fillStyle = "#16140f";
+    ctx.font = "800 54px Rajdhani, sans-serif";
+    ctx.fillText(match.kickoff || "", 22, 58);
     ctx.font = "700 36px Rajdhani, sans-serif";
-    ctx.fillText(fit(ctx, String(match.opponent || "").toUpperCase(), width - safe.side * 2 - 140, ctx.font), 18, 82);
-    ctx.fillStyle = MUTED;
+    ctx.fillText(fit(ctx, String(match.opponent || "").toUpperCase(), stripW - 160, ctx.font), 22, rowH - 42);
+    ctx.fillStyle = "#5c574e";
     ctx.font = "800 14px Inter, sans-serif";
-    ctx.fillText(String(match.competition || "AMISTOSO").toUpperCase(), 18, 102);
-    ctx.fillStyle = SHEET;
-    ctx.font = "800 28px Rajdhani, sans-serif";
-    ctx.fillText(String(index + 1).padStart(2, "0"), width - safe.side * 2 - 58, 40);
+    ctx.fillText(String(match.competition || "AMISTOSO").toUpperCase(), 22, rowH - 22);
     const logo = assets?.opponents?.[index] || assets?.byId?.[match.id];
     if (logo?.bitmap) {
       ctx.save();
-      ctx.translate(width - safe.side * 2 - 92, 58);
+      ctx.translate(stripW - 108, 18);
       ctx.rotate(-0.08);
-      ctx.drawImage(logo.bitmap, 0, 0, 64, 64);
+      ctx.drawImage(logo.bitmap, 0, 0, 72, 72);
       ctx.restore();
     }
     ctx.restore();
-    paintTape(ctx, safe.side + 70, y + 4, 78, -0.16, enter);
+    paintTape(ctx, safe.side + 86, y + 6, 86, -0.16, enter);
   });
 }
 
@@ -516,8 +564,8 @@ export function paintCollageRelated(ctx, { timeline, time = 0, assets, dayLabel 
   const { width, height, safe, still } = timeline;
   const t = still ? 2 : Number(time) || 0;
   paintPaper(ctx, width, height, still ? 1 : t);
-  paintCollageWord(ctx, "RELACIONADOS", safe.side - 10, safe.top + 36, {
-    size: 52,
+  paintCollageWord(ctx, "RELACIONADOS", safe.side - 10, safe.top + 42, {
+    size: 48,
     seed: 5,
     time: t,
     maxWidth: width - safe.side * 2 + 24,
@@ -526,7 +574,7 @@ export function paintCollageRelated(ctx, { timeline, time = 0, assets, dayLabel 
   ctx.globalAlpha = collageEnter(t, 0.12, 0.2);
   ctx.fillStyle = MUTED;
   ctx.font = "800 16px Inter, sans-serif";
-  ctx.fillText(dayLabel || "", safe.side, safe.top + 78);
+  ctx.fillText(dayLabel || "", safe.side, safe.top + 84);
   ctx.restore();
 
   paintCollagePitch(ctx, timeline, t);
@@ -537,21 +585,21 @@ export function paintCollageRelated(ctx, { timeline, time = 0, assets, dayLabel 
   if (!featured) return;
 
   paintTornPhoto(ctx, asset?.bitmap, {
-    x: width * 0.58,
-    y: height * 0.22,
+    x: width * -0.02,
+    y: height * 0.28,
     w: width * 0.34,
-    h: height * 0.42,
+    h: height * 0.46,
   }, {
     seed: 33,
-    rot: 0.05,
+    rot: -0.04,
     alpha: collageEnter(t, scene?.start || 0.2, 0.28),
     time: t,
   });
-  paintTape(ctx, width * 0.7, height * 0.23, 100, -0.2, collageEnter(t, 0.34, 0.16));
+  paintTape(ctx, width * 0.18, height * 0.3, 100, -0.2, collageEnter(t, 0.34, 0.16));
 
   const number = shirtLabel(featured);
   if (number) {
-    paintSticker(ctx, number, width * 0.6, height * 0.68, {
+    paintSticker(ctx, number, width * 0.08, height * 0.74, {
       size: 28,
       rot: -0.12,
       fill: SHEET,
@@ -559,14 +607,14 @@ export function paintCollageRelated(ctx, { timeline, time = 0, assets, dayLabel 
       start: 0.36,
     });
   }
-  paintCollageWord(ctx, String(featured.name || "").toUpperCase(), safe.side, height * 0.84, {
+  paintCollageWord(ctx, String(featured.name || "").toUpperCase(), safe.side, height * 0.86, {
     size: 54,
     seed: 17,
     time: t,
     start: 0.32,
-    maxWidth: width * 0.7,
+    maxWidth: width * 0.78,
   });
-  paintSticker(ctx, featured.position || "MC", safe.side + 12, height * 0.92, {
+  paintSticker(ctx, featured.position || "MC", safe.side + 12, height * 0.94, {
     size: 18,
     rot: 0.06,
     fill: INK,
@@ -582,8 +630,8 @@ export function paintCollageSummary(ctx, { timeline, time = 0, assets, dayLabel 
   const matches = timeline.matches || [];
   const stats = timeline.stats || timeline.period?.stats || {};
   paintPaper(ctx, width, height, still ? 1 : t);
-  paintCollageWord(ctx, "RESUMO", safe.side, safe.top + 54, {
-    size: 88,
+  paintCollageWord(ctx, "RESUMO", safe.side, safe.top + 64, {
+    size: 96,
     seed: 11,
     time: t,
     maxWidth: width - safe.side * 2,
@@ -592,19 +640,18 @@ export function paintCollageSummary(ctx, { timeline, time = 0, assets, dayLabel 
   ctx.globalAlpha = collageEnter(t, 0.1, 0.2);
   ctx.fillStyle = MUTED;
   ctx.font = "800 16px Inter, sans-serif";
-  ctx.fillText(dayLabel || timeline.title || "", safe.side, safe.top + 104);
+  ctx.fillText(dayLabel || timeline.title || "", safe.side, safe.top + 118);
   ctx.restore();
 
   [["J", stats.games], ["V", stats.wins], ["GOLS", stats.goalsFor ?? stats.gf]].forEach((item, index) => {
     const x = safe.side + index * 210 + (index === 1 ? 12 : 0);
-    const y = safe.top + 150 + (index === 2 ? 10 : 0);
+    const y = safe.top + 160 + (index === 2 ? 10 : 0);
     const enter = collageEnter(t, 0.16 + index * 0.07, 0.24);
     ctx.save();
     ctx.globalAlpha = enter;
     ctx.translate(x, y);
     ctx.rotate(-0.06 + index * 0.05);
-    ctx.fillStyle = SHEET;
-    ctx.fillRect(0, 0, 176, 118);
+    paintPaperSheet(ctx, 0, 0, 176, 118, PAPER_IDS[index], 1);
     ctx.fillStyle = "#16140f";
     ctx.font = "800 16px Inter, sans-serif";
     ctx.fillText(String(item[0]), 16, 36);
@@ -615,22 +662,22 @@ export function paintCollageSummary(ctx, { timeline, time = 0, assets, dayLabel 
   });
 
   matches.slice(0, 5).forEach((match, index) => {
-    const y = safe.top + 310 + index * 98;
+    const y = safe.top + 330 + index * 108;
     const enter = collageEnter(t, 0.28 + index * 0.06, 0.22);
+    const stripW = width - safe.side * 2;
     ctx.save();
     ctx.globalAlpha = enter;
     ctx.translate(safe.side + (index % 2 ? 8 : -8), y);
     ctx.rotate(index % 2 ? 0.012 : -0.014);
-    ctx.fillStyle = "rgba(244,241,234,0.07)";
-    ctx.fillRect(0, 0, width - safe.side * 2, 84);
-    ctx.fillStyle = INK;
+    paintPaperSheet(ctx, 0, 0, stripW, 92, PAPER_IDS[(index + 3) % PAPER_IDS.length], 0.92);
+    ctx.fillStyle = "#16140f";
     ctx.font = "700 32px Rajdhani, sans-serif";
-    ctx.fillText(fit(ctx, String(match.opponent || "").toUpperCase(), width * 0.5, ctx.font), 18, 52);
+    ctx.fillText(fit(ctx, String(match.opponent || "").toUpperCase(), width * 0.48, ctx.font), 18, 58);
     ctx.textAlign = "right";
-    ctx.font = "800 40px Rajdhani, sans-serif";
-    ctx.fillText(`${match.strix_score ?? match.scoreFor ?? ""}–${match.opponent_score ?? match.scoreAgainst ?? ""}`, width - safe.side * 2 - 18, 56);
+    ctx.font = "800 44px Rajdhani, sans-serif";
+    ctx.fillText(`${match.strix_score ?? match.scoreFor ?? ""}–${match.opponent_score ?? match.scoreAgainst ?? ""}`, stripW - 18, 62);
     const logo = assets?.opponents?.[index] || assets?.byId?.[match.id];
-    if (logo?.bitmap) ctx.drawImage(logo.bitmap, width * 0.52, 12, 52, 52);
+    if (logo?.bitmap) ctx.drawImage(logo.bitmap, stripW * 0.52, 16, 56, 56);
     ctx.restore();
   });
 }

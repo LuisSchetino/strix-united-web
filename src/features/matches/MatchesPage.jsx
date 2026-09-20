@@ -24,6 +24,7 @@ import "./match-fixes.css";
 import "../../partidas.css";
 
 import { canAddManualMatch, canSearchEa } from "../../access.js";
+import { readApiJson } from "../../lib/read-api-json.js";
 const safeRows = (value) => Array.isArray(value) ? value : [];
 const matchTypeLabel = (value) => ({ friendlyMatch: "AMISTOSO EA", leagueMatch: "LIGA EA", playoffMatch: "PLAYOFF EA" })[value] || String(value || "PARTIDA EA").toUpperCase();
 const formatDate = (value) =>
@@ -793,6 +794,7 @@ export function MatchesPage({ profile, workspace, client }) {
   const [loadingSource, setLoadingSource] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [errorDetail, setErrorDetail] = useState("");
   const [success, setSuccess] = useState("");
   const [metrics, setMetrics] = useState(null);
   const [emptySource, setEmptySource] = useState("");
@@ -818,6 +820,7 @@ export function MatchesPage({ profile, workspace, client }) {
     const started = performance.now();
     setLoadingSource("ea");
     setError("");
+    setErrorDetail("");
     setSuccess("");
     setEmptySource("");
     setMetrics({ feedbackMs: null, totalMs: null, requests: 1, status: "loading" });
@@ -836,11 +839,7 @@ export function MatchesPage({ profile, workspace, client }) {
         },
         cache: "no-store",
       });
-      const payload = await response.json();
-      if (!response.ok)
-        throw new Error(
-          payload.message || payload.error || "A fonte não retornou partidas.",
-        );
+      const payload = await readApiJson(response);
       const candidates = safeRows(payload.matches);
       setFound(candidates);
       setSelected(new Set());
@@ -858,6 +857,7 @@ export function MatchesPage({ profile, workspace, client }) {
       setError(
         requestError.message || "Não foi possível consultar as partidas.",
       );
+      setErrorDetail(requestError.detail || "");
       setMetrics((current) => ({
         ...current,
         totalMs: Math.round(performance.now() - started),
@@ -880,6 +880,7 @@ export function MatchesPage({ profile, workspace, client }) {
     const importedCount = chosen.length;
     setSaving(true);
     setError("");
+    setErrorDetail("");
     setSuccess("");
     try {
       const aliasRows = Object.entries(aliases)
@@ -902,8 +903,7 @@ export function MatchesPage({ profile, workspace, client }) {
         },
         body: JSON.stringify({ matches: chosen }),
       });
-      const payload = await response.json();
-      if (!response.ok) throw new Error(payload.message || payload.error || "Não foi possível publicar a partida.");
+      await readApiJson(response);
       await workspace.refresh();
       setFound([]);
       setSelected(new Set());
@@ -921,6 +921,7 @@ export function MatchesPage({ profile, workspace, client }) {
         /* preserve the original import failure */
       }
       setError(saveError.message || "Não foi possível concluir a importação.");
+      setErrorDetail(saveError.detail || "");
     } finally {
       setSaving(false);
     }
@@ -1008,7 +1009,7 @@ export function MatchesPage({ profile, workspace, client }) {
             {metrics.totalMs ?? "em andamento"}
             {metrics.totalMs !== null ? " ms" : ""}
           </span>
-          <span>{metrics.requests} request</span>
+          <span>{metrics.requests} request{metrics.requests === 1 ? "" : "s"}</span>
         </div>
       )}
       {(error || workspace.error) && (
@@ -1017,7 +1018,10 @@ export function MatchesPage({ profile, workspace, client }) {
             <path d="M12 3 2.5 20h19L12 3z" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinejoin="round" />
             <path d="M12 9v5M12 17.2h.01" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
           </svg>
-          <span>{error || workspace.error}</span>
+          <span>
+            {error || workspace.error}
+            {errorDetail ? <small className="matches-error-detail">{errorDetail}</small> : null}
+          </span>
         </p>
       )}
       {success && (
