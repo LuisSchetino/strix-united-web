@@ -1,6 +1,6 @@
 import { authenticateDiscordMember, json, requireTier } from "../../_lib/auth.js";
 import { normalizeEaMatches, suggestAgendaMatches } from "../../../src/features/matches/import-core.js";
-import { FC27_CLUB_ID } from "../../../shared/fc27-club.js";
+import { FC27_CLUB_ID, FC27_PLATFORM } from "../../../shared/fc27-club.js";
 
 const serviceHeaders = (env) => ({
   apikey: env.SUPABASE_SERVICE_ROLE_KEY,
@@ -82,6 +82,7 @@ async function fetchAllMatches(env) {
   }
   const url = new URL("/v1/matches", base);
   url.searchParams.set("clubId", FC27_CLUB_ID);
+  url.searchParams.set("platform", FC27_PLATFORM);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 10_000);
   try {
@@ -190,6 +191,7 @@ function eaError(error) {
     layer,
     message: messages[error?.code] || error?.message || "Não foi possível sincronizar a EA.",
     upstreamStatus: error.upstreamStatus || error.status || status,
+    contentType: error.upstreamContentType || "application/json",
     upstreamContentType: error.upstreamContentType || "",
     bodyPreview: error.bodyPreview || "",
   }, status);

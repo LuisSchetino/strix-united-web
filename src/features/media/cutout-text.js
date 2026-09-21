@@ -5,7 +5,7 @@ import {
   CUTOUT_VARIANT_COUNTS,
 } from "./cutout-manifest.js";
 
-export const CUTOUT_ENGINE_VERSION = "cutout-v3";
+export const CUTOUT_ENGINE_VERSION = "cutout-v4";
 export { CUTOUT_MANIFEST_VERSION, CUTOUT_LIBRARY, CUTOUT_VARIANT_COUNTS, CUTOUT_CHAR_DIRS };
 export const CUTOUT_PUBLIC_ROOT = "/collage/letters";
 
@@ -167,7 +167,7 @@ export function cutoutGlyphPlan(char, seed, slot) {
     scale: 0.9 + rand() * 0.18,
     overlap: 0.03 + rand() * 0.07,
     invert: rand() > 0.55,
-    delay: slot * 0.12,
+    delay: slot * 0.09,
   };
 }
 
@@ -245,7 +245,7 @@ export function layoutCutoutText(text, {
 
 export function cutoutEnterAmount(mode, progress, delay) {
   const resolved = modeOf(mode);
-  if (resolved === "assemble") return clamp((Number(progress) - delay) / 0.1);
+  if (resolved === "assemble") return clamp((Number(progress) - delay) / 0.14);
   return 1;
 }
 
@@ -255,7 +255,7 @@ function jitterOf(mode, progress, seed, slot) {
   const rand = seeded(hashSeed(seed, slot, "jitter"));
   const slow = Number(progress) * (0.7 + rand() * 0.5);
   const wave = Math.sin(slow + slot * 0.37);
-  const amp = 1 + rand() * 2;
+  const amp = 0.55 + rand() * 1.15;
   return {
     x: wave * amp,
     y: Math.cos(slow * 0.82 + slot) * amp * 0.65,
@@ -446,7 +446,7 @@ function resolveSwap(char, glyph, { seed, mode, progress, rate }) {
     swapState.set(key, { variant, from, since: progress });
     return { variant, from, blend: from === variant ? 1 : 0, ready: true };
   }
-  const blend = clamp((Number(progress) - Number(prev.since)) / 0.06);
+  const blend = clamp((Number(progress) - Number(prev.since)) / 0.08);
   return { variant: prev.variant, from: prev.from, blend, ready: true };
 }
 

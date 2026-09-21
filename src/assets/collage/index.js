@@ -1,5 +1,5 @@
-export const COLLAGE_ASSETS_REVISION = "collage-pack-v2.2";
-export const COLLAGE_PAINTER_VERSION = "collage-painter-v7";
+export const COLLAGE_ASSETS_REVISION = "collage-pack-v2.3";
+export const COLLAGE_PAINTER_VERSION = "collage-painter-v8";
 
 export const COLLAGE_ASSETS = Object.freeze({
   papers: Object.freeze([
@@ -14,7 +14,10 @@ export const COLLAGE_ASSETS = Object.freeze({
   noise: Object.freeze([
     { id: "grain-3", url: new URL("./noise/grain-3.png", import.meta.url).href, pack: "NOISE GRAPHICS DESIGN SYNDROME" },
   ]),
-  brushes: Object.freeze([]),
+  brushes: Object.freeze([
+    { id: "brush-04", url: new URL("./marker/scratch-04.png", import.meta.url).href, pack: "LASER SIGHT BRUSH PACK DESIGN SYNDROME" },
+    { id: "brush-10", url: new URL("./marker/scratch-10.png", import.meta.url).href, pack: "LASER SIGHT BRUSH PACK DESIGN SYNDROME" },
+  ]),
   markers: Object.freeze([
     { id: "scratch-04", url: new URL("./marker/scratch-04.png", import.meta.url).href, pack: "LASER SIGHT BRUSH PACK DESIGN SYNDROME" },
     { id: "scratch-10", url: new URL("./marker/scratch-10.png", import.meta.url).href, pack: "LASER SIGHT BRUSH PACK DESIGN SYNDROME" },

@@ -118,6 +118,10 @@ test("V2 reutiliza a campanha V1 e só troca headlines collage", async () => {
   assert.match(collage, /paintAgendaFrame/);
   assert.match(collage, /paintCutoutText/);
   assert.match(collage, /collageHeadlineMode/);
+  assert.match(collage, /\["AGENDA", "DO", "DIA"\]/);
+  assert.match(collage, /\["RELACIONADOS", "DA", "NOITE"\]/);
+  assert.match(collage, /\["RESUMO", "DO", "DIA"\]/);
+  assert.match(collage, /pickCollageAsset\("brushes"/);
   assert.doesNotMatch(collage, /noise-paper-1|cut-fill|PAPER_IDS/);
   assert.doesNotMatch(collage, /paintCollagePitch/);
   assert.match(announceFrame, /paintCollageAnnounce/);

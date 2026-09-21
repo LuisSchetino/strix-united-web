@@ -1,4 +1,5 @@
 import { authenticateDiscordMember, json, requireTier } from "../../_lib/auth.js";
+import { FC27_CLUB_ID, FC27_PLATFORM } from "../../../shared/fc27-club.js";
 
 export async function onRequestGet({ request, env }) {
   const session = await authenticateDiscordMember(request, env);
@@ -22,6 +23,7 @@ export async function onRequestGet({ request, env }) {
       ea_sync: Boolean(env.EA_SYNC_API_URL && env.EA_SYNC_API_TOKEN),
     },
     ea_sync: await probeEaSync(env),
+    fc27: { clubId: FC27_CLUB_ID, platform: FC27_PLATFORM },
     checked_at: new Date().toISOString(),
   });
 }
@@ -36,14 +38,28 @@ function sanitizeHost(value) {
 
 async function probeEaSync(env) {
   if (!env.EA_SYNC_API_URL) {
-    return { configured: false, host: "", health: "missing_url" };
+    return {
+      configured: false,
+      host: "",
+      health: "missing_url",
+      clubId: FC27_CLUB_ID,
+      platform: FC27_PLATFORM,
+      service: "",
+    };
   }
   const host = sanitizeHost(env.EA_SYNC_API_URL);
   let healthUrl;
   try {
     healthUrl = new URL("/health", env.EA_SYNC_API_URL);
   } catch {
-    return { configured: true, host, health: "invalid_url" };
+    return {
+      configured: true,
+      host,
+      health: "invalid_url",
+      clubId: FC27_CLUB_ID,
+      platform: FC27_PLATFORM,
+      service: "",
+    };
   }
   const started = Date.now();
   try {
@@ -65,8 +81,8 @@ async function probeEaSync(env) {
       contentType: contentType || "unknown",
       durationMs: Date.now() - started,
       service: payload?.service || "",
-      clubId: payload?.club_id || "",
-      platform: payload?.platform || "",
+      clubId: payload?.club_id || FC27_CLUB_ID,
+      platform: payload?.platform || FC27_PLATFORM,
     };
   } catch (error) {
     return {
@@ -76,6 +92,8 @@ async function probeEaSync(env) {
       status: 0,
       contentType: "unknown",
       durationMs: Date.now() - started,
+      clubId: FC27_CLUB_ID,
+      platform: FC27_PLATFORM,
       message: String(error?.message || "unreachable").slice(0, 80),
     };
   }

@@ -16,6 +16,17 @@ test("HTML/DOCTYPE from /api is a structured JSON error, never a parse crash", (
     (error) => error instanceof ApiJsonError && error.code === "html_instead_of_json",
   );
   assert.deepEqual(parseApiJson('{"matches":[]}', { status: 200, contentType: "application/json" }), { matches: [] });
+  assert.throws(
+    () => parseApiJson("<html><h1>Bad gateway</h1></html>", {
+      status: 502,
+      contentType: "text/html",
+    }),
+    (error) => error instanceof ApiJsonError
+      && error.code === "ea_sync_upstream_error"
+      && error.layer === "pages_edge"
+      && error.contentType === "text/html"
+      && error.status === 502,
+  );
 });
 
 test("Buscar na EA trata [] como vazio válido e não chama json() cego", async () => {
@@ -32,4 +43,5 @@ test("Buscar na EA trata [] como vazio válido e não chama json() cego", async 
   assert.match(matches, /layer === "railway"/);
   assert.match(matches, /layer === "ea"/);
   assert.match(matches, /layer === "pages"/);
+  assert.match(matches, /layer === "pages_edge"/);
 });

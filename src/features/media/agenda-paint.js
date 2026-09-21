@@ -519,12 +519,12 @@ function paintMatchVariableBlock(ctx, timeline, scene, time, assets, alpha, offs
     ctx.fillText(line, geo.rightX, geo.nameY + index * (geo.type.team * 0.84));
   });
   ctx.font = `700 ${geo.type.kickoff}px Rajdhani, sans-serif`;
-  ctx.fillText(match.kickoff || "", width / 2, geo.nameY + 156);
+  ctx.fillText(match.kickoff || "", width / 2, geo.nameY + 172);
   const detail = [match.competition, match.round].filter(Boolean).join("  ·  ").toUpperCase();
   if (detail) {
     ctx.fillStyle = MUTED;
     ctx.font = `800 ${geo.type.competition}px Inter, sans-serif`;
-    ctx.fillText(fitText(ctx, detail, width - safe.side * 2, ctx.font), width / 2, geo.nameY + 214);
+    ctx.fillText(fitText(ctx, detail, width - safe.side * 2, ctx.font), width / 2, geo.nameY + 232);
   }
   ctx.restore();
 }
@@ -574,7 +574,7 @@ export function finaleRowLayout(timeline) {
       ? (feed ? 96 : 118)
       : density === "medium"
         ? (feed ? 108 : 132)
-        : (feed ? 118 : 148);
+        : (feed ? 128 : 162);
   const endY = height - safe.bottom - (density === "dense" ? 2 : 6);
   const row = (endY - startY - header) / Math.max(count, 1);
   const logoScale = density === "spacious" ? 1.22 : density === "medium" ? 1.2 : density === "compact" ? 1.05 : 0.84;
@@ -583,7 +583,7 @@ export function finaleRowLayout(timeline) {
     Math.max(48, row * (density === "spacious" ? 0.28 : density === "medium" ? 0.3 : density === "compact" ? 0.2 : 0.16)),
   );
   const minCompGap = density === "spacious" ? 30 : density === "medium" ? 26 : density === "compact" ? 20 : 18;
-  const timeGap = density === "spacious" ? 36 : density === "medium" ? 28 : density === "compact" ? 22 : 18;
+  const timeGap = density === "spacious" ? 44 : density === "medium" ? 34 : density === "compact" ? 26 : 20;
   const timeScale = density === "medium" || density === "spacious" ? 1.18 : 1;
   const timeH = Math.min(type.finaleTime * timeScale, row * (density === "dense" ? 0.2 : 0.32));
   const nameH = Math.min(type.finaleName * (density === "medium" ? 1.15 : 1), row * 0.14);

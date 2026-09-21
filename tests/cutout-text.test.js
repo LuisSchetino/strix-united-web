@@ -33,10 +33,10 @@ test("mesmo seed reproduz o mesmo layout e fingerprint inclui seed/modo", () => 
     b.rows[0].glyphs.map((item) => [item.x, item.y, item.rot, item.scale]),
   );
   assert.notEqual(a.rows[0].glyphs[0].rot, c.rows[0].glyphs[0].rot);
-  assert.equal(CUTOUT_ENGINE_VERSION, "cutout-v3");
+  assert.equal(CUTOUT_ENGINE_VERSION, "cutout-v4");
   assert.equal(CUTOUT_MANIFEST_VERSION, "letters-real-v1");
   assert.match(cutoutFingerprintToken(), new RegExp(`^${CUTOUT_ENGINE_VERSION}:${CUTOUT_MANIFEST_VERSION}:`));
-  assert.match(lookAssetFingerprint("collage"), /cutout-v3/);
+  assert.match(lookAssetFingerprint("collage"), /cutout-v4/);
   assert.match(lookAssetFingerprint("collage", { seed: 2, mode: "chaos" }), /seed:2/);
   assert.match(lookAssetFingerprint("collage", { seed: 2, mode: "chaos" }), /mode:chaos/);
   assert.notEqual(

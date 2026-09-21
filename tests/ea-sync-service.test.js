@@ -43,7 +43,18 @@ test("health de DEV sonda o host sanitizado do EA Sync", async () => {
   assert.match(health, /EA_SYNC_API_URL/);
   assert.match(health, /\/health/);
   assert.match(health, /sanitizeHost/);
+  assert.match(health, /fc27: \{ clubId: FC27_CLUB_ID, platform: FC27_PLATFORM \}/);
   assert.doesNotMatch(health, /authorization: `Bearer \$\{env\.EA_SYNC_API_TOKEN\}/);
+});
+
+test("Pages middleware converte HTML 502 em JSON estruturado", async () => {
+  const middleware = await readFile(new URL("../functions/api/_middleware.js", import.meta.url), "utf8");
+  assert.match(middleware, /ea_sync_upstream_error/);
+  assert.match(middleware, /pages_edge/);
+  assert.match(middleware, /contentType/);
+  assert.match(middleware, /upstreamStatus/);
+  assert.match(functionSource, /contentType: error\.upstreamContentType/);
+  assert.match(functionSource, /searchParams\.set\("platform", FC27_PLATFORM\)/);
 });
 
 test("token do serviço não aparece em query string ou resposta", () => {
