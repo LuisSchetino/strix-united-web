@@ -1,5 +1,5 @@
 export const COLLAGE_ASSETS_REVISION = "collage-pack-v2.2";
-export const COLLAGE_PAINTER_VERSION = "collage-painter-v6";
+export const COLLAGE_PAINTER_VERSION = "collage-painter-v7";
 
 export const COLLAGE_ASSETS = Object.freeze({
   papers: Object.freeze([

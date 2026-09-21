@@ -16,7 +16,8 @@ test("Pages chama somente o EA Sync externo e não a EA diretamente", () => {
 test("serviço externo é privado, limitado ao clube FC27 e usa os três tipos", () => {
   assert.match(serverSource, /timingSafeEqual/);
   assert.match(serverSource, /clubId !== FC27_CLUB_ID/);
-  assert.match(serverSource, /from "\.\/fc27-club\.js"/);
+  assert.match(serverSource, /club_id: FC27_CLUB_ID/);
+  assert.match(serverSource, /platform: FC27_PLATFORM/);
   assert.doesNotMatch(serverSource, /15686/);
   assert.doesNotMatch(functionSource, /15686/);
   assert.match(functionSource, /from "\.\.\/\.\.\/\.\.\/shared\/fc27-club\.js"/);
@@ -26,13 +27,23 @@ test("serviço externo é privado, limitado ao clube FC27 e usa os três tipos",
   }
 });
 
-test("Pages nunca devolve HTML do Railway e identifica a camada", () => {
+test("Pages nunca devolve HTML do upstream e identifica a camada pelo host", () => {
   assert.match(functionSource, /await response\.text\(\)/);
   assert.match(functionSource, /ea_sync_upstream_error/);
-  assert.match(functionSource, /layer: "railway"/);
+  assert.match(functionSource, /eaSyncTarget/);
+  assert.match(functionSource, /railway\.app/);
   assert.match(functionSource, /layer: "ea"/);
   assert.match(functionSource, /10_000/);
   assert.doesNotMatch(functionSource, /await response\.json\(\)/);
+});
+
+test("health de DEV sonda o host sanitizado do EA Sync", async () => {
+  const health = await readFile(new URL("../functions/api/internal/health.js", import.meta.url), "utf8");
+  assert.match(health, /probeEaSync/);
+  assert.match(health, /EA_SYNC_API_URL/);
+  assert.match(health, /\/health/);
+  assert.match(health, /sanitizeHost/);
+  assert.doesNotMatch(health, /authorization: `Bearer \$\{env\.EA_SYNC_API_TOKEN\}/);
 });
 
 test("token do serviço não aparece em query string ou resposta", () => {

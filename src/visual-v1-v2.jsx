@@ -16,9 +16,9 @@ import { preloadCutoutText, CUTOUT_TEMPLATE_SEEDS } from "./features/media/cutou
 const dayLabel = "20 SET 2026";
 
 const matches = [
-  { id: "1", opponent: "Maquina FC", kickoff: "22:10", scheduled_at: "2026-09-20T22:10:00-03:00", opponent_logo: "", competition: "Copa Yeshua", competition_logo: "", round: "" },
-  { id: "2", opponent: "POA City", kickoff: "22:40", scheduled_at: "2026-09-20T22:40:00-03:00", opponent_logo: "", competition: "Yeshua League", competition_logo: "", round: "" },
-  { id: "3", opponent: "CTX Gamingg", kickoff: "23:10", scheduled_at: "2026-09-20T23:10:00-03:00", opponent_logo: "", competition: "Copa Yeshua", competition_logo: "", round: "" },
+  { id: "1", opponent: "Maquina", kickoff: "21:10", scheduled_at: "2026-09-20T21:10:00-03:00", opponent_logo: "", competition: "Amistoso", competition_logo: "", round: "" },
+  { id: "2", opponent: "Sinceridade FC", kickoff: "21:40", scheduled_at: "2026-09-20T21:40:00-03:00", opponent_logo: "", competition: "Amistoso", competition_logo: "", round: "" },
+  { id: "3", opponent: "POA City", kickoff: "22:10", scheduled_at: "2026-09-20T22:10:00-03:00", opponent_logo: "", competition: "Amistoso", competition_logo: "", round: "" },
 ];
 
 const related = [
@@ -99,10 +99,10 @@ function App() {
         }))),
       ]);
       await Promise.all([
-        preloadCutoutText("AGENDA", { seed: CUTOUT_TEMPLATE_SEEDS.agenda, mode: "static" }),
-        preloadCutoutText("RELACIONADOS", { seed: CUTOUT_TEMPLATE_SEEDS.related, mode: "static" }),
-        preloadCutoutText("NUNES", { seed: CUTOUT_TEMPLATE_SEEDS.announce, mode: "static" }),
-        preloadCutoutText("RESUMO", { seed: CUTOUT_TEMPLATE_SEEDS.summary, mode: "static" }),
+        preloadCutoutText("AGENDA DO DIA", { seed: CUTOUT_TEMPLATE_SEEDS.agenda, mode: "chaos" }),
+        preloadCutoutText("RELACIONADOS DA NOITE", { seed: CUTOUT_TEMPLATE_SEEDS.related, mode: "chaos" }),
+        preloadCutoutText("NUNES", { seed: CUTOUT_TEMPLATE_SEEDS.announce, mode: "chaos" }),
+        preloadCutoutText("RESUMO DO DIA", { seed: CUTOUT_TEMPLATE_SEEDS.summary, mode: "chaos" }),
       ]);
       if (cancelled) return;
 
@@ -128,8 +128,11 @@ function App() {
 
       const v1Agenda = paint(renderAgendaFrame, agendaV1, agendaAssets, 1.35, "v1-agenda");
       const v2Agenda = paint(renderAgendaFrame, agendaV2, agendaAssets, 1.35, "v2-agenda");
+      const v2AgendaFinale = paint(renderAgendaFrame, agendaV2, agendaAssets, agendaV2.finaleStart + 0.7, "v2-agenda-finale");
       const v1Related = paint(renderRelatedNightFrame, relatedV1, relatedAssets, 0.85, "v1-related");
       const v2Related = paint(renderRelatedNightFrame, relatedV2, relatedAssets, 0.85, "v2-related");
+      const relatedHeroTime = relatedV2.scenes.find((scene) => scene.type === "player")?.start + 0.45;
+      const v2RelatedHero = paint(renderRelatedNightFrame, { ...relatedV2, still: false }, relatedAssets, relatedHeroTime, "v2-related-hero");
       const v1Announce = paint(renderAnnounceFrame, announceV1, announceAssets, 2.6, "v1-announce");
       const v2Announce = paint(renderAnnounceFrame, announceV2, announceAssets, 2.6, "v2-announce");
       const v1Summary = paint(renderSummaryFrame, summaryV1, summaryAssets, 1.35, "v1-summary");
@@ -138,8 +141,10 @@ function App() {
       const items = [
         { id: "v1-agenda", canvas: v1Agenda },
         { id: "v2-agenda", canvas: v2Agenda },
+        { id: "v2-agenda-finale", canvas: v2AgendaFinale },
         { id: "v1-related", canvas: v1Related },
         { id: "v2-related", canvas: v2Related },
+        { id: "v2-related-hero", canvas: v2RelatedHero },
         { id: "v1-announce", canvas: v1Announce },
         { id: "v2-announce", canvas: v2Announce },
         { id: "v1-summary", canvas: v1Summary },

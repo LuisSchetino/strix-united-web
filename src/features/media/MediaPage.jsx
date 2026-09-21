@@ -163,7 +163,7 @@ export function MediaPage({ profile, client, workspace }) {
     if (mediaLook !== "collage") return;
     void preloadCollageAssets();
     const names = (workspace.players || []).map((item) => item.display_name || item.name || "").join(" ");
-    void preloadCutoutChars(`AGENDA RELACIONADOS RESUMO ELENCO ${names}`);
+    void preloadCutoutChars(`AGENDA DO DIA RELACIONADOS DA NOITE RESUMO DO DIA ELENCO ${names}`);
   }, [mediaLook, workspace.players]);
   const day = useMemo(() => formatAgendaDay(), []);
   const matches = useMemo(() => collectTodayAgenda(workspace), [workspace.agenda, workspace.competitions, workspace.competitionFixtures]);

@@ -19,7 +19,64 @@ export async function onRequestGet({ request, env }) {
       discord: Boolean(env.DISCORD_BOT_TOKEN && env.DISCORD_GUILD_ID && env.DISCORD_ROLE_TIER_MAP),
       service_role: Boolean(env.SUPABASE_SERVICE_ROLE_KEY),
       competition_sync: Boolean(env.FC27_SYNC_SECRET),
+      ea_sync: Boolean(env.EA_SYNC_API_URL && env.EA_SYNC_API_TOKEN),
     },
+    ea_sync: await probeEaSync(env),
     checked_at: new Date().toISOString(),
   });
+}
+
+function sanitizeHost(value) {
+  try {
+    return new URL(value).host;
+  } catch {
+    return "";
+  }
+}
+
+async function probeEaSync(env) {
+  if (!env.EA_SYNC_API_URL) {
+    return { configured: false, host: "", health: "missing_url" };
+  }
+  const host = sanitizeHost(env.EA_SYNC_API_URL);
+  let healthUrl;
+  try {
+    healthUrl = new URL("/health", env.EA_SYNC_API_URL);
+  } catch {
+    return { configured: true, host, health: "invalid_url" };
+  }
+  const started = Date.now();
+  try {
+    const response = await fetch(healthUrl, {
+      method: "GET",
+      headers: { accept: "application/json" },
+      cache: "no-store",
+    });
+    const contentType = String(response.headers.get("content-type") || "").split(";")[0];
+    const text = await response.text();
+    const html = /text\/html/i.test(contentType) || /^<!doctype html/i.test(text.trimStart());
+    let payload = null;
+    try { payload = text ? JSON.parse(text) : null; } catch { payload = null; }
+    return {
+      configured: true,
+      host,
+      health: html ? "html" : (response.ok && payload?.ok ? "ok" : "error"),
+      status: response.status,
+      contentType: contentType || "unknown",
+      durationMs: Date.now() - started,
+      service: payload?.service || "",
+      clubId: payload?.club_id || "",
+      platform: payload?.platform || "",
+    };
+  } catch (error) {
+    return {
+      configured: true,
+      host,
+      health: "unreachable",
+      status: 0,
+      contentType: "unknown",
+      durationMs: Date.now() - started,
+      message: String(error?.message || "unreachable").slice(0, 80),
+    };
+  }
 }

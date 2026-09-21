@@ -192,6 +192,8 @@ test("agenda completa adapta 3/5/6 jogos e separa competição do matchup", () =
       const zones = finaleRowZones(layout, index);
       assert.ok(zones.compY - zones.matchupBottom >= layout.minCompGap - 0.01);
       assert.ok(zones.timeY < zones.matchupMid);
+      assert.ok(zones.matchupMid - zones.timeY >= layout.timeGap);
+      assert.ok(layout.timeGap >= 18);
       assert.ok(zones.compY < layout.endY + 0.01);
     }
     const ctx = mockContext();

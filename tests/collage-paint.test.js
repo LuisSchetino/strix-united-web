@@ -95,9 +95,9 @@ test("V2 monta headline letra a letra com rotação própria", () => {
   assert.equal(collageHeadlineMode(true, 4), "static");
   assert.equal(collageHeadlineMode(false, 0.2), "assemble");
   assert.equal(collageHeadlineMode(false, 1.1), "chaos");
-  assert.equal(collageHeadlineMode(false, 2.0), "match_cut");
-  assert.equal(collageHeadlineMode(false, 3.0), "chaos");
-  assert.equal(collageHeadlineMode(false, 4), "static");
+  assert.equal(collageHeadlineMode(false, 1.7), "match_cut");
+  assert.equal(collageHeadlineMode(false, 2.1), "chaos");
+  assert.equal(collageHeadlineMode(false, 2.6), "static");
 });
 
 test("V2 reutiliza a campanha V1 e só troca headlines collage", async () => {
@@ -146,7 +146,7 @@ test("V2 reutiliza a campanha V1 e só troca headlines collage", async () => {
   const agendaCtx = mockCtx();
   paintCollageAgenda(agendaCtx, { timeline: { ...agendaDay, still: true }, time: 1.2, dayLabel: "20/09" });
   assert.equal(agendaCtx.texts.includes("AGENDA"), false);
-  assert.ok(agendaCtx.texts.includes("DO DIA"));
+  assert.equal(agendaCtx.texts.includes("DO DIA"), false);
   const agendaMatchCtx = mockCtx();
   paintCollageAgenda(agendaMatchCtx, {
     timeline: agendaDay,
@@ -156,16 +156,26 @@ test("V2 reutiliza a campanha V1 e só troca headlines collage", async () => {
   });
   assert.ok(agendaMatchCtx.texts.includes("22:10"));
   assert.ok(agendaMatchCtx.texts.includes("AMISTOSO"));
+  const agendaFinaleCtx = mockCtx();
+  paintCollageAgenda(agendaFinaleCtx, {
+    timeline: agendaDay,
+    time: agendaDay.finaleStart + 0.6,
+    dayLabel: "20 SET 2026",
+    assets: { strix: { initials: "SU" }, opponents: [{ initials: "MA" }] },
+  });
+  assert.ok(agendaFinaleCtx.texts.includes("AGENDA COMPLETA"));
+  assert.ok(agendaFinaleCtx.texts.includes("AGENDA"));
+  assert.ok(agendaFinaleCtx.texts.includes("22:10"));
 
   const relatedCtx = mockCtx();
-  paintCollageRelated(relatedCtx, { timeline: withMediaLook(related, "collage"), time: 1.2 });
+  paintCollageRelated(relatedCtx, { timeline: withMediaLook(related, "collage"), time: 0.85 });
   assert.equal(relatedCtx.texts.includes("RELACIONADOS"), false);
-  assert.ok(relatedCtx.texts.includes("DA NOITE"));
+  assert.equal(relatedCtx.texts.includes("DA NOITE"), false);
 
   const summaryCtx = mockCtx();
   paintCollageSummary(summaryCtx, { timeline: { ...timelineBase, matches: [{ opponent: "POA CITY", strix_score: 2, opponent_score: 1 }], stats: { games: 1, wins: 1, goalsFor: 2 }, period: { title: "RESUMO DO DIA", stats: { games: 1 } } }, time: 1.2 });
   assert.equal(summaryCtx.texts.includes("RESUMO"), false);
-  assert.ok(summaryCtx.texts.includes("DO DIA"));
+  assert.equal(summaryCtx.texts.includes("DO DIA"), false);
 });
 
 test("export/fingerprint V2 não reutiliza o cache da V1", async () => {

@@ -198,8 +198,8 @@ function paintField(ctx, timeline, camera, presence, spotlight) {
   ctx.globalAlpha = presence;
 
   ctx.beginPath();
-  ctx.moveTo(rim[0].x + 8, rim[0].y + drop);
-  rim.slice(1).forEach((point) => ctx.lineTo(point.x + 8, point.y + drop));
+  ctx.moveTo(rim[0].x, rim[0].y + drop);
+  rim.slice(1).forEach((point) => ctx.lineTo(point.x, point.y + drop));
   ctx.closePath();
   ctx.fillStyle = "rgba(0,0,0,0.42)";
   ctx.fill();
@@ -238,7 +238,7 @@ function paintField(ctx, timeline, camera, presence, spotlight) {
     ctx.fill();
   }
 
-  const light = ctx.createRadialGradient(width * 0.44, quad[2].y - 60, 20, width * 0.44, quad[0].y, width * 0.7);
+  const light = ctx.createRadialGradient(width * 0.5, quad[2].y - 60, 20, width * 0.5, quad[0].y, width * 0.7);
   light.addColorStop(0, "rgba(239,236,230,0.1)");
   light.addColorStop(1, "rgba(239,236,230,0)");
   ctx.fillStyle = light;
@@ -350,7 +350,7 @@ function paintNormalizedPhoto(ctx, bitmap, width, height) {
     layer.save();
     layer.filter = "blur(14px)";
     layer.globalAlpha = 0.42;
-    coverPhoto(layer, bitmap, 10, 16, width, height, 0.2);
+    coverPhoto(layer, bitmap, 0, 8, width, height, 0.2);
     layer.filter = "none";
     layer.globalAlpha = 1;
     coverPhoto(layer, bitmap, 0, 0, width, height, 0.2);
@@ -419,12 +419,13 @@ function paintHero(ctx, timeline, scene, time, assets) {
   const y = stage.portraitTop;
 
   ctx.save();
-  ctx.globalAlpha = presence * 0.38;
-  const veil = ctx.createLinearGradient(width * 0.58, 0, width, 0);
+  ctx.globalAlpha = presence * 0.42;
+  const veil = ctx.createLinearGradient(width * 0.42, 0, width, 0);
   veil.addColorStop(0, "rgba(5,6,7,0)");
-  veil.addColorStop(1, "rgba(5,6,7,0.5)");
+  veil.addColorStop(0.55, "rgba(5,6,7,0.08)");
+  veil.addColorStop(1, "rgba(5,6,7,0.46)");
   ctx.fillStyle = veil;
-  ctx.fillRect(width * 0.55, 0, width * 0.45, height);
+  ctx.fillRect(0, 0, width, height);
   ctx.restore();
 
   ctx.save();
@@ -625,7 +626,7 @@ function paintChrome(ctx, timeline, time, dayLabel) {
 
 function paintVignette(ctx, timeline) {
   const { width, height } = timeline;
-  const vignette = ctx.createRadialGradient(width * 0.42, height * 0.5, width * 0.18, width / 2, height * 0.5, width * 0.9);
+  const vignette = ctx.createRadialGradient(width * 0.5, height * 0.5, width * 0.18, width / 2, height * 0.5, width * 0.9);
   vignette.addColorStop(0, "rgba(5,6,7,0)");
   vignette.addColorStop(1, "rgba(5,6,7,0.56)");
   ctx.fillStyle = vignette;

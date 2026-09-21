@@ -519,12 +519,12 @@ function paintMatchVariableBlock(ctx, timeline, scene, time, assets, alpha, offs
     ctx.fillText(line, geo.rightX, geo.nameY + index * (geo.type.team * 0.84));
   });
   ctx.font = `700 ${geo.type.kickoff}px Rajdhani, sans-serif`;
-  ctx.fillText(match.kickoff || "", width / 2, geo.nameY + 128);
+  ctx.fillText(match.kickoff || "", width / 2, geo.nameY + 156);
   const detail = [match.competition, match.round].filter(Boolean).join("  ·  ").toUpperCase();
   if (detail) {
     ctx.fillStyle = MUTED;
     ctx.font = `800 ${geo.type.competition}px Inter, sans-serif`;
-    ctx.fillText(fitText(ctx, detail, width - safe.side * 2, ctx.font), width / 2, geo.nameY + 178);
+    ctx.fillText(fitText(ctx, detail, width - safe.side * 2, ctx.font), width / 2, geo.nameY + 214);
   }
   ctx.restore();
 }
@@ -583,12 +583,13 @@ export function finaleRowLayout(timeline) {
     Math.max(48, row * (density === "spacious" ? 0.28 : density === "medium" ? 0.3 : density === "compact" ? 0.2 : 0.16)),
   );
   const minCompGap = density === "spacious" ? 30 : density === "medium" ? 26 : density === "compact" ? 20 : 18;
+  const timeGap = density === "spacious" ? 36 : density === "medium" ? 28 : density === "compact" ? 22 : 18;
   const timeScale = density === "medium" || density === "spacious" ? 1.18 : 1;
   const timeH = Math.min(type.finaleTime * timeScale, row * (density === "dense" ? 0.2 : 0.32));
   const nameH = Math.min(type.finaleName * (density === "medium" ? 1.15 : 1), row * 0.14);
   const matchupH = Math.max(logoBox, nameH);
   const compH = Math.min(type.finaleComp * (density === "medium" ? 1.1 : 1), row * 0.13);
-  const stack = timeH + 12 + matchupH + minCompGap + compH;
+  const stack = timeH + timeGap + matchupH + minCompGap + compH;
   const pad = Math.max(4, (row - stack) / 2);
   const usable = width - safe.side * 2;
   const span = usable * (density === "dense" ? 0.74 : density === "compact" ? 0.78 : 0.82);
@@ -600,6 +601,7 @@ export function finaleRowLayout(timeline) {
     row,
     logoBox,
     minCompGap,
+    timeGap,
     timeH,
     matchupH,
     compH,
@@ -614,7 +616,7 @@ export function finaleRowLayout(timeline) {
 export function finaleRowZones(layout, index) {
   const y = layout.startY + layout.header + index * layout.row;
   const timeY = y + layout.pad + layout.timeH;
-  const matchupMid = y + layout.pad + layout.timeH + 10 + layout.matchupH / 2;
+  const matchupMid = y + layout.pad + layout.timeH + layout.timeGap + layout.matchupH / 2;
   const matchupBottom = matchupMid + layout.matchupH / 2;
   const compY = matchupBottom + layout.minCompGap + layout.compH * 0.75;
   return { y, timeY, matchupMid, matchupBottom, compY };

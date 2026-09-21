@@ -137,3 +137,12 @@ test("painter ancora nome e posição no hero sem card de reserva", () => {
   assert.ok(!calls.some((text) => text === "STRIX UNITED" && calls[calls.indexOf("CEDRAZ") + 1] === "STRIX UNITED"));
   assert.ok(!calls.some((text) => /RESERVA|BANCO|SUPLENTE|TITULAR/i.test(text)));
 });
+
+test("campo não usa retângulo deslocado de véu nem bandeja assimétrica", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const paint = await readFile(new URL("../src/features/media/related-night-paint.js", import.meta.url), "utf8");
+  assert.doesNotMatch(paint, /fillRect\(width \* 0\.55/);
+  assert.doesNotMatch(paint, /rim\[0\]\.x \+ 8/);
+  assert.match(paint, /width \* 0\.5, quad\[2\]\.y/);
+  assert.match(paint, /createRadialGradient\(width \* 0\.5, height \* 0\.5/);
+});

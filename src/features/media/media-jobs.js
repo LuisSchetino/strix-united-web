@@ -169,7 +169,7 @@ export async function startAgendaRender({
   });
 
   try {
-    await prepareCollageLook(timeline, "AGENDA", { seed: CUTOUT_TEMPLATE_SEEDS.agenda, mode: "chaos" });
+    await prepareCollageLook(timeline, "AGENDA DO DIA", { seed: CUTOUT_TEMPLATE_SEEDS.agenda, mode: "chaos" });
     const assets = await loadAgendaAssets(matches, {
       onProgress: (progress) => emit({ stage: "preparing", progress }),
     });
@@ -260,7 +260,7 @@ export async function startRelatedNightRender({
   });
 
   try {
-    await prepareCollageLook(timeline, `RELACIONADOS ${(players || []).map((item) => item.name || "").join(" ")}`, {
+    await prepareCollageLook(timeline, `RELACIONADOS DA NOITE ${(players || []).map((item) => item.name || "").join(" ")}`, {
       seed: CUTOUT_TEMPLATE_SEEDS.related,
       mode: "match_cut",
     });
@@ -359,7 +359,7 @@ export async function startSummaryRender({
   });
 
   try {
-    await prepareCollageLook(timeline, "RESUMO", { seed: CUTOUT_TEMPLATE_SEEDS.summary, mode: "chaos" });
+    await prepareCollageLook(timeline, "RESUMO DO DIA", { seed: CUTOUT_TEMPLATE_SEEDS.summary, mode: "chaos" });
     const assets = await loadSummaryAssets(matches, {
       onProgress: (progress) => emit({ stage: "preparing", progress }),
     });

@@ -9,6 +9,8 @@ import {
   paintCutoutText,
 } from "./cutout-text.js";
 
+const SECONDARY_HEADLINES = new Set(["DO DIA", "DA NOITE", "DA SEMANA"]);
+
 function normalizeHeadline(value) {
   return String(value || "")
     .normalize("NFD")
@@ -31,10 +33,10 @@ function isTitleFace(font) {
 export function collageHeadlineMode(still, time = 0) {
   if (still) return "static";
   const t = Math.max(0, Number(time) || 0);
-  if (t < 0.9) return "assemble";
-  if (t < 1.28) return "chaos";
-  if (t >= 1.85 && t < 2.18) return "match_cut";
-  if (t >= 2.85 && t < 3.12) return "chaos";
+  if (t < 0.82) return "assemble";
+  if (t < 1.58) return "chaos";
+  if (t < 1.98) return "match_cut";
+  if (t < 2.38) return "chaos";
   return "static";
 }
 
@@ -66,7 +68,15 @@ export function paintCollageWord(ctx, text, x, y, {
   const motion = animation || collageHeadlineMode(still, local);
   const layout = layoutCutoutText(text, { seed, size, maxWidth, align: "left" });
   const left = align === "center" ? x - layout.width / 2 : align === "right" ? x - layout.width : x;
-  return paintCutoutText(ctx, {
+  const prev = {
+    font: ctx.font,
+    fillStyle: ctx.fillStyle,
+    strokeStyle: ctx.strokeStyle,
+    textAlign: ctx.textAlign,
+    textBaseline: ctx.textBaseline,
+    globalAlpha: ctx.globalAlpha,
+  };
+  const painted = paintCutoutText(ctx, {
     text,
     x: left,
     y: y - size * 0.82,
@@ -76,23 +86,48 @@ export function paintCollageWord(ctx, text, x, y, {
     align: "left",
     animation: motion,
     progress: still ? 1 : Math.max(0.001, local),
-    rate: motion === "match_cut" ? 6 : 8,
+    rate: motion === "match_cut" ? 5 : 7,
   });
+  ctx.font = prev.font;
+  ctx.fillStyle = prev.fillStyle;
+  ctx.strokeStyle = prev.strokeStyle;
+  ctx.textAlign = prev.textAlign;
+  ctx.textBaseline = prev.textBaseline;
+  ctx.globalAlpha = prev.globalAlpha;
+  return painted;
+}
+
+function paintAccentMark(ctx, hit, accent) {
+  if (!accent || !hit) return;
+  ctx.save();
+  if (hit.transform && typeof ctx.setTransform === "function") {
+    const matrix = hit.transform;
+    ctx.setTransform(matrix.a, matrix.b, matrix.c, matrix.d, matrix.e, matrix.f);
+  }
+  ctx.globalAlpha *= 0.62;
+  ctx.fillStyle = accent;
+  const width = SECONDARY_HEADLINES.has(hit.text) ? 44 : 58;
+  const x = hit.align === "center" ? hit.x - width / 2 : hit.align === "right" ? hit.x - width : hit.x;
+  ctx.fillRect(x, hit.y + 10, width, 2);
+  ctx.restore();
 }
 
 function replaceHeadlines(ctx, skipped, paint, overlay) {
   const original = ctx?.fillText;
   if (typeof original !== "function") {
     paint();
-    return;
+    return { accent: "" };
   }
   const deny = new Set((skipped || []).map(normalizeHeadline).filter(Boolean));
+  let accent = "";
+  let lastHit = null;
   ctx.fillText = function patchedFillText(text, x = 0, y = 0, ...rest) {
     const key = normalizeHeadline(text);
     if (deny.has(key) && isTitleFace(ctx.font)) {
       const align = ctx.textAlign === "center" || ctx.textAlign === "right" ? ctx.textAlign : "left";
-      paintCollageWord(ctx, key, Number(x) || 0, Number(y) || 0, {
-        size: Math.max(36, Math.round(fontPx(ctx.font, 96) * 0.78)),
+      const secondary = SECONDARY_HEADLINES.has(key);
+      const painted = paintCollageWord(ctx, key, Number(x) || 0, Number(y) || 0, {
+        size: Math.max(32, Math.round(fontPx(ctx.font, 96) * (secondary ? 0.62 : 0.88))),
         seed: overlay.seed,
         time: overlay.time,
         start: overlay.start,
@@ -100,6 +135,14 @@ function replaceHeadlines(ctx, skipped, paint, overlay) {
         maxWidth: overlay.maxWidth,
         align,
       });
+      if (painted?.dominantAccent) accent = painted.dominantAccent;
+      lastHit = {
+        text: key,
+        x: Number(x) || 0,
+        y: Number(y) || 0,
+        align,
+        transform: typeof ctx.getTransform === "function" ? ctx.getTransform() : null,
+      };
       return undefined;
     }
     return original.call(this, text, x, y, ...rest);
@@ -109,6 +152,8 @@ function replaceHeadlines(ctx, skipped, paint, overlay) {
   } finally {
     ctx.fillText = original;
   }
+  if (accent) paintAccentMark(ctx, lastHit, accent);
+  return { accent };
 }
 
 export function isCollageLook(timeline) {
@@ -116,11 +161,7 @@ export function isCollageLook(timeline) {
 }
 
 function motionStart(timeline, time, { name = false } = {}) {
-  const still = Boolean(timeline.still);
-  if (still) return 0;
-  const t = Number(time) || 0;
-  const finaleStart = Number(timeline.finaleStart);
-  if (Number.isFinite(finaleStart) && t >= finaleStart) return finaleStart;
+  if (timeline.still) return 0;
   if (name) return Number(timeline.introEnd) || 0;
   return 0;
 }
@@ -129,7 +170,12 @@ export function paintCollageAgenda(ctx, { timeline, time = 0, assets, dayLabel }
   if (!ctx || !timeline?.width) return;
   const t = Number(time) || 0;
   const still = Boolean(timeline.still);
-  replaceHeadlines(ctx, ["AGENDA"], () => {
+  const finaleStart = Number(timeline.finaleStart);
+  if (!still && Number.isFinite(finaleStart) && t >= finaleStart) {
+    paintAgendaFrame(ctx, { timeline, time: t, assets, dayLabel });
+    return;
+  }
+  replaceHeadlines(ctx, ["AGENDA", "DO DIA"], () => {
     paintAgendaFrame(ctx, { timeline, time: t, assets, dayLabel });
   }, {
     seed: CUTOUT_TEMPLATE_SEEDS.agenda,
@@ -144,7 +190,12 @@ export function paintCollageRelated(ctx, { timeline, time = 0, assets, dayLabel 
   if (!ctx || !timeline?.width) return;
   const t = Number(time) || 0;
   const still = Boolean(timeline.still);
-  replaceHeadlines(ctx, ["RELACIONADOS"], () => {
+  const finaleStart = Number(timeline.finaleStart);
+  if (!still && Number.isFinite(finaleStart) && t >= finaleStart) {
+    paintRelatedNightFrame(ctx, { timeline, time: t, assets, dayLabel });
+    return;
+  }
+  replaceHeadlines(ctx, ["RELACIONADOS", "DA NOITE", "RELACIONADOS DA NOITE"], () => {
     paintRelatedNightFrame(ctx, { timeline, time: t, assets, dayLabel });
   }, {
     seed: CUTOUT_TEMPLATE_SEEDS.related,
@@ -181,7 +232,12 @@ export function paintCollageSummary(ctx, { timeline, time = 0, assets, dayLabel 
   if (!ctx || !timeline?.width) return;
   const t = Number(time) || 0;
   const still = Boolean(timeline.still);
-  replaceHeadlines(ctx, ["RESUMO"], () => {
+  const finaleStart = Number(timeline.finaleStart);
+  if (!still && Number.isFinite(finaleStart) && t >= finaleStart) {
+    paintSummaryFrame(ctx, { timeline, time: t, assets, dayLabel });
+    return;
+  }
+  replaceHeadlines(ctx, ["RESUMO", "DO DIA", "DA SEMANA"], () => {
     paintSummaryFrame(ctx, { timeline, time: t, assets, dayLabel });
   }, {
     seed: CUTOUT_TEMPLATE_SEEDS.summary,

@@ -27,7 +27,13 @@ function authorized(request) {
 const server = createServer(async (request, response) => {
   const url = new URL(request.url || "/", `http://${request.headers.host || "localhost"}`);
   if (request.method === "GET" && url.pathname === "/health") {
-    return json(response, 200, { ok: true, service: "strix-fc27-ea-sync", timestamp: new Date().toISOString() });
+    return json(response, 200, {
+      ok: true,
+      service: "strix-fc27-ea-sync",
+      club_id: FC27_CLUB_ID,
+      platform: FC27_PLATFORM,
+      timestamp: new Date().toISOString(),
+    });
   }
   if (request.method !== "POST" || url.pathname !== "/v1/matches") {
     return json(response, 404, { error: "not_found" });

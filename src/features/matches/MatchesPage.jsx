@@ -857,6 +857,8 @@ export function MatchesPage({ profile, workspace, client }) {
       const layer = String(requestError.layer || "").toLowerCase();
       const status = requestError.status || "";
       const layerLabel = layer === "railway" ? `SYNC INDISPONÍVEL. Railway respondeu HTTP ${status || 502}.`
+        : layer === "render" ? `SYNC INDISPONÍVEL. Render respondeu HTTP ${status || 502}.`
+        : layer === "ea_sync" || layer === "local" ? `SYNC INDISPONÍVEL. O serviço de sincronização respondeu HTTP ${status || 502}.`
         : layer === "ea" ? "A EA recusou ou devolveu payload inválido."
         : layer === "pages" ? "Pages não conseguiu completar a consulta."
         : "";

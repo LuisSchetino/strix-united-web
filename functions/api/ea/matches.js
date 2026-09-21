@@ -33,10 +33,31 @@ async function readUpstream(response) {
   };
 }
 
-function upstreamError(upstream, message) {
+function sanitizeHost(value) {
+  try {
+    return new URL(value).host;
+  } catch {
+    return "";
+  }
+}
+
+function eaSyncTarget(env) {
+  const host = sanitizeHost(env.EA_SYNC_API_URL);
+  if (!host) return { host: "", layer: "pages" };
+  const layer = host.includes("railway.app")
+    ? "railway"
+    : host.includes("onrender.com") || host.includes("render.com")
+      ? "render"
+      : host.includes("localhost") || host.includes("127.0.0.1")
+        ? "local"
+        : "ea_sync";
+  return { host, layer };
+}
+
+function upstreamError(upstream, message, layer = "ea_sync") {
   const error = new Error(message);
   error.code = "ea_sync_upstream_error";
-  error.layer = "railway";
+  error.layer = layer;
   error.status = 502;
   error.upstreamStatus = upstream.status;
   error.upstreamContentType = String(upstream.contentType || "").split(";")[0] || "unknown";
@@ -51,6 +72,7 @@ async function fetchAllMatches(env) {
     error.layer = "pages";
     throw error;
   }
+  const target = eaSyncTarget(env);
   const base = new URL(env.EA_SYNC_API_URL);
   if (base.protocol !== "https:") {
     const error = new Error("EA Sync API must use HTTPS.");
@@ -74,12 +96,12 @@ async function fetchAllMatches(env) {
     });
     const upstream = await readUpstream(response);
     if (upstream.html || !upstream.payload) {
-      throw upstreamError(upstream, "Railway respondeu HTML/inválido em vez de JSON.");
+      throw upstreamError(upstream, `${target.layer} respondeu HTML/inválido em vez de JSON.`, target.layer);
     }
     if (!upstream.ok || !upstream.payload.ok || upstream.payload.club_id !== FC27_CLUB_ID || !Array.isArray(upstream.payload.matches)) {
-      const error = new Error(upstream.payload.message || `Railway respondeu HTTP ${upstream.status}.`);
+      const error = new Error(upstream.payload.message || `${target.layer} respondeu HTTP ${upstream.status}.`);
       error.code = upstream.payload.error || "ea_sync_upstream_error";
-      error.layer = "railway";
+      error.layer = target.layer;
       error.status = upstream.status === 429 ? 429 : 502;
       error.upstreamStatus = upstream.status;
       error.upstreamContentType = String(upstream.contentType || "").split(";")[0] || "application/json";
@@ -93,9 +115,10 @@ async function fetchAllMatches(env) {
     };
   } catch (error) {
     if (error?.layer || error?.name === "AbortError") throw error;
-    const wrapped = new Error("Railway não respondeu.");
+    const target = eaSyncTarget(env);
+    const wrapped = new Error(`${target.layer || "ea_sync"} não respondeu.`);
     wrapped.code = "ea_sync_upstream_error";
-    wrapped.layer = "railway";
+    wrapped.layer = target.layer || "ea_sync";
     wrapped.status = 502;
     wrapped.upstreamStatus = 502;
     wrapped.upstreamContentType = "unknown";
@@ -145,12 +168,12 @@ function withAgendaSuggestions(matches, agenda) {
 }
 
 function eaError(error) {
-  const layer = error?.layer || (error?.name === "AbortError" ? "railway" : "pages");
+  const layer = error?.layer || (error?.name === "AbortError" ? "ea_sync" : "pages");
   if (error?.name === "AbortError") {
     return json({
       error: "ea_timeout",
-      layer: "railway",
-      message: "SYNC INDISPONÍVEL. Railway não respondeu a tempo.",
+      layer: "ea_sync",
+      message: "SYNC INDISPONÍVEL. O serviço de sincronização da EA não respondeu a tempo.",
     }, 504);
   }
   const status = error.status === 429 ? 429 : 502;
@@ -159,8 +182,8 @@ function eaError(error) {
     ea_invalid_payload: "A EA respondeu com conteúdo inválido em vez de JSON.",
     ea_sync_not_configured: "O serviço de sincronização da EA não está configurado nas Pages.",
     ea_sync_invalid_response: "O serviço de sincronização respondeu com conteúdo inválido.",
-    ea_sync_upstream_error: error.message || "Railway respondeu HTML ou JSON inválido.",
-    unsupported_club: "Railway recusou o clube FC27 atual.",
+    ea_sync_upstream_error: error.message || "O serviço de sincronização respondeu HTML ou JSON inválido.",
+    unsupported_club: "O serviço de sincronização recusou o clube FC27 atual.",
   };
   return json({
     error: error?.code || "ea_sync_failed",

@@ -28,7 +28,7 @@ test("V2 usa manifest local, não a biblioteca-fonte", async () => {
   const collage = announceIdentityPayload({ people: [], look: "collage" });
   assert.equal(campaign.collageAssets, "");
   assert.equal(collage.collageAssets, lookAssetFingerprint("collage", { seed: 41, mode: "chaos" }));
-  assert.match(collage.collageAssets, /cutout-v2/);
+  assert.match(collage.collageAssets, /cutout-v3/);
   assert.match(collage.collageAssets, /seed:41/);
   assert.ok(collage.collageAssets.includes(collageFingerprintToken()));
   assert.notEqual(campaign.collageAssets, collage.collageAssets);

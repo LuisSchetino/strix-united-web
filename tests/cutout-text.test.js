@@ -16,6 +16,7 @@ import {
   pickCutoutVariant,
   paintCutoutText,
   preloadCutoutChars,
+  readyCutoutVariant,
 } from "../src/features/media/cutout-text.js";
 import { lookAssetFingerprint } from "../src/features/media/media-look.js";
 
@@ -32,10 +33,10 @@ test("mesmo seed reproduz o mesmo layout e fingerprint inclui seed/modo", () => 
     b.rows[0].glyphs.map((item) => [item.x, item.y, item.rot, item.scale]),
   );
   assert.notEqual(a.rows[0].glyphs[0].rot, c.rows[0].glyphs[0].rot);
-  assert.equal(CUTOUT_ENGINE_VERSION, "cutout-v2");
+  assert.equal(CUTOUT_ENGINE_VERSION, "cutout-v3");
   assert.equal(CUTOUT_MANIFEST_VERSION, "letters-real-v1");
   assert.match(cutoutFingerprintToken(), new RegExp(`^${CUTOUT_ENGINE_VERSION}:${CUTOUT_MANIFEST_VERSION}:`));
-  assert.match(lookAssetFingerprint("collage"), /cutout-v2/);
+  assert.match(lookAssetFingerprint("collage"), /cutout-v3/);
   assert.match(lookAssetFingerprint("collage", { seed: 2, mode: "chaos" }), /seed:2/);
   assert.match(lookAssetFingerprint("collage", { seed: 2, mode: "chaos" }), /mode:chaos/);
   assert.notEqual(
@@ -64,10 +65,20 @@ test("Chaos troca variante da mesma letra e nunca o caractere", () => {
   assert.equal(pickCutoutVariant("A", { seed: 7, slot: 0, mode: "static", progress: 0 }), pickCutoutVariant("A", { seed: 7, slot: 0, mode: "static", progress: 4 }));
   assert.ok(variants.size >= 2);
   assert.ok([...variants].every((value) => value >= 1 && value <= CUTOUT_VARIANT_COUNTS.A));
-  const held = pickCutoutVariant("A", { seed: 7, slot: 0, mode: "chaos", progress: 0.12, rate: 8 });
-  const neighbor = pickCutoutVariant("A", { seed: 7, slot: 0, mode: "chaos", progress: 0.13, rate: 8 });
+  assert.equal(readyCutoutVariant("A", 3, 1), 3);
+  const held = pickCutoutVariant("A", { seed: 7, slot: 0, mode: "chaos", progress: 0.12, rate: 7 });
+  const neighbor = pickCutoutVariant("A", { seed: 7, slot: 0, mode: "chaos", progress: 0.13, rate: 7 });
   assert.ok(held >= 1);
   assert.ok(neighbor >= 1);
+  const sequence = Array.from({ length: 30 }, (_, index) => pickCutoutVariant("A", {
+    seed: 7,
+    slot: 0,
+    mode: "chaos",
+    progress: index / 30,
+    rate: 7,
+  }));
+  const swaps = sequence.filter((value, index) => index > 0 && value !== sequence[index - 1]).length;
+  assert.ok(swaps >= 3 && swaps <= 16, `ritmo de chaos: ${swaps} trocas/s`);
   assert.equal(normalizeCutoutChar("á"), "A");
   assert.equal(normalizeCutoutChar("%"), "?");
 });
@@ -114,6 +125,7 @@ test("multiline, max width, fallback e preload seletivo", async () => {
     restore() {},
     translate() {},
     rotate() {},
+    scale() {},
     fillRect() {},
     strokeRect() {},
     fillText(text) { this.texts.push(String(text)); },
