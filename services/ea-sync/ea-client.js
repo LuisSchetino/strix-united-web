@@ -36,8 +36,8 @@ export function createEaGateway({
   fetchImpl = fetch,
   now = Date.now,
   cacheMs = 45_000,
-  timeoutMs = 12_000,
-  retries = 2,
+  timeoutMs = 5_000,
+  retries = 1,
   random = Math.random,
 } = {}) {
   const cache = new Map();
@@ -64,7 +64,7 @@ export function createEaGateway({
           let payload;
           try { payload = JSON.parse(text); } catch { payload = null; }
           const matches = parseEaMatchesPayload(payload);
-          if (response.ok && matches) {
+          if (response.ok && Array.isArray(matches)) {
             cache.set(key, { savedAt: now(), matches });
             return { matches, cached: false };
           }
@@ -95,16 +95,23 @@ export function createEaGateway({
     maxResultCount = FC27_MAX_RESULTS,
   } = {}) {
     const startedAt = now();
-    const results = await Promise.all(MATCH_TYPES.map(async (matchType) => ({
-      matchType,
-      result: await loadType({ clubId, platform, matchType, maxResultCount }),
-    })));
+    const settled = await Promise.all(MATCH_TYPES.map(async (matchType) => {
+      try {
+        return { matchType, result: await loadType({ clubId, platform, matchType, maxResultCount }), error: null };
+      } catch (error) {
+        return { matchType, result: { matches: [], cached: false }, error };
+      }
+    }));
+    const failures = settled.filter((item) => item.error);
+    if (failures.length === MATCH_TYPES.length) {
+      throw failures[0].error;
+    }
     return {
-      matches: results.flatMap(({ matchType, result }) => result.matches.map((match) => ({
+      matches: settled.flatMap(({ matchType, result }) => result.matches.map((match) => ({
         ...match,
         _fc27MatchType: matchType,
       }))),
-      cached: results.every(({ result }) => result.cached),
+      cached: settled.every(({ result }) => result.cached),
       durationMs: Math.max(0, now() - startedAt),
     };
   };

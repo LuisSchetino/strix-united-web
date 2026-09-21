@@ -1,3 +1,6 @@
+import { collageFingerprintToken } from "../../assets/collage/index.js";
+import { cutoutFingerprintToken } from "./cutout-text.js";
+
 export const MEDIA_LOOK_STORAGE_KEY = "strix-fc27-media-look";
 
 export const MEDIA_LOOKS = Object.freeze({
@@ -51,4 +54,11 @@ export function mediaLookLabel(value) {
 export function withMediaLook(timeline, look) {
   if (!timeline || typeof timeline !== "object") return timeline;
   return { ...timeline, mediaLook: normalizeMediaLook(look || timeline.mediaLook) };
+}
+
+export function lookAssetFingerprint(look, extra = {}) {
+  if (normalizeMediaLook(look) !== "collage") return "";
+  const seed = extra.seed == null ? "" : String(extra.seed);
+  const mode = extra.mode ? String(extra.mode) : "";
+  return `${collageFingerprintToken()}|${cutoutFingerprintToken()}|seed:${seed}|mode:${mode}`;
 }

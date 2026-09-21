@@ -43,6 +43,7 @@ import { AccessDenied } from "../../ui/AccessDenied.jsx";
 import { MediaLookBadge, MediaLookSwitch } from "./MediaLookSwitch.jsx";
 import { readStoredMediaLook, withMediaLook, writeStoredMediaLook } from "./media-look.js";
 import { preloadCollageAssets } from "../../assets/collage/index.js";
+import { preloadCutoutChars } from "./cutout-text.js";
 import "./media.css";
 
 function PreviewCanvas({
@@ -159,8 +160,11 @@ export function MediaPage({ profile, client, workspace }) {
   const [mediaLook, setMediaLook] = useState(readStoredMediaLook);
   const setLook = (value) => setMediaLook(writeStoredMediaLook(value));
   useEffect(() => {
-    if (mediaLook === "collage") void preloadCollageAssets();
-  }, [mediaLook]);
+    if (mediaLook !== "collage") return;
+    void preloadCollageAssets();
+    const names = (workspace.players || []).map((item) => item.display_name || item.name || "").join(" ");
+    void preloadCutoutChars(`AGENDA RELACIONADOS RESUMO ELENCO ${names}`);
+  }, [mediaLook, workspace.players]);
   const day = useMemo(() => formatAgendaDay(), []);
   const matches = useMemo(() => collectTodayAgenda(workspace), [workspace.agenda, workspace.competitions, workspace.competitionFixtures]);
   const relatedState = useMemo(

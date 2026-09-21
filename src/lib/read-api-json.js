@@ -1,10 +1,11 @@
 export class ApiJsonError extends Error {
-  constructor(message, { code = "invalid_json", status = 0, detail = "" } = {}) {
+  constructor(message, { code = "invalid_json", status = 0, detail = "", layer = "" } = {}) {
     super(message);
     this.name = "ApiJsonError";
     this.code = code;
     this.status = status;
     this.detail = detail;
+    this.layer = layer;
   }
 }
 
@@ -20,6 +21,7 @@ export function parseApiJson(text, { status = 0, contentType = "" } = {}) {
     throw new ApiJsonError("A rota da EA devolveu HTML em vez de JSON.", {
       code: "html_instead_of_json",
       status,
+      layer: "pages",
       detail: `HTTP ${status || "?"} · ${String(contentType || "unknown").split(";")[0] || "unknown"}`,
     });
   }
@@ -45,7 +47,12 @@ export async function readApiJson(response) {
       {
         code: payload.error || "http_error",
         status: response.status,
-        detail: payload.detail || `HTTP ${response.status}`,
+        layer: payload.layer || "",
+        detail: [
+          payload.layer ? String(payload.layer).toUpperCase() : "",
+          payload.upstreamStatus ? `HTTP ${payload.upstreamStatus}` : `HTTP ${response.status}`,
+          payload.upstreamContentType || "",
+        ].filter(Boolean).join(" · "),
       },
     );
   }

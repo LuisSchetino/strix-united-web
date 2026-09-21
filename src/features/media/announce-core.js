@@ -1,4 +1,5 @@
-import { collageFingerprintToken } from "../../assets/collage/index.js";
+import { lookAssetFingerprint } from "./media-look.js";
+import { CUTOUT_TEMPLATE_SEEDS } from "./cutout-text.js";
 import { MEDIA_FORMATS, opponentInitials } from "./agenda-media-core.js";
 import { ANNOUNCE_FX_REVISION } from "./announce-fx.js";
 import { positionGroup } from "./related-night-core.js";
@@ -305,7 +306,10 @@ export function announceIdentityPayload({
     phraseId: String(phraseId || ""),
     phrase: String(phrase || ""),
     look: String(mediaLook || look || "campaign"),
-    collageAssets: String(mediaLook || look || "campaign") === "collage" ? collageFingerprintToken() : "",
+    collageAssets: lookAssetFingerprint(mediaLook || look, {
+      seed: CUTOUT_TEMPLATE_SEEDS.announce,
+      mode: format === "feed" ? "static" : "chaos",
+    }),
     people: people.map((person) => ({
       id: person.id || "",
       name: person.name || "",

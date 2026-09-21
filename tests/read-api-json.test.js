@@ -28,4 +28,8 @@ test("Buscar na EA trata [] como vazio válido e não chama json() cego", async 
   assert.doesNotMatch(main, /if \(!normalized\.length\) throw/);
   assert.doesNotMatch(matches, /await response\.json\(\)/);
   assert.match(matches, /A EA respondeu normalmente, mas não retornou partidas recentes/);
+  assert.match(matches, /SYNC INDISPONÍVEL/);
+  assert.match(matches, /layer === "railway"/);
+  assert.match(matches, /layer === "ea"/);
+  assert.match(matches, /layer === "pages"/);
 });

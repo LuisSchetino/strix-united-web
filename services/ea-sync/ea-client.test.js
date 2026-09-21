@@ -43,6 +43,22 @@ test("headers não carregam qualquer segredo", () => {
   assert.equal("authorization" in headers, false);
 });
 
+test("[] é sucesso e uma liga válida não cai se o amistoso falhar", async () => {
+  const gateway = createEaGateway({
+    retries: 0,
+    fetchImpl: async (url) => {
+      const href = String(url);
+      if (href.includes("friendlyMatch")) return new Response("[]", { status: 200, headers: { "content-type": "application/json" } });
+      if (href.includes("playoffMatch")) return new Response("<html>blocked</html>", { status: 502, headers: { "content-type": "text/html" } });
+      return new Response(JSON.stringify([{ matchId: "league-1" }]), { status: 200, headers: { "content-type": "application/json" } });
+    },
+  });
+  const result = await gateway();
+  assert.equal(result.matches.length, 1);
+  assert.equal(result.matches[0].matchId, "league-1");
+  assert.equal(result.matches[0]._fc27MatchType, "leagueMatch");
+});
+
 test("aceita array ou {matches} e não cacheia erro/HTML", async () => {
   assert.deepEqual(parseEaMatchesPayload([{ matchId: "1" }]), [{ matchId: "1" }]);
   assert.deepEqual(parseEaMatchesPayload({ matches: [{ matchId: "2" }] }), [{ matchId: "2" }]);

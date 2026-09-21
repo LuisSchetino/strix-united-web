@@ -854,10 +854,16 @@ export function MatchesPage({ profile, workspace, client }) {
         status: "success",
       }));
     } catch (requestError) {
+      const layer = String(requestError.layer || "").toLowerCase();
+      const status = requestError.status || "";
+      const layerLabel = layer === "railway" ? `SYNC INDISPONÍVEL. Railway respondeu HTTP ${status || 502}.`
+        : layer === "ea" ? "A EA recusou ou devolveu payload inválido."
+        : layer === "pages" ? "Pages não conseguiu completar a consulta."
+        : "";
       setError(
         requestError.message || "Não foi possível consultar as partidas.",
       );
-      setErrorDetail(requestError.detail || "");
+      setErrorDetail([layerLabel, requestError.detail].filter(Boolean).join(" "));
       setMetrics((current) => ({
         ...current,
         totalMs: Math.round(performance.now() - started),

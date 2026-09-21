@@ -1,5 +1,6 @@
-import { collageFingerprintToken } from "../../assets/collage/index.js";
 import { saoPauloDay, todayAgendaMatches } from "../agenda/agenda-time.js";
+import { lookAssetFingerprint } from "./media-look.js";
+import { CUTOUT_TEMPLATE_SEEDS } from "./cutout-text.js";
 
 export const AGENDA_TEMPLATE_ID = "agenda-day";
 export const AGENDA_TEMPLATE_VERSION = "agenda-day-v7";
@@ -82,7 +83,10 @@ export function renderIdentityPayload({ day, format, matches = [], look = "campa
     template: AGENDA_TEMPLATE_ID,
     templateVersion,
     look: String(mediaLook || look || "campaign"),
-    collageAssets: String(mediaLook || look || "campaign") === "collage" ? collageFingerprintToken() : "",
+    collageAssets: lookAssetFingerprint(mediaLook || look, {
+      seed: CUTOUT_TEMPLATE_SEEDS.agenda,
+      mode: format === "feed" ? "static" : "chaos",
+    }),
     matches: matches.map((match) => ({
       id: match.id || "",
       scheduled_at: match.scheduled_at || "",

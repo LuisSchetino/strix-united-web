@@ -26,6 +26,15 @@ test("serviço externo é privado, limitado ao clube FC27 e usa os três tipos",
   }
 });
 
+test("Pages nunca devolve HTML do Railway e identifica a camada", () => {
+  assert.match(functionSource, /await response\.text\(\)/);
+  assert.match(functionSource, /ea_sync_upstream_error/);
+  assert.match(functionSource, /layer: "railway"/);
+  assert.match(functionSource, /layer: "ea"/);
+  assert.match(functionSource, /10_000/);
+  assert.doesNotMatch(functionSource, /await response\.json\(\)/);
+});
+
 test("token do serviço não aparece em query string ou resposta", () => {
   assert.doesNotMatch(serverSource, /searchParams\.get\(["']token/);
   assert.doesNotMatch(serverSource, /API_TOKEN[^\n]*json/);

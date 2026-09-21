@@ -1,4 +1,5 @@
-import { collageFingerprintToken } from "../../assets/collage/index.js";
+import { lookAssetFingerprint } from "./media-look.js";
+import { CUTOUT_TEMPLATE_SEEDS } from "./cutout-text.js";
 import { saoPauloDay, todayAgendaMatches } from "../agenda/agenda-time.js";
 import { formatAgendaDay, MEDIA_FORMATS } from "./agenda-media-core.js";
 
@@ -163,7 +164,10 @@ export function relatedNightIdentityPayload({
     source: "night_related",
     saved: Boolean(saved),
     look: String(mediaLook || look || "campaign"),
-    collageAssets: String(mediaLook || look || "campaign") === "collage" ? collageFingerprintToken() : "",
+    collageAssets: lookAssetFingerprint(mediaLook || look, {
+      seed: CUTOUT_TEMPLATE_SEEDS.related,
+      mode: format === "feed" ? "static" : "match_cut",
+    }),
     players: players.map((player) => ({
       id: player.id || "",
       name: player.name || "",
