@@ -28,12 +28,6 @@ function fontPx(font, fallback = 96) {
   return match ? Number(match[1]) : fallback;
 }
 
-function isTitleFace(font) {
-  const face = String(font || "");
-  if (!face) return true;
-  return /rajdhani/i.test(face);
-}
-
 function hexToRgb(hex) {
   const value = String(hex || "").replace("#", "");
   if (value.length < 6) return { r: 233, g: 75, b: 155 };
@@ -59,9 +53,9 @@ function classifyAccent(hex) {
 
 function accentTrio(primary = "") {
   const lead = classifyAccent(primary);
-  if (lead === V2_CYAN) return [V2_CYAN, V2_PINK, V2_YELLOW];
-  if (lead === V2_YELLOW) return [V2_YELLOW, V2_CYAN, V2_PINK];
-  return [V2_PINK, V2_CYAN, V2_YELLOW];
+  if (lead === V2_CYAN) return [V2_CYAN, V2_YELLOW];
+  if (lead === V2_YELLOW) return [V2_YELLOW, V2_CYAN];
+  return [V2_PINK, V2_CYAN];
 }
 
 export function collageHeadlineMode(still, time = 0) {
@@ -101,7 +95,8 @@ export function paintCollageWord(ctx, text, x, y, {
   const local = Math.max(0, Number(time) - Number(start));
   const motion = animation || collageHeadlineMode(still, local);
   const layout = layoutCutoutText(text, { seed, size, maxWidth, align: "left" });
-  const left = align === "center" ? x - layout.width / 2 : align === "right" ? x - layout.width : x;
+  const rawLeft = align === "center" ? x - layout.width / 2 : align === "right" ? x - layout.width : x;
+  const left = align === "left" ? Math.max(24, rawLeft) : rawLeft;
   const prev = {
     font: ctx.font,
     fillStyle: ctx.fillStyle,
@@ -142,93 +137,101 @@ function isMetaCopy(text) {
   return false;
 }
 
-function paintBrushMark(ctx, bitmap, { x, y, w, h, rot = 0, alpha = 0.28, color = V2_PINK, composite = "screen" }) {
+function tintedBrush(bitmap, color, dw, dh) {
+  const scratch = typeof OffscreenCanvas === "function"
+    ? new OffscreenCanvas(Math.ceil(dw), Math.ceil(dh))
+    : (typeof document !== "undefined" ? document.createElement("canvas") : null);
+  if (!scratch?.getContext) return null;
+  scratch.width = Math.max(1, Math.ceil(dw));
+  scratch.height = Math.max(1, Math.ceil(dh));
+  const sctx = scratch.getContext("2d");
+  if (!sctx) return null;
+  sctx.drawImage(bitmap, 0, 0, dw, dh);
+  sctx.globalCompositeOperation = "source-in";
+  sctx.fillStyle = color;
+  sctx.fillRect(0, 0, dw, dh);
+  return scratch;
+}
+
+function paintBrushMark(ctx, bitmap, { x, y, maxW = 220, maxH = 56, rot = 0, alpha = 0.22, color = V2_PINK } = {}) {
   ctx.save();
-  ctx.globalAlpha = alpha;
   ctx.translate(x, y);
   ctx.rotate(rot);
+  ctx.globalAlpha = alpha;
+  ctx.globalCompositeOperation = "screen";
   if (bitmap && typeof ctx.drawImage === "function") {
-    ctx.globalCompositeOperation = composite;
-    ctx.drawImage(bitmap, -w / 2, -h / 2, w, h);
-    ctx.globalCompositeOperation = "source-atop";
-    ctx.fillStyle = color;
-    ctx.globalAlpha = alpha * 0.72;
-    ctx.fillRect(-w / 2, -h / 2, w, h);
+    const iw = Math.max(1, bitmap.width || maxW);
+    const ih = Math.max(1, bitmap.height || maxH);
+    const aspect = iw / ih;
+    let dw = maxW;
+    let dh = dw / aspect;
+    if (dh > maxH) {
+      dh = maxH;
+      dw = dh * aspect;
+    }
+    const tinted = tintedBrush(bitmap, color, dw, dh);
+    if (tinted) ctx.drawImage(tinted, -dw / 2, -dh / 2);
+    else ctx.drawImage(bitmap, -dw / 2, -dh / 2, dw, dh);
   } else {
     ctx.strokeStyle = color;
-    ctx.lineWidth = Math.max(10, h * 0.18);
+    ctx.lineWidth = 7;
     ctx.lineCap = "round";
     ctx.beginPath();
-    ctx.moveTo(-w * 0.42, h * 0.08);
-    ctx.quadraticCurveTo(0, -h * 0.22, w * 0.4, h * 0.04);
+    ctx.moveTo(-42, 6);
+    ctx.quadraticCurveTo(8, -14, 48, 4);
     ctx.stroke();
   }
   ctx.restore();
 }
 
-function paintEnergyField(ctx, timeline, { accent = "", time = 0, seed = 2, kind = "intro" } = {}) {
+function paintHeadlineAccents(ctx, timeline, {
+  accent = "",
+  time = 0,
+  seed = 2,
+  x = 0,
+  y = 0,
+} = {}) {
   if (!ctx || !timeline?.width) return;
-  const { width, height } = timeline;
-  const [pink, cyan, yellow] = accentTrio(accent);
-  const pulse = 0.5 + Math.sin(time * 1.6 + seed) * 0.5;
+  const [lead, second] = accentTrio(accent);
+  const pulse = 0.5 + Math.sin(time * 1.2 + seed) * 0.5;
   ctx.save();
   ctx.globalCompositeOperation = "screen";
-  const wash = ctx.createRadialGradient(width * 0.5, height * (kind === "hero" ? 0.42 : kind === "match" ? 0.22 : 0.36), 20, width * 0.5, height * (kind === "match" ? 0.22 : 0.4), width * (kind === "match" ? 0.42 : 0.62));
-  wash.addColorStop(0, rgba(pink, kind === "match" ? 0.05 : 0.1 + pulse * 0.04));
-  wash.addColorStop(0.45, rgba(cyan, kind === "match" ? 0.03 : 0.05));
-  wash.addColorStop(1, "rgba(5,6,7,0)");
-  ctx.fillStyle = wash;
-  ctx.fillRect(0, 0, width, height * (kind === "match" ? 0.38 : 0.72));
-  ctx.restore();
-
-  const brushA = pickCollageAsset("brushes", seed);
-  const brushB = pickCollageAsset("brushes", seed + 1);
-  paintBrushMark(ctx, brushA, {
-    x: width * 0.5,
-    y: height * (kind === "announce" ? 0.58 : 0.34),
-    w: width * 0.92,
-    h: height * 0.16,
-    rot: -0.08,
-    alpha: 0.22,
-    color: pink,
-  });
-  paintBrushMark(ctx, brushB, {
-    x: width * 0.58,
-    y: height * (kind === "announce" ? 0.64 : 0.4),
-    w: width * 0.7,
-    h: height * 0.1,
-    rot: 0.12,
-    alpha: 0.16,
-    color: cyan,
-  });
-
-  ctx.save();
-  ctx.globalCompositeOperation = "screen";
-  ctx.globalAlpha = 0.18 + pulse * 0.08;
-  const flare = ctx.createRadialGradient(width * 0.72, height * 0.3, 4, width * 0.72, height * 0.3, 120);
-  flare.addColorStop(0, rgba(yellow, 0.55));
-  flare.addColorStop(1, "rgba(242,201,76,0)");
+  const glow = ctx.createRadialGradient(x, y, 8, x, y, 140);
+  glow.addColorStop(0, rgba(lead, 0.16 + pulse * 0.05));
+  glow.addColorStop(1, "rgba(5,6,7,0)");
+  ctx.fillStyle = glow;
+  ctx.beginPath();
+  ctx.arc(x, y, 140, 0, Math.PI * 2);
+  ctx.fill();
+  const flare = ctx.createRadialGradient(x + 86, y - 48, 2, x + 86, y - 48, 36);
+  flare.addColorStop(0, rgba(second, 0.42));
+  flare.addColorStop(1, "rgba(5,6,7,0)");
   ctx.fillStyle = flare;
   ctx.beginPath();
-  ctx.arc(width * 0.72, height * 0.3, 90, 0, Math.PI * 2);
+  ctx.arc(x + 86, y - 48, 36, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
 
   ctx.save();
-  ctx.globalAlpha = 0.35;
-  ctx.strokeStyle = rgba(cyan, 0.55);
-  ctx.lineWidth = 1.4;
+  ctx.globalAlpha = 0.28;
+  ctx.strokeStyle = rgba(second, 0.7);
+  ctx.lineWidth = 1.2;
   ctx.beginPath();
-  ctx.moveTo(width * 0.18, height * 0.22);
-  ctx.lineTo(width * 0.34, height * 0.22);
-  ctx.stroke();
-  ctx.strokeStyle = rgba(pink, 0.7);
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.moveTo(width * 0.5 - 36, height * (kind === "announce" ? 0.7 : 0.48));
-  ctx.lineTo(width * 0.5 + 36, height * (kind === "announce" ? 0.7 : 0.48));
+  ctx.moveTo(x - 90, y - 70);
+  ctx.lineTo(x - 28, y - 70);
   ctx.stroke();
   ctx.restore();
+
+  const brush = pickCollageAsset("brushes", seed);
+  paintBrushMark(ctx, brush, {
+    x: x + 70,
+    y: y + 18,
+    maxW: 168,
+    maxH: 44,
+    rot: -0.16,
+    alpha: 0.2,
+    color: lead,
+  });
 }
 
 function paintHeroStack(ctx, timeline, {
@@ -239,6 +242,7 @@ function paintHeroStack(ctx, timeline, {
   start = 0,
   y = 0,
   primary = 236,
+  stackLead = 1.08,
 } = {}) {
   const width = timeline.width;
   const secondary = Math.round(primary * 0.5);
@@ -258,19 +262,36 @@ function paintHeroStack(ctx, timeline, {
     });
     if (painted?.dominantAccent) accent = painted.dominantAccent;
     paintedLines.push({ text, y: cursor, size });
-    cursor += size * (index === 0 ? 0.86 : 0.78);
+    cursor += index === 0 ? size * 0.88 : size * stackLead;
   });
-  if (accent) {
+  if (accent || paintedLines[0]) {
     ctx.save();
-    ctx.globalAlpha = 0.85;
-    ctx.fillStyle = classifyAccent(accent);
-    ctx.fillRect(width / 2 - 34, paintedLines[0].y + 14, 68, 3);
+    ctx.globalAlpha = 0.8;
+    ctx.fillStyle = classifyAccent(accent || V2_CYAN);
+    ctx.fillRect(width / 2 - 28, paintedLines[0].y + 10, 56, 2);
     ctx.restore();
   }
   return { accent, bottom: cursor, lines: paintedLines };
 }
 
-function withCollagePass(ctx, { skip = [], shiftMeta = 0, collectNames = [] }, paint) {
+function paintMetaBlock(ctx, timeline, { date = "", count = "", y = 0 } = {}) {
+  if (!ctx) return;
+  const x = timeline.width / 2;
+  ctx.save();
+  ctx.textAlign = "center";
+  ctx.fillStyle = "#efece6";
+  if (date) {
+    ctx.font = `700 ${timeline.format === "feed" ? 32 : 44}px Inter, sans-serif`;
+    ctx.fillText(date, x, y);
+  }
+  if (count) {
+    ctx.font = `800 ${timeline.format === "feed" ? 48 : 72}px Inter, sans-serif`;
+    ctx.fillText(count, x, y + (timeline.format === "feed" ? 56 : 72));
+  }
+  ctx.restore();
+}
+
+function withCollagePass(ctx, { skip = [], skipMeta = false, collectNames = [] }, paint) {
   const original = ctx?.fillText;
   if (typeof original !== "function") {
     paint();
@@ -281,7 +302,8 @@ function withCollagePass(ctx, { skip = [], shiftMeta = 0, collectNames = [] }, p
   const hits = [];
   ctx.fillText = function patchedFillText(text, x = 0, y = 0, ...rest) {
     const key = normalizeHeadline(text);
-    if (deny.has(key) && isTitleFace(ctx.font)) {
+    if (skipMeta && isMetaCopy(text)) return undefined;
+    if (deny.has(key) || names.has(key)) {
       hits.push({
         text: key,
         x: Number(x) || 0,
@@ -292,19 +314,7 @@ function withCollagePass(ctx, { skip = [], shiftMeta = 0, collectNames = [] }, p
       });
       return undefined;
     }
-    if (names.has(key) && isTitleFace(ctx.font)) {
-      hits.push({
-        text: key,
-        x: Number(x) || 0,
-        y: Number(y) || 0,
-        align: ctx.textAlign === "left" ? "left" : ctx.textAlign,
-        size: fontPx(ctx.font, 96),
-        transform: typeof ctx.getTransform === "function" ? ctx.getTransform() : null,
-      });
-      return undefined;
-    }
-    const nextY = shiftMeta && isMetaCopy(text) ? Number(y) + shiftMeta : y;
-    return original.call(this, text, x, nextY, ...rest);
+    return original.call(this, text, x, y, ...rest);
   };
   try {
     paint();
@@ -334,24 +344,35 @@ export function paintCollageAgenda(ctx, { timeline, time = 0, assets, dayLabel }
     paintAgendaFrame(ctx, { timeline, time: t, assets, dayLabel });
     return;
   }
-  const shiftMeta = intro ? 286 : 0;
-  withCollagePass(ctx, { skip: ["AGENDA", "DO DIA"], shiftMeta }, () => {
+  withCollagePass(ctx, { skip: ["AGENDA", "DO DIA"], skipMeta: intro }, () => {
     paintAgendaFrame(ctx, { timeline, time: t, assets, dayLabel });
   });
   if (intro) {
-    paintEnergyField(ctx, timeline, { time: t, seed: CUTOUT_TEMPLATE_SEEDS.agenda, kind: "intro" });
+    const y = Math.round(timeline.height * 0.4);
+    paintHeadlineAccents(ctx, timeline, {
+      accent: V2_PINK,
+      time: t,
+      seed: CUTOUT_TEMPLATE_SEEDS.agenda,
+      x: timeline.width / 2,
+      y,
+    });
     paintHeroStack(ctx, timeline, {
       lines: ["AGENDA", "DO", "DIA"],
       seed: CUTOUT_TEMPLATE_SEEDS.agenda,
       time: t,
       still,
       start: motionStart(timeline),
-      y: timeline.safe.top + 252,
+      y,
       primary: Math.round(Math.min(timeline.width * 0.248, 268)),
     });
-    return;
+    const countLabel = String(timeline.matches?.length || 0).padStart(2, "0");
+    const games = `${countLabel} ${(timeline.matches?.length || 0) === 1 ? "JOGO" : "JOGOS"}`;
+    paintMetaBlock(ctx, timeline, {
+      date: dayLabel,
+      count: games,
+      y: timeline.height - timeline.safe.bottom - 108,
+    });
   }
-  paintEnergyField(ctx, timeline, { time: t, seed: CUTOUT_TEMPLATE_SEEDS.agenda, kind: "match", accent: V2_YELLOW });
 }
 
 export function paintCollageRelated(ctx, { timeline, time = 0, assets, dayLabel } = {}) {
@@ -364,19 +385,32 @@ export function paintCollageRelated(ctx, { timeline, time = 0, assets, dayLabel 
     paintRelatedNightFrame(ctx, { timeline, time: t, assets, dayLabel });
     return;
   }
-  withCollagePass(ctx, { skip: ["RELACIONADOS", "DA NOITE", "RELACIONADOS DA NOITE"], shiftMeta: intro ? 168 : 0 }, () => {
+  withCollagePass(ctx, { skip: ["RELACIONADOS", "DA NOITE", "RELACIONADOS DA NOITE"], skipMeta: intro }, () => {
     paintRelatedNightFrame(ctx, { timeline, time: t, assets, dayLabel });
   });
   if (intro) {
-    paintEnergyField(ctx, timeline, { time: t, seed: CUTOUT_TEMPLATE_SEEDS.related, kind: "intro" });
-    paintHeroStack(ctx, timeline, {
+    const y = Math.round(timeline.safe.top + timeline.height * 0.16);
+    paintHeadlineAccents(ctx, timeline, {
+      accent: V2_CYAN,
+      time: t,
+      seed: CUTOUT_TEMPLATE_SEEDS.related,
+      x: timeline.width / 2,
+      y,
+    });
+    const stack = paintHeroStack(ctx, timeline, {
       lines: ["RELACIONADOS", "DA", "NOITE"],
       seed: CUTOUT_TEMPLATE_SEEDS.related,
       time: t,
       still,
       start: motionStart(timeline),
-      y: timeline.safe.top + 168,
-      primary: Math.round(Math.min(timeline.width * 0.176, 198)),
+      y,
+      primary: Math.round(Math.min(timeline.width * 0.168, 186)),
+      stackLead: 1.62,
+    });
+    paintMetaBlock(ctx, timeline, {
+      date: dayLabel,
+      count: `${timeline.players?.length || 0} RELACIONADOS`,
+      y: Math.max(Math.round(timeline.height * 0.54), Math.round(stack.bottom + 36)),
     });
   }
 }
@@ -384,7 +418,8 @@ export function paintCollageRelated(ctx, { timeline, time = 0, assets, dayLabel 
 export function paintCollageAnnounce(ctx, { timeline, time = 0, assets } = {}) {
   if (!ctx || !timeline?.width) return;
   const t = Number(time) || 0;
-  const person = timeline.person || timeline.people?.[0];
+  const scene = (timeline.scenes || []).find((item) => t >= item.start && t < item.end);
+  const person = scene?.person || timeline.person || timeline.people?.[0];
   const name = campaignName(person || {});
   if (timeline.kind === "team" || !name) {
     paintAnnounceFrame(ctx, { timeline, time: t, assets });
@@ -395,48 +430,46 @@ export function paintCollageAnnounce(ctx, { timeline, time = 0, assets } = {}) {
   const { hits } = withCollagePass(ctx, { skip, collectNames: skip }, () => {
     paintAnnounceFrame(ctx, { timeline, time: t, assets });
   });
-  const paper = pickCollageAsset("tornPaper", CUTOUT_TEMPLATE_SEEDS.announce);
-  const tape = pickCollageAsset("brushes", CUTOUT_TEMPLATE_SEEDS.announce + 4);
-  if (hits.length) {
-    const lead = hits[0];
-    paintEnergyField(ctx, timeline, {
+  if (!hits.length && !still && t < Number(timeline.introEnd || 0)) return;
+  const lead = hits[0] || {
+    text: normalizeHeadline(name),
+    x: timeline.safe?.side || 64,
+    y: timeline.height * 0.72,
+    align: "left",
+    size: timeline.format === "feed" ? 132 : 176,
+    transform: null,
+  };
+  const brush = pickCollageAsset("brushes", CUTOUT_TEMPLATE_SEEDS.announce);
+  paintBrushMark(ctx, brush, {
+    x: lead.x + 90,
+    y: lead.y - lead.size * 0.35,
+    maxW: 150,
+    maxH: 38,
+    rot: -0.2,
+    alpha: 0.22,
+    color: V2_PINK,
+  });
+  paintHeadlineAccents(ctx, timeline, {
+    accent: V2_PINK,
+    time: t,
+    seed: CUTOUT_TEMPLATE_SEEDS.announce,
+    x: lead.x + 120,
+    y: lead.y - 20,
+  });
+  const targets = hits.length ? hits : [lead];
+  targets.forEach((hit, index) => {
+    const size = Math.round(Math.min(hit.size || 176, timeline.format === "feed" ? 84 : 152));
+    const x = Math.max(Number(hit.x) || 0, timeline.safe?.side || 72) + 40;
+    paintCollageWord(ctx, hit.text, x, hit.y + (index ? size * 0.06 : 0), {
+      size,
+      seed: CUTOUT_TEMPLATE_SEEDS.announce + index,
       time: t,
-      seed: CUTOUT_TEMPLATE_SEEDS.announce,
-      kind: "announce",
-      accent: V2_PINK,
+      start: motionStart(timeline, { name: true }),
+      still,
+      maxWidth: Math.max(220, timeline.width - x - (timeline.safe?.side || 64) - 12),
+      align: "left",
     });
-    if (paper) {
-      ctx.save();
-      ctx.globalAlpha = 0.42;
-      ctx.translate(lead.x + 24, lead.y - lead.size * 0.7);
-      ctx.rotate(-0.06);
-      ctx.drawImage(paper, 0, 0, Math.max(220, lead.size * 2.6), Math.max(90, lead.size * 1.05));
-      ctx.restore();
-    }
-    paintBrushMark(ctx, tape, {
-      x: lead.x + 80,
-      y: lead.y - lead.size * 0.55,
-      w: 220,
-      h: 28,
-      rot: -0.18,
-      alpha: 0.34,
-      color: V2_YELLOW,
-    });
-    hits.forEach((hit, index) => {
-      const size = Math.round(Math.max(hit.size * 1.28, timeline.format === "feed" ? 96 : 198));
-      paintCollageWord(ctx, hit.text, hit.x, hit.y + (index ? size * 0.08 : 0), {
-        size,
-        seed: CUTOUT_TEMPLATE_SEEDS.announce + index,
-        time: t,
-        start: motionStart(timeline, { name: true }),
-        still,
-        maxWidth: timeline.width - (timeline.safe?.side || 64) - 24,
-        align: hit.align,
-      });
-    });
-    return;
-  }
-  paintEnergyField(ctx, timeline, { time: t, seed: CUTOUT_TEMPLATE_SEEDS.announce, kind: "announce", accent: V2_PINK });
+  });
 }
 
 export function paintCollageSummary(ctx, { timeline, time = 0, assets, dayLabel } = {}) {
@@ -450,18 +483,25 @@ export function paintCollageSummary(ctx, { timeline, time = 0, assets, dayLabel 
     return;
   }
   const week = /SEMANA/i.test(timeline.period?.title || "");
-  withCollagePass(ctx, { skip: ["RESUMO", "DO DIA", "DA SEMANA"], shiftMeta: intro ? 148 : 0 }, () => {
+  withCollagePass(ctx, { skip: ["RESUMO", "DO DIA", "DA SEMANA"], skipMeta: intro }, () => {
     paintSummaryFrame(ctx, { timeline, time: t, assets, dayLabel });
   });
   if (intro) {
-    paintEnergyField(ctx, timeline, { time: t, seed: CUTOUT_TEMPLATE_SEEDS.summary, kind: "intro" });
+    const y = Math.round(timeline.safe.top + 220);
+    paintHeadlineAccents(ctx, timeline, {
+      accent: V2_YELLOW,
+      time: t,
+      seed: CUTOUT_TEMPLATE_SEEDS.summary,
+      x: timeline.width / 2,
+      y,
+    });
     paintHeroStack(ctx, timeline, {
       lines: week ? ["RESUMO", "DA", "SEMANA"] : ["RESUMO", "DO", "DIA"],
       seed: CUTOUT_TEMPLATE_SEEDS.summary,
       time: t,
       still,
       start: motionStart(timeline),
-      y: timeline.safe.top + 176,
+      y,
       primary: Math.round(Math.min(timeline.width * 0.214, 228)),
     });
   }

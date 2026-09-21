@@ -859,7 +859,7 @@ export function MatchesPage({ profile, workspace, client }) {
       const layerLabel = layer === "railway" ? `SYNC INDISPONÍVEL. Railway respondeu HTTP ${status || 502}.`
         : layer === "render" ? `SYNC INDISPONÍVEL. Render respondeu HTTP ${status || 502}.`
         : layer === "ea_sync" || layer === "local" ? `SYNC INDISPONÍVEL. O serviço de sincronização respondeu HTTP ${status || 502}.`
-        : layer === "pages_edge" ? `SYNC INDISPONÍVEL. A borda da Pages respondeu HTML HTTP ${status || 502}.`
+        : layer === "pages_edge" ? "Falha antes da resposta da API."
         : layer === "ea" ? "A EA recusou ou devolveu payload inválido."
         : layer === "pages" ? "Pages não conseguiu completar a consulta."
         : "";

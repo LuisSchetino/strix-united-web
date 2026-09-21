@@ -1,4 +1,5 @@
 import { authenticateDiscordMember, json, requireTier } from "../../_lib/auth.js";
+import { stampApiResponse } from "../../_lib/api-sentinel.js";
 import { normalizeEaMatches, suggestAgendaMatches } from "../../../src/features/matches/import-core.js";
 import { FC27_CLUB_ID, FC27_PLATFORM } from "../../../shared/fc27-club.js";
 
@@ -65,7 +66,7 @@ function upstreamError(upstream, message, layer = "ea_sync") {
   return error;
 }
 
-async function fetchAllMatches(env) {
+async function fetchAllMatches(env, requestId = "") {
   if (!env.EA_SYNC_API_URL || !env.EA_SYNC_API_TOKEN) {
     const error = new Error("O serviço de sincronização da EA não está configurado.");
     error.code = "ea_sync_not_configured";
@@ -85,6 +86,14 @@ async function fetchAllMatches(env) {
   url.searchParams.set("platform", FC27_PLATFORM);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 10_000);
+  const started = Date.now();
+  console.log(JSON.stringify({
+    event: "upstream_request_start",
+    route: "ea-matches",
+    requestId,
+    host: target.host,
+    ea_sync_url_configured: true,
+  }));
   try {
     const response = await fetch(url, {
       method: "POST",
@@ -96,6 +105,16 @@ async function fetchAllMatches(env) {
       signal: controller.signal,
     });
     const upstream = await readUpstream(response);
+    console.log(JSON.stringify({
+      event: "upstream_response_status",
+      route: "ea-matches",
+      requestId,
+      host: target.host,
+      status: upstream.status,
+      contentType: String(upstream.contentType || "").split(";")[0],
+      durationMs: Date.now() - started,
+      html: upstream.html,
+    }));
     if (upstream.html || !upstream.payload) {
       throw upstreamError(upstream, `${target.layer} respondeu HTML/inválido em vez de JSON.`, target.layer);
     }
@@ -109,6 +128,13 @@ async function fetchAllMatches(env) {
       error.bodyPreview = upstream.preview;
       throw error;
     }
+    console.log(JSON.stringify({
+      event: "normalization_complete",
+      route: "ea-matches",
+      requestId,
+      count: upstream.payload.matches.length,
+      durationMs: Date.now() - started,
+    }));
     return {
       raw: upstream.payload.matches,
       durationMs: Number(upstream.payload.duration_ms || 0),
@@ -116,10 +142,10 @@ async function fetchAllMatches(env) {
     };
   } catch (error) {
     if (error?.layer || error?.name === "AbortError") throw error;
-    const target = eaSyncTarget(env);
-    const wrapped = new Error(`${target.layer || "ea_sync"} não respondeu.`);
+    const fallback = eaSyncTarget(env);
+    const wrapped = new Error(`${fallback.layer || "ea_sync"} não respondeu.`);
     wrapped.code = "ea_sync_upstream_error";
-    wrapped.layer = target.layer || "ea_sync";
+    wrapped.layer = fallback.layer || "ea_sync";
     wrapped.status = 502;
     wrapped.upstreamStatus = 502;
     wrapped.upstreamContentType = "unknown";
@@ -175,7 +201,7 @@ function eaError(error) {
       error: "ea_timeout",
       layer: "ea_sync",
       message: "SYNC INDISPONÍVEL. O serviço de sincronização da EA não respondeu a tempo.",
-    }, 504);
+    }, 504, { route: "ea-matches" });
   }
   const status = error.status === 429 ? 429 : 502;
   const messages = {
@@ -194,23 +220,36 @@ function eaError(error) {
     contentType: error.upstreamContentType || "application/json",
     upstreamContentType: error.upstreamContentType || "",
     bodyPreview: error.bodyPreview || "",
-  }, status);
+  }, status, { route: "ea-matches" });
 }
 
 async function authorize(request, env) {
   const session = await authenticateDiscordMember(request, env);
   if (session.error) return session;
   if (!requireTier(session, "dev")) {
-    return { error: json({ error: "insufficient_permission", layer: "pages", message: "Sincronização EA restrita a Desenvolvimento." }, 403) };
+    return { error: json({ error: "insufficient_permission", layer: "pages", message: "Sincronização EA restrita a Desenvolvimento." }, 403, { route: "ea-matches" }) };
   }
   return session;
 }
 
 export async function onRequestGet({ request, env }) {
+  const requestId = crypto.randomUUID();
+  const target = eaSyncTarget(env);
+  console.log(JSON.stringify({
+    event: "function_enter",
+    route: "ea-matches",
+    requestId,
+    host: target.host,
+    ea_sync_url_configured: Boolean(env.EA_SYNC_API_URL),
+  }));
   try {
     const session = await authorize(request, env);
-    if (session.error) return session.error;
-    const result = await fetchAllMatches(env);
+    if (session.error) {
+      console.log(JSON.stringify({ event: "auth_fail", route: "ea-matches", requestId }));
+      return stampApiResponse(session.error, request, { route: "ea-matches", requestId });
+    }
+    console.log(JSON.stringify({ event: "auth_ok", route: "ea-matches", requestId }));
+    const result = await fetchAllMatches(env, requestId);
     const normalized = normalizeEaMatches(result.raw, FC27_CLUB_ID);
     const [agenda, importedIds] = await Promise.all([
       loadAgenda(env),
@@ -220,6 +259,7 @@ export async function onRequestGet({ request, env }) {
       ...match,
       alreadyImported: importedIds.has(String(match.id)),
     }));
+    console.log(JSON.stringify({ event: "function_exit", route: "ea-matches", requestId, ok: true, count: matches.length }));
     return json({
       ok: true,
       matches,
@@ -228,8 +268,16 @@ export async function onRequestGet({ request, env }) {
       duration_ms: result.durationMs,
       cached: result.cached,
       layer: "ea",
-    });
+    }, 200, { route: "ea-matches", requestId });
   } catch (error) {
+    console.log(JSON.stringify({
+      event: "function_exit",
+      route: "ea-matches",
+      requestId,
+      ok: false,
+      code: error?.code || "",
+      layer: error?.layer || "",
+    }));
     return eaError(error);
   }
 }

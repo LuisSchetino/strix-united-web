@@ -1,10 +1,16 @@
+import { apiRouteName, stampApiResponse } from "./api-sentinel.js";
+
 const TIER_WEIGHT = Object.freeze({ teste: 10, player: 20, conselho: 30, diretoria: 40, dev: 50 });
 
-function json(body, status = 200) {
-  return new Response(JSON.stringify(body), {
+function json(body, status = 200, meta = {}) {
+  const route = meta.route || (meta.request ? apiRouteName(meta.request.url) : "api");
+  return stampApiResponse(new Response(JSON.stringify(body), {
     status,
-    headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
-  });
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": "no-store",
+    },
+  }), meta.request, { route, requestId: meta.requestId });
 }
 
 function bearer(request) {
@@ -33,25 +39,25 @@ export function roleTier(roleIds, map = {}) {
 
 export async function authenticateDiscordMember(request, env) {
   const authorization = bearer(request);
-  if (!authorization) return { error: json({ error: "authentication_required" }, 401) };
+  if (!authorization) return { error: json({ error: "authentication_required" }, 401, { request }) };
   const supabaseHeaders = { apikey: env.SUPABASE_PUBLISHABLE_KEY, authorization };
   const userResponse = await fetch(`${env.SUPABASE_URL}/auth/v1/user`, { headers: supabaseHeaders, cache: "no-store" });
-  if (!userResponse.ok) return { error: json({ error: "invalid_session" }, 401) };
+  if (!userResponse.ok) return { error: json({ error: "invalid_session" }, 401, { request }) };
   const user = await userResponse.json();
   const memberId = discordId(user);
-  if (!memberId) return { error: json({ error: "discord_identity_missing" }, 422) };
+  if (!memberId) return { error: json({ error: "discord_identity_missing" }, 422, { request }) };
 
   const memberResponse = await fetch(`https://discord.com/api/v10/guilds/${env.DISCORD_GUILD_ID}/members/${memberId}`, {
     headers: { authorization: `Bot ${env.DISCORD_BOT_TOKEN}`, accept: "application/json" },
     cache: "no-store",
   });
-  if (memberResponse.status === 404) return { error: json({ error: "not_in_team_server" }, 403) };
-  if (!memberResponse.ok) return { error: json({ error: "discord_lookup_unavailable" }, 503) };
+  if (memberResponse.status === 404) return { error: json({ error: "not_in_team_server" }, 403, { request }) };
+  if (!memberResponse.ok) return { error: json({ error: "discord_lookup_unavailable" }, 503, { request }) };
   const member = await memberResponse.json();
   let roleMap = {};
   try { roleMap = JSON.parse(env.DISCORD_ROLE_TIER_MAP || "{}"); } catch {}
   const tier = roleTier(member.roles, roleMap);
-  if (!tier) return { error: json({ error: "discord_role_unmapped" }, 403) };
+  if (!tier) return { error: json({ error: "discord_role_unmapped" }, 403, { request }) };
   return { user, member, discordId: memberId, tier };
 }
 

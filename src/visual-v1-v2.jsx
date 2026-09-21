@@ -128,6 +128,7 @@ function App() {
 
       const v1Agenda = paint(renderAgendaFrame, agendaV1, agendaAssets, 1.35, "v1-agenda");
       const v2Agenda = paint(renderAgendaFrame, agendaV2, agendaAssets, 1.35, "v2-agenda");
+      const v2AgendaMid = paint(renderAgendaFrame, agendaV2, agendaAssets, agendaV2.introEnd + 0.9, "v2-agenda-mid");
       const v2AgendaFinale = paint(renderAgendaFrame, agendaV2, agendaAssets, agendaV2.finaleStart + 0.7, "v2-agenda-finale");
       const v1Related = paint(renderRelatedNightFrame, relatedV1, relatedAssets, 0.85, "v1-related");
       const v2Related = paint(renderRelatedNightFrame, relatedV2, relatedAssets, 0.85, "v2-related");
@@ -141,6 +142,7 @@ function App() {
       const items = [
         { id: "v1-agenda", canvas: v1Agenda },
         { id: "v2-agenda", canvas: v2Agenda },
+        { id: "v2-agenda-mid", canvas: v2AgendaMid },
         { id: "v2-agenda-finale", canvas: v2AgendaFinale },
         { id: "v1-related", canvas: v1Related },
         { id: "v2-related", canvas: v2Related },

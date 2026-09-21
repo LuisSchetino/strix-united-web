@@ -16,21 +16,24 @@ export function looksLikeHtml(text = "", contentType = "") {
   return type.includes("text/html") || /^<!doctype html/i.test(body) || /^<html[\s>]/i.test(body);
 }
 
-export function parseApiJson(text, { status = 0, contentType = "" } = {}) {
+export function parseApiJson(text, { status = 0, contentType = "", apiLayer = "" } = {}) {
   const raw = String(text || "");
+  const functionRan = String(apiLayer || "").toLowerCase() === "pages-function";
   if (looksLikeHtml(raw, contentType)) {
     const type = String(contentType || "text/html").split(";")[0] || "text/html";
-    const edge = status === 502 || status === 503 || status === 504;
+    const edge = !functionRan && (status === 502 || status === 503 || status === 504);
     throw new ApiJsonError(
       edge
-        ? "SYNC INDISPONÍVEL. A borda devolveu HTML em vez de JSON."
-        : "A rota da EA devolveu HTML em vez de JSON.",
+        ? "Falha antes da resposta da API."
+        : functionRan
+          ? "A API respondeu HTML depois de executar."
+          : "A rota da EA devolveu HTML em vez de JSON.",
       {
         code: edge ? "ea_sync_upstream_error" : "html_instead_of_json",
         status,
-        layer: edge ? "pages_edge" : "pages",
+        layer: edge ? "pages_edge" : (functionRan ? "pages" : "pages"),
         contentType: type,
-        detail: `HTTP ${status || "?"} · ${type}`,
+        detail: `HTTP ${status || "?"} · ${type}${functionRan ? " · function" : " · no-sentinel"}`,
       },
     );
   }
@@ -49,7 +52,8 @@ export function parseApiJson(text, { status = 0, contentType = "" } = {}) {
 export async function readApiJson(response) {
   const text = await response.text();
   const contentType = response.headers?.get?.("content-type") || "";
-  const payload = parseApiJson(text, { status: response.status, contentType });
+  const apiLayer = response.headers?.get?.("x-strix-api-layer") || "";
+  const payload = parseApiJson(text, { status: response.status, contentType, apiLayer });
   if (!response.ok) {
     throw new ApiJsonError(
       payload.message || payload.error || `A fonte respondeu HTTP ${response.status}.`,

@@ -381,7 +381,9 @@ function paintIntro(ctx, timeline, time, dayLabel) {
   ctx.globalAlpha = structure * 0.45;
   ctx.strokeStyle = RULE;
   ctx.lineWidth = 1;
-  const floorY = Math.min(height - safe.bottom - 24, countY + 86);
+  const floorY = String(timeline.mediaLook || "") === "collage"
+    ? height - safe.bottom - 24
+    : Math.min(height - safe.bottom - 24, countY + 86);
   ctx.beginPath();
   ctx.moveTo(safe.side, floorY);
   ctx.lineTo(width - safe.side, floorY);

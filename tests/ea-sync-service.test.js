@@ -39,22 +39,34 @@ test("Pages nunca devolve HTML do upstream e identifica a camada pelo host", () 
 
 test("health de DEV sonda o host sanitizado do EA Sync", async () => {
   const health = await readFile(new URL("../functions/api/internal/health.js", import.meta.url), "utf8");
-  assert.match(health, /probeEaSync/);
+  const probe = await readFile(new URL("../functions/_lib/ea-sync-probe.js", import.meta.url), "utf8");
+  assert.match(health, /probeEaSyncHealth/);
   assert.match(health, /EA_SYNC_API_URL/);
-  assert.match(health, /\/health/);
-  assert.match(health, /sanitizeHost/);
+  assert.match(probe, /\/health/);
+  assert.match(probe, /sanitizeHost/);
   assert.match(health, /fc27: \{ clubId: FC27_CLUB_ID, platform: FC27_PLATFORM \}/);
   assert.doesNotMatch(health, /authorization: `Bearer \$\{env\.EA_SYNC_API_TOKEN\}/);
 });
 
 test("Pages middleware converte HTML 502 em JSON estruturado", async () => {
   const middleware = await readFile(new URL("../functions/api/_middleware.js", import.meta.url), "utf8");
-  assert.match(middleware, /ea_sync_upstream_error/);
-  assert.match(middleware, /pages_edge/);
-  assert.match(middleware, /contentType/);
-  assert.match(middleware, /upstreamStatus/);
+  const root = await readFile(new URL("../functions/_middleware.js", import.meta.url), "utf8");
+  const guard = await readFile(new URL("../functions/_lib/api-html-guard.js", import.meta.url), "utf8");
+  const sentinel = await readFile(new URL("../functions/_lib/api-sentinel.js", import.meta.url), "utf8");
+  assert.match(middleware, /guardApiHtml/);
+  assert.match(root, /guardApiHtml/);
+  assert.match(guard, /stampApiResponse/);
+  assert.match(sentinel, /X-Strix-Api-Layer/);
+  assert.match(guard, /ea_sync_upstream_error/);
+  assert.match(guard, /contentType/);
+  assert.match(guard, /upstreamStatus/);
   assert.match(functionSource, /contentType: error\.upstreamContentType/);
   assert.match(functionSource, /searchParams\.set\("platform", FC27_PLATFORM\)/);
+  assert.match(functionSource, /function_enter/);
+  const healthProbe = await readFile(new URL("../functions/api/internal/ea-sync-health.js", import.meta.url), "utf8");
+  assert.match(healthProbe, /requireTier\(session, "dev"\)/);
+  assert.match(healthProbe, /probeEaSyncHealth/);
+  assert.match(healthProbe, /probeEaSyncMatches/);
 });
 
 test("token do serviço não aparece em query string ou resposta", () => {

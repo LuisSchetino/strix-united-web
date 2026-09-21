@@ -34,7 +34,7 @@ function mockCtx() {
     scale() {},
     fillRect() { calls.push("fillRect"); },
     strokeRect() {},
-    fillText(text) { this.texts.push(String(text)); calls.push(["fillText", String(text)]); },
+    fillText(text, x = 0, y = 0) { this.texts.push(String(text)); this.placed.push({ text: String(text), y: Number(y) || 0 }); calls.push(["fillText", String(text), Number(y) || 0]); },
     stroke() { calls.push("stroke"); },
     fill() { calls.push("fill"); },
     beginPath() {},
@@ -56,6 +56,7 @@ function mockCtx() {
     createRadialGradient() { return grad; },
     createLinearGradient() { return grad; },
     texts: [],
+    placed: [],
     globalCompositeOperation: "source-over",
     filter: "none",
     fillStyle: "",
@@ -122,7 +123,9 @@ test("V2 reutiliza a campanha V1 e só troca headlines collage", async () => {
   assert.match(collage, /\["RELACIONADOS", "DA", "NOITE"\]/);
   assert.match(collage, /\["RESUMO", "DO", "DIA"\]/);
   assert.match(collage, /pickCollageAsset\("brushes"/);
+  assert.match(collage, /paintHeadlineAccents/);
   assert.doesNotMatch(collage, /noise-paper-1|cut-fill|PAPER_IDS/);
+  assert.doesNotMatch(collage, /width \* 0\.92|source-atop/);
   assert.doesNotMatch(collage, /paintCollagePitch/);
   assert.match(announceFrame, /paintCollageAnnounce/);
   assert.match(agendaFrame, /paintCollageAgenda/);
@@ -139,6 +142,7 @@ test("V2 reutiliza a campanha V1 e só troca headlines collage", async () => {
     { id: "p1", name: "João", photo: "", position: "GOL", group: "GOL", number: 1 },
   ], { format: "story" });
   const announceCtx = mockCtx();
+  announceCtx.font = "700 176px Inter, sans-serif";
   paintCollageAnnounce(announceCtx, { timeline: { ...timelineBase, kind: "individual", person: { name: "Nunes", position: "MC", extraBadge: "CAPITÃO", shirt_number: 8 } }, time: 2 });
   assert.equal(announceCtx.texts.includes("NUNES"), false);
   assert.ok(announceCtx.texts.includes("MC"));
@@ -151,6 +155,9 @@ test("V2 reutiliza a campanha V1 e só troca headlines collage", async () => {
   paintCollageAgenda(agendaCtx, { timeline: { ...agendaDay, still: true }, time: 1.2, dayLabel: "20/09" });
   assert.equal(agendaCtx.texts.includes("AGENDA"), false);
   assert.equal(agendaCtx.texts.includes("DO DIA"), false);
+  const dateHit = agendaCtx.placed.find((item) => item.text.includes("20/09") || item.text.includes("SET"));
+  assert.ok(dateHit, "data da agenda deve ser pintada");
+  assert.ok(dateHit.y > 1400, `data precisa descer: y=${dateHit.y}`);
   const agendaMatchCtx = mockCtx();
   paintCollageAgenda(agendaMatchCtx, {
     timeline: agendaDay,
