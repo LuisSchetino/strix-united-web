@@ -58,3 +58,75 @@
   .announce-filters button{flex:0 0 auto}
   .announce-controls .media-tabs button{min-height:48px}
 }
+
+/* FC27 studio UI: compact roster controls, clear generation priority and a quiet archive. */
+.announce-studio .announce-layout{grid-template-columns:minmax(340px,.9fr) minmax(0,1.1fr);gap:clamp(24px,3vw,44px)}
+.announce-studio .announce-layout>.media-preview-card,.announce-studio .announce-layout>.media-side{grid-column:auto;grid-row:auto;min-width:0}
+.media-page>.announce-studio{grid-column:1/-1;min-width:0}
+.announce-filter-groups{display:grid;gap:8px}
+.announce-filter-types,.announce-filter-positions{gap:5px;overflow:visible;padding:0}
+.announce-filter-types button{min-height:36px;padding:7px 10px;border-radius:8px;font-size:10px}
+.announce-filter-positions button{min-height:32px;padding:5px 9px;border-radius:6px;font-size:9px;color:#aeb4bb}
+.announce-bulk{align-items:center;gap:4px;padding:8px 0;border-block:1px solid var(--strix-border)}
+.announce-bulk>span{margin-right:4px;color:#8e969f;font-size:9px;font-weight:900;letter-spacing:.11em}
+.announce-bulk button{min-height:34px;padding:6px 8px;border:0;border-radius:6px;background:transparent;color:#b7bdc4;font-size:9px;font-weight:850;letter-spacing:.035em}
+.announce-bulk button:hover,.announce-bulk button:focus-visible{background:#171b20;color:#fff}
+.announce-bulk button.is-reset{margin-left:auto;color:#8e969f}
+.announce-people{max-height:min(56vh,620px);gap:5px;padding-right:3px;overscroll-behavior:contain}
+.announce-people li{grid-template-columns:minmax(0,1fr) minmax(130px,160px) auto;gap:7px;padding:6px 8px;border-radius:9px;background:#0d0f12;transition:border-color 160ms ease,background 160ms ease}
+.announce-people li:hover{background:#111419}
+.announce-people li.is-selected{border-color:#777e86;background:#121519}
+.announce-person{display:flex;align-items:center;gap:10px;padding:3px;min-height:44px}
+.announce-person-index{display:grid;place-items:center;width:28px;height:28px;flex:0 0 auto;border:1px solid var(--strix-border);border-radius:7px;color:#858c94;font:800 10px/1 Rajdhani,Inter,sans-serif}
+.is-selected .announce-person-index{border-color:#8e969f;color:#f4f5f6}
+.announce-person-copy{display:grid;gap:3px;min-width:0}
+.announce-person-copy b{font-size:13px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.announce-person-copy small{font-size:10px;line-height:1.3;color:#8e969f}
+.announce-people .select-control{min-width:0;width:100%}
+.announce-people .select-control>button{min-height:38px;padding-inline:9px;font-size:9px}
+.announce-order{grid-column:auto;gap:3px}
+.announce-order button{min-width:34px;min-height:38px;border:1px solid var(--strix-border);border-radius:7px;background:#111419;color:#b7bdc4;font-size:14px}
+.announce-order button:disabled{opacity:.35;cursor:default}
+.announce-studio .media-actions{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:7px}
+.announce-studio .media-actions .announce-generate{grid-column:1/-1;min-height:50px;background:#f1f0ec;color:#101113;border-color:#f1f0ec;font-size:12px;letter-spacing:.08em}
+.announce-studio .media-actions .announce-generate:hover:not(:disabled){background:#fff}
+.announce-studio .media-actions .secondary{min-height:40px;padding-inline:12px;border:1px solid var(--strix-border);border-radius:8px;background:#111419;color:#c2c7cc}
+.announce-studio .media-actions .announce-regenerate{justify-self:end;border-color:transparent;background:transparent;color:#8e969f;font-size:9px}
+.announce-history-heading{display:flex;align-items:end;justify-content:space-between;gap:12px;padding-bottom:5px}
+.media-page .announce-history-heading{border-top:1px solid var(--strix-border);padding-top:16px}
+.announce-history-heading div{display:grid;gap:5px}
+.announce-history-heading span{color:#8e969f;font-size:9px;font-weight:900;letter-spacing:.12em}
+.announce-history-heading h2{margin:0;font-size:16px}
+.announce-history-heading>small{color:#8e969f;font-size:10px}
+.media-page .media-cache .announce-history-item{display:grid;grid-template-columns:42px minmax(0,1fr) auto;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--strix-border)}
+.announce-history-format{display:grid;gap:3px;color:#aeb4bb}
+.announce-history-format small{font-size:9px}
+.announce-history-format b{color:#727981;font:700 10px Rajdhani,sans-serif}
+.media-page .media-cache .announce-history-item>p{min-width:0;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;line-height:1.4;color:#c2c7cc}
+.announce-history-item .media-inline-actions{gap:4px}
+.announce-history-item .media-inline-actions button{min-height:34px;padding:6px 9px;border:1px solid var(--strix-border);border-radius:7px;background:#111419;color:#c2c7cc;font-size:9px}
+.announce-history-empty{padding:12px 0;border-top:1px solid var(--strix-border);color:#8e969f;font-size:12px}
+@media(max-width:900px){
+  .announce-studio .announce-layout{grid-template-columns:minmax(0,1fr);gap:26px}
+  .announce-studio .announce-layout>.media-preview-card,.announce-studio .announce-layout>.media-side{grid-column:1;grid-row:auto}
+  .announce-people{max-height:none}
+}
+@media(max-width:580px){
+  .announce-filter-groups{grid-template-columns:1fr;gap:6px}
+  .announce-filter-types,.announce-filter-positions{flex-wrap:wrap;overflow:visible}
+  .announce-people li{grid-template-columns:minmax(0,1fr) minmax(112px,38%) auto;gap:5px;padding:5px}
+  .announce-person{gap:7px}
+  .announce-person-index{width:25px;height:25px}
+  .announce-person-copy b{font-size:12px}
+  .announce-person-copy small{font-size:9px}
+  .announce-people .select-control>button{min-height:40px;padding-inline:7px;font-size:9px}
+  .announce-order{flex-direction:column}
+  .announce-order button{min-width:40px;min-height:40px}
+  .announce-studio .media-actions{grid-template-columns:1fr 1fr}
+  .announce-studio .media-actions .announce-generate{grid-column:1/-1}
+  .announce-studio .media-actions .announce-regenerate{justify-self:stretch}
+  .media-page .media-cache .announce-history-item{grid-template-columns:38px minmax(0,1fr) auto;gap:8px}
+  .announce-history-item .media-inline-actions button{min-width:40px;min-height:40px;padding-inline:7px}
+  .announce-search input,.announce-search textarea{font-size:16px}
+}
+@media(prefers-reduced-motion:reduce){.announce-people li{transition:none}.announce-people .announce-person-index{transition:none}}

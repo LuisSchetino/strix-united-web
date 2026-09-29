@@ -68,23 +68,42 @@ export function eaPlayerRows(raw, clubId = EA_CLUB_ID) {
       const stats = player.stats || player.matchStats || player;
       const passesMade = readNumber(stats, ["passesmade", "passesMade", "passSuccess", "passes"]);
       const passesAttempts = readNumber(stats, ["passattempts", "passesAttempted", "passAttempts", "passesAttempt"]);
-      const goals = readNumber(stats, ["goals", "goal"]) || 0;
-      const assists = readNumber(stats, ["assists", "assist"]) || 0;
+      const goals = readNumber(stats, ["goals", "goal"]);
+      const assists = readNumber(stats, ["assists", "assist"]);
+      const eaPlayerId = String(player.playerId ?? player.personaId ?? player._eaKey ?? "").trim();
       const name = player.playername || player.name || player.playerName || player.personaName || player._eaKey;
       return {
-        id: String(player.playerId || player.personaId || player._eaKey || name),
+        // EA's player key is an external identity. Keep it as a string so large
+        // numeric keys are never rounded by JavaScript and never replace the
+        // internal Supabase roster id.
+        id: eaPlayerId || String(name),
+        eaPlayerId: eaPlayerId || null,
         eaName: name,
         name,
         position: player.pos || player.position || player.positionAbbr || "",
+        pos: player.pos ?? null,
+        archetypeId: readNumber(stats, ["archetypeid", "archetypeId"]) ?? readNumber(player, ["archetypeid", "archetypeId"]),
         rating: readNumber(stats, ["rating", "ratingAverage", "matchRating", "ratingValue"]),
         goals,
         assists,
         passesMade,
         passesAttempts,
         passes: passesMade === null ? null : passesAttempts ? `${passesMade}/${passesAttempts}` : passesMade,
-        shots: readNumber(stats, ["shots", "shotsOnTarget", "shotAttempts"]),
-        tackles: readNumber(stats, ["tacklesmade", "tacklesMade", "tackles", "tackleSuccess"]),
-        saves: readNumber(stats, ["saves", "goalkeeperSaves"]),
+        shots: readNumber(stats, ["shots"]),
+        tackleAttempts: readNumber(stats, ["tackleattempts", "tackleAttempts", "tacklesAttempts"]),
+        tackles: readNumber(stats, ["tacklesmade", "tacklesMade"]),
+        saves: readNumber(stats, ["saves"]),
+        goodDirectionSaves: readNumber(stats, ["goodDirectionSaves"]),
+        reflexSaves: readNumber(stats, ["reflexSaves"]),
+        crossSaves: readNumber(stats, ["crossSaves"]),
+        ballDiveSaves: readNumber(stats, ["ballDiveSaves"]),
+        parrySaves: readNumber(stats, ["parrySaves"]),
+        punchSaves: readNumber(stats, ["punchSaves"]),
+        mom: readNumber(stats, ["mom"]),
+        redcards: readNumber(stats, ["redcards"]),
+        cleansheetsdef: readNumber(stats, ["cleansheetsdef"]),
+        cleansheetsgk: readNumber(stats, ["cleansheetsgk"]),
+        secondsPlayed: readNumber(stats, ["secondsPlayed"]),
       };
     })
     .filter((player) => player.eaName && player.eaName !== clubId);

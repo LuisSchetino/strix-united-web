@@ -12,6 +12,8 @@ export const LAUNCH_CONFIG = Object.freeze({
 const OFFICIAL_HOSTS = new Set(["strixunited.com.br"]);
 const QA_PREVIEW_HOST = "strix-united-fc27.pages.dev";
 export const LAUNCH_RETURN_KEY = "strix-fc27-launch-return";
+export const LAUNCH_ACCESS_KEY = "strix-fc27-launch-access-verified";
+export const LAUNCH_ACCESS_TTL_MS = 12 * 60 * 60 * 1000;
 
 export function normalizeHostname(hostname = "") {
   return String(hostname || "")
@@ -72,6 +74,55 @@ export function isLaunchUnlocked(now = Date.now(), config = LAUNCH_CONFIG) {
   return Number(now) >= at;
 }
 
+function launchStorage(storage, now = Date.now()) {
+  if (isLaunchUnlocked(now)) return null;
+  try {
+    return storage || globalThis.sessionStorage || null;
+  } catch {
+    return null;
+  }
+}
+
+export function rememberLaunchAccess(profile, storage, now = Date.now()) {
+  const target = launchStorage(storage, now);
+  if (!target?.setItem || !isDev(profile) || !profile?.user_id) return false;
+  try {
+    target.setItem(LAUNCH_ACCESS_KEY, JSON.stringify({ userId: String(profile.user_id), tier: "dev", verifiedAt: Number(now) }));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// This is a rendering hint only. Access is always decided from the live profile.
+export function readLaunchAccessVerification(storage, now = Date.now()) {
+  const target = launchStorage(storage, now);
+  if (!target?.getItem) return null;
+  try {
+    const value = JSON.parse(target.getItem(LAUNCH_ACCESS_KEY) || "null");
+    const age = Number(now) - Number(value?.verifiedAt);
+    if (value?.tier !== "dev" || !value?.userId || !Number.isFinite(age) || age < 0 || age > LAUNCH_ACCESS_TTL_MS) {
+      target.removeItem?.(LAUNCH_ACCESS_KEY);
+      return null;
+    }
+    return { userId: String(value.userId), verifiedAt: Number(value.verifiedAt) };
+  } catch {
+    try { target.removeItem?.(LAUNCH_ACCESS_KEY); } catch {}
+    return null;
+  }
+}
+
+export function clearLaunchAccessVerification(storage, now = Date.now()) {
+  const target = launchStorage(storage, now);
+  if (!target?.removeItem) return false;
+  try {
+    target.removeItem(LAUNCH_ACCESS_KEY);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function remainingMs(now = Date.now(), config = LAUNCH_CONFIG) {
   const at = parseLaunchAt(config);
   if (at == null) return Number.POSITIVE_INFINITY;
@@ -112,13 +163,15 @@ export function launchGateDecision({
   hostname,
   now = Date.now(),
   profile = null,
+  sessionUserId = "",
   authLoading = false,
   config = LAUNCH_CONFIG,
 } = {}) {
   if (!config?.enabled) return "app";
   if (!isLaunchGateHost(hostname)) return "app";
   if (isLaunchUnlocked(now, config)) return "app";
+  const sameVerifiedUser = Boolean(sessionUserId && profile?.user_id && String(sessionUserId) === String(profile.user_id));
+  if (isDev(profile) && sameVerifiedUser) return "app";
   if (authLoading) return "bootstrap";
-  if (isDev(profile)) return "app";
   return "countdown";
 }

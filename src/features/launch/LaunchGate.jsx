@@ -46,7 +46,7 @@ function LaunchUnit({ value, label, reduced }) {
   );
 }
 
-export function LaunchGate({ mode = "countdown", config = LAUNCH_CONFIG, onUnlock, onInternalAccess }) {
+export function LaunchGate({ mode = "countdown", config = LAUNCH_CONFIG, previouslyVerified = false, onUnlock, onInternalAccess }) {
   const reduced = useReducedMotion();
   const [now, setNow] = useState(() => Date.now());
   const [signingIn, setSigningIn] = useState(false);
@@ -56,6 +56,7 @@ export function LaunchGate({ mode = "countdown", config = LAUNCH_CONFIG, onUnloc
   const showInternal = mode === "countdown" && Boolean(onInternalAccess) && canShowInternalAccess(hostname);
 
   useEffect(() => {
+    if (mode === "bootstrap") return undefined;
     const tick = () => {
       const next = Date.now();
       setNow(next);
@@ -64,9 +65,16 @@ export function LaunchGate({ mode = "countdown", config = LAUNCH_CONFIG, onUnloc
     tick();
     const id = window.setInterval(tick, reduced ? 1000 : 250);
     return () => window.clearInterval(id);
-  }, [config, onUnlock, reduced]);
+  }, [config, mode, onUnlock, reduced]);
 
   const checking = mode === "bootstrap";
+
+  if (checking) {
+    return <main className="launch-bootstrap" role="status" aria-busy="true">
+      <ClubLogo name="Strix United" url={STRIX_BRAND.logo} className="launch-bootstrap-crest" kind="logo" priority decorative />
+      <span>{previouslyVerified ? "Validando sessão" : "Preparando acesso"}</span>
+    </main>;
+  }
 
   return (
     <main

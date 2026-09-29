@@ -15,6 +15,7 @@ import "./agenda-sync.css";
 import "./fc27-data.css";
 import "./fc27-fixes.css";
 import { nextAgendaSlot } from "./features/agenda/agenda-slots.js";
+import { availableLineupPlayers, duplicateLineupPlayers, validateLineupUnique } from "./features/agenda/lineup-core.js";
 import { activeAgendaMatches, agendaHeroSelection, nextAgendaMatches, todayAgendaMatches } from "./features/agenda/agenda-time.js";
 import { agendaStandingComparison } from "./features/agenda/agenda-standings.js";
 import { resolveAgendaTeamIdentity, resolveTeamIdentity } from "./features/teams/team-identity.js";
@@ -22,7 +23,7 @@ import { notify, RollingLabel, ToastViewport } from "./ui/motion/motion.jsx";
 import { ClubLogo } from "./ui/ClubLogo.jsx";
 import { ActionMenu } from "./ui/ActionMenu.jsx";
 import { LaunchGate } from "./features/launch/LaunchGate.jsx";
-import { LAUNCH_CONFIG, consumeLaunchReturn, launchGateDecision } from "./launch.js";
+import { LAUNCH_CONFIG, clearLaunchAccessVerification, consumeLaunchReturn, isLaunchUnlocked, launchGateDecision, readLaunchAccessVerification, rememberLaunchAccess } from "./launch.js";
 import { preloadClubLogos } from "./ui/provider-assets.js";
 import { STRIX_BRAND } from "./brand.js";
 import { RastroSignature } from "./ui/RastroBrand.jsx";
@@ -778,6 +779,8 @@ function useFc27Workspace(client, profile) {
   const saveAgenda = async (payload, mode, existing) => {
     if (!canManageAgenda(profile)) throw permissionDenied("Sem permissão para alterar a Agenda.");
     const entries = Array.isArray(payload) ? payload : [payload];
+    const invalidLineup = entries.find((item) => !validateLineupUnique(item.lineup, state.players).valid);
+    if (invalidLineup) throw new Error("Um jogador não pode ocupar mais de uma posição na mesma escalação.");
     if (existing) {
       const data = await agendaPayload(entries[0], mode === "swap" ? {
         previous_opponent_name: existing.opponent_name,
@@ -1099,13 +1102,7 @@ function Sidebar({
         >
           ‹
         </button>
-        <button
-          className="mobile-close"
-          onClick={() => setMobileOpen(false)}
-          aria-label="Fechar menu"
-        >
-          <Icon name="close" />
-        </button>
+        <CloseButton className="mobile-close" onClick={() => setMobileOpen(false)} label="Fechar menu" />
       </div>
       <div className="sidebar-scroll">
       <div className="menu-group">
@@ -1191,9 +1188,7 @@ function Profile({ player, close }) {
         className="profile-modal"
         onMouseDown={(event) => event.stopPropagation()}
       >
-        <button className="modal-close" onClick={close}>
-          <Icon name="close" />
-        </button>
+        <CloseButton className="modal-close" onClick={close} />
         <div className="profile-show">
           <Avatar name={player[0]} />
           <span>STRIX UNITED · FC 27</span>
@@ -1371,16 +1366,26 @@ const lineupSlots = [
 const emptyLineup = () => Array(11).fill("");
 function FormationPicker({ lineup, onChange, compact = false, readOnly = false, roster = [], assetUrl = (value) => value || "" }) {
   const [slot, setSlot] = useState(null);
+  const duplicateSlots = duplicateLineupPlayers(lineup, roster);
   const choose = (player) => {
+    if (slot === null) return;
     const next = [...lineup];
     next[slot] = player?.display_name || "";
     onChange(next);
     setSlot(null);
   };
+  const clearSlot = () => {
+    if (slot === null) return;
+    const next = [...lineup];
+    next[slot] = "";
+    onChange(next);
+    setSlot(null);
+  };
   const activeRoster = (Array.isArray(roster) ? roster : []).filter((player) => player?.is_active);
   const desiredPosition = slot === null ? "" : lineupSlots[slot];
-  const natural = activeRoster.filter((player) => (player.positions || []).includes(desiredPosition));
-  const improvised = activeRoster.filter((player) => !(player.positions || []).includes(desiredPosition));
+  const availableRoster = availableLineupPlayers(lineup, activeRoster, slot ?? -1);
+  const natural = availableRoster.filter((player) => (player.positions || []).includes(desiredPosition));
+  const improvised = availableRoster.filter((player) => !(player.positions || []).includes(desiredPosition));
   const avatarFor = (player) => player?.avatar_path ? assetUrl(player.avatar_path) : player?.external_avatar_url || "";
   const lineupPlayer = (name) => activeRoster.find((player) => normalizeTeamName(player.display_name) === normalizeTeamName(name));
   useEffect(() => {
@@ -1400,6 +1405,7 @@ function FormationPicker({ lineup, onChange, compact = false, readOnly = false, 
   );
   return (
     <section className={`formation-picker ${compact ? "is-compact" : ""} ${readOnly ? "is-read-only" : ""}`}>
+      {!readOnly && duplicateSlots.length > 0 && <p className="formation-duplicate-warning" role="alert">Esta escalação contém jogador duplicado. Remova a repetição antes de salvar.</p>}
       <div className="formation-picker-field">
         {lineupSlots.map((position, index) => {
           const player = lineupPlayer(lineup[index]);
@@ -1427,10 +1433,9 @@ function FormationPicker({ lineup, onChange, compact = false, readOnly = false, 
         >
           <header>
             <span>POSIÇÃO · {lineupSlots[slot]}</span>
-            <button type="button" aria-label="Fechar seleção de jogador" onClick={() => setSlot(null)}>
-              <Icon name="close" size={16} />
-            </button>
+            <CloseButton className="formation-picker-close" label="Fechar seleção de jogador" onClick={() => setSlot(null)} />
           </header>
+          {lineup[slot] && <button type="button" className="formation-clear-slot" onClick={clearSlot}>REMOVER DESTA POSIÇÃO</button>}
           <section className="formation-roster-group">
             <h4>NATURAIS · {desiredPosition}</h4>
             {natural.length ? natural.map(playerButton) : <p>Nenhum jogador ativo nesta posição.</p>}
@@ -1472,6 +1477,7 @@ function AgendaModal({ entry, mode = "new", presets, roster = [], assetUrl, stan
   const [logoFile, setLogoFile] = useState(null);
   const [queuedGames, setQueuedGames] = useState([]);
   const [addFeedback, setAddFeedback] = useState("");
+  const [lineupError, setLineupError] = useState("");
   const swap = mode === "swap";
   const readOnly = mode === "view";
   useEffect(() => {
@@ -1514,6 +1520,12 @@ function AgendaModal({ entry, mode = "new", presets, roster = [], assetUrl, stan
       setAddFeedback("Informe o adversário antes de adicionar outro jogo.");
       return;
     }
+    const validation = validateLineupUnique(lineup, roster);
+    if (!validation.valid) {
+      setLineupError(validation.message);
+      return;
+    }
+    setLineupError("");
     const queuedGame = { ...form, lineup: [...lineup], opponent: form.opponent.trim(), logoFile };
     const nextQueue = [...queuedGames, queuedGame];
     setQueuedGames(nextQueue);
@@ -1541,6 +1553,13 @@ function AgendaModal({ entry, mode = "new", presets, roster = [], assetUrl, stan
       setAddFeedback("Informe o adversário antes de salvar a Agenda.");
       return;
     }
+    const lineups = [...queuedGames, { ...entry, ...form, lineup }];
+    const invalidLineup = lineups.find((game) => !validateLineupUnique(game.lineup, roster).valid);
+    if (invalidLineup) {
+      setLineupError("Um jogador não pode ocupar mais de uma posição na mesma escalação.");
+      return;
+    }
+    setLineupError("");
     const currentGame = { ...entry, ...form, lineup, logoFile, opponent: form.opponent.trim() };
     onSave(edit ? currentGame : [...queuedGames, currentGame], mode);
   };
@@ -1572,17 +1591,11 @@ function AgendaModal({ entry, mode = "new", presets, roster = [], assetUrl, stan
                   : "Adicionar à agenda"}
             </h2>
           </div>
-          <button
-            type="button"
-            className="modal-close"
-            onClick={onClose}
-            aria-label="Fechar"
-          >
-            <Icon name="close" />
-          </button>
+          <CloseButton className="modal-close" onClick={onClose} />
         </header>
         <form onSubmit={(event) => submit(event)}>
           <div className="agenda-modal-scroll">
+          {lineupError && <p className="formation-duplicate-warning" role="alert">{lineupError}</p>}
           {!edit && queuedGames.length > 0 && (
             <section className="modal-game-queue" aria-label="Jogos adicionados neste envio">
               {queuedGames.map((game, index) => (
@@ -1615,6 +1628,7 @@ function AgendaModal({ entry, mode = "new", presets, roster = [], assetUrl, stan
                 {swap ? "NOVO ADVERSÁRIO" : "ADVERSÁRIO"}
                 <input
                   required
+                  className="agenda-opponent-input"
                   name="opponent"
                   value={form.opponent}
                   onChange={change}
@@ -1759,11 +1773,18 @@ function PresetPanel({ presets, setPresets, roster = [], assetUrl, onClose }) {
   const [name, setName] = useState("");
   const [duration, setDuration] = useState("1");
   const [lineup, setLineup] = useState(emptyLineup());
+  const [lineupError, setLineupError] = useState("");
   const [editingId, setEditingId] = useState("");
   const [pendingDelete, setPendingDelete] = useState(null);
   const add = (event) => {
     event.preventDefault();
     if (!name.trim()) return;
+    const validation = validateLineupUnique(lineup, roster);
+    if (!validation.valid) {
+      setLineupError(validation.message);
+      return;
+    }
+    setLineupError("");
     const payload = {
         id: crypto.randomUUID(),
         name: name.trim(),
@@ -1795,17 +1816,11 @@ function PresetPanel({ presets, setPresets, roster = [], assetUrl, onClose }) {
               alterar jogos já criados.
             </p>
           </div>
-          <button
-            type="button"
-            className="modal-close"
-            onClick={onClose}
-            aria-label="Fechar"
-          >
-            <Icon name="close" />
-          </button>
+          <CloseButton className="modal-close" onClick={onClose} />
         </header>
         <div className="preset-panel-body">
         <FormationPicker compact lineup={lineup} onChange={setLineup} roster={roster} assetUrl={assetUrl} />
+        {lineupError && <p className="formation-duplicate-warning" role="alert">{lineupError}</p>}
         <div>
           {presets.length ? (
             presets.map((preset) => (
@@ -2902,7 +2917,9 @@ function CurrentGame({ navigate }) {
 }
 function CurrentGameLive({ navigate, workspace }) {
   const item = useMemo(() => nextAgendaMatches(workspace.agenda)[0], [workspace.agenda]);
-  return <button className="now-playing" onClick={() => navigate("agenda")}><Crest small/><div><small>{item ? "PRÓXIMA PARTIDA" : "AGENDA LIVRE"}</small><b>{item ? `Strix United vs ${item.opponent_name}` : "Nenhuma partida programada"}</b></div><strong>{item ? timePart(item.scheduled_at) : "—"}</strong><Icon name="arrow" size={17}/></button>;
+  return <button className={`now-playing${item ? "" : " is-agenda-free"}`} onClick={() => navigate("agenda")} aria-label={item ? `Próxima partida: Strix United contra ${item.opponent_name}, ${datePart(item.scheduled_at)} às ${timePart(item.scheduled_at)}` : "Agenda: nenhuma partida programada"} title={item ? undefined : "Agenda sem partidas programadas"}>
+    {item ? <><Crest small/><div><small>PRÓXIMA PARTIDA</small><b>Strix United vs {item.opponent_name}</b></div><strong>{timePart(item.scheduled_at)}</strong><Icon name="arrow" size={17}/></> : <Crest small priority/>}
+  </button>;
 }
 function WorkspaceSkeleton({ type = "central" }) {
   const rowCount = type === "table" || type === "competitions" ? 5 : 3;
@@ -2951,10 +2968,14 @@ function App() {
   const [route, setRoute] = useState(currentRoute);
   const locationState = resolveLocation(route);
   const [launchTick, setLaunchTick] = useState(() => Date.now());
+  const [launchAccessCache, setLaunchAccessCache] = useState(() =>
+    isLaunchUnlocked(Date.now(), LAUNCH_CONFIG) ? null : readLaunchAccessVerification(),
+  );
   const launchDecision = launchGateDecision({
     hostname: window.location.hostname,
     now: launchTick,
     profile: auth.profile,
+    sessionUserId: auth.session?.user?.id || "",
     authLoading: auth.loading,
     config: LAUNCH_CONFIG,
   });
@@ -3037,6 +3058,21 @@ function App() {
     return () => clearTimeout(timer);
   }, [active, workspace.loading]);
   useEffect(() => {
+    if (isLaunchUnlocked(launchTick, LAUNCH_CONFIG)) {
+      setLaunchAccessCache(null);
+      return;
+    }
+    if (auth.profile?.access_tier === "dev") {
+      rememberLaunchAccess(auth.profile);
+      setLaunchAccessCache(readLaunchAccessVerification());
+      return;
+    }
+    if (!auth.loading) {
+      clearLaunchAccessVerification();
+      setLaunchAccessCache(null);
+    }
+  }, [auth.loading, auth.profile, launchTick]);
+  useEffect(() => {
     if (workspace.loading) return;
     preloadClubLogos(workspace.agenda
       .filter((match) => !["cancelled", "completed"].includes(match.status))
@@ -3060,7 +3096,7 @@ function App() {
     return <SpecialState kind="offline" onRetry={() => window.location.reload()} />;
   }
   if (launchDecision !== "app") {
-    return <LaunchGate mode={launchDecision} config={LAUNCH_CONFIG} onUnlock={() => setLaunchTick(Date.now())} onInternalAccess={auth.signIn} />;
+    return <LaunchGate mode={launchDecision} config={LAUNCH_CONFIG} previouslyVerified={Boolean(launchAccessCache)} onUnlock={() => setLaunchTick(Date.now())} onInternalAccess={auth.signIn} />;
   }
   if (auth.failureKind === "unavailable") {
     return <SpecialState kind="unavailable" onRetry={() => window.location.reload()} />;

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { MatchDisplay } from "../../ui/MatchDisplay.jsx";
+import { CloseButton } from "../../ui/CloseButton.jsx";
 import { ClubLogo } from "../../ui/ClubLogo.jsx";
 import { NextClubsSignature } from "../../ui/NextClubsBrand.jsx";
 import { STRIX_BRAND } from "../../brand.js";
@@ -124,9 +125,7 @@ function ImportCompetitionModal({ client, profile, workspace, close }) {
             <h2>Adicionar campeonato</h2>
             <p>A análise procura classificação e mata-mata da mesma edição.</p>
           </div>
-          <button onClick={close} aria-label="Fechar">
-            ×
-          </button>
+          <CloseButton onClick={close} />
         </header>
         <div className="competition-url-row">
           <label>

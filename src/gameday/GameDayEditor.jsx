@@ -8,6 +8,7 @@ import {
   canManageGameDay,
 } from "./defaults.js";
 import { GameDayCanvas, LayerControls } from "./GameDayCanvas.jsx";
+import { CloseButton } from "../ui/CloseButton.jsx";
 import {
   clearDraft,
   deleteProject,
@@ -233,9 +234,7 @@ function PlayerLibrary({ client, profile, players, refresh, onPick, close }) {
               os GameDays.
             </p>
           </div>
-          <button type="button" onClick={close} aria-label="Fechar">
-            ×
-          </button>
+          <CloseButton onClick={close} />
         </header>
         <div className="gd-library-body">
           <aside>
@@ -1066,7 +1065,7 @@ export function GameDayEditor({ profile, client, workspace }) {
                           })
                         }
                       >
-                        ×
+                        <Icon name="close" size={14} />
                       </button>
                     </article>
                   ))
@@ -1219,7 +1218,7 @@ export function GameDayEditor({ profile, client, workspace }) {
                           })
                         }
                       >
-                        ×
+                        <Icon name="close" size={14} />
                       </button>
                     </div>
                   </article>
@@ -1510,7 +1509,7 @@ export function GameDayEditor({ profile, client, workspace }) {
                           })
                         }
                       >
-                        ×
+                        <Icon name="close" size={14} />
                       </button>
                     </div>
                   </article>
@@ -1812,7 +1811,7 @@ export function GameDayEditor({ profile, client, workspace }) {
               <div className="gd-error" role="alert">
                 {error}
                 <button type="button" onClick={() => setError("")}>
-                  ×
+                  <Icon name="close" size={14} />
                 </button>
               </div>
             )}

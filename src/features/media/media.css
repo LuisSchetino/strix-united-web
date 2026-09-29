@@ -66,6 +66,8 @@
 .media-editorial-heading p{margin:0;color:#a6adb5;line-height:1.55}
 .media-page .media-tabs{width:100%;border-radius:10px;padding:5px;background:#0b0d10}
 .media-page .media-tabs button{flex:1 0 auto;font-size:11px;padding-inline:16px}
+.media-page .media-output-tabs{width:max-content;max-width:100%;border-radius:10px;padding:4px;background:#0b0d10}
+.media-page .media-output-tabs button{min-width:148px;min-height:42px;padding-inline:16px;font-size:10px;letter-spacing:.055em}
 .media-page .media-hero{padding:4px 0 20px;border:0;border-bottom:1px solid var(--strix-border);border-radius:0;background:none}
 .media-page .media-hero h1{font-size:26px;letter-spacing:-.025em;line-height:1.2;margin:6px 0 10px}
 .media-page .media-hero p{font-size:14px;line-height:1.55;max-width:65ch}
@@ -113,6 +115,8 @@ dialog.media-viewer::backdrop{background:#0009}
   .media-hero-meta>span{flex-basis:100%;font-size:11px}
   .media-hero-meta b{font-size:22px}
   .media-page .media-tabs button{font-size:11px;min-height:48px}
+  .media-page .media-output-tabs{width:100%}
+  .media-page .media-output-tabs button{min-width:0;flex:1 1 50%;min-height:46px;padding-inline:8px;font-size:9px}
   .media-page .media-preview-frame{padding:0}
   .media-actions{display:grid;grid-template-columns:1fr}
   dialog.media-viewer{padding:12px 12px max(12px,env(safe-area-inset-bottom));align-items:end}

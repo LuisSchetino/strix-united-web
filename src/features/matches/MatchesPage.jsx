@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { MatchDisplay } from "../../ui/MatchDisplay.jsx";
+import { CloseButton } from "../../ui/CloseButton.jsx";
+import { useDialog } from "../../ui/useDialog.js";
 import { STRIX_BRAND } from "../../brand.js";
 import { RastroDataSignature, RastroWatermark } from "../../ui/RastroBrand.jsx";
 import {
@@ -19,6 +21,7 @@ import {
   validateImport,
 } from "./import-core.js";
 import { canonicalPlayerName } from "../statistics/statistics-core.js";
+import { describeEaArchetype } from "../statistics/ea-archetypes.js";
 import "./match-import.css";
 import "./match-fixes.css";
 import "../../partidas.css";
@@ -131,9 +134,7 @@ function EditMatchModal({ match, workspace, close, save }) {
             <h2>Editar antes de importar</h2>
             <p>O card ao lado acompanha cada alteração em tempo real.</p>
           </div>
-          <button type="button" onClick={close} aria-label="Fechar">
-            ×
-          </button>
+          <CloseButton onClick={close} />
         </header>
         <div className="match-review-layout">
           <section className="match-review-fields">
@@ -567,13 +568,68 @@ function StatIcon({ name }) {
   return <svg className="match-stat-icon" viewBox="0 0 24 24" aria-hidden="true">{paths[name] || paths.rating}</svg>;
 }
 
+function PlayerMatchSheet({ player, match, workspace, close }) {
+  const dialogRef = useDialog(close);
+  useEffect(() => {
+    const dismiss = (event) => event.key === "Escape" && close();
+    window.addEventListener("keydown", dismiss);
+    return () => window.removeEventListener("keydown", dismiss);
+  }, [close]);
+  const eaId = String(player.eaPlayerId ?? player.ea_player_id ?? player.id ?? "");
+  const linkedAlias = safeRows(workspace.aliases).find((alias) => String(alias.ea_player_id || "") === eaId && eaId)
+    || safeRows(workspace.aliases).find((alias) => normalizeName(alias.ea_name) === normalizeName(player.eaName || player.name));
+  const linkedPlayer = safeRows(workspace.players).find((item) => eaId && String(item.ea_player_id || "") === eaId)
+    || (linkedAlias ? safeRows(workspace.players).find((item) => String(item.id) === String(linkedAlias.player_id)) : null);
+  const name = linkedPlayer?.display_name || canonicalPlayerName(player.name || player.eaName, workspace.players, workspace.aliases);
+  const position = player.pos || player.position || linkedPlayer?.positions?.join(" · ") || "—";
+  const archetype = player.archetypeId ? describeEaArchetype(player.archetypeId) : null;
+  const goalkeeper = /^(GK|GOL|GL|GOLEIRO)$/i.test(String(position)) || Number(player.saves) > 0;
+  const passesMatch = String(player.passes || "").match(/(\d+)\s*\/\s*(\d+)/);
+  const passesMade = Number(player.passesMade ?? passesMatch?.[1]);
+  const passesAttempted = Number(player.passesAttempts ?? player.passAttempts ?? passesMatch?.[2]);
+  const tacklesMade = Number(player.tackles ?? 0);
+  const tackleAttempts = Number(player.tackleAttempts ?? player.tacklesAttempts);
+  const normalMetrics = [
+    ["GOLS", player.goals], ["ASSISTÊNCIAS", player.assists], ["G+A", Number(player.goals || 0) + Number(player.assists || 0)],
+    ["CHUTES", player.shots], ["PASSES", Number.isFinite(passesMade) && Number.isFinite(passesAttempted) ? `${passesMade} / ${passesAttempted}` : null],
+    ["PRECISÃO", passesAttempted > 0 && Number.isFinite(passesMade) ? `${((passesMade / passesAttempted) * 100).toFixed(1)}%` : null],
+    ["DESARMES", Number.isFinite(tacklesMade) ? tacklesMade : null],
+    ["DESARMES TENTADOS", Number.isFinite(tackleAttempts) ? tackleAttempts : null],
+    ["EFICIÊNCIA", tackleAttempts > 0 ? `${((tacklesMade / tackleAttempts) * 100).toFixed(1)}%` : null],
+    ["MOTM", player.mom === 1 || player.mom === true ? "SIM" : hasOwnValue(player.mom) ? "NÃO" : null],
+    ["VERMELHO", player.redcards], ["CLEAN SHEET DEF", player.cleansheetsdef],
+  ];
+  const goalkeeperMetrics = [
+    ["DEFESAS · TOTAL EA", player.saves], ["GOOD DIRECTION", player.goodDirectionSaves], ["REFLEX", player.reflexSaves],
+    ["CROSS", player.crossSaves], ["BALL DIVE", player.ballDiveSaves], ["PARRY", player.parrySaves],
+    ["PUNCH", player.punchSaves], ["CLEAN SHEET", player.cleansheetsgk],
+  ];
+  const dateLabel = match.played_at ? formatDate(match.played_at) : "Data indisponível";
+  return createPortal(<div className="player-match-sheet-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && close()}>
+    <section ref={dialogRef} tabIndex={-1} className="player-match-sheet" role="dialog" aria-modal="true" aria-label={`Ficha pós-jogo de ${name}`}>
+      <header><div><span>FICHA PÓS-JOGO · {dateLabel}</span><h2>{name}</h2><p>{position}{archetype ? ` · ${archetype.name}` : ""} · Strix {match.strix_score} × {match.opponent_score} {match.opponent_name}</p></div><CloseButton onClick={close}/></header>
+      <div className="player-match-sheet-rating"><small>NOTA EA</small><strong>{hasOwnValue(player.rating) ? player.rating : "—"}</strong></div>
+      <div className="player-match-sheet-grid">{[...normalMetrics, ...(goalkeeper ? goalkeeperMetrics : [])].filter(([, value]) => value !== null && value !== undefined && value !== "").map(([label, value]) => <article key={label}><small>{label}</small><b>{value}</b></article>)}</div>
+      {!goalkeeper && <p className="player-match-sheet-note">Métricas defensivas e disciplina conforme os campos fornecidos pela EA.</p>}
+      <footer><button type="button" className="secondary" onClick={close}>FECHAR</button></footer>
+    </section>
+  </div>, document.body);
+}
+
+const hasOwnValue = (value) => value !== null && value !== undefined && value !== "";
+
 function MatchDetails({ match, workspace, close }) {
+  const [selectedPlayer, setSelectedPlayer] = useState(null);
   const sheetDismiss = useSheetDismiss(close);
   useEffect(() => {
-    const onKeyDown = (event) => event.key === "Escape" && close();
+    const onKeyDown = (event) => {
+      if (event.key !== "Escape") return;
+      if (selectedPlayer) setSelectedPlayer(null);
+      else close();
+    };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [close]);
+  }, [close, selectedPlayer]);
   const performance = match.performance || {};
   const players = [...(performance.players || [])].sort(
     (left, right) => Number(right.rating || 0) - Number(left.rating || 0),
@@ -618,9 +674,7 @@ function MatchDetails({ match, workspace, close }) {
         <button type="button" className="match-sheet-handle" aria-label="Arraste ou toque para fechar" onClick={close} {...sheetDismiss}><i /></button>
         <header className="match-detail-header">
           <div><span>HISTÓRICO DA PARTIDA</span><h2>Resumo do confronto</h2><p>{formatDate(match.played_at)} · {formatTime(match.played_at)} · {match.competition_name || "Amistoso"}</p></div>
-          <button type="button" onClick={close} aria-label="Fechar">
-            ×
-          </button>
+          <CloseButton onClick={close} />
         </header>
         <div className="match-detail-body">
           <section className="match-detail-score-shell" aria-label={`Resultado: ${result}`}>
@@ -654,7 +708,7 @@ function MatchDetails({ match, workspace, close }) {
                 <header role="row"><span>JOGADOR</span><span>NOTA</span><span>G</span><span>A</span><span>PASSES</span><span>CHUTES</span><span>DESARMES</span><span>DEFESAS</span></header>
                 {players.map((player, index) => (
                   <article role="row" className={`${Number(player.rating) === bestRating && bestRating > 0 ? "is-best " : ""}${disconnected(player) ? "is-disconnected" : ""}`} key={player.id || player.eaName || index}>
-                    <div><b>{canonicalPlayerName(player.name || player.eaName, workspace.players, workspace.aliases)}</b><small>{disconnected(player) && <em className="disconnect-badge">CAIU DA PARTIDA</em>}{!disconnected(player) && Number(player.rating) === bestRating && bestRating > 0 && <em>MELHOR NOTA</em>}{Number(player.goals) === maxGoals && maxGoals > 0 && <em><StatIcon name="goals"/> ARTILHEIRO</em>}{Number(player.assists) === maxAssists && maxAssists > 0 && <em><StatIcon name="assists"/> ASSISTÊNCIA</em>}{Number(player.passesMade) === maxPasses && maxPasses > 0 && <em>MAIS PASSES</em>}</small></div>
+                    <div><b><button type="button" className="match-player-profile-trigger" onClick={() => setSelectedPlayer(player)} aria-label={`Abrir ficha de ${canonicalPlayerName(player.name || player.eaName, workspace.players, workspace.aliases)} nesta partida`}>{canonicalPlayerName(player.name || player.eaName, workspace.players, workspace.aliases)}</button></b><small>{disconnected(player) && <em className="disconnect-badge">CAIU DA PARTIDA</em>}{!disconnected(player) && Number(player.rating) === bestRating && bestRating > 0 && <em>MELHOR NOTA</em>}{Number(player.goals) === maxGoals && maxGoals > 0 && <em><StatIcon name="goals"/> ARTILHEIRO</em>}{Number(player.assists) === maxAssists && maxAssists > 0 && <em><StatIcon name="assists"/> ASSISTÊNCIA</em>}{Number(player.passesMade) === maxPasses && maxPasses > 0 && <em>MAIS PASSES</em>}</small></div>
                     <strong>{player.rating ?? "—"}</strong><span>{player.goals ?? "—"}</span><span>{player.assists ?? "—"}</span><span>{player.passes ?? "—"}</span><span>{player.shots ?? "—"}</span><span>{player.tackles ?? "—"}</span><span>{player.saves ?? "—"}</span>
                   </article>
                 ))}
@@ -672,6 +726,7 @@ function MatchDetails({ match, workspace, close }) {
           </button>
         </footer>
       </section>
+      {selectedPlayer && <PlayerMatchSheet player={selectedPlayer} match={match} workspace={workspace} close={() => setSelectedPlayer(null)}/>}
     </div>
   ), document.body);
 }

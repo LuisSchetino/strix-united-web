@@ -30,7 +30,7 @@ function Review() {
   const [rosterClient] = useState(() => createRosterFixtureClient(localStorage, "strix-quality-roster-v2", fixture.players.map((player, index) => ({ ...player, external_avatar_url: index === 0 ? "/brand/strix/portrait-ygo.png" : index === 1 ? "/brand/strix/portrait-joao.png" : "" }))));
   const [players, setPlayers] = useState(() => rosterClient.rows());
   const [emptyAgenda, setEmptyAgenda] = useState(false);
-  const [active, setActive] = useState("central");
+  const [active, setActive] = useState(() => new URLSearchParams(window.location.search).get("page") === "midia" ? "midia" : "central");
   const [compact, setCompact] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [agenda, setAgenda] = useState(() => [0, 1, 2].map((index) => ({

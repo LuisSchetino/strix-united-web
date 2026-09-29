@@ -14,6 +14,27 @@ test("estatísticas do time calculam campanha, médias e precisão", () => {
   assert.equal(result.activeSquad, 1);
 });
 
+test("métricas EA ausentes permanecem sem amostra e não viram zeros de produto", () => {
+  const result = aggregateTeamStatistics([{ strix_score: 2, opponent_score: 0, performance: { players: [] } }]);
+  assert.equal(result.goalsFor, 2, "placar da partida continua sendo dado oficial disponível");
+  assert.equal(result.metricSamples.shots, 0);
+  assert.equal(result.shotsPerGame, null);
+  assert.equal(result.metricSamples.tackles, 0);
+  assert.equal(result.tacklesPerGame, null);
+  assert.equal(result.metricSamples.saves, 0);
+  assert.equal(result.savesPerGame, null);
+  assert.equal(result.passAccuracy, null);
+  assert.equal(result.averageRating, null);
+});
+
+test("zero tentativas continuam observadas, mas não produzem porcentagem infinita", () => {
+  const result = aggregateTeamStatistics([{ strix_score: 0, opponent_score: 0, performance: { passesMade: 0, passesAttempts: 0, tackleAttempts: 0, tackles: 0, shots: 0, saves: 0 } }]);
+  assert.equal(result.metricSamples.shots, 1);
+  assert.equal(result.shotsPerGame, 0);
+  assert.equal(result.passAccuracy, null);
+  assert.equal(result.tackleAccuracy, null);
+});
+
 test("estatísticas individuais consolidam G+A e passes", () => {
   const [player] = aggregatePlayerStatistics(matches);
   assert.equal(player.games, 2);
@@ -37,9 +58,28 @@ test("separa goleiro e exclui desconexão de rankings", () => {
   ] } }];
   const players = aggregatePlayerStatistics(withRoles);
   assert.equal(players.find((player) => player.name === "JOAO").goalkeeper, true);
-  assert.equal(players.find((player) => player.name === "JOAO").cleanSheets, 1);
+  assert.equal(players.find((player) => player.name === "JOAO").cleanSheets, 0, "clean sheets individuais só vêm dos campos EA correspondentes");
   assert.equal(players.find((player) => player.name === "CAIU").disconnected, true);
   assert.deepEqual(buildRanking(players, "averageRating").map((player) => player.name), ["ATACANTE"]);
+});
+
+test("usa métricas EA diretas sem somar breakdowns ou tratar zero segundos como atuação", () => {
+  const sample = [{ played_at: "2026-09-01T23:00:00-03:00", strix_score: 2, opponent_score: 1, performance: { players: [
+    { eaPlayerId: "ea-1", eaName: "Goleiro", pos: "GK", secondsPlayed: 0, rating: 8, goals: 1, assists: 1, shots: 2, passesMade: 8, passesAttempts: 10, tackles: 2, tackleAttempts: 4, mom: 1, cleansheetsdef: 2, cleansheetsgk: 1, saves: 4, reflexSaves: 3, crossSaves: 2, goodDirectionSaves: 1 },
+  ] } }];
+  const [player] = aggregatePlayerStatistics(sample);
+  assert.equal(player.eaPlayerIds[0], "ea-1");
+  assert.equal(player.goalAssists, 2);
+  assert.equal(player.shotConversion, 50);
+  assert.equal(player.passAccuracy, 80);
+  assert.equal(player.tackleAccuracy, 50);
+  assert.equal(player.mom, 1);
+  assert.equal(player.cleanSheetsDef, 2);
+  assert.equal(player.cleanSheetsGk, 1);
+  assert.equal(player.saves, 4, "breakdown de defesas não é somado ao total oficial");
+  assert.equal(player.reflexSaves, 3);
+  assert.equal(player.goalkeeperGames, 0, "secondsPlayed igual a zero não conta automaticamente como atuação");
+  assert.equal(player.goalsAgainst, 0);
 });
 
 test("precisão exige amostra mínima de passes", () => {

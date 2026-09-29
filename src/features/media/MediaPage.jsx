@@ -44,6 +44,7 @@ import { MediaLookBadge, MediaLookSwitch } from "./MediaLookSwitch.jsx";
 import { readStoredMediaLook, withMediaLook, writeStoredMediaLook } from "./media-look.js";
 import { preloadCollageAssets } from "../../assets/collage/index.js";
 import { preloadCutoutChars } from "./cutout-text.js";
+import { StaticMediaV2Studio } from "./StaticMediaV2Studio.jsx";
 import "./media.css";
 
 function PreviewCanvas({
@@ -145,6 +146,7 @@ function CacheCard({ title, record, currentFingerprint, onView, onDownload, onRe
 export function MediaPage({ profile, client, workspace }) {
   const allowed = canManageMedia(profile);
   const [tab, setTab] = useState("agenda");
+  const [outputMode, setOutputMode] = useState("video");
   const [format, setFormat] = useState("story");
   const [job, setJob] = useState(null);
   const [assets, setAssets] = useState(null);
@@ -355,6 +357,14 @@ export function MediaPage({ profile, client, workspace }) {
     <section className="media-page page-enter">
       <header className="media-editorial-heading"><span>STRIX UNITED · MÍDIA</span><h1>Central de conteúdo.</h1><p>A noite em campo. A história nas redes.</p></header>
       <MotionTabs
+        className="media-output-tabs"
+        items={[["video", "VÍDEO · V1"], ["static", "ARTE ESTÁTICA · V2"]]}
+        active={outputMode}
+        onChange={setOutputMode}
+        label="Formato de saída"
+      />
+      {outputMode === "static" ? <StaticMediaV2Studio /> : <>
+      <MotionTabs
         className="media-tabs"
         items={[
           ["agenda", "AGENDA DO DIA"],
@@ -365,7 +375,7 @@ export function MediaPage({ profile, client, workspace }) {
         ]}
         active={tab}
         onChange={setTab}
-        label="Área de mídia"
+        label="Tipo de conteúdo em vídeo"
       />
       {tab === "announce" ? (
         <AnnounceStudio workspace={workspace} mediaLook={mediaLook} onMediaLook={setLook} />
@@ -632,6 +642,7 @@ export function MediaPage({ profile, client, workspace }) {
           )}
         </>
       )}
+      </>}
       {viewer && <Viewer record={viewer} close={() => setViewer(null)} />}
     </section>
   );

@@ -4,6 +4,7 @@ import {
   EA_CLUB_ID,
   aliasLookup,
   dedupeImportedMatches,
+  eaPlayerRows,
   normalizeEaMatch,
   normalizeEaMatches,
   resolvePlayerAliases,
@@ -151,6 +152,42 @@ test("clube FC27 atual e legado 15686 alimentam o mesmo parser", () => {
   assert.equal(legacy.strixScore, 2);
   assert.equal(legacy.opponent, "POA CITY FC");
   assert.equal(legacy.performance.players.length, 3);
+});
+
+test("friendlies preservam EA player id e somente os campos individuais enviados", () => {
+  const rows = eaPlayerRows({ players: { "30428": {
+    "9007199254740993": {
+      playername: "Teste FC27", pos: "GK", archetypeid: 12, secondsPlayed: 0,
+      goals: 0, assists: 1, shots: 2, passattempts: 10, passesmade: 8,
+      tackleattempts: 3, tacklesmade: 2, rating: 7.4, mom: 1, redcards: 0,
+      cleansheetsdef: 1, cleansheetsgk: 0, saves: 4, goodDirectionSaves: 2,
+      reflexSaves: 3, crossSaves: 0, ballDiveSaves: 1, parrySaves: 1, punchSaves: 0,
+      realtimegame: 88, realtimeidle: 5, userresult: 1, goalsconceded: 99,
+    },
+  } } });
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].eaPlayerId, "9007199254740993");
+  assert.equal(rows[0].id, "9007199254740993");
+  assert.equal(rows[0].archetypeId, 12);
+  assert.equal(rows[0].position, "GK");
+  assert.equal(rows[0].passesMade, 8);
+  assert.equal(rows[0].passesAttempts, 10);
+  assert.equal(rows[0].tackleAttempts, 3);
+  assert.equal(rows[0].tackles, 2);
+  assert.equal(rows[0].goodDirectionSaves, 2);
+  assert.equal(rows[0].mom, 1);
+  assert.equal(rows[0].redcards, 0);
+  assert.equal(rows[0].cleansheetsdef, 1);
+  assert.equal(rows[0].cleansheetsgk, 0);
+  assert.equal(rows[0].saves, 4);
+  assert.equal(rows[0].reflexSaves, 3);
+  assert.equal(rows[0].crossSaves, 0);
+  assert.equal(rows[0].ballDiveSaves, 1);
+  assert.equal(rows[0].parrySaves, 1);
+  assert.equal(rows[0].punchSaves, 0);
+  assert.equal(rows[0].goalsconceded, undefined);
+  assert.equal(rows[0].realtimegame, undefined);
+  assert.equal(rows[0].userresult, undefined);
 });
 
 test("payload FC27 real usa clubs.details.name, goals string e players por persona", () => {

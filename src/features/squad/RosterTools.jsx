@@ -1,12 +1,13 @@
 import React, { useState } from "react";
-import { IconLink, IconTrash, IconX } from "@tabler/icons-react";
+import { IconLink, IconTrash } from "@tabler/icons-react";
 import { notify } from "../../ui/motion/motion.jsx";
+import { CloseButton } from "../../ui/CloseButton.jsx";
 import "./roster-tools.css";
 
 function ToolsDialog({ title, eyebrow, close, children, footer }) {
   return <div className="roster-tools-layer" onMouseDown={(event) => event.target === event.currentTarget && close()}>
     <section className="roster-tools-dialog" role="dialog" aria-modal="true" aria-label={title}>
-      <header><div><span>{eyebrow}</span><h2>{title}</h2></div><button type="button" onClick={close} aria-label="Fechar"><IconX size={20}/></button></header>
+      <header><div><span>{eyebrow}</span><h2>{title}</h2></div><CloseButton onClick={close} /></header>
       <div className="roster-tools-body">{children}</div>
       {footer && <footer>{footer}</footer>}
     </section>

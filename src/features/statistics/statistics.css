@@ -648,3 +648,115 @@
 .statistics-ranking-list article>strong,.statistics-ranking-value>span{color:#f4f5f6!important}
 .statistics-ranking-list article.is-top:before{background:#d8dce0!important;box-shadow:none}
 @media(max-width:760px){.statistics-player-table>article{background:#0b0d10!important;border-color:var(--strix-border)!important}}
+
+/* Rastro is reserved for analytical marks and values; descriptive copy stays neutral. */
+.statistics-v3 .statistics-stat-card>small,
+.statistics-v3 .statistics-ranking-card header small,
+.statistics-v3 .statistics-ranking-card li small,
+.statistics-v3 .statistics-goalkeeper-card dt,
+.statistics-v3 .statistics-section-heading span,
+.statistics-v3 .statistics-ranking-modal header span{color:#aeb4bb!important}
+.statistics-v3 .statistics-stat-card>span,
+.statistics-v3 .statistics-stat-card>span svg,
+.statistics-v3 .statistics-ranking-card>header>span svg,
+.statistics-v3 .statistics-goalkeeper-card>header>span svg{color:var(--rastro-blue)!important}
+.statistics-v3 .statistics-stat-card>strong,
+.statistics-v3 .statistics-team-grid .statistics-stat-card>strong,
+.statistics-v3 .statistics-ranking-card>ol>li>strong,
+.statistics-v3 .statistics-ranking-value>span,
+.statistics-v3 .statistics-goalkeeper-card dd{color:var(--rastro-blue)!important}
+.statistics-v3 .statistics-ranking-card>ol>li>em{color:#2F80FF!important}
+.statistics-v3 .statistics-ranking-card>ol>li:nth-child(2)>em{color:#78ADFF!important}
+.statistics-v3 .statistics-ranking-card>ol>li:nth-child(3)>em{color:#245FAF!important}
+.statistics-v3 .statistics-ranking-list article>strong{background:rgba(47,128,255,.12)!important;color:#2F80FF!important}
+.statistics-v3 .statistics-ranking-list article.is-top-1>strong{background:rgba(47,128,255,.20)!important;color:#2F80FF!important}
+.statistics-v3 .statistics-ranking-list article.is-top-2>strong{background:rgba(120,173,255,.16)!important;color:#78ADFF!important}
+.statistics-v3 .statistics-ranking-list article.is-top-3>strong{background:rgba(36,95,175,.22)!important;color:#5c91dc!important}
+.statistics-v3 .statistics-ranking-list article.is-top-1:before{background:#2F80FF!important}
+.statistics-v3 .statistics-ranking-list article.is-top-2:before{background:#78ADFF!important}
+.statistics-v3 .statistics-ranking-list article.is-top-3:before{background:#245FAF!important}
+.statistics-v3 .statistics-ranking-list article>div b,
+.statistics-v3 .statistics-ranking-list article em,
+.statistics-v3 .statistics-ranking-value small{color:#d8dce0!important}
+.statistics-v3 .statistics-archetype{color:#aeb4bb;font-size:10px;font-weight:800}
+.statistics-v3 .statistics-player-table{overflow-x:auto}
+.statistics-v3 .statistics-player-table>header,
+.statistics-v3 .statistics-player-table>article{min-width:1720px;grid-template-columns:minmax(145px,1.5fr) repeat(17,minmax(55px,.6fr)) minmax(125px,1fr)}
+.statistics-v3 .statistics-player-table>header span:last-child{min-width:125px}
+.statistics-v3 .statistics-player-table>article>span[data-label="EA ID"]{max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.statistics-ranking-modal .statistics-ranking-list article>strong{background:rgba(47,128,255,.12)!important;color:#2F80FF!important}
+.statistics-ranking-modal .statistics-ranking-list article.is-top-1>strong{background:rgba(47,128,255,.20)!important;color:#2F80FF!important}
+.statistics-ranking-modal .statistics-ranking-list article.is-top-2>strong{background:rgba(120,173,255,.16)!important;color:#78ADFF!important}
+.statistics-ranking-modal .statistics-ranking-list article.is-top-3>strong{background:rgba(36,95,175,.22)!important;color:#5c91dc!important}
+.statistics-ranking-modal .statistics-ranking-list article.is-top-1:before{background:#2F80FF!important}
+.statistics-ranking-modal .statistics-ranking-list article.is-top-2:before{background:#78ADFF!important}
+.statistics-ranking-modal .statistics-ranking-list article.is-top-3:before{background:#245FAF!important}
+.statistics-ranking-modal .statistics-ranking-value>span{color:#2F80FF!important}
+@media(max-width:760px){.statistics-v3 .statistics-player-table{overflow:visible}.statistics-v3 .statistics-player-table>article{min-width:0;grid-template-columns:1fr 1fr}.statistics-v3 .statistics-player-table>header{display:none}.statistics-v3 .statistics-player-table>article>b{grid-column:1/-1}.statistics-v3 .statistics-player-table>article>span[data-label="EA ID"]{max-width:none;overflow-wrap:anywhere;white-space:normal}}
+
+/* Rastro blue is reserved for analytics data, not navigation or generic controls. */
+.statistics-v3 .statistics-stat-card>span{color:var(--rastro-blue)!important}
+.statistics-v3 .statistics-stat-card>span svg{color:var(--rastro-blue)!important}
+.statistics-v3 .statistics-stat-card>strong{color:var(--rastro-blue)!important}
+.statistics-team-identity p{color:#aeb4bb;font-size:11px}
+.statistics-team-identity p i{padding-inline:4px;color:#69717a;font-style:normal}
+.statistics-individual-select,.statistics-night-summary,.statistics-individual-profile{border:1px solid var(--strix-border,#25292e);border-radius:12px;background:#0b0d10;color:#e8e9ea}
+.statistics-individual-select{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:15px 17px}
+.statistics-individual-select>div>span,.statistics-night-summary header>div>span,.statistics-profile-identity>div>span,.statistics-profile-form header span,.statistics-profile-records header span{color:#91979e;font-size:10px;font-weight:850;letter-spacing:.13em}
+.statistics-individual-select p,.statistics-night-summary header p{margin:5px 0 0;color:#a9afb5;font-size:12px;line-height:1.45}
+.statistics-individual-select .select-control{min-width:min(280px,45%)}
+.statistics-individual-profile{overflow:hidden}
+.statistics-profile-identity{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:21px 22px;border-bottom:1px solid var(--strix-border,#25292e)}
+.statistics-profile-identity h2{margin:6px 0 3px;font-size:clamp(20px,2.5vw,28px);line-height:1.05}
+.statistics-profile-identity p,.statistics-profile-identity>small{margin:0;color:#a9afb5;font-size:12px}
+.statistics-profile-identity>small{text-align:right}
+.statistics-profile-season{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));border-bottom:1px solid var(--strix-border,#25292e)}
+.statistics-profile-season article{display:grid;gap:8px;min-height:84px;padding:15px 18px;border-right:1px solid var(--strix-border,#25292e)}
+.statistics-profile-season article:last-child{border-right:0}
+.statistics-profile-season small,.statistics-night-scoreline small{color:#9da3aa;font-size:9px;font-weight:850;letter-spacing:.08em}
+.statistics-profile-season strong,.statistics-night-scoreline strong{color:var(--rastro-blue,#2F80FF);font-size:20px;font-variant-numeric:tabular-nums}
+.statistics-profile-lower{display:grid;grid-template-columns:1.15fr .85fr;gap:0}
+.statistics-profile-form,.statistics-profile-records{padding:18px 20px}
+.statistics-profile-form{border-right:1px solid var(--strix-border,#25292e)}
+.statistics-profile-form header,.statistics-profile-records header{margin-bottom:12px}
+.statistics-profile-form h3,.statistics-profile-records h3{margin:4px 0 0;font-size:16px}
+.statistics-profile-form>ol{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px;margin:0;padding:0;list-style:none}
+.statistics-profile-form>ol li{display:grid;gap:4px;min-width:0;padding:10px;border:1px solid #262a30;border-radius:7px;background:#101216}
+.statistics-profile-form>ol li strong{color:var(--rastro-blue,#2F80FF);font-size:20px;font-variant-numeric:tabular-nums}
+.statistics-profile-form>ol li span,.statistics-profile-form>ol li small{overflow:hidden;color:#c3c7cb;font-size:10px;text-overflow:ellipsis;white-space:nowrap}
+.statistics-profile-form>ol li small{color:#8c9299;font-size:9px}
+.statistics-profile-form>p,.statistics-profile-records>p{margin:0;padding:12px 0;color:#a9afb5;font-size:12px}
+.statistics-form-comparisons{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px}
+.statistics-form-comparisons article{display:grid;grid-template-columns:1fr auto;align-items:center;gap:4px 10px;padding:9px 10px;border-top:1px solid #292d32}
+.statistics-form-comparisons small{color:#969ca3;font-size:9px;font-weight:800;letter-spacing:.05em}
+.statistics-form-comparisons b{color:var(--rastro-blue,#2F80FF);font-size:14px}
+.statistics-form-comparisons span{grid-column:1/-1;color:#b5bac0;font-size:10px}
+.statistics-profile-records ul{display:grid;gap:0;margin:0;padding:0;list-style:none}
+.statistics-profile-records li{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:8px 0;border-top:1px solid #292d32}
+.statistics-profile-records li>span{display:grid;gap:3px}
+.statistics-profile-records li small{color:#9da3aa;font-size:9px;font-weight:800;letter-spacing:.04em}
+.statistics-profile-records li b{color:var(--rastro-blue,#2F80FF);font-size:15px}
+.statistics-profile-records li em{max-width:58%;color:#aeb3b9;font-size:9px;font-style:normal;text-align:right}
+.statistics-position-context{display:grid;gap:7px;margin-top:13px;padding-top:11px;border-top:1px solid #292d32}
+.statistics-position-context>small{color:#91979e;font-size:9px;font-weight:850;letter-spacing:.08em}
+.statistics-position-context>span{display:flex;justify-content:space-between;gap:10px;color:#d9dcdf;font-size:11px}
+.statistics-position-context em{color:#aeb4ba;font-size:10px;font-style:normal;text-align:right}
+.statistics-night-summary{padding:16px 18px}
+.statistics-night-summary>header{display:flex;align-items:center;justify-content:space-between;gap:20px}
+.statistics-night-summary header h2{margin:4px 0 0;font-size:19px}
+.statistics-night-controls{display:flex;align-items:center;gap:9px}
+.statistics-night-controls .select-control{min-width:170px}
+.statistics-night-controls button{min-height:40px;white-space:nowrap}
+.statistics-night-body{display:grid;gap:12px;margin-top:14px;padding-top:14px;border-top:1px solid var(--strix-border,#25292e)}
+.statistics-night-scoreline{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.statistics-night-scoreline article{display:grid;gap:4px;padding:10px 12px;background:#101216;border-radius:7px}
+.statistics-night-scoreline strong{font-size:18px}
+.statistics-night-leaders{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.statistics-night-leaders>article{padding:10px 12px;border-top:1px solid #292d32}
+.statistics-night-leaders>article>small{color:#9da3aa;font-size:9px;font-weight:850;letter-spacing:.08em}
+.statistics-night-leaders>article>div{display:grid;gap:5px;margin-top:6px}
+.statistics-night-leaders>article span{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.statistics-night-leaders b{color:#e2e4e6;font-size:12px}
+.statistics-night-leaders strong{color:var(--rastro-blue,#2F80FF);font-size:12px;white-space:nowrap}
+@media(max-width:900px){.statistics-profile-season{grid-template-columns:repeat(3,minmax(0,1fr))}.statistics-profile-season article:nth-child(3){border-right:0}.statistics-profile-season article:nth-child(n+4){border-top:1px solid var(--strix-border,#25292e)}.statistics-profile-lower{grid-template-columns:1fr}.statistics-profile-form{border-right:0;border-bottom:1px solid var(--strix-border,#25292e)}}
+@media(max-width:620px){.statistics-individual-select,.statistics-night-summary>header{align-items:stretch;flex-direction:column}.statistics-individual-select .select-control,.statistics-night-controls,.statistics-night-controls .select-control{width:100%;min-width:0}.statistics-night-controls{align-items:stretch;flex-direction:column}.statistics-profile-identity{align-items:flex-start;flex-direction:column}.statistics-profile-identity>small{text-align:left}.statistics-profile-season{grid-template-columns:repeat(2,minmax(0,1fr))}.statistics-profile-season article{min-height:72px;padding:12px}.statistics-profile-season article:nth-child(odd){border-right:1px solid var(--strix-border,#25292e)}.statistics-profile-season article:nth-child(even){border-right:0}.statistics-profile-season article:nth-child(n+3){border-top:1px solid var(--strix-border,#25292e)}.statistics-profile-season strong{font-size:17px}.statistics-profile-form,.statistics-profile-records{padding:15px 13px}.statistics-profile-form>ol{grid-template-columns:repeat(5,minmax(54px,1fr));overflow-x:auto;padding-bottom:4px}.statistics-form-comparisons{grid-template-columns:1fr}.statistics-profile-records li{align-items:flex-start}.statistics-profile-records li em{max-width:48%}.statistics-position-context>span{font-size:10px}.statistics-night-scoreline{grid-template-columns:repeat(2,minmax(0,1fr))}.statistics-night-leaders{grid-template-columns:repeat(2,minmax(0,1fr))}.statistics-night-summary{padding:14px 12px}}

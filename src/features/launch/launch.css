@@ -306,3 +306,5 @@
 .launch-gate.is-reduced .launch-wordmark,
 .launch-gate.is-reduced .launch-panel{animation:none}
 .launch-gate.is-reduced .launch-digit-track{transition:none}
+.launch-bootstrap{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;gap:12px;min-height:100dvh;padding:env(safe-area-inset-top) 24px env(safe-area-inset-bottom);background:#050607;color:#aeb4bb;font-size:12px;font-weight:750;letter-spacing:.08em}
+.launch-bootstrap-crest{width:28px;height:28px;opacity:.82}

@@ -3,7 +3,10 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import {
   LAUNCH_CONFIG,
+  LAUNCH_ACCESS_KEY,
+  LAUNCH_ACCESS_TTL_MS,
   canShowInternalAccess,
+  clearLaunchAccessVerification,
   consumeLaunchReturn,
   countdownParts,
   displayRemainingMs,
@@ -14,6 +17,8 @@ import {
   isLaunchUnlocked,
   launchGateDecision,
   parseLaunchAt,
+  readLaunchAccessVerification,
+  rememberLaunchAccess,
   rememberLaunchReturn,
   remainingMs,
 } from "../src/launch.js";
@@ -55,6 +60,33 @@ test("official apex pre-launch shows countdown", () => {
   );
 });
 
+test("only a session-matched live dev profile wins over silent auth revalidation", () => {
+  assert.equal(launchGateDecision({ hostname: official, now: pre, profile: { user_id: "qa-user", access_tier: "dev" }, sessionUserId: "qa-user", authLoading: true }), "app");
+  assert.equal(launchGateDecision({ hostname: official, now: pre, profile: { user_id: "qa-user", access_tier: "dev" }, authLoading: true }), "bootstrap");
+  assert.equal(launchGateDecision({ hostname: official, now: pre, profile: { user_id: "qa-user", access_tier: "dev" }, authLoading: false }), "countdown");
+  assert.equal(launchGateDecision({ hostname: official, now: pre, profile: { user_id: "old", access_tier: "dev" }, sessionUserId: "new", authLoading: true }), "bootstrap");
+});
+
+test("cached launch verification is temporary rendering context, never authorization", () => {
+  const storage = memoryStorage();
+  const profile = { user_id: "qa-user", access_tier: "dev" };
+  assert.equal(rememberLaunchAccess(profile, storage, pre), true);
+  assert.deepEqual(readLaunchAccessVerification(storage, pre + 1), { userId: "qa-user", verifiedAt: pre });
+  assert.equal(LAUNCH_ACCESS_KEY, "strix-fc27-launch-access-verified");
+  assert.equal(LAUNCH_ACCESS_TTL_MS, 12 * 60 * 60 * 1000);
+  assert.equal(launchGateDecision({ hostname: official, now: pre, profile: null, authLoading: false }), "countdown");
+  assert.equal(rememberLaunchAccess({ user_id: "member", access_tier: "jogador" }, storage, pre), false);
+  assert.equal(readLaunchAccessVerification(storage, pre + LAUNCH_ACCESS_TTL_MS + 1), null);
+});
+
+test("launch verification cache is not read at or after public launch", () => {
+  const storage = memoryStorage();
+  rememberLaunchAccess({ user_id: "qa-user", access_tier: "dev" }, storage, pre);
+  assert.equal(readLaunchAccessVerification(storage, exact), null);
+  assert.equal(launchGateDecision({ hostname: official, now: exact, profile: null, authLoading: false }), "app");
+  assert.equal(clearLaunchAccessVerification(storage, exact), false);
+});
+
 test("www pre-launch matches the apex", () => {
   assert.equal(isOfficialLaunchHost(www), true);
   assert.equal(
@@ -68,7 +100,8 @@ test("DEV bypasses the official gate before launch", () => {
     launchGateDecision({
       hostname: official,
       now: pre,
-      profile: { access_tier: "dev" },
+      profile: { user_id: "qa-dev", access_tier: "dev" },
+      sessionUserId: "qa-dev",
       authLoading: false,
       config: LAUNCH_CONFIG,
     }),

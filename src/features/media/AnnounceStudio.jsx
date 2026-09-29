@@ -372,27 +372,25 @@ export function AnnounceStudio({ workspace, mediaLook = "campaign", onMediaLook 
             <span>BUSCAR</span>
             <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Nome, nick ou posição" />
           </label>
-          <div className="announce-filters">
-            {[
-              ["all", "TODOS"],
-              ["players", "JOGADORES"],
-              ["structure", "ESTRUTURA"],
-              ["GOL", "GOL"],
-              ["DEF", "DEF"],
-              ["MEI", "MEI"],
-              ["ATA", "ATA"],
-            ].map(([id, label]) => (
-              <button key={id} type="button" className={groupFilter === id ? "is-active" : ""} onClick={() => setGroupFilter(id)}>
-                {label}
-              </button>
-            ))}
+          <div className="announce-filter-groups" aria-label="Filtros do elenco">
+            <div className="announce-filters announce-filter-types" aria-label="Tipo de integrante">
+              {[["all", "TODOS"], ["players", "JOGADORES"], ["structure", "ESTRUTURA"]].map(([id, label]) => (
+                <button key={id} type="button" className={groupFilter === id ? "is-active" : ""} onClick={() => setGroupFilter(id)}>{label}</button>
+              ))}
+            </div>
+            <div className="announce-filters announce-filter-positions" aria-label="Posição">
+              {[["GOL", "GOL"], ["DEF", "DEF"], ["MEI", "MEI"], ["ATA", "ATA"]].map(([id, label]) => (
+                <button key={id} type="button" className={groupFilter === id ? "is-active" : ""} onClick={() => setGroupFilter(id)}>{label}</button>
+              ))}
+            </div>
           </div>
           {kind === "team" && (
             <div className="announce-bulk">
-              <button type="button" className="secondary" onClick={() => selectFiltered(() => true)}>SELECIONAR TODOS</button>
-              <button type="button" className="secondary" onClick={() => selectFiltered((person) => !isStructureRole(person.extraRole))}>SÓ JOGADORES</button>
-              <button type="button" className="secondary" onClick={() => selectFiltered((person) => isStructureRole(person.extraRole))}>SÓ ESTRUTURA</button>
-              <button type="button" className="secondary" onClick={() => setSelectedIds([])}>LIMPAR</button>
+              <span>SELEÇÃO</span>
+              <button type="button" onClick={() => selectFiltered(() => true)}>TODOS</button>
+              <button type="button" onClick={() => selectFiltered((person) => !isStructureRole(person.extraRole))}>SÓ JOGADORES</button>
+              <button type="button" onClick={() => selectFiltered((person) => isStructureRole(person.extraRole))}>SÓ ESTRUTURA</button>
+              <button type="button" className="is-reset" onClick={() => setSelectedIds([])}>LIMPAR</button>
             </div>
           )}
           <ul className="announce-people">
@@ -413,9 +411,9 @@ export function AnnounceStudio({ workspace, mediaLook = "campaign", onMediaLook 
                     setSelectedIds(moveItem(selectedIds, from, to - from));
                   }}
                 >
-                  <button type="button" className="announce-person" onClick={() => toggleSelected(person.id)}>
-                    <b>{person.name}</b>
-                    <small>{[person.position, person.extraBadge || ANNOUNCE_ROLES[person.extraRole]?.label].filter(Boolean).join(" · ")}</small>
+                  <button type="button" className="announce-person" onClick={() => toggleSelected(person.id)} aria-pressed={on}>
+                    <span className="announce-person-index" aria-label={on ? `Ordem ${order + 1}` : "Não selecionado"}>{on ? String(order + 1).padStart(2, "0") : "—"}</span>
+                    <span className="announce-person-copy"><b>{person.name}</b><small>{[person.position, person.extraBadge || ANNOUNCE_ROLES[person.extraRole]?.label].filter(Boolean).join(" · ")}</small></span>
                   </button>
                   <SelectControl
                     label="Função oficial"
@@ -424,10 +422,9 @@ export function AnnounceStudio({ workspace, mediaLook = "campaign", onMediaLook 
                     onChange={(value) => setRole(person.id, value)}
                   />
                   {kind === "team" && on && (
-                    <div className="announce-order">
-                      <span>{String(order + 1).padStart(2, "0")}</span>
-                      <button type="button" aria-label="Subir" onClick={() => setSelectedIds(moveItem(selectedIds, order, -1))}>↑</button>
-                      <button type="button" aria-label="Descer" onClick={() => setSelectedIds(moveItem(selectedIds, order, 1))}>↓</button>
+                    <div className="announce-order" aria-label={`Ordenar ${person.name}`}>
+                      <button type="button" aria-label={`Subir ${person.name}`} disabled={order === 0} onClick={() => setSelectedIds(moveItem(selectedIds, order, -1))}>↑</button>
+                      <button type="button" aria-label={`Descer ${person.name}`} disabled={order === selectedIds.length - 1} onClick={() => setSelectedIds(moveItem(selectedIds, order, 1))}>↓</button>
                     </div>
                   )}
                 </li>
@@ -482,7 +479,7 @@ export function AnnounceStudio({ workspace, mediaLook = "campaign", onMediaLook 
             )}
           </div>
           <div className="media-actions">
-            <button type="button" className="primary" disabled={!selected.length || running} onClick={() => generate(false)}>
+            <button type="button" className="primary announce-generate" disabled={!selected.length || running} onClick={() => generate(false)}>
               {format === "feed" ? "GERAR PNG" : "GERAR MP4"}
             </button>
             <button type="button" className="secondary" disabled={!readyRecord} onClick={() => readyRecord && setViewer(readyRecord)}>
@@ -491,7 +488,7 @@ export function AnnounceStudio({ workspace, mediaLook = "campaign", onMediaLook 
             <button type="button" className="secondary" disabled={!readyRecord} onClick={() => readyRecord && downloadBlob(readyRecord.blob, readyRecord.fileName)}>
               {format === "feed" ? "BAIXAR PNG" : "BAIXAR MP4"}
             </button>
-            <button type="button" className="secondary" disabled={!selected.length || running} onClick={() => generate(true)}>
+            <button type="button" className="secondary announce-regenerate" disabled={!selected.length || running} onClick={() => generate(true)}>
               GERAR NOVAMENTE
             </button>
           </div>
@@ -503,18 +500,18 @@ export function AnnounceStudio({ workspace, mediaLook = "campaign", onMediaLook 
           )}
           {job?.status === "error" && <p className="media-error">{job.error}</p>}
           <section className="media-cache">
-            <h2>Últimas gerações</h2>
+            <header className="announce-history-heading"><div><span>ARQUIVO</span><h2>Últimas gerações</h2></div><small>{history.length || cache.length} disponíveis</small></header>
             {(history.length ? history : cache.slice(0, 6)).map((record) => (
-              <article key={record.id}>
-                <small>{isImageRecord(record) ? "POST" : "REELS"}</small>
-                <p>{record.fileName}</p>
+              <article className="announce-history-item" key={record.id}>
+                <div className="announce-history-format"><small>{isImageRecord(record) ? "POST" : "REELS"}</small><b>{isImageRecord(record) ? "4:5" : "9:16"}</b></div>
+                <p title={record.fileName}>{record.fileName}</p>
                 <div className="media-inline-actions">
-                  <button type="button" className="secondary" onClick={() => setViewer(record)}>VISUALIZAR</button>
-                  <button type="button" className="secondary" onClick={() => downloadBlob(record.blob, record.fileName)}>BAIXAR</button>
+                  <button type="button" className="secondary" aria-label={`Visualizar ${record.fileName}`} onClick={() => setViewer(record)}>VER</button>
+                  <button type="button" className="secondary" aria-label={`Baixar ${record.fileName}`} onClick={() => downloadBlob(record.blob, record.fileName)}>BAIXAR</button>
                 </div>
               </article>
             ))}
-            {!history.length && !cache.length && <p>Nenhum anúncio gerado nesta sessão.</p>}
+            {!history.length && !cache.length && <p className="announce-history-empty">Nenhuma peça gerada nesta sessão.</p>}
           </section>
         </article>
       </div>

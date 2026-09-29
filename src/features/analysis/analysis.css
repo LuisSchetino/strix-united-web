@@ -50,3 +50,35 @@
 .analysis-v2 .analysis-metric p{font-size:11px;line-height:1.5}
 @keyframes analysis-update{from{opacity:.72;transform:translateY(3px)}to{opacity:1;transform:none}}
 @media(prefers-reduced-motion:reduce){.analysis-v2 .analysis-results{animation:none}.analysis-v2 .analysis-filters>button,.analysis-v2 .analysis-filters>button:after,.analysis-v2 .analysis-player-picker button,.analysis-v2 .analysis-xray-toggle button{transition:none}}
+
+/* Raio-X controls reuse the site's shared sliding segmented control. */
+.analysis-xray-filters{display:flex;align-items:center;flex-wrap:wrap;gap:10px;padding:12px 16px}
+.analysis-xray-filters>.analysis-xray-toggle.motion-tabs{min-height:48px;flex:0 0 auto;padding:4px;border:1px solid var(--strix-border-strong);border-radius:10px;background:#111419}
+.analysis-xray-toggle.motion-tabs button{min-height:38px;padding-inline:14px;border-radius:7px;color:#aeb4bb;font-size:10px}
+.analysis-v2 .analysis-xray-toggle.motion-tabs button{min-height:38px}
+.analysis-xray-toggle.motion-tabs button.active,.analysis-xray-toggle.motion-tabs button[aria-selected=true]{color:#101113!important}
+.analysis-xray-toggle.motion-tabs .motion-tabs-indicator{top:4px;bottom:4px;border-radius:7px;background:#f2f2f0;box-shadow:none;transition:transform 190ms cubic-bezier(.2,.8,.2,1),width 190ms cubic-bezier(.2,.8,.2,1),opacity 120ms ease}
+.analysis-xray-filters>.select-control{flex:0 1 auto;min-width:170px}
+.analysis-xray-filters>.select-control>button{min-height:48px;font-size:10px}
+.analysis-xray .analysis-empty{display:grid;justify-items:center;align-content:center;gap:7px;min-height:116px;margin:12px 16px;padding:20px;border:1px solid var(--strix-border);border-radius:10px;background:#0d0f12;color:#c2c7cc;font-size:12px}
+.analysis-xray .analysis-empty span{color:#8e969f;font-size:9px;font-weight:900;letter-spacing:.1em}
+.analysis-xray .analysis-empty p{margin:0;color:#8e969f;font-size:11px;line-height:1.45;text-align:center}
+@media(max-width:800px){.analysis-xray-filters{display:flex;align-items:center}.analysis-xray-filters>.select-control{flex:1 1 220px;width:auto}}
+@media(max-width:520px){.analysis-xray-filters{display:grid;grid-template-columns:1fr;gap:8px}.analysis-xray-filters>.analysis-xray-toggle.motion-tabs,.analysis-xray-filters>.select-control{width:100%;min-width:0}.analysis-xray-toggle.motion-tabs button{flex:1 1 0;padding-inline:8px}.analysis-xray .analysis-empty{min-height:104px;margin:10px;padding:17px}}
+@media(prefers-reduced-motion:reduce){.analysis-xray-toggle.motion-tabs .motion-tabs-indicator{transition:none}}
+
+/* Rastro accent belongs to measured values and analytic marks only. */
+.analysis-v2 .analysis-metric strong,
+.analysis-v2 .analysis-insights p strong,
+.analysis-v2 .analysis-radar-legend dd{color:var(--rastro-blue)!important}
+.analysis-v2 .analysis-metric header>svg,
+.analysis-v2 .analysis-insights p>svg{color:var(--rastro-blue)!important}
+.analysis-v2 .analysis-metric small,
+.analysis-v2 .analysis-insights p{color:#c2c7cc}
+.analysis-v2 .analysis-insights p{display:flex;align-items:flex-start;gap:9px;padding-left:12px}
+.analysis-v2 .analysis-insights p>svg{flex:0 0 auto;margin-top:2px}
+.analysis-v2 .analysis-insights p:before{display:none}
+.analysis-v2 .analysis-player-picker button{border-radius:9px}
+.analysis-v2 .analysis-player-picker button.selected{border-color:var(--player-color)!important}
+.analysis-v2 .analysis-player-picker button.selected i{background:var(--player-color)!important}
+@media(prefers-reduced-motion:reduce){.analysis-v2 .radar-player{animation:none}}

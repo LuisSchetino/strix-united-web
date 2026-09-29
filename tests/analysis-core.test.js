@@ -37,3 +37,16 @@ test("Raio-X respeita janela, aliases canônicos e métricas por posição", () 
   assert.equal(goalkeeper.axes.includes("Defesas/j"), true);
   assert.equal(goalkeeper.axes.includes("Finalizações/j"), false);
 });
+
+test("Raio-X mantém elenco ativo sem amostra e nunca inventa comparação estatística", () => {
+  const players = [
+    { id: "with-data", display_name: "Com dados", positions: ["MC"], is_active: true },
+    { id: "no-data", display_name: "Sem dados", positions: ["ATA"], is_active: true },
+    { id: "inactive", display_name: "Inativo", positions: ["ZAG"], is_active: false },
+  ];
+  const aliases = [{ ea_name: "Obenzera", player_id: "with-data" }];
+  const result = buildPlayerComparison(games.slice(0, 1).map((game) => ({ ...game, performance: { players: [{ eaName: "Obenzera", rating: 8, goals: 1 }] } })), { kind: "line", period: "all", players, aliases, playerIds: ["no-data"] });
+  assert.deepEqual(result.roster.map((player) => player.playerId), ["with-data", "no-data"]);
+  assert.equal(result.roster.find((player) => player.playerId === "no-data").hasSample, false);
+  assert.equal(result.players.length, 0);
+});

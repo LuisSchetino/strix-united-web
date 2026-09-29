@@ -4,3 +4,7 @@
 /* Real team marks render raw; the framed avatar is reserved for initials. */
 .agenda-game .avatar.has-image.is-logo{background:transparent!important;border:0!important;box-shadow:none!important}.agenda-game .avatar.has-image.is-logo img{object-fit:contain!important}
 .agenda-game[role="button"]{cursor:pointer;outline:0}.agenda-game[role="button"]:focus-visible{box-shadow:inset 0 0 0 2px #4a9ee8;background:#0b2138}
+/* The opponent remains a free-text field, presented as one quiet surface. */
+.agenda-modal .agenda-opponent-input{border-color:var(--strix-border)!important;border-radius:8px;background:#101318!important;box-shadow:none}
+.agenda-modal .agenda-opponent-input:focus{border-color:#707780!important;box-shadow:0 0 0 2px #ffffff0a!important}
+.agenda-modal .close-button.modal-close{width:42px;height:42px;min-width:42px;min-height:42px;padding:0;border:1px solid var(--strix-border);border-radius:50%;background:#14181d;color:#f2f2f0}

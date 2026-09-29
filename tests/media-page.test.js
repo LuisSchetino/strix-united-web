@@ -19,6 +19,10 @@ test("Mídia vira gerador automático da Agenda do Dia sem misturar EA Sync", as
   assert.match(page, /BAIXAR MP4/);
   assert.match(page, /RELACIONADOS DA NOITE/);
   assert.match(page, /ANÚNCIOS FC 27/);
+  assert.match(page, /\[\["video", "VÍDEO · V1"\], \["static", "ARTE ESTÁTICA · V2"\]\]/);
+  assert.doesNotMatch(page, /\["seletiva", "SELETIVA"\]/);
+  assert.match(page, /<StaticMediaV2Studio \/>/);
+  assert.match(page, /AnnounceStudio workspace=\{workspace\}/);
   assert.match(page, /AnnounceStudio/);
   assert.match(page, /MediaLookSwitch/);
   assert.match(page, /withMediaLook/);
@@ -77,4 +81,35 @@ test("encode usa H.264 e nunca troca logo depois que o render começa", async ()
   assert.match(assets, /loadAnnounceAssets/);
   assert.match(encode, /encodeStillPng/);
   assert.doesNotMatch(encode, /html-to-image/);
+});
+
+test("V2 é uma saída estática compartilhada e Seletiva é um template registrado separado da V1", async () => {
+  const page = await read("src/features/media/MediaPage.jsx");
+  const studio = await read("src/features/media/StaticMediaV2Studio.jsx");
+  const template = await read("src/features/media/SeletivaTemplate.jsx");
+  const logo = await read("src/features/media/StaticMediaV2Logo.jsx");
+  const core = await read("src/features/media/static-media-v2-core.js");
+  const registry = await read("src/features/media/static-media-v2-templates.js");
+  const canvas = await read("src/features/media/StaticMediaV2Canvas.jsx");
+  const exporter = await read("src/features/media/static-media-v2-export.js");
+  const job = await read("src/features/media/media-jobs.js");
+  assert.match(core, /STATIC_MEDIA_V2_CANVAS/);
+  assert.match(core, /STATIC_MEDIA_V2_TEMPLATES/);
+  assert.match(registry, /SeletivaTemplate/);
+  assert.match(registry, /sanitizeSeletivaInput/);
+  assert.match(canvas, /STATIC_MEDIA_V2_CANVAS/);
+  assert.match(exporter, /exportStaticMediaV2Png/);
+  assert.match(exporter, /toBlob\(element/);
+  assert.match(exporter, /downloadBlob\(blob, fileName\)/);
+  assert.match(template, /StaticMediaV2Logo/);
+  assert.match(logo, /STRIX_BRAND\.logo/);
+  assert.match(template, /size = SELETIVA_POSTER_SIZE/);
+  assert.match(studio, /Templates estáticos/);
+  assert.match(studio, /STATIC_MEDIA_V2_TEMPLATE_REGISTRY/);
+  assert.doesNotMatch(studio, /startAgendaRender|startRelatedNightRender|startSummaryRender|startAnnounceRender/);
+  assert.match(job, /startAgendaRender/);
+  assert.match(job, /startRelatedNightRender/);
+  assert.match(job, /startSummaryRender/);
+  assert.match(page, /<AnnounceStudio workspace=\{workspace\}/);
+  assert.doesNotMatch(page, /\["seletiva", "SELETIVA"\]/);
 });

@@ -72,28 +72,39 @@ export function buildPlayerComparison(matches = [], options = {}) {
   const selectedMatches = selectComparisonPeriod(matches, options.period, options.competition, options.now);
   const allPlayers = aggregatePlayerStatistics(selectedMatches, { players: options.players, aliases: options.aliases });
   const kind = options.kind === "goalkeeper" ? "goalkeeper" : "line";
-  const selected = allPlayers
-    .filter((player) => player.playerId && player.active !== false && player.rankingEligible && !player.disconnected && (kind === "goalkeeper" ? player.goalkeeper : !player.goalkeeper))
-    .filter((player) => !options.playerIds?.length || options.playerIds.includes(player.playerId));
+  const statsById = new Map(allPlayers.filter((player) => player.playerId).map((player) => [player.playerId, player]));
+  const isKeeper = (player) => [...(Array.isArray(player.positions) ? player.positions : []), player.position]
+    .filter(Boolean).some((position) => ["gol", "gk", "goalkeeper", "goleiro"].includes(String(position).toLocaleLowerCase("pt-BR").trim()));
+  const roster = (Array.isArray(options.players) ? options.players : [])
+    .filter((player) => player && player.is_active !== false && player.id)
+    .filter((player) => kind === "goalkeeper" ? isKeeper(player) : !isKeeper(player))
+    .map((player) => {
+      const stat = statsById.get(player.id);
+      return stat ? { ...stat, name: player.display_name || stat.name, positions: player.positions || stat.positions || [], hasSample: stat.validGames > 0 }
+        : { playerId: player.id, name: player.display_name || "Jogador", handle: player.display_name || "Jogador", active: true, positions: player.positions || [], memberType: player.member_type, games: 0, validGames: 0, goalkeeperGames: 0, goals: 0, assists: 0, goalAssists: 0, passesMade: 0, passAttempts: 0, shots: 0, tackles: 0, saves: 0, averageRating: null, passAccuracy: null, hasSample: false, goalkeeper: kind === "goalkeeper" };
+    });
+  const selectedIds = new Set(options.playerIds === undefined ? roster.filter((player) => player.hasSample).map((player) => player.playerId) : options.playerIds);
+  const selected = roster.filter((player) => selectedIds.has(player.playerId) && player.hasSample && !player.disconnected);
   const axes = kind === "goalkeeper"
     ? [
       ["Nota", (player) => Number(player.averageRating || 0), 10],
-      ["Defesas/j", (player) => perGame(player.saves, player.games)],
-      ["Clean sheets", (player) => player.games ? Number(((player.cleanSheets / player.games) * 100).toFixed(1)) : 0, 100],
-      ["Passes/j", (player) => perGame(player.passesMade, player.games)],
+      ["Defesas/j", (player) => perGame(player.saves, player.goalkeeperGames)],
+      ["Clean sheets", (player) => player.goalkeeperGames ? Number(((player.cleanSheetsGk / player.goalkeeperGames) * 100).toFixed(1)) : 0, 100],
+      ["Passes/j", (player) => perGame(player.passesMade, player.validGames)],
       ["Precisão", (player) => Number(player.passAccuracy || 0), 100],
     ]
     : [
       ["Nota", (player) => Number(player.averageRating || 0), 10],
-      ["Passes/j", (player) => perGame(player.passesMade, player.games)],
+      ["Passes/j", (player) => perGame(player.passesMade, player.validGames)],
       ["Precisão", (player) => Number(player.passAccuracy || 0), 100],
-      ["Desarmes/j", (player) => perGame(player.tackles, player.games)],
-      ["Finalizações/j", (player) => perGame(player.shots, player.games)],
-      ["G+A/j", (player) => perGame(player.goalAssists, player.games)],
+      ["Desarmes/j", (player) => perGame(player.tackles, player.validGames)],
+      ["Finalizações/j", (player) => perGame(player.shots, player.validGames)],
+      ["G+A/j", (player) => perGame(player.goalAssists, player.validGames)],
     ];
   const maxima = axes.map(([, read, fixedMax]) => fixedMax || Math.max(1, ...selected.map(read)));
   return {
     matches: selectedMatches.length,
+    roster,
     axes: axes.map(([label]) => label),
     players: selected.map((player) => ({
       ...player,
