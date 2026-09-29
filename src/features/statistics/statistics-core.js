@@ -26,7 +26,7 @@ const richness = (match) => JSON.stringify(performanceOf(match)).length + (match
 
 export function uniqueMatches(matches = []) {
   const reconciled = new Map();
-  for (const match of rows(matches)) {
+  for (const match of rows(matches).filter((value) => value && typeof value === "object")) {
     const key = matchIdentity(match);
     const current = reconciled.get(key);
     if (!current || richness(match) > richness(current)) reconciled.set(key, match);
@@ -142,7 +142,7 @@ export function buildPlayerProfile(player, matches = [], options = {}) {
   const records = recordSpecs.map(([label, key]) => {
     const candidates = appearances.map((row) => {
       const passes = passPair(row);
-      const value = key === "goalAssists" ? number(row.goals) + number(row.assists)
+      const value = key === "goalAssists" ? hasNumber(row.goals) && hasNumber(row.assists) ? number(row.goals) + number(row.assists) : null
         : key === "passesMade" ? passes.made
           : key === "passAccuracy" ? passes.attempts > 0 ? (passes.made / passes.attempts) * 100 : null
             : row[key];
@@ -311,6 +311,7 @@ const aliasIndex = (players, aliases) => {
 
 export function aggregatePlayerStatistics(matches = [], options = {}) {
   const playerMap = new Map();
+  const hasCanonicalRoster = Array.isArray(options.players);
   const { index: aliases, indexByEaId } = aliasIndex(options.players, options.aliases);
   for (const match of uniqueMatches(matches)) {
     for (const player of playerRows(match)) {
@@ -318,6 +319,10 @@ export function aggregatePlayerStatistics(matches = [], options = {}) {
       const rawKey = normalized(handle);
       const eaPlayerId = String(player.eaPlayerId ?? player.id ?? "").trim() || null;
       const linked = (eaPlayerId ? indexByEaId.get(eaPlayerId) : null) || aliases.get(rawKey);
+      // When current-roster context is supplied, current statistics are scoped
+      // to active club members. Unlinked/archived EA identities remain in match
+      // snapshots but must not leak into present-day rankings.
+      if (hasCanonicalRoster && (!linked?.roster || linked.roster.is_active === false)) continue;
       const key = linked?.roster?.id ? `player:${linked.roster.id}` : eaPlayerId ? `ea-id:${eaPlayerId}` : `ea:${rawKey}`;
       const current = playerMap.get(key) || {
         name: linked?.display || handle,
@@ -351,6 +356,7 @@ export function aggregatePlayerStatistics(matches = [], options = {}) {
         cleanSheetsDef: 0,
         cleanSheetsGk: 0,
         goalsAgainst: 0,
+        goalsAgainstSamples: 0,
         cleanSheets: 0,
         ratingTotal: 0,
         ratings: 0,
@@ -406,7 +412,10 @@ export function aggregatePlayerStatistics(matches = [], options = {}) {
         current.goalkeeperGames += 1;
         // Goals against are derived only from the match score and only when
         // the player is a goalkeeper who has evidence of participation.
-        current.goalsAgainst += number(match.opponent_score);
+        if (hasNumber(match.opponent_score)) {
+          current.goalsAgainst += Number(match.opponent_score);
+          current.goalsAgainstSamples += 1;
+        }
       }
       if (participated && Number.isFinite(Number(player.rating))) { current.ratingTotal += Number(player.rating); current.ratings += 1; }
       if (player.archetypeId !== null && player.archetypeId !== undefined && player.archetypeId !== "") {
@@ -435,7 +444,7 @@ export function aggregatePlayerStatistics(matches = [], options = {}) {
     passAccuracy: player.passAttempts ? Math.round((player.passesMade / player.passAttempts) * 100) : null,
     tackleAccuracy: player.tackleAttempts ? Number(((player.tackles / player.tackleAttempts) * 100).toFixed(1)) : null,
     averageRating: player.ratings ? Number((player.ratingTotal / player.ratings).toFixed(1)) : null,
-    motmPercentage: player.validGames ? Number(((player.mom / player.validGames) * 100).toFixed(1)) : null,
+    motmPercentage: player.metricSamples?.mom > 0 && player.validGames ? Number(((player.mom / player.validGames) * 100).toFixed(1)) : null,
     cleanSheets: player.cleanSheetsDef + player.cleanSheetsGk,
     savesPerGame: player.goalkeeperGames ? Number((player.saves / player.goalkeeperGames).toFixed(1)) : null,
     disconnected: player.disconnectedGames === player.games,
@@ -458,7 +467,7 @@ export function buildPlayerProfileChoices(statisticsPlayers = [], roster = [], a
   };
   const choices = rows(statisticsPlayers).map((player) => {
     const rosterPlayer = findRoster(player);
-    if (!rosterPlayer) return player;
+    if (!rosterPlayer) return null;
     return {
       ...player,
       name: rosterPlayer.display_name || player.name,
@@ -468,7 +477,7 @@ export function buildPlayerProfileChoices(statisticsPlayers = [], roster = [], a
       memberType: rosterPlayer.member_type || player.memberType,
       goalkeeper: isGoalkeeper(player, rosterPlayer),
     };
-  });
+  }).filter(Boolean);
   const representedIds = new Set(choices.map((player) => String(player.playerId || "")).filter(Boolean));
   for (const player of activeRoster) {
     if (representedIds.has(String(player.id))) continue;
@@ -550,4 +559,9 @@ export function buildRanking(players = [], metric, limit) {
 export function canonicalPlayerName(rawName, players = [], aliases = []) {
   const { index } = aliasIndex(players, aliases);
   return index.get(normalized(rawName))?.display || rawName || "Jogador EA";
+}
+
+export function formatPlayerHandle(handle) {
+  const value = String(handle || "").replace(/^@+/, "").toLocaleLowerCase("pt-BR");
+  return value ? `@${value}` : "";
 }

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { agendaHeroSelection, classifyAgendaMatch, nextAgendaMatches, todayAgendaMatches } from "../src/features/agenda/agenda-time.js";
+import { activeAgendaMatches, agendaHeroSelection, classifyAgendaMatch, nextAgendaMatches, todayAgendaMatches } from "../src/features/agenda/agenda-time.js";
 
 test("partida atrasada não bloqueia a próxima partida", () => {
   const now = new Date("2026-08-17T02:30:00-03:00");
@@ -43,4 +43,15 @@ test("Agenda da noite contém somente partidas do dia em São Paulo", () => {
     { id: "next-week", scheduled_at: "2026-09-08T22:10:00-03:00", status: "scheduled" },
   ];
   assert.deepEqual(todayAgendaMatches(matches, now).map((match) => match.id), ["earlier-today", "today"]);
+});
+
+test("vínculo da Agenda exclui removidos e mantém só registros ativos após reload", () => {
+  const persistedRows = [
+    { id: "A", scheduled_at: "2026-09-03T20:00:00-03:00", status: "scheduled" },
+    { id: "B", scheduled_at: "2026-09-03T21:00:00-03:00", status: "scheduled", deleted_at: "2026-09-02T10:00:00Z" },
+    { id: "C", scheduled_at: "2026-09-03T22:00:00-03:00", status: "scheduled", is_archived: true },
+    { id: "D", scheduled_at: "2026-09-03T23:00:00-03:00", status: "scheduled" },
+  ];
+  const reloaded = JSON.parse(JSON.stringify(persistedRows));
+  assert.deepEqual(activeAgendaMatches(reloaded).map(({ id }) => id), ["A", "D"]);
 });

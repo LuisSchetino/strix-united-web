@@ -5,7 +5,7 @@ import { canViewAnalysis } from "../../access.js";
 import { AccessDenied } from "../../ui/AccessDenied.jsx";
 import { RastroDataSignature } from "../../ui/RastroBrand.jsx";
 import { SelectControl } from "../../ui/SelectControl.jsx";
-import { buildAnalysis, buildPlayerComparison, comparePeriods, selectAnalysisPeriod } from "./analysis-core.js";
+import { analysisInsightKind, buildAnalysis, buildPlayerComparison, comparePeriods, playerComparisonState, selectAnalysisPeriod } from "./analysis-core.js";
 import "./analysis.css";
 
 const radarColors = ["#2F80FF", "#78ADFF", "#c8ccd0", "#245FAF"];
@@ -22,8 +22,10 @@ function Metric({ icon: Icon, label, value, suffix = "", note, tooltip, trend })
 }
 
 function InsightLine({ children }) {
+  const kind = analysisInsightKind(children);
+  const Icon = kind === "passing" ? IconArrowsExchange : kind === "attacking" ? IconBallFootball : IconShieldCheck;
   const parts = String(children).split(/(\d+(?:[,.]\d+)?%?)/g);
-  return <p><IconChartBar size={15} aria-hidden="true" />{parts.map((part, index) => /^\d/.test(part) ? <strong key={index}>{part}</strong> : part)}</p>;
+  return <p className={`analysis-insight-${kind}`}><Icon size={15} aria-hidden="true" />{parts.map((part, index) => /^\d/.test(part) ? <strong key={index}>{part}</strong> : part)}</p>;
 }
 
 const polygonPoints = (values, radius = 112, center = 145) => values.map((value, index) => {
@@ -58,19 +60,24 @@ function PlayerComparison({ matches, workspace, competitions }) {
     setPlayerIds((current) => current.filter((id) => ids.includes(id)));
   }, [availableIds]);
   const comparison = useMemo(() => buildPlayerComparison(matches, { ...baseOptions, playerIds }), [matches, period, competition, kind, playerIds, workspace.players, workspace.aliases]);
+  const comparisonState = playerComparisonState(comparison, playerIds);
   const togglePlayer = (id) => setPlayerIds((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
   return <section className="analysis-xray"><header><div><span>RAIO-X DO ELENCO</span><h2>Comparação de jogadores.</h2><p>Métricas normalizadas dentro do recorte; os valores reais continuam visíveis ao lado.</p></div><IconRadar2 size={34}/></header>
     <div className="analysis-xray-filters"><SegmentedControl className="analysis-xray-toggle" items={[["line", "LINHA"], ["goalkeeper", "GOLEIROS"]]} active={kind} onChange={setKind} label="Posição dos jogadores comparados"/><SelectControl value={period} onChange={setPeriod} label="Período do Raio-X" options={[["7days", "7 DIAS"], ["30days", "30 DIAS"], ["90days", "90 DIAS"], ["season", "TEMPORADA"], ["all", "TODO O PERÍODO"]]} /><SelectControl value={competition} onChange={setCompetition} label="Competição do Raio-X" options={[["", "TODAS AS COMPETIÇÕES"], ...competitions.map((item) => [item, item])]} /></div>
     <div className="analysis-player-picker" aria-label="Jogadores do elenco ativo">{available.roster.map((player, index) => <button type="button" key={player.playerId} className={playerIds.includes(player.playerId) ? "selected" : ""} aria-pressed={playerIds.includes(player.playerId)} style={{ "--player-color": radarColors[Math.max(0, playerIds.indexOf(player.playerId))] || radarColors[index % radarColors.length] }} onClick={() => togglePlayer(player.playerId)}><i/><span>{player.name}</span><small>{player.hasSample ? `${player.validGames}J` : "SEM AMOSTRA"}</small></button>)}</div>
-    {comparison.matches === 0 ? <div className="analysis-empty"><span>{selected.length ? "SEM AMOSTRA NESTE RECORTE" : "ESCOLHA JOGADORES PARA COMPARAR"}</span><p>{selected.length ? "Os selecionados não têm dados de partida neste período e competição." : "Os jogadores sem amostra continuam disponíveis; escolha quem deseja comparar."}</p></div> : comparison.players.length < 2 ? <div className="analysis-empty"><span>COMPARAÇÃO INDISPONÍVEL</span><p>Selecione ao menos dois jogadores com dados válidos neste recorte.</p></div> : <RadarChart comparison={comparison}/>}
+    {comparisonState === "no-sample" ? <div className="analysis-empty"><span>SEM AMOSTRA NESTE RECORTE</span><p>Os selecionados não têm dados de partida neste período e competição.</p></div> : comparisonState === "choose" ? <div className="analysis-empty"><span>ESCOLHA JOGADORES PARA COMPARAR</span><p>Os jogadores sem amostra continuam disponíveis; escolha quem deseja comparar.</p></div> : comparisonState === "needs-more" ? <div className="analysis-empty"><span>COMPARAÇÃO INDISPONÍVEL</span><p>Selecione ao menos dois jogadores com dados válidos neste recorte.</p></div> : <RadarChart comparison={comparison}/>}
   </section>;
 }
 
 export function AnalysisPage({ workspace, profile, matches = workspace.matches || [] }) {
+  matches = Array.isArray(matches) ? matches : [];
+  const activePlayers = Array.isArray(workspace.players) ? workspace.players : [];
+  const aliases = Array.isArray(workspace.aliases) ? workspace.aliases : [];
   const [period, setPeriod] = useState("last5");
+  matches = matches.filter((match) => match && typeof match === "object");
   const competitions = [...new Set(matches.map((match) => match.competition_name || "Amistoso"))].sort();
   const selected = useMemo(() => selectAnalysisPeriod(matches, period), [matches, period]);
-  const { team, insights } = useMemo(() => buildAnalysis(selected, workspace.players), [selected, workspace.players]);
+  const { team, insights } = useMemo(() => buildAnalysis(selected, activePlayers), [selected, activePlayers]);
   const trends = useMemo(() => comparePeriods(matches, period), [matches, period]);
   if (!canViewAnalysis(profile)) return <AccessDenied page="analise" />;
   const groups = [
@@ -96,7 +103,7 @@ export function AnalysisPage({ workspace, profile, matches = workspace.matches |
     <div id="analysis-results" className="analysis-results" key={period}>
       {team.games ? <><section className="analysis-groups">{groups.map(([title, Icon, metrics]) => <article className="analysis-group" key={title}><header><Icon/><div><span>LEITURA</span><h2>{title}</h2></div></header><div>{metrics.map(([label, value, suffix, note, tooltip, trend]) => <Metric key={label} icon={metricIcons[label] || Icon} label={label} value={value} suffix={suffix} note={value == null ? "Sem dados registrados" : note} tooltip={tooltip} trend={value == null ? null : trend}/>)}</div></article>)}</section><section className="analysis-insights"><header><span>INSIGHTS DO PERÍODO</span><h2>Leitura objetiva.</h2><RastroDataSignature label="Analytics by" /></header>{insights.map((insight) => <InsightLine key={insight}>{insight}</InsightLine>)}</section></> : <div className="analysis-empty">Não há partidas suficientes neste recorte. Escolha outro período ou competição.</div>}
     </div>
-    <PlayerComparison matches={matches} workspace={workspace} competitions={competitions}/>
+    <PlayerComparison matches={matches} workspace={{ ...workspace, players: activePlayers, aliases }} competitions={competitions}/>
   </section>;
 }
 

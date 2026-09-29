@@ -2668,7 +2668,7 @@ function PartidasLiveV2({ profile, workspace }) {
   const [aliasPicker, setAliasPicker] = useState("");
   const [aliases, setAliases] = useState({});
   const [manualDraft, setManualDraft] = useState({ opponent: "", date: new Date().toISOString().slice(0, 10), time: "21:10", strixScore: "0", opponentScore: "0", competition: "Amistoso" });
-  const activeAgenda = workspace.agenda.filter((item) => !["cancelled", "completed"].includes(item.status));
+  const activeAgenda = activeAgendaMatches(workspace.agenda);
   const getKnownPlayer = (eaName) => workspace.aliases.find((item) => normalizeTeamName(item.ea_name) === normalizeTeamName(eaName))?.player_id
     || workspace.players.find((item) => normalizeTeamName(item.display_name) === normalizeTeamName(eaName))?.id
     || "";

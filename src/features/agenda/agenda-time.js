@@ -1,4 +1,5 @@
 const ZONE = "America/Sao_Paulo";
+const rows = (value) => Array.isArray(value) ? value : [];
 
 export const saoPauloDay = (value) => new Intl.DateTimeFormat("en-CA", {
   timeZone: ZONE,
@@ -15,9 +16,17 @@ export function classifyAgendaMatch(match, now = new Date()) {
   return saoPauloDay(kickoff) === saoPauloDay(now) ? "today" : "upcoming";
 }
 
+export function isAgendaMatchActive(match = {}) {
+  const status = String(match.status || "scheduled").trim().toLocaleLowerCase("pt-BR");
+  if (["completed", "cancelled", "canceled", "deleted", "removed", "archived"].includes(status)) return false;
+  if (["is_deleted", "deleted", "is_removed", "removed", "is_archived", "archived", "is_cancelled", "cancelled"].some((field) => match[field] === true)) return false;
+  if (["deleted_at", "removed_at", "archived_at", "cancelled_at"].some((field) => Boolean(match[field]))) return false;
+  return true;
+}
+
 export function activeAgendaMatches(matches = [], now = new Date()) {
-  return (Array.isArray(matches) ? matches : [])
-    .filter((match) => !["completed", "cancelled"].includes(match?.status))
+  return rows(matches)
+    .filter(isAgendaMatchActive)
     .map((match) => ({ ...match, temporal_status: classifyAgendaMatch(match, now) }))
     .sort((left, right) => new Date(left.scheduled_at) - new Date(right.scheduled_at));
 }

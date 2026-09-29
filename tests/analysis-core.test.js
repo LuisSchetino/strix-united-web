@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildAnalysis, buildPlayerComparison, comparePeriods, selectAnalysisPeriod, selectComparisonPeriod } from "../src/features/analysis/analysis-core.js";
+import { analysisInsightKind, buildAnalysis, buildPlayerComparison, comparePeriods, playerComparisonState, selectAnalysisPeriod, selectComparisonPeriod } from "../src/features/analysis/analysis-core.js";
 
 const games = Array.from({ length: 10 }, (_, index) => ({
   id: String(index), played_at: `2026-08-${String(index + 1).padStart(2, "0")}T22:00:00-03:00`,
@@ -12,6 +12,17 @@ const games = Array.from({ length: 10 }, (_, index) => ({
 test("recortes de análise respeitam período e competição", () => {
   assert.equal(selectAnalysisPeriod(games, "last5").length, 5);
   assert.equal(selectAnalysisPeriod(games, "competition:Liga").length, 5);
+});
+
+test("análise mantém rota determinística para histórico vazio/parcial e ícones objetivos distintos", () => {
+  assert.deepEqual(selectAnalysisPeriod(null, null), []);
+  assert.equal(buildAnalysis(null, null).team.games, 0);
+  assert.equal(analysisInsightKind("A precisão de passe está em 75%; há margem."), "passing");
+  assert.equal(analysisInsightKind("A produção ofensiva supera a defensiva em 2 gols."), "attacking");
+  assert.equal(analysisInsightKind("A equipe sofreu 2 gols a mais do que marcou."), "defending");
+  assert.equal(playerComparisonState({ matches: 0, players: [] }, ["player"]), "no-sample");
+  assert.equal(playerComparisonState({ matches: 0, players: [] }, []), "choose");
+  assert.equal(playerComparisonState({ matches: 2, players: [{ id: "one" }] }, ["one"]), "needs-more");
 });
 
 test("insights usam apenas relações matemáticas disponíveis", () => {

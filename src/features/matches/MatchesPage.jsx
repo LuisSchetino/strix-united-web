@@ -587,15 +587,15 @@ function PlayerMatchSheet({ player, match, workspace, close }) {
   const passesMatch = String(player.passes || "").match(/(\d+)\s*\/\s*(\d+)/);
   const passesMade = Number(player.passesMade ?? passesMatch?.[1]);
   const passesAttempted = Number(player.passesAttempts ?? player.passAttempts ?? passesMatch?.[2]);
-  const tacklesMade = Number(player.tackles ?? 0);
+  const tacklesMade = hasOwnValue(player.tackles) && Number.isFinite(Number(player.tackles)) ? Number(player.tackles) : null;
   const tackleAttempts = Number(player.tackleAttempts ?? player.tacklesAttempts);
   const normalMetrics = [
-    ["GOLS", player.goals], ["ASSISTÊNCIAS", player.assists], ["G+A", Number(player.goals || 0) + Number(player.assists || 0)],
+    ["GOLS", player.goals], ["ASSISTÊNCIAS", player.assists], ["G+A", hasOwnValue(player.goals) && hasOwnValue(player.assists) ? Number(player.goals) + Number(player.assists) : null],
     ["CHUTES", player.shots], ["PASSES", Number.isFinite(passesMade) && Number.isFinite(passesAttempted) ? `${passesMade} / ${passesAttempted}` : null],
     ["PRECISÃO", passesAttempted > 0 && Number.isFinite(passesMade) ? `${((passesMade / passesAttempted) * 100).toFixed(1)}%` : null],
-    ["DESARMES", Number.isFinite(tacklesMade) ? tacklesMade : null],
+    ["DESARMES", tacklesMade],
     ["DESARMES TENTADOS", Number.isFinite(tackleAttempts) ? tackleAttempts : null],
-    ["EFICIÊNCIA", tackleAttempts > 0 ? `${((tacklesMade / tackleAttempts) * 100).toFixed(1)}%` : null],
+    ["EFICIÊNCIA", tacklesMade !== null && Number.isFinite(tackleAttempts) && tackleAttempts > 0 ? `${((tacklesMade / tackleAttempts) * 100).toFixed(1)}%` : null],
     ["MOTM", player.mom === 1 || player.mom === true ? "SIM" : hasOwnValue(player.mom) ? "NÃO" : null],
     ["VERMELHO", player.redcards], ["CLEAN SHEET DEF", player.cleansheetsdef],
   ];
@@ -708,7 +708,7 @@ function MatchDetails({ match, workspace, close }) {
                 <header role="row"><span>JOGADOR</span><span>NOTA</span><span>G</span><span>A</span><span>PASSES</span><span>CHUTES</span><span>DESARMES</span><span>DEFESAS</span></header>
                 {players.map((player, index) => (
                   <article role="row" className={`${Number(player.rating) === bestRating && bestRating > 0 ? "is-best " : ""}${disconnected(player) ? "is-disconnected" : ""}`} key={player.id || player.eaName || index}>
-                    <div><b><button type="button" className="match-player-profile-trigger" onClick={() => setSelectedPlayer(player)} aria-label={`Abrir ficha de ${canonicalPlayerName(player.name || player.eaName, workspace.players, workspace.aliases)} nesta partida`}>{canonicalPlayerName(player.name || player.eaName, workspace.players, workspace.aliases)}</button></b><small>{disconnected(player) && <em className="disconnect-badge">CAIU DA PARTIDA</em>}{!disconnected(player) && Number(player.rating) === bestRating && bestRating > 0 && <em>MELHOR NOTA</em>}{Number(player.goals) === maxGoals && maxGoals > 0 && <em><StatIcon name="goals"/> ARTILHEIRO</em>}{Number(player.assists) === maxAssists && maxAssists > 0 && <em><StatIcon name="assists"/> ASSISTÊNCIA</em>}{Number(player.passesMade) === maxPasses && maxPasses > 0 && <em>MAIS PASSES</em>}</small></div>
+                    <div><b><button type="button" className="match-player-profile-trigger" onClick={() => setSelectedPlayer(player)} aria-label={`Abrir ficha de ${canonicalPlayerName(player.name || player.eaName, workspace.players, workspace.aliases)} nesta partida`}>{canonicalPlayerName(player.name || player.eaName, workspace.players, workspace.aliases)}</button></b><small>{disconnected(player) && <em className="disconnect-badge">CAIU DA PARTIDA</em>}{!disconnected(player) && Number(player.rating) === bestRating && bestRating > 0 && <em className="match-best-rating"><StatIcon name="rating"/> MELHOR NOTA</em>}{Number(player.goals) === maxGoals && maxGoals > 0 && <em><StatIcon name="goals"/> ARTILHEIRO</em>}{Number(player.assists) === maxAssists && maxAssists > 0 && <em><StatIcon name="assists"/> ASSISTÊNCIA</em>}{Number(player.passesMade) === maxPasses && maxPasses > 0 && <em>MAIS PASSES</em>}</small></div>
                     <strong>{player.rating ?? "—"}</strong><span>{player.goals ?? "—"}</span><span>{player.assists ?? "—"}</span><span>{player.passes ?? "—"}</span><span>{player.shots ?? "—"}</span><span>{player.tackles ?? "—"}</span><span>{player.saves ?? "—"}</span>
                   </article>
                 ))}

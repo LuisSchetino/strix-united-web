@@ -145,3 +145,41 @@ test("seletor individual inclui todo elenco ativo mesmo sem amostra e preserva i
   assert.deepEqual(noSample.metricSamples, {});
   assert.equal(choices.some((player) => player.name === "ARQUIVADO"), false);
 });
+
+test("Dados Individuais renderiza o elenco ativo em lista sem usar select de jogador", async () => {
+  const source = await readFile(new URL("../src/features/statistics/StatisticsPage.jsx", import.meta.url), "utf8");
+  const rosterStart = source.indexOf('className="statistics-individual-roster"');
+  const rosterEnd = source.indexOf('className="statistics-sort"', rosterStart);
+  assert.notEqual(rosterStart, -1, "a seção de leitura individual deve existir");
+  assert.notEqual(rosterEnd, -1, "a seção de leitura individual deve terminar antes dos controles de ordenação");
+  const rosterSection = source.slice(rosterStart, rosterEnd);
+  assert.match(rosterSection, /eligibleProfiles\.map\(/, "a lista deve renderizar todos os perfis ativos elegíveis");
+  assert.match(rosterSection, /player\.noSample\s*\?\s*"Sem amostra"/, "jogadores sem atuação devem permanecer visíveis");
+  assert.match(rosterSection, /setSelectedPlayerKey\(key\)/, "cada linha deve abrir a ficha individual existente");
+  assert.doesNotMatch(rosterSection, /<SelectControl\b/, "o jogador não pode ser escolhido por select");
+});
+
+test("estatísticas atuais omitem inativos e desconhecidos, mantendo somente jogadores ativos", () => {
+  const roster = [
+    { id: "active", display_name: "ATIVO", positions: ["MC"], is_active: true },
+    { id: "old", display_name: "ANTIGO", positions: ["ATA"], is_active: false },
+  ];
+  const match = { performance: { players: [
+    { eaName: "ATIVO EA", rating: 8, goals: 1 },
+    { eaName: "ANTIGO EA", rating: 9, goals: 4 },
+    { eaName: "HISTÓRICO SEM VÍNCULO", rating: 10, goals: 7 },
+  ] } };
+  const stats = aggregatePlayerStatistics([match], { players: roster, aliases: [
+    { ea_name: "ATIVO EA", player_id: "active" }, { ea_name: "ANTIGO EA", player_id: "old" },
+  ] });
+  assert.deepEqual(stats.map((player) => player.playerId), ["active"]);
+  assert.equal(stats[0].goals, 1);
+  assert.deepEqual(buildPlayerProfileChoices(stats, roster).map((player) => player.name), ["ATIVO"]);
+});
+
+test("handle é normalizado apenas para apresentação", async () => {
+  const { formatPlayerHandle } = await import("../src/features/statistics/statistics-core.js");
+  assert.equal(formatPlayerHandle("@B7NFelipe"), "@b7nfelipe");
+  assert.equal(formatPlayerHandle("NUNES"), "@nunes");
+  assert.equal(formatPlayerHandle("@nunes"), "@nunes");
+});

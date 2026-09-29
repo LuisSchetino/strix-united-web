@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { aggregatePlayerStatistics, aggregateTeamStatistics, buildRanking, canonicalPlayerName, uniqueMatches } from "../src/features/statistics/statistics-core.js";
+import { aggregatePlayerStatistics, aggregateTeamStatistics, buildRanking, canonicalPlayerName, formatPlayerHandle, uniqueMatches } from "../src/features/statistics/statistics-core.js";
 
 const matches = [{ strix_score: 3, opponent_score: 1, performance: { passes: "80/100", shots: 9, tackles: 5, goalkeeperSaves: 2, averageRating: 7.5, players: [{ eaName: "OBEEN", rating: 8, goals: 1, assists: 2, passesMade: 30, passesAttempts: 40, tackles: 3, shots: 2 }] } }, { strix_score: 1, opponent_score: 1, performance: { passes: "45/60", players: [{ eaName: "OBEEN", rating: 7, passesMade: 20, passesAttempts: 25 }] } }];
 
@@ -25,6 +25,32 @@ test("métricas EA ausentes permanecem sem amostra e não viram zeros de produto
   assert.equal(result.savesPerGame, null);
   assert.equal(result.passAccuracy, null);
   assert.equal(result.averageRating, null);
+});
+
+test("MOTM, clean sheet e campos de goleiro distinguem ausente de zero real", () => {
+  const roster = [{ id: "gk", display_name: "GOLEIRO", positions: ["GK"], is_active: true }];
+  const aliases = [{ ea_name: "GOLEIRO EA", player_id: "gk" }];
+  const [missing] = aggregatePlayerStatistics([{ opponent_score: null, performance: { players: [{ eaName: "GOLEIRO EA", pos: "GK", rating: 8, saves: 2 }] } }], { players: roster, aliases });
+  assert.equal(missing.metricSamples.mom, undefined);
+  assert.equal(missing.motmPercentage, null);
+  assert.equal(missing.cleanSheetsGk, 0);
+  assert.equal(missing.goalsAgainstSamples, 0);
+  assert.equal(missing.reflexSaves, 0);
+  const [zero] = aggregatePlayerStatistics([{ opponent_score: 0, performance: { players: [{ eaName: "GOLEIRO EA", pos: "GK", rating: 8, saves: 0, mom: 0, cleansheetsgk: 0, reflexSaves: 0 }] } }], { players: roster, aliases });
+  assert.equal(zero.metricSamples.saves, 1);
+  assert.equal(zero.metricSamples.mom, 1);
+  assert.equal(zero.metricSamples.cleansheetsgk, 1);
+  assert.equal(zero.metricSamples.reflexSaves, 1);
+  assert.equal(zero.saves, 0);
+  assert.equal(zero.mom, 0);
+  assert.equal(zero.cleanSheetsGk, 0);
+  assert.equal(zero.goalsAgainstSamples, 1);
+});
+
+test("handle preserva o valor original e normaliza apenas a apresentação", () => {
+  const stored = "@B7NFelipe";
+  assert.equal(formatPlayerHandle(stored), "@b7nfelipe");
+  assert.equal(stored, "@B7NFelipe");
 });
 
 test("zero tentativas continuam observadas, mas não produzem porcentagem infinita", () => {

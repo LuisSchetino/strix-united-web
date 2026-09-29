@@ -27,6 +27,7 @@ import {
 } from "./competition-storage.js";
 import {
   deriveCompetitionView,
+  qualificationScenarioInput,
   qualificationState,
   reconcileCompetitionResults,
 } from "./competition-core.js";
@@ -648,10 +649,8 @@ function Knockout({ view, accent }) {
 }
 
 function ScenarioPanel({ edition, snapshot, qualificationSlots }) {
-  const group =
-    snapshot?.groups?.find((item) => item.isStrixGroup) ||
-    snapshot?.groups?.[0];
-  if (!group || !qualificationSlots || !snapshot.fixtures?.length)
+  const scenarioInput = qualificationScenarioInput(snapshot, qualificationSlots);
+  if (!scenarioInput)
     return (
       <section className="competition-section scenario-panel">
         <header>
@@ -666,8 +665,7 @@ function ScenarioPanel({ edition, snapshot, qualificationSlots }) {
       </section>
     );
   const result = calculateQualificationScenarios({
-    standings: group.standings.map((row) => ({ name: row.team, ...row })),
-    fixtures: snapshot.fixtures,
+    ...scenarioInput,
     qualificationSlots,
     tieBreakRules: edition.tie_break_rules || [],
   });
@@ -1044,9 +1042,13 @@ export function CompetitionsPage({ profile, workspace, client }) {
   const [modal, setModal] = useState(false);
   const [pendingDelete, setPendingDelete] = useState(null);
   const [deleteError, setDeleteError] = useState("");
+  const competitionEditions = Array.isArray(workspace.competitionEditions) ? workspace.competitionEditions : [];
+  const competitions = Array.isArray(workspace.competitions) ? workspace.competitions : [];
+  const competitionSources = Array.isArray(workspace.competitionSources) ? workspace.competitionSources : [];
+  const competitionFixtures = Array.isArray(workspace.competitionFixtures) ? workspace.competitionFixtures : [];
   const available = useMemo(
     () =>
-      workspace.competitionEditions
+      competitionEditions
         .filter((edition) =>
           viewMode === "historical"
             ? edition.status === "historical"
@@ -1054,12 +1056,12 @@ export function CompetitionsPage({ profile, workspace, client }) {
         )
         .map((edition) => ({
           edition,
-          competition: workspace.competitions.find(
+          competition: competitions.find(
             (item) => item.id === edition.competition_id,
           ),
         }))
         .filter((item) => item.competition),
-    [workspace.competitionEditions, workspace.competitions, viewMode],
+    [competitionEditions, competitions, viewMode],
   );
   useEffect(() => {
     if (!available.some((item) => item.edition.id === selectedEditionId))
@@ -1068,18 +1070,18 @@ export function CompetitionsPage({ profile, workspace, client }) {
   const selected =
     available.find((item) => item.edition.id === selectedEditionId) ||
     available[0];
-  const sources = workspace.competitionSources.filter(
+  const sources = competitionSources.filter(
     (source) => source.edition_id === selected?.edition.id,
   );
-  const fixtures = (workspace.competitionFixtures || []).filter(
+  const fixtures = competitionFixtures.filter(
     (fixture) => fixture.edition_id === selected?.edition.id,
   );
-  const historicalEditions = workspace.competitionEditions
+  const historicalEditions = competitionEditions
     .filter((edition) => edition.status === "historical")
     .map((edition) => ({
       ...edition,
-      stats: competitionHistoryStats(edition, (workspace.competitionFixtures || []).filter((fixture) => fixture.edition_id === edition.id)),
-      competition: workspace.competitions.find(
+      stats: competitionHistoryStats(edition, competitionFixtures.filter((fixture) => fixture.edition_id === edition.id)),
+      competition: competitions.find(
         (competition) => competition.id === edition.competition_id,
       ),
     }));

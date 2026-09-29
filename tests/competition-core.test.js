@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { deriveCompetitionView, qualificationState } from "../src/features/competitions/competition-core.js";
+import { deriveCompetitionView, qualificationScenarioInput, qualificationState } from "../src/features/competitions/competition-core.js";
 
 test("classificação preservada e mata-mata define a fase atual", () => {
   const sources = [
@@ -81,4 +81,21 @@ test("snapshot and persisted bracket rows share the structural slot identity", (
   const view = deriveCompetitionView(sources, persisted);
   assert.equal(view.fixtures.length, 1);
   assert.equal(view.fixtures[0].bracket_slot_key, "final:0");
+});
+
+test("snapshots vazios ou parciais de competição não quebram a rota", () => {
+  assert.doesNotThrow(() => deriveCompetitionView(null, null));
+  const view = deriveCompetitionView([
+    { source_kind: "standings", snapshot: { groups: null, fixtures: {} } },
+    { source_kind: "knockout", snapshot: { knockout: { fixtures: null } } },
+  ], []);
+  assert.deepEqual(view.fixtures, []);
+  assert.deepEqual(view.standings.groups, []);
+  assert.equal(qualificationScenarioInput({ groups: [{ standings: null }], fixtures: [{}] }, 8), null);
+});
+
+test("cenários exigem classificação e fixtures em forma válida", () => {
+  const input = qualificationScenarioInput({ groups: [{ standings: [{ team: "STRIX", position: 2, points: 3 }] }], fixtures: [{ status: "scheduled" }] }, 4);
+  assert.deepEqual(input.standings, [{ team: "STRIX", position: 2, points: 3, name: "STRIX" }]);
+  assert.equal(input.fixtures.length, 1);
 });

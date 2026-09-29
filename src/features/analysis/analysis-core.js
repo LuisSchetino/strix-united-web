@@ -3,6 +3,7 @@ import { aggregatePlayerStatistics, aggregateTeamStatistics, uniqueMatches } fro
 const newest = (matches) => uniqueMatches(matches).sort((left, right) => new Date(right.played_at || 0) - new Date(left.played_at || 0));
 
 export function selectAnalysisPeriod(matches = [], period = "season") {
+  period = typeof period === "string" ? period : "season";
   const ordered = newest(matches);
   if (period === "last5") return ordered.slice(0, 5);
   if (period === "last10") return ordered.slice(0, 10);
@@ -11,6 +12,19 @@ export function selectAnalysisPeriod(matches = [], period = "season") {
     return ordered.filter((match) => String(match.competition_name || "Amistoso") === competition);
   }
   return ordered;
+}
+
+export function analysisInsightKind(insight = "") {
+  const text = String(insight).toLocaleLowerCase("pt-BR");
+  if (text.includes("precisão de passe")) return "passing";
+  if (text.includes("produção ofensiva") || text.includes("ficou sem marcar")) return "attacking";
+  return "defending";
+}
+
+export function playerComparisonState(comparison, playerIds = []) {
+  if (comparison?.matches === 0) return playerIds.length ? "no-sample" : "choose";
+  if ((comparison?.players?.length || 0) < 2) return "needs-more";
+  return "ready";
 }
 
 export function comparePeriods(matches = [], period = "last5") {

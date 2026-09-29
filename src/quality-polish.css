@@ -10,6 +10,8 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 .sidebar .brand .club-logo{filter:none}
 .sidebar .menu-group button{min-height:44px}
 .sidebar .collapse,.sidebar .mobile-close,.sidebar .sidebar-user button{min-width:44px;min-height:44px}
+.sidebar .brand>.close-button.mobile-close{display:none;background:#15171b;color:#e8eaec;border-color:#ffffff24}
+@media(max-width:900px){.sidebar .brand>.close-button.mobile-close{display:grid;width:44px;height:44px;min-width:44px;min-height:44px}}
 .page-home .match-hero:after{background:linear-gradient(0deg,#ffffff04,transparent)!important}
 .page-home .match-hero:before{background:radial-gradient(ellipse at 50% 0,#ffffff09,transparent 65%),repeating-linear-gradient(90deg,transparent 0 20%,#ffffff03 20% 20.5%,transparent 20.5% 40%)!important}
 .page-home .match-hero .smoke{display:none}

@@ -115,6 +115,9 @@
 .match-player-performance{background:#0b0d10}.match-player-performance>header{background:#101318}
 .match-player-table>article{background:#0b0d10}.match-player-table>article.is-best{background:linear-gradient(90deg,#15191e,#0b0d10)!important}
 .match-player-table>article em{border:1px solid var(--strix-border);background:#15191e;color:#d8dce0}
+.match-detail-metrics article svg,.match-detail-metrics article strong{color:var(--rastro-blue,#2F80FF);stroke:currentColor}
+.match-player-table>article em.match-best-rating{display:inline-flex;align-items:center;gap:4px}
+.match-player-table>article em.match-best-rating svg{width:12px;height:12px;stroke:currentColor;fill:none}
 
 /* Operational match/import UI remains Strix monochrome. */
 .matches-source-empty,.import-stage,.match-review-list article,.resolve-list>article,.import-summary>article,.match-review-modal,.match-live-preview{border-color:var(--strix-border);background:#0b0d10;color:var(--strix-text)}

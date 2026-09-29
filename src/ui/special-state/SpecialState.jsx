@@ -186,8 +186,10 @@ export class AppErrorBoundary extends Component {
     return { failed: true };
   }
 
-  componentDidCatch() {
-    // Keep the stack out of the UI. Logging stays in the browser console.
+  componentDidCatch(error, errorInfo) {
+    // Keep the user-facing fallback calm while preserving the real render trace
+    // in DevTools; this must not turn a failure into an invisible fallback.
+    console.error("[Strix AppErrorBoundary]", error, errorInfo?.componentStack || "");
   }
 
   render() {

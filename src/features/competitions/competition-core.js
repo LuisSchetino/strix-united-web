@@ -33,14 +33,19 @@ export function qualificationState(row, slots) {
 }
 
 export function deriveCompetitionView(sources = [], persistedFixtures = [], edition = {}) {
+  sources = Array.isArray(sources) ? sources.filter(Boolean) : [];
+  persistedFixtures = Array.isArray(persistedFixtures) ? persistedFixtures.filter(Boolean) : [];
   const standingsSource = sources.find((source) => source.source_kind === "standings");
   const knockoutSource = sources.find((source) => source.source_kind === "knockout");
-  const standings = standingsSource?.snapshot || {};
-  const knockout = knockoutSource?.snapshot || {};
+  const standings = standingsSource?.snapshot && typeof standingsSource.snapshot === "object" ? { ...standingsSource.snapshot } : {};
+  standings.groups = Array.isArray(standings.groups)
+    ? standings.groups.filter((group) => group && typeof group === "object").map((group) => ({ ...group, standings: Array.isArray(group.standings) ? group.standings : [] }))
+    : [];
+  const knockout = knockoutSource?.snapshot && typeof knockoutSource.snapshot === "object" ? knockoutSource.snapshot : {};
   const snapshotFixtures = sources.flatMap((source) => [
-    ...(source.snapshot?.fixtures || []),
-    ...(source.snapshot?.knockout?.fixtures || []),
-  ]).map((fixture) => ({
+    ...(Array.isArray(source.snapshot?.fixtures) ? source.snapshot.fixtures : []),
+    ...(Array.isArray(source.snapshot?.knockout?.fixtures) ? source.snapshot.knockout.fixtures : []),
+  ]).filter((fixture) => fixture && typeof fixture === "object").map((fixture) => ({
     ...fixture,
     external_match_id: fixture.externalMatchId,
     round_label: fixture.roundLabel,
@@ -99,4 +104,13 @@ export function reconcileCompetitionResults(providerResults = [], internalMatche
     });
     return internal ? { ...fixture, internalMatch: internal } : fixture;
   });
+}
+
+export function qualificationScenarioInput(snapshot, qualificationSlots) {
+  const groups = Array.isArray(snapshot?.groups) ? snapshot.groups : [];
+  const group = groups.find((item) => item?.isStrixGroup) || groups[0];
+  const standings = Array.isArray(group?.standings) ? group.standings : [];
+  const fixtures = Array.isArray(snapshot?.fixtures) ? snapshot.fixtures : [];
+  if (!standings.length || !fixtures.length || !Number(qualificationSlots)) return null;
+  return { standings: standings.map((row) => ({ ...row, name: row?.team || row?.name || "" })), fixtures };
 }
