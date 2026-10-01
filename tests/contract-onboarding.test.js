@@ -129,6 +129,24 @@ test("onboarding persiste no usuário autenticado e bloqueia o app até assinar"
   assert.match(css, /prefers-reduced-motion:reduce/);
 });
 
+test("contrato assinado pode ser revisto e baixado sem reenviar assinatura", async () => {
+  const [main, archive, css] = await Promise.all([
+    read("../src/main.jsx"),
+    read("../src/features/onboarding/SignedContractArchive.jsx"),
+    read("../src/features/onboarding/contract-archive.css"),
+  ]);
+  assert.match(main, /ContractArchiveAction/);
+  assert.match(main, /SignedContractArchive contract=\{signedContract\}/);
+  assert.match(archive, /REVER ANIMAÇÃO/);
+  assert.match(archive, /BAIXAR PDF/);
+  assert.match(archive, /downloadSignedContractPdf\(contract, identity\)/);
+  assert.match(archive, /lockScroll: true/);
+  assert.match(archive, /aria-modal="true"/);
+  assert.match(css, /100dvh/);
+  assert.match(css, /prefers-reduced-motion:reduce/);
+  assert.doesNotMatch(archive, /updateUser|CONTRACT_METADATA_KEY/, "rever e baixar não assinam nem mutam metadata");
+});
+
 test("nenhuma migration nova foi criada para o contrato", async () => {
   const { readdir } = await import("node:fs/promises");
   const names = await readdir(new URL("../supabase/migrations/", import.meta.url));

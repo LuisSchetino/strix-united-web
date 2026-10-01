@@ -18,10 +18,18 @@ export const MEDIA_LOOKS = Object.freeze({
     short: "V2",
     kicker: "COLLAGE EDITORIAL",
   },
+  editorial: {
+    id: "editorial",
+    version: "v3",
+    label: "Editorial clean",
+    short: "V3",
+    kicker: "STRIX EDITORIAL",
+  },
 });
 
-export function normalizeMediaLook(value = "campaign") {
-  return String(value || "").trim().toLowerCase() === "collage" ? "collage" : "campaign";
+export function normalizeMediaLook(value = "editorial") {
+  const normalized = String(value || "").trim().toLowerCase();
+  return MEDIA_LOOKS[normalized] ? normalized : "editorial";
 }
 
 export function withMediaLook(timeline, look) {
@@ -30,7 +38,9 @@ export function withMediaLook(timeline, look) {
 }
 
 export function lookAssetFingerprint(look, extra = {}) {
-  if (normalizeMediaLook(look) !== "collage") return "";
+  const resolved = normalizeMediaLook(look);
+  if (resolved === "editorial") return "strix-editorial-clean-v1";
+  if (resolved !== "collage") return "";
   const seed = extra.seed == null ? "" : String(extra.seed);
   const mode = extra.mode ? String(extra.mode) : "";
   return `${collageFingerprintToken()}|${cutoutFingerprintToken()}|seed:${seed}|mode:${mode}`;

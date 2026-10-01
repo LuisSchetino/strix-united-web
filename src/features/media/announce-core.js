@@ -5,7 +5,7 @@ import { ANNOUNCE_FX_REVISION } from "./announce-fx.js";
 import { positionGroup } from "./related-night-core.js";
 
 export const ANNOUNCE_TEMPLATE_ID = "season-announce";
-export const ANNOUNCE_TEMPLATE_VERSION = "season-announce-v3.10";
+export const ANNOUNCE_TEMPLATE_VERSION = "season-announce-editorial-v1";
 export const ANNOUNCE_FPS = 30;
 export const ANNOUNCE_SEASON = "FC 27";
 export const ANNOUNCE_CACHE_DAY = "fc27";
@@ -290,7 +290,7 @@ export function announceIdentityPayload({
   phraseId = "",
   title = "",
   announceType = "",
-  look = "campaign",
+  look = "editorial",
   mediaLook = "",
   templateVersion = ANNOUNCE_TEMPLATE_VERSION,
 } = {}) {
@@ -305,7 +305,7 @@ export function announceIdentityPayload({
     announceType: String(announceType || ""),
     phraseId: String(phraseId || ""),
     phrase: String(phrase || ""),
-    look: String(mediaLook || look || "campaign"),
+    look: String(mediaLook || look || "editorial"),
     collageAssets: lookAssetFingerprint(mediaLook || look, {
       seed: CUTOUT_TEMPLATE_SEEDS.announce,
       mode: format === "feed" ? "static" : "chaos",

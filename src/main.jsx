@@ -24,7 +24,8 @@ import { ClubLogo } from "./ui/ClubLogo.jsx";
 import { ActionMenu } from "./ui/ActionMenu.jsx";
 import { LaunchGate } from "./features/launch/LaunchGate.jsx";
 import { ContractGate, ContractValidating } from "./features/onboarding/ContractGate.jsx";
-import { hasSignedContract } from "./features/onboarding/contract-core.js";
+import { hasSignedContract, readContract, resolveContractIdentity } from "./features/onboarding/contract-core.js";
+import { ContractArchiveAction, SignedContractArchive } from "./features/onboarding/SignedContractArchive.jsx";
 import { LAUNCH_CONFIG, clearLaunchAccessVerification, consumeLaunchReturn, isLaunchUnlocked, launchGateDecision, readLaunchAccessVerification, rememberLaunchAccess } from "./launch.js";
 import { preloadClubLogos } from "./ui/provider-assets.js";
 import { STRIX_BRAND } from "./brand.js";
@@ -1072,6 +1073,8 @@ function Sidebar({
   setMobileOpen,
   profile,
   signOut,
+  hasContract,
+  onOpenContract,
 }) {
   const warmRoute = (id) => () => { void preloadRoute(id); };
   const [mobile, setMobile] = useState(() => window.matchMedia("(max-width:900px)").matches);
@@ -1143,11 +1146,12 @@ function Sidebar({
       </div>
       <div className="sidebar-dock">
       <RastroSignature compact={collapsed} />
-      {collapsed ? <div className="sidebar-compact-account"><button type="button" className="sidebar-signout" onClick={signOut} aria-label="Sair da conta" data-tooltip="Sair da conta"><Icon name="logout" size={19}/></button></div> : <div className="sidebar-user">
+      {collapsed ? <div className="sidebar-compact-account">{hasContract && <ContractArchiveAction compact onClick={onOpenContract}/>}<button type="button" className="sidebar-signout" onClick={signOut} aria-label="Sair da conta" data-tooltip="Sair da conta"><Icon name="logout" size={19}/></button></div> : <div className="sidebar-user">
         <Avatar name={profile.display_name} logo={profile.avatar_url} kind="photo" size="sm" />
         <span>
           <b>{profile.display_name}</b>
           <small>{tierLabel(profile.access_tier)}</small>
+          {hasContract && <ContractArchiveAction onClick={onOpenContract}/>}
         </span>
         <button type="button" className="sidebar-signout" onClick={signOut} title="Sair da conta" aria-label="Sair da conta">
           <Icon name="logout" size={15} />
@@ -2982,6 +2986,7 @@ function App() {
     [command, setCommand] = useState(false),
     [createOpen, setCreateOpen] = useState(false),
     [player, setPlayer] = useState(null),
+    [contractArchiveOpen, setContractArchiveOpen] = useState(false),
     [contractSignedFor, setContractSignedFor] = useState(""),
     [contractShownFor, setContractShownFor] = useState("");
   const syncRoute = () => {
@@ -3116,6 +3121,8 @@ function App() {
   }
   // Primeiro login: contrato de vínculo da temporada, ligado ao usuário autenticado.
   const contractUser = auth.session?.user;
+  const signedContract = hasSignedContract(contractUser) ? readContract(contractUser) : null;
+  const contractIdentity = resolveContractIdentity({ session: auth.session, profile: auth.profile, players: workspace.players });
   // The gate stays mounted from the moment it opens until the confirmation ends, even though
   // the session refresh that follows `updateUser` already reports the contract as signed.
   const contractPending = Boolean(contractUser) && contractSignedFor !== contractUser.id
@@ -3151,6 +3158,8 @@ function App() {
         setMobileOpen={setMobileOpen}
         profile={auth.profile}
         signOut={auth.signOut}
+        hasContract={Boolean(signedContract)}
+        onOpenContract={() => { setMobileOpen(false); setContractArchiveOpen(true); }}
       />
       <main className="workspace">
         <header className="topbar">
@@ -3212,6 +3221,7 @@ function App() {
         <Command close={() => setCommand(false)} navigate={navigate} workspace={workspace} profile={auth.profile} />
       )}
       <Profile player={player} close={() => setPlayer(null)} />
+      {contractArchiveOpen && signedContract && <SignedContractArchive contract={signedContract} identity={contractIdentity} onClose={() => setContractArchiveOpen(false)}/>}
       <ToastViewport />
     </div>
   );

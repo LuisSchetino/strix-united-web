@@ -1,5 +1,5 @@
 import { paintAnnounceFrame } from "./announce-paint.js";
-import { paintCollageAnnounce, isCollageLook } from "./collage-paint.js";
+import { paintEditorialAnnounce } from "./editorial-media-paint.js";
 import { announceSceneAt } from "./announce-timeline.js";
 
 export function announceFrameTime(frameIndex, timeline) {
@@ -15,11 +15,8 @@ export function renderAnnounceFrame(ctx, {
   assets,
 } = {}) {
   const resolved = Number.isFinite(timeSec) ? timeSec : time;
-  if (isCollageLook(timeline)) {
-    paintCollageAnnounce(ctx, { timeline, time: resolved, assets });
-    return;
-  }
-  paintAnnounceFrame(ctx, { timeline, time: resolved, assets });
+  if (timeline?.still) paintAnnounceFrame(ctx, { timeline, time: resolved, assets });
+  else paintEditorialAnnounce(ctx, { timeline, time: resolved, assets });
 }
 
 export function describeAnnounceFrame(timeline, timeSec) {

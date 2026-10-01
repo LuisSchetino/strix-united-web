@@ -5,7 +5,7 @@ import { uniqueMatches, aggregateTeamStatistics } from "../statistics/statistics
 import { formatAgendaDay, formatKickoff, MEDIA_FORMATS, opponentInitials } from "./agenda-media-core.js";
 
 export const SUMMARY_TEMPLATE_ID = "period-summary";
-export const SUMMARY_TEMPLATE_VERSION = "period-summary-v1";
+export const SUMMARY_TEMPLATE_VERSION = "period-summary-editorial-v1";
 export const SUMMARY_FPS = 30;
 
 const WEEKDAY = Object.freeze({
@@ -108,7 +108,7 @@ export function summaryIdentityPayload({
   day,
   format = "story",
   matches = [],
-  look = "campaign",
+  look = "editorial",
   mediaLook = "",
   templateVersion = SUMMARY_TEMPLATE_VERSION,
 } = {}) {
@@ -118,7 +118,7 @@ export function summaryIdentityPayload({
     template: SUMMARY_TEMPLATE_ID,
     templateVersion,
     mode: mode === "week" ? "week" : "day",
-    look: String(mediaLook || look || "campaign"),
+    look: String(mediaLook || look || "editorial"),
     collageAssets: lookAssetFingerprint(mediaLook || look, {
       seed: CUTOUT_TEMPLATE_SEEDS.summary,
       mode: format === "feed" ? "static" : "chaos",

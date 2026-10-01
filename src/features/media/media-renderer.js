@@ -4,10 +4,9 @@ import { normalizeMediaLook, withMediaLook } from "./media-look.js";
  * MediaRenderer: the layer that decides HOW a piece is built so the user never has to.
  *
  *   section + content + format  →  composition (timeline builder, frame painter, output)
- *   composition + asset health  →  look (V1 "campaign" painter or V2 "collage" painter)
+ *   composition + source media  →  visual treatment (editorial clean V3)
  *
- * The V1 and V2 painters stay intact. The Central only exposes sections, content
- * and format; the painter is resolved here.
+ * The Central only exposes sections, content and format; the painter stays automatic.
  */
 
 export const MEDIA_SECTIONS = Object.freeze([
@@ -39,12 +38,8 @@ export function resolveMediaFormat(sectionId, requested) {
   return section.formats.includes(requested) ? requested : section.formats[0];
 }
 
-/**
- * V2 (collage) is the editorial look. V1 (campaign) is the safe fallback when the
- * collage assets did not load, so a missing asset can never block a piece.
- */
-export function resolveMediaLook({ collageReady = true } = {}) {
-  return normalizeMediaLook(collageReady ? "collage" : "campaign");
+export function resolveMediaLook() {
+  return normalizeMediaLook("editorial");
 }
 
 /**

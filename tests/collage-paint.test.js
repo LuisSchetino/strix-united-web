@@ -101,7 +101,7 @@ test("V2 monta headline letra a letra com rotação própria", () => {
   assert.equal(collageHeadlineMode(false, 2.6), "static");
 });
 
-test("V2 reutiliza a campanha V1 e só troca headlines collage", async () => {
+test("pintores legados permanecem isolados e os quatro MP4s ativos chamam o novo painter", async () => {
   const [collage, announceFrame, agendaFrame, relatedFrame, summaryFrame, jobs, announcePaint, agendaPaint] = await Promise.all([
     read("../src/features/media/collage-paint.js"),
     read("../src/features/media/announce-frame.js"),
@@ -127,10 +127,11 @@ test("V2 reutiliza a campanha V1 e só troca headlines collage", async () => {
   assert.doesNotMatch(collage, /noise-paper-1|cut-fill|PAPER_IDS/);
   assert.doesNotMatch(collage, /width \* 0\.92|source-atop/);
   assert.doesNotMatch(collage, /paintCollagePitch/);
-  assert.match(announceFrame, /paintCollageAnnounce/);
-  assert.match(agendaFrame, /paintCollageAgenda/);
-  assert.match(relatedFrame, /paintCollageRelated/);
-  assert.match(summaryFrame, /paintCollageSummary/);
+  assert.match(announceFrame, /paintEditorialAnnounce/);
+  assert.match(announceFrame, /timeline\?\.still\) paintAnnounceFrame/);
+  assert.match(agendaFrame, /paintEditorialAgenda/);
+  assert.match(relatedFrame, /paintEditorialRelated/);
+  assert.match(summaryFrame, /paintEditorialSummary/);
   assert.match(jobs, /renderAnnounceFrame/);
   assert.match(announcePaint, /paintAnnounceFrame|cinematicCamera|paintRoleSweep/);
   assert.doesNotMatch(announcePaint, /paintCutoutText/);

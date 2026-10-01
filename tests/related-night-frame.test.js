@@ -36,7 +36,7 @@ function mockContext() {
     rect() {},
     arc() {},
     ellipse() {},
-    translate() {},
+    translate(...args) { calls.push(["translate", ...args]); },
     scale() {},
     rotate() {},
     quadraticCurveTo() {},

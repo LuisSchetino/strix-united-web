@@ -139,8 +139,8 @@ test("easing premium não é linear e o painter cobre intro, jogo e finale", () 
   assert.equal(timeline.scenes.at(-1).type, "finale");
 });
 
-test("agenda-day-v7 mantém palco persistente entre os jogos", () => {
-  assert.equal(AGENDA_TEMPLATE_VERSION, "agenda-day-v7");
+test("pintor novo invalida render antigo e mantém o utilitário de palco legado", () => {
+  assert.equal(AGENDA_TEMPLATE_VERSION, "agenda-editorial-v1");
   const timeline = buildAgendaTimeline(matches(5), { format: "story" });
   const assets = {
     strix: { bitmap: null, initials: "SU", name: "Strix United" },

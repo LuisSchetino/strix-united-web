@@ -105,14 +105,16 @@ export function loadSummaryAssets(matches = [], options = {}) {
   return loadAgendaAssets(matches, options);
 }
 
-export async function loadAnnounceAssets(people = [], { onProgress } = {}) {
+export async function loadAnnounceAssets(people = [], { onProgress, loadFx = true } = {}) {
   const assets = await loadRelatedNightAssets(people, { onProgress });
-  const fx = await loadAnnounceFxLibrary();
   await Promise.allSettled([
     document.fonts?.load("800 22px Inter"),
     document.fonts?.load("600 34px Inter"),
     document.fonts?.load("700 128px Rajdhani"),
     document.fonts?.load("700 92px Rajdhani"),
   ]);
-  return { ...assets, fx };
+  // The legacy still/post renderer still uses its overlay library. The new MP4
+  // painter does not, so video generation can skip that fetch and decode work.
+  if (!loadFx) return assets;
+  return { ...assets, fx: await loadAnnounceFxLibrary() };
 }

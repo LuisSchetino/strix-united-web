@@ -22,9 +22,9 @@ test("a navegação tem exatamente as cinco áreas editoriais, na ordem do produ
 });
 
 test("o MediaRenderer decide o painter e o formato; o usuário nunca escolhe", () => {
-  assert.equal(resolveMediaLook({ collageReady: true }), "collage");
-  assert.equal(resolveMediaLook({ collageReady: false }), "campaign", "sem assets de collage, V1 assume sozinho");
-  assert.equal(resolveMediaLook(), "collage");
+  assert.equal(resolveMediaLook({ collageReady: true }), "editorial");
+  assert.equal(resolveMediaLook({ collageReady: false }), "editorial", "o painter novo não depende dos assets antigos");
+  assert.equal(resolveMediaLook(), "editorial");
   assert.equal(resolveMediaFormat("related", "feed"), "story", "Relacionados só produz Reels");
   assert.equal(resolveMediaFormat("agenda", "feed"), "feed");
   assert.equal(resolveMediaFormat("announce", "feed"), "feed");

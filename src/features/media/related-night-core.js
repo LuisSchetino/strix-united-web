@@ -4,7 +4,7 @@ import { saoPauloDay, todayAgendaMatches } from "../agenda/agenda-time.js";
 import { formatAgendaDay, MEDIA_FORMATS } from "./agenda-media-core.js";
 
 export const RELATED_NIGHT_TEMPLATE_ID = "related-night";
-export const RELATED_NIGHT_TEMPLATE_VERSION = "related-night-v6";
+export const RELATED_NIGHT_TEMPLATE_VERSION = "related-night-editorial-v1";
 export const RELATED_NIGHT_FPS = 30;
 
 export const LINEUP_SLOT_POSITIONS = Object.freeze([
@@ -152,7 +152,7 @@ export function relatedNightIdentityPayload({
   format,
   players = [],
   saved = true,
-  look = "campaign",
+  look = "editorial",
   mediaLook = "",
   templateVersion = RELATED_NIGHT_TEMPLATE_VERSION,
 } = {}) {
@@ -163,7 +163,7 @@ export function relatedNightIdentityPayload({
     templateVersion,
     source: "night_related",
     saved: Boolean(saved),
-    look: String(mediaLook || look || "campaign"),
+    look: String(mediaLook || look || "editorial"),
     collageAssets: lookAssetFingerprint(mediaLook || look, {
       seed: CUTOUT_TEMPLATE_SEEDS.related,
       mode: format === "feed" ? "static" : "match_cut",

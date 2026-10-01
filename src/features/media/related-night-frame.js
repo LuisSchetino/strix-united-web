@@ -1,5 +1,4 @@
-import { paintRelatedNightFrame } from "./related-night-paint.js";
-import { paintCollageRelated, isCollageLook } from "./collage-paint.js";
+import { paintEditorialRelated } from "./editorial-media-paint.js";
 import { relatedNightSceneAt } from "./related-night-timeline.js";
 
 export function relatedNightFrameTime(frameIndex, timeline) {
@@ -16,11 +15,7 @@ export function renderRelatedNightFrame(ctx, {
   dayLabel,
 } = {}) {
   const resolved = Number.isFinite(timeSec) ? timeSec : time;
-  if (isCollageLook(timeline)) {
-    paintCollageRelated(ctx, { timeline, time: resolved, assets, dayLabel });
-    return;
-  }
-  paintRelatedNightFrame(ctx, { timeline, time: resolved, assets, dayLabel });
+  paintEditorialRelated(ctx, { timeline, time: resolved, assets, dayLabel });
 }
 
 export function describeRelatedNightFrame(timeline, timeSec) {

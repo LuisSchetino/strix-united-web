@@ -1,5 +1,4 @@
-import { paintAgendaFrame } from "./agenda-paint.js";
-import { paintCollageAgenda, isCollageLook } from "./collage-paint.js";
+import { paintEditorialAgenda } from "./editorial-media-paint.js";
 import { sceneAt } from "./agenda-timeline.js";
 
 export function agendaFrameTime(frameIndex, timeline) {
@@ -16,11 +15,7 @@ export function renderAgendaFrame(ctx, {
   dayLabel,
 } = {}) {
   const resolved = Number.isFinite(timeSec) ? timeSec : time;
-  if (isCollageLook(timeline)) {
-    paintCollageAgenda(ctx, { timeline, time: resolved, assets, dayLabel });
-    return;
-  }
-  paintAgendaFrame(ctx, { timeline, time: resolved, assets, dayLabel });
+  paintEditorialAgenda(ctx, { timeline, time: resolved, assets, dayLabel });
 }
 
 export function describeAgendaFrame(timeline, timeSec) {

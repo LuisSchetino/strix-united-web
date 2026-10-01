@@ -1,8 +1,6 @@
 import { AGENDA_TEMPLATE_ID, agendaFileName, fingerprintAgendaRender } from "./agenda-media-core.js";
 import { encodeAgendaMp4, encodeStillPng } from "./encode-mp4.js";
 import { loadAgendaAssets, loadAnnounceAssets, loadRelatedNightAssets, loadSummaryAssets } from "./media-assets.js";
-import { preloadCollageAssets } from "../../assets/collage/index.js";
-import { CUTOUT_TEMPLATE_SEEDS, preloadCutoutText } from "./cutout-text.js";
 import { relatedNightFileName, fingerprintRelatedNightRender, RELATED_NIGHT_TEMPLATE_ID } from "./related-night-core.js";
 import { relatedNightFrameTime, renderRelatedNightFrame } from "./related-night-frame.js";
 import { fingerprintSummaryRender, SUMMARY_TEMPLATE_ID, summaryFileName } from "./summary-core.js";
@@ -32,19 +30,6 @@ let job = {
 function emit(patch) {
   job = { ...job, ...patch };
   for (const listener of listeners) listener(job);
-}
-
-function collageMotionOf(timeline, motion = "chaos") {
-  if (timeline?.still || timeline?.format === "feed") return "static";
-  return motion;
-}
-
-async function prepareCollageLook(timeline, text = "", { seed = 1, mode = "chaos" } = {}) {
-  if (String(timeline?.mediaLook || "").toLowerCase() !== "collage") return;
-  await Promise.all([
-    preloadCollageAssets(),
-    preloadCutoutText(text, { seed, mode: collageMotionOf(timeline, mode) }),
-  ]);
 }
 
 export function getMediaJob() {
@@ -171,7 +156,6 @@ export async function startAgendaRender({
   });
 
   try {
-    await prepareCollageLook(timeline, "AGENDA DO DIA", { seed: CUTOUT_TEMPLATE_SEEDS.agenda, mode: "chaos" });
     const assets = await loadAgendaAssets(matches, {
       onProgress: (progress) => emit({ stage: "preparing", progress }),
     });
@@ -264,10 +248,6 @@ export async function startRelatedNightRender({
   });
 
   try {
-    await prepareCollageLook(timeline, `RELACIONADOS DA NOITE ${(players || []).map((item) => item.name || "").join(" ")}`, {
-      seed: CUTOUT_TEMPLATE_SEEDS.related,
-      mode: "match_cut",
-    });
     const assets = await loadRelatedNightAssets(players, {
       onProgress: (progress) => emit({ stage: "preparing", progress }),
     });
@@ -365,7 +345,6 @@ export async function startSummaryRender({
   });
 
   try {
-    await prepareCollageLook(timeline, "RESUMO DO DIA", { seed: CUTOUT_TEMPLATE_SEEDS.summary, mode: "chaos" });
     const assets = await loadSummaryAssets(matches, {
       onProgress: (progress) => emit({ stage: "preparing", progress }),
     });
@@ -473,11 +452,8 @@ export async function startAnnounceRender({
   });
 
   try {
-    await prepareCollageLook(timeline, `ELENCO ${(people || []).map((item) => item.name || "").join(" ")}`, {
-      seed: CUTOUT_TEMPLATE_SEEDS.announce,
-      mode: "chaos",
-    });
     const assets = await loadAnnounceAssets(people, {
+      loadFx: format === "feed",
       onProgress: (progress) => emit({ stage: "preparing", progress }),
     });
     if (format === "feed") {

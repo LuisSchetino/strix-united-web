@@ -133,6 +133,7 @@ test("painter cobre intro, stats, resultado e finale", () => {
     fill() {},
     stroke() {},
     fillRect() {},
+    strokeRect() {},
     fillText() {},
     moveTo() {},
     lineTo() {},

@@ -3,7 +3,7 @@ import { lookAssetFingerprint } from "./media-look.js";
 import { CUTOUT_TEMPLATE_SEEDS } from "./cutout-text.js";
 
 export const AGENDA_TEMPLATE_ID = "agenda-day";
-export const AGENDA_TEMPLATE_VERSION = "agenda-day-v7";
+export const AGENDA_TEMPLATE_VERSION = "agenda-editorial-v1";
 export const AGENDA_FPS = 30;
 
 export const MEDIA_FORMATS = Object.freeze({
@@ -76,13 +76,13 @@ export function collectTodayAgenda(workspace = {}, now = new Date()) {
   });
 }
 
-export function renderIdentityPayload({ day, format, matches = [], look = "campaign", mediaLook = "", templateVersion = AGENDA_TEMPLATE_VERSION } = {}) {
+export function renderIdentityPayload({ day, format, matches = [], look = "editorial", mediaLook = "", templateVersion = AGENDA_TEMPLATE_VERSION } = {}) {
   return {
     day: String(day || ""),
     format: String(format || "story"),
     template: AGENDA_TEMPLATE_ID,
     templateVersion,
-    look: String(mediaLook || look || "campaign"),
+    look: String(mediaLook || look || "editorial"),
     collageAssets: lookAssetFingerprint(mediaLook || look, {
       seed: CUTOUT_TEMPLATE_SEEDS.agenda,
       mode: format === "feed" ? "static" : "chaos",

@@ -8,13 +8,14 @@ import { fingerprintAgendaRender } from "../src/features/media/agenda-media-core
 import { fingerprintRelatedNightRender } from "../src/features/media/related-night-core.js";
 import { fingerprintSummaryRender } from "../src/features/media/summary-core.js";
 
-test("V1 e V2 existem como painters internos e nenhuma tela deixa o usuário escolher", async () => {
+test("looks históricos continuam legíveis, mas a interface usa o painter editorial atual", async () => {
   const [page, sections, studio, shell] = await Promise.all([
     "MediaPage.jsx", "MediaSections.jsx", "AnnounceStudio.jsx", "MediaShell.jsx",
   ].map((name) => readFile(new URL(`../src/features/media/${name}`, import.meta.url), "utf8")));
-  assert.deepEqual(Object.keys(MEDIA_LOOKS), ["campaign", "collage"]);
+  assert.deepEqual(Object.keys(MEDIA_LOOKS), ["campaign", "collage", "editorial"]);
   assert.equal(normalizeMediaLook("collage"), "collage");
   assert.equal(normalizeMediaLook("campaign"), "campaign");
+  assert.equal(normalizeMediaLook(), "editorial");
   for (const source of [page, sections, studio, shell]) {
     assert.doesNotMatch(source, /MediaLookSwitch|MediaLookBadge|mediaLook=|onMediaLook|setLook|readStoredMediaLook|writeStoredMediaLook/);
     assert.doesNotMatch(source, /V1 — |V2 — |VÍDEO · V1|ARTE ESTÁTICA · V2|TEMPLATE VISUAL/);
@@ -24,18 +25,25 @@ test("V1 e V2 existem como painters internos e nenhuma tela deixa o usuário esc
   assert.match(sections, /renderSummaryFrame/);
 });
 
-test("timeline collage usa o segundo painter sem apagar a campanha", async () => {
-  const frame = await readFile(new URL("../src/features/media/announce-frame.js", import.meta.url), "utf8");
-  assert.match(frame, /paintCollageAnnounce/);
-  assert.match(frame, /paintAnnounceFrame/);
+test("todos os MP4 ativos usam a linguagem editorial nova; artes still preservam o painter anterior", async () => {
+  const [announce, agenda, related, summary] = await Promise.all([
+    "announce-frame.js", "agenda-frame.js", "related-night-frame.js", "summary-frame.js",
+  ].map((name) => readFile(new URL(`../src/features/media/${name}`, import.meta.url), "utf8")));
+  assert.match(announce, /paintEditorialAnnounce/);
+  assert.match(announce, /timeline\?\.still\) paintAnnounceFrame/);
+  assert.match(agenda, /paintEditorialAgenda/);
+  assert.match(related, /paintEditorialRelated/);
+  assert.match(summary, /paintEditorialSummary/);
   const campaign = withMediaLook({ kind: "individual" }, "campaign");
   const collage = withMediaLook({ kind: "individual" }, "collage");
+  const editorial = withMediaLook({ kind: "individual" }, "editorial");
   assert.equal(campaign.mediaLook, "campaign");
   assert.equal(isCollageLook(campaign), false);
   assert.equal(isCollageLook(collage), true);
+  assert.equal(editorial.mediaLook, "editorial");
 });
 
-test("fingerprint muda entre V1 e V2 para não misturar cache", async () => {
+test("fingerprints separam aparências históricas e invalidam renders antigos pelo template editorial", async () => {
   const people = [{ id: "p1", name: "Júlio", photo: "", position: "VOL", extraRole: "jogador" }];
   const a = await fingerprintAnnounceRender({ people, look: "campaign" });
   const b = await fingerprintAnnounceRender({ people, look: "collage" });
