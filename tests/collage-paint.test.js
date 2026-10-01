@@ -18,6 +18,7 @@ import { fingerprintRelatedNightRender } from "../src/features/media/related-nig
 import { fingerprintSummaryRender } from "../src/features/media/summary-core.js";
 import { buildRelatedNightTimeline } from "../src/features/media/related-night-timeline.js";
 import { buildAgendaTimeline } from "../src/features/media/agenda-timeline.js";
+import { renderAgendaFrame } from "../src/features/media/agenda-frame.js";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 
@@ -149,35 +150,26 @@ test("pintores legados permanecem isolados e os quatro MP4s ativos chamam o novo
   assert.ok(announceCtx.texts.includes("MC"));
   assert.ok(announceCtx.texts.includes("CAPITÃO"));
 
-  const agendaDay = withMediaLook(buildAgendaTimeline([
+  const agendaDay = buildAgendaTimeline([
     { id: "1", kickoff: "22:10", opponent: "MÁQUINA", competition: "AMISTOSO" },
-  ], { format: "story" }), "collage");
-  const agendaCtx = mockCtx();
-  paintCollageAgenda(agendaCtx, { timeline: { ...agendaDay, still: true }, time: 1.2, dayLabel: "20/09" });
-  assert.equal(agendaCtx.texts.includes("AGENDA"), false);
-  assert.equal(agendaCtx.texts.includes("DO DIA"), false);
-  const dateHit = agendaCtx.placed.find((item) => item.text.includes("20/09") || item.text.includes("SET"));
-  assert.ok(dateHit, "data da agenda deve ser pintada");
-  assert.ok(dateHit.y > 1400, `data precisa descer: y=${dateHit.y}`);
+  ], { format: "story" });
   const agendaMatchCtx = mockCtx();
-  paintCollageAgenda(agendaMatchCtx, {
+  renderAgendaFrame(agendaMatchCtx, {
     timeline: agendaDay,
-    time: agendaDay.introEnd + 0.8,
+    timeSec: agendaDay.introEnd + 0.8,
     dayLabel: "20/09",
     assets: { strix: { initials: "SU" }, opponents: [{ initials: "MA" }] },
   });
   assert.ok(agendaMatchCtx.texts.includes("22:10"));
   assert.ok(agendaMatchCtx.texts.includes("AMISTOSO"));
   const agendaFinaleCtx = mockCtx();
-  paintCollageAgenda(agendaFinaleCtx, {
+  renderAgendaFrame(agendaFinaleCtx, {
     timeline: agendaDay,
-    time: agendaDay.finaleStart + 0.6,
+    timeSec: agendaDay.finaleStart + 0.6,
     dayLabel: "20 SET 2026",
     assets: { strix: { initials: "SU" }, opponents: [{ initials: "MA" }] },
   });
-  assert.ok(agendaFinaleCtx.texts.includes("AGENDA COMPLETA"));
-  assert.ok(agendaFinaleCtx.texts.includes("AGENDA"));
-  assert.ok(agendaFinaleCtx.texts.includes("22:10"));
+  assert.ok(agendaFinaleCtx.texts.some((text) => text.includes("01 JOGO")));
 
   const relatedCtx = mockCtx();
   paintCollageRelated(relatedCtx, { timeline: withMediaLook(related, "collage"), time: 0.85 });

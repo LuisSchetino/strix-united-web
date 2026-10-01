@@ -83,13 +83,14 @@ test("fingerprint muda quando horário, adversário, logo ou jogo mudam", async 
   assert.notEqual(original, removed);
 });
 
-test("duração respira no opening e no finale sem estourar o formato social", () => {
+test("duração cresce por páginas animadas sem omitir partidas conforme a agenda aumenta", () => {
   assert.equal(agendaDurationSeconds(0), 0);
-  assert.ok(agendaDurationSeconds(1) >= 11 && agendaDurationSeconds(1) <= 14);
-  assert.ok(agendaDurationSeconds(3) >= 15 && agendaDurationSeconds(3) <= 17);
-  assert.ok(agendaDurationSeconds(5) >= 18 && agendaDurationSeconds(5) <= 21);
-  assert.ok(agendaDurationSeconds(6) >= 20 && agendaDurationSeconds(6) <= 24);
-  assert.ok(agendaDurationSeconds(7) <= 24);
+  assert.equal(agendaDurationSeconds(1), 9.65);
+  assert.equal(agendaDurationSeconds(4), 9.65);
+  assert.equal(agendaDurationSeconds(5), 14);
+  assert.equal(agendaDurationSeconds(8), 14);
+  assert.equal(agendaDurationSeconds(9), 18.35);
+  assert.equal(agendaDurationSeconds(15), 22.7);
   assert.equal(agendaFileName({ day: "2026-09-02", format: "story" }), "strix-agenda-2026-09-02-story.mp4");
   assert.equal(agendaFileName({ day: "2026-09-02", format: "feed" }), "strix-agenda-2026-09-02-feed.mp4");
 });

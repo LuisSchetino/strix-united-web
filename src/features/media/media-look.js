@@ -39,7 +39,7 @@ export function withMediaLook(timeline, look) {
 
 export function lookAssetFingerprint(look, extra = {}) {
   const resolved = normalizeMediaLook(look);
-  if (resolved === "editorial") return "strix-editorial-clean-v1";
+  if (resolved === "editorial") return "strix-matchday-motion-v2";
   if (resolved !== "collage") return "";
   const seed = extra.seed == null ? "" : String(extra.seed);
   const mode = extra.mode ? String(extra.mode) : "";

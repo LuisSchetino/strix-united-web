@@ -11,6 +11,7 @@ import {
   paintAgendaFrame,
   typeScale,
 } from "../src/features/media/agenda-paint.js";
+import { renderAgendaFrame } from "../src/features/media/agenda-frame.js";
 import { AGENDA_TEMPLATE_VERSION } from "../src/features/media/agenda-media-core.js";
 import { readFile } from "node:fs/promises";
 
@@ -44,6 +45,7 @@ function mockContext() {
     fill() { calls.push("fill"); },
     stroke() { calls.push("stroke"); },
     fillRect(...args) { calls.push(["fillRect", ...args]); },
+    strokeRect(...args) { calls.push(["strokeRect", ...args]); },
     fillText(text, x, y) { calls.push(["fillText", text, x, y]); },
     moveTo() {},
     lineTo() {},
@@ -68,14 +70,13 @@ test("timeline adapta beats e nunca sai da safe area do Instagram", () => {
   const one = buildAgendaTimeline(matches(1), { format: "story" });
   const five = buildAgendaTimeline(matches(5), { format: "story" });
   const feed = buildAgendaTimeline(matches(3), { format: "feed" });
-  assert.equal(one.scenes.filter((scene) => scene.type === "match").length, 1);
-  assert.equal(five.scenes.filter((scene) => scene.type === "match").length, 5);
+  assert.equal(one.scenes.filter((scene) => scene.type === "page").length, 1);
+  assert.equal(five.scenes.filter((scene) => scene.type === "page").length, 2);
   const seven = buildAgendaTimeline(matches(7), { format: "story" });
-  assert.ok(one.scenes.find((scene) => scene.type === "match").end - one.scenes.find((scene) => scene.type === "match").start > 4);
-  const fiveBeat = five.scenes.find((scene) => scene.type === "match").end - five.scenes.find((scene) => scene.type === "match").start;
-  const sevenBeat = seven.scenes.find((scene) => scene.type === "match").end - seven.scenes.find((scene) => scene.type === "match").start;
-  assert.ok(fiveBeat >= 2.4 && fiveBeat < 2.7);
-  assert.ok(sevenBeat >= 2.1 && sevenBeat <= 2.3);
+  assert.equal(seven.scenes.filter((scene) => scene.type === "page").length, 2);
+  const pageBeat = five.scenes.find((scene) => scene.type === "page").end - five.scenes.find((scene) => scene.type === "page").start;
+  assert.equal(pageBeat, 4.35);
+  assert.equal(five.scenes.filter((scene) => scene.type === "page").flatMap((page) => page.matches).length, 5);
   assert.equal(one.scenes.filter((scene) => scene.type === "lockup").length, 0);
   assert.deepEqual(measureSafeZones(one), {
     format: "story",
@@ -94,7 +95,7 @@ test("timeline adapta beats e nunca sai da safe area do Instagram", () => {
   assert.equal(sceneAt(one, one.finaleStart + 0.1).type, "finale");
   assert.equal(sceneAt(one, Math.max(0, one.duration - 0.05)).type, "finale");
   assert.ok(one.introEnd >= 2);
-  assert.ok(one.duration - one.finaleStart >= 3.2);
+  assert.ok(Math.abs(one.duration - one.finaleStart - 2.5) < 0.001);
   assert.ok(typeScale("story").title >= 110);
   assert.ok(typeScale("story").kickoff >= 110);
   const box = typeScale("story").logoMatch;
@@ -105,7 +106,7 @@ test("timeline adapta beats e nunca sai da safe area do Instagram", () => {
   assert.equal(Math.max(left.dw, left.dh).toFixed(1), Math.max(right.dw, right.dh).toFixed(1));
 });
 
-test("easing premium não é linear e o painter cobre intro, jogo e finale", () => {
+test("easing premium não é linear e o render cobre abertura, páginas completas e encerramento", () => {
   assert.ok(easeOutExpo(0.2) > 0.2);
   assert.ok(easeOutExpo(0.2) > easeOutExpo(0.1));
   const timeline = buildAgendaTimeline(matches(3), { format: "story" });
@@ -114,57 +115,56 @@ test("easing premium não é linear e o painter cobre intro, jogo e finale", () 
     strix: { bitmap: null, initials: "SU", name: "Strix United" },
     opponents: matches(3).map((match) => ({ bitmap: null, initials: "WE", name: match.opponent })),
   };
-  paintAgendaFrame(ctx, { timeline, time: 0.8, assets, dayLabel: "02 SET 2026" });
-  paintAgendaFrame(ctx, { timeline, time: timeline.introEnd + 0.6, assets, dayLabel: "02 SET 2026" });
-  paintAgendaFrame(ctx, { timeline, time: timeline.finaleStart + 0.8, assets, dayLabel: "02 SET 2026" });
-  paintAgendaFrame(ctx, { timeline, time: Math.max(0, timeline.duration - 0.2), assets, dayLabel: "02 SET 2026" });
+  renderAgendaFrame(ctx, { timeline, time: 0.8, assets, dayLabel: "02 SET 2026" });
+  renderAgendaFrame(ctx, { timeline, time: timeline.introEnd + 0.6, assets, dayLabel: "02 SET 2026" });
+  renderAgendaFrame(ctx, { timeline, time: timeline.finaleStart + 0.8, assets, dayLabel: "02 SET 2026" });
+  renderAgendaFrame(ctx, { timeline, time: Math.max(0, timeline.duration - 0.2), assets, dayLabel: "02 SET 2026" });
   const texts = ctx.calls.filter((call) => Array.isArray(call) && call[0] === "fillText").map((call) => call[1]);
   assert.ok(texts.includes("AGENDA"));
   assert.ok(texts.includes("DO DIA"));
-  assert.ok(texts.includes("AGENDA COMPLETA"));
+  assert.ok(texts.includes("PARTIDAS MARCADAS"));
   assert.ok(texts.includes("STRIX UNITED"));
-  assert.ok(!texts.includes("MATCHDAY"));
-  assert.ok(texts.some((text) => String(text).includes("WINNER")));
+  assert.ok(texts.some((text) => String(text).includes("MATCHDAY")));
+  assert.ok(texts.some((text) => String(text).toUpperCase().includes("WINNER")));
   const lateMatch = mockContext();
-  const lastMatch = timeline.scenes.filter((scene) => scene.type === "match").at(-1);
-  paintAgendaFrame(lateMatch, { timeline, time: lastMatch.end - 0.04, assets, dayLabel: "02 SET 2026" });
+  const lastPage = timeline.scenes.filter((scene) => scene.type === "page").at(-1);
+  renderAgendaFrame(lateMatch, { timeline, time: lastPage.end - 0.04, assets, dayLabel: "02 SET 2026" });
   const lateTexts = lateMatch.calls.filter((call) => Array.isArray(call) && call[0] === "fillText").map((call) => call[1]);
-  assert.ok(!lateTexts.includes("AGENDA COMPLETA"));
-  assert.ok(!lateTexts.includes("MATCHDAY"));
+  assert.ok(!lateTexts.includes("A NOITE TEM"));
   const lateIntro = mockContext();
-  paintAgendaFrame(lateIntro, { timeline, time: timeline.introEnd - 0.04, assets, dayLabel: "02 SET 2026" });
+  renderAgendaFrame(lateIntro, { timeline, time: timeline.introEnd - 0.04, assets, dayLabel: "02 SET 2026" });
   const introTexts = lateIntro.calls.filter((call) => Array.isArray(call) && call[0] === "fillText").map((call) => call[1]);
-  assert.ok(!introTexts.some((text) => String(text).startsWith("JOGO")));
-  assert.ok(!introTexts.includes("AGENDA COMPLETA"));
+  assert.ok(!introTexts.includes("PARTIDAS MARCADAS"));
   assert.equal(timeline.scenes.at(-1).type, "finale");
 });
 
-test("pintor novo invalida render antigo e mantém o utilitário de palco legado", () => {
-  assert.equal(AGENDA_TEMPLATE_VERSION, "agenda-editorial-v1");
+test("nova identidade invalida o render anterior e mantém Strix em todas as páginas", () => {
+  assert.equal(AGENDA_TEMPLATE_VERSION, "agenda-nightshift-v3");
   const timeline = buildAgendaTimeline(matches(5), { format: "story" });
   const assets = {
     strix: { bitmap: null, initials: "SU", name: "Strix United" },
     opponents: matches(5).map((match) => ({ bitmap: null, initials: "WE", name: match.opponent })),
   };
-  const beat = timeline.scenes.find((scene) => scene.type === "match").end
-    - timeline.scenes.find((scene) => scene.type === "match").start;
+  const beat = timeline.scenes.find((scene) => scene.type === "page").end
+    - timeline.scenes.find((scene) => scene.type === "page").start;
   const times = [
+    timeline.introEnd + 0.2,
     timeline.introEnd + 1.1,
-    timeline.introEnd + beat,
+    timeline.introEnd + beat - 0.1,
     timeline.introEnd + beat + 0.12,
-    timeline.introEnd + beat * 2,
-    timeline.introEnd + beat * 4,
-    timeline.introEnd + beat * 4 + 0.14,
+    timeline.introEnd + beat * 2 - 0.1,
   ];
   for (const time of times) {
-    const presence = matchStagePresence(timeline, time);
-    assert.ok(presence.persistent >= 0.99, `Strix persistente em ${time}`);
     const ctx = mockContext();
-    paintAgendaFrame(ctx, { timeline, time, assets, dayLabel: "02 SET 2026" });
+    renderAgendaFrame(ctx, { timeline, time, assets, dayLabel: "02 SET 2026" });
     const texts = ctx.calls.filter((call) => Array.isArray(call) && call[0] === "fillText").map((call) => call[1]);
-    assert.ok(texts.includes("STRIX UNITED"), `STRIX UNITED em ${time}`);
-    assert.ok(texts.includes("×"), `× em ${time}`);
+    assert.ok(texts.some((text) => String(text).includes("STRIX UNITED")), `STRIX UNITED em ${time}`);
+    assert.ok(texts.some((text) => String(text).includes("VS")), `VS em ${time}`);
   }
+  const finale = mockContext();
+  renderAgendaFrame(finale, { timeline, time: timeline.finaleStart + 0.14, assets, dayLabel: "02 SET 2026" });
+  const finaleTexts = finale.calls.filter((call) => Array.isArray(call) && call[0] === "fillText").map((call) => call[1]);
+  assert.ok(finaleTexts.includes("HORA E LUGAR."));
 });
 
 test("agenda completa adapta 3/5/6 jogos e separa competição do matchup", () => {

@@ -20,13 +20,17 @@ export function renderAgendaFrame(ctx, {
 
 export function describeAgendaFrame(timeline, timeSec) {
   const scene = sceneAt(timeline, timeSec);
+  const firstMatch = scene?.type === "page" ? scene.matches?.[0] : null;
   return {
     timeSec: Number(timeSec) || 0,
     sceneType: scene?.type || "none",
-    matchIndex: scene?.type === "match" ? scene.index : null,
-    opponent: scene?.match?.opponent || null,
-    kickoff: scene?.match?.kickoff || null,
-    competition: scene?.match?.competition || null,
+    matchIndex: scene?.type === "page" ? scene.firstMatchIndex : null,
+    pageIndex: scene?.type === "page" ? scene.pageIndex : null,
+    pageCount: scene?.type === "page" ? scene.pageCount : null,
+    matchCount: scene?.type === "page" ? scene.matches?.length || 0 : null,
+    opponent: firstMatch?.opponent || null,
+    kickoff: firstMatch?.kickoff || null,
+    competition: firstMatch?.competition || null,
   };
 }
 

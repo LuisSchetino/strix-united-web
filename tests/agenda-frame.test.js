@@ -64,22 +64,32 @@ test("preview e encode compartilham o mesmo relógio de frame", () => {
   }
 });
 
-test("1, 3 e 6 jogos cobrem opening, confrontos e agenda completa", () => {
+test("1, 3 e 6 jogos cobrem abertura, páginas de confrontos e encerramento", () => {
   for (const count of [1, 3, 6]) {
     const timeline = buildAgendaTimeline(matches(count), { format: "story" });
     assert.equal(describeAgendaFrame(timeline, 0.5).sceneType, "intro");
-    assert.equal(describeAgendaFrame(timeline, timeline.introEnd + 0.4).sceneType, "match");
+    assert.equal(describeAgendaFrame(timeline, timeline.introEnd + 0.4).sceneType, "page");
     assert.equal(describeAgendaFrame(timeline, timeline.introEnd + 0.4).matchIndex, 0);
+    assert.equal(describeAgendaFrame(timeline, timeline.introEnd + 0.4).matchCount, Math.min(4, count));
     assert.equal(describeAgendaFrame(timeline, timeline.finaleStart + 0.3).sceneType, "finale");
     assert.equal(describeAgendaFrame(timeline, Math.max(0, timeline.duration - 0.05)).sceneType, "finale");
-    if (count >= 3) {
-      assert.equal(describeAgendaFrame(timeline, timeline.introEnd + 3.4).matchIndex, 1);
-      assert.equal(describeAgendaFrame(timeline, timeline.introEnd + 6.4).matchIndex, 2);
-    }
     assert.ok(agendaDurationSeconds(count) === timeline.duration);
-    const lastMatch = timeline.scenes.filter((scene) => scene.type === "match").at(-1);
-    assert.equal(describeAgendaFrame(timeline, lastMatch.end - 0.01).sceneType, "match");
-    assert.equal(describeAgendaFrame(timeline, lastMatch.end).sceneType, "finale");
+    const pages = timeline.scenes.filter((scene) => scene.type === "page");
+    assert.equal(pages.length, Math.ceil(count / 4));
+    assert.deepEqual(pages.flatMap((page) => page.matches.map((match) => match.id)), matches(count).map((match) => match.id));
+    assert.equal(describeAgendaFrame(timeline, pages.at(-1).end - 0.01).sceneType, "page");
+    assert.equal(describeAgendaFrame(timeline, pages.at(-1).end).sceneType, "finale");
+  }
+});
+
+test("listas longas são paginadas sem truncar jogos", () => {
+  for (const count of [15, 300]) {
+    const source = matches(count);
+    const timeline = buildAgendaTimeline(source, { format: "story" });
+    const pages = timeline.scenes.filter((scene) => scene.type === "page");
+    assert.equal(pages.length, Math.ceil(count / timeline.pageSize));
+    assert.deepEqual(pages.flatMap((page) => page.matches.map((match) => match.id)), source.map((match) => match.id));
+    assert.equal(pages.at(-1).matches.length, count % timeline.pageSize || timeline.pageSize);
   }
 });
 
@@ -91,8 +101,8 @@ test("motion de ambiente muda entre holds do mesmo jogo", () => {
   renderAgendaFrame(early, { timeline, timeSec: 3.2, assets, dayLabel: "02 SET 2026" });
   renderAgendaFrame(late, { timeline, timeSec: 3.8, assets, dayLabel: "02 SET 2026" });
   assert.notDeepEqual(early.calls, late.calls);
-  assert.equal(describeAgendaFrame(timeline, 3.2).sceneType, "match");
-  assert.equal(describeAgendaFrame(timeline, 3.8).sceneType, "match");
+  assert.equal(describeAgendaFrame(timeline, 3.2).sceneType, "page");
+  assert.equal(describeAgendaFrame(timeline, 3.8).sceneType, "page");
 });
 
 test("assinaturas diferentes não colapsam para zero", () => {

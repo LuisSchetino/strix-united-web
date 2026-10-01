@@ -5,7 +5,7 @@ import { uniqueMatches, aggregateTeamStatistics } from "../statistics/statistics
 import { formatAgendaDay, formatKickoff, MEDIA_FORMATS, opponentInitials } from "./agenda-media-core.js";
 
 export const SUMMARY_TEMPLATE_ID = "period-summary";
-export const SUMMARY_TEMPLATE_VERSION = "period-summary-editorial-v1";
+export const SUMMARY_TEMPLATE_VERSION = "period-summary-studio-v4";
 export const SUMMARY_FPS = 30;
 
 const WEEKDAY = Object.freeze({

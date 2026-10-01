@@ -3,8 +3,9 @@ import { lookAssetFingerprint } from "./media-look.js";
 import { CUTOUT_TEMPLATE_SEEDS } from "./cutout-text.js";
 
 export const AGENDA_TEMPLATE_ID = "agenda-day";
-export const AGENDA_TEMPLATE_VERSION = "agenda-editorial-v1";
+export const AGENDA_TEMPLATE_VERSION = "agenda-nightshift-v3";
 export const AGENDA_FPS = 30;
+export const AGENDA_MOTION_PAGE_SIZE = 4;
 
 export const MEDIA_FORMATS = Object.freeze({
   story: { id: "story", label: "Story / Reels 9:16", width: 1080, height: 1920, suffix: "story" },
@@ -121,24 +122,17 @@ export function agendaFileName({ day, format } = {}) {
 
 export function introDuration(matchCount) {
   if (matchCount <= 0) return 0;
-  if (matchCount <= 3) return 2.5;
-  if (matchCount <= 6) return 2.3;
-  return 2.2;
+  return 2.8;
 }
 
 export function beatDuration(matchCount) {
   if (matchCount <= 0) return 0;
-  if (matchCount === 1) return 5.0;
-  if (matchCount <= 3) return 3.0;
-  if (matchCount <= 6) return 2.55;
-  return 2.2;
+  return 4.35;
 }
 
 export function finaleDuration(matchCount) {
   if (matchCount <= 0) return 0;
-  if (matchCount === 1) return 4.2;
-  if (matchCount >= 6) return 4.6;
-  return 4.4;
+  return 2.5;
 }
 
 export function lockupDuration(matchCount) {
@@ -148,9 +142,10 @@ export function lockupDuration(matchCount) {
 
 export function agendaDurationSeconds(matchCount) {
   if (matchCount <= 0) return 0;
+  const pages = Math.ceil(matchCount / AGENDA_MOTION_PAGE_SIZE);
   return Number((
     introDuration(matchCount)
-    + matchCount * beatDuration(matchCount)
+    + pages * beatDuration(matchCount)
     + finaleDuration(matchCount)
     + lockupDuration(matchCount)
   ).toFixed(3));

@@ -11,11 +11,12 @@ function canvas() {
   const ctx = {
     canvas: { width: 1080, height: 1920 },
     width: 1080, height: 1920, texts: [], placements: [], fills: [], calls,
-    save() {}, restore() {}, setTransform() {}, translate(...args) { calls.push(args); },
+    save() {}, restore() {}, setTransform() {}, translate(...args) { calls.push(args); }, scale() {},
     fillRect(x, y, width, height) { this.fills.push(this.fillStyle); calls.push(["rect", x, y, width, height]); },
-    strokeRect() {}, beginPath() {}, moveTo() {}, lineTo() {}, stroke() {},
+    strokeRect() {}, beginPath() {}, closePath() {}, moveTo() {}, lineTo() {}, quadraticCurveTo() {}, stroke() {}, fill() {},
     drawImage() {}, rect() {}, clip() {},
-    fillText(text, x, y) { this.texts.push(String(text)); this.placements.push({ text: String(text), x, y }); },
+    createLinearGradient() { return { addColorStop() {} }; },
+    fillText(text, x, y) { this.texts.push(String(text)); this.placements.push({ text: String(text), x, y, color: this.fillStyle }); },
     measureText(text) { return { width: String(text).length * 8 }; },
     set fillStyle(value) { this._fillStyle = value; }, get fillStyle() { return this._fillStyle; },
     set strokeStyle(value) { this._strokeStyle = value; }, get strokeStyle() { return this._strokeStyle; },
@@ -29,13 +30,14 @@ const matches = [
 ];
 const player = { id: "p1", name: "Nunes", photo: "", position: "MC", group: "MEI", number: 8, extraBadge: "JOGADOR" };
 
-test("painter editorial desenha composição off-white de Agenda e anima a entrada do confronto", () => {
+test("painter nightshift compõe abertura, wipe e páginas legíveis de Agenda", () => {
   const timeline = buildAgendaTimeline(matches, { format: "story" });
   const early = canvas(); const settled = canvas();
   paintEditorialAgenda(early, { timeline, time: timeline.introEnd + 0.02, assets: { strix: { initials: "SU" }, opponents: [{ initials: "PC" }] } });
   paintEditorialAgenda(settled, { timeline, time: timeline.introEnd + 0.42, assets: { strix: { initials: "SU" }, opponents: [{ initials: "PC" }] } });
 
-  assert.ok(early.fills.includes("#f0efe9"));
+  assert.ok(early.fills.some((fill) => typeof fill === "object"), "o palco aplica gradação carvão em vez de uma tela branca lisa");
+  assert.ok(settled.fills.includes("#efeee8"));
   assert.ok(settled.texts.includes("COPA YESHUA"));
   assert.ok(settled.texts.includes("POA CITY"));
   assert.ok(settled.texts.includes("STRIX UNITED"));
@@ -56,6 +58,13 @@ test("resumo separa headline dos cards e mantém campos não disponíveis como t
   assert.ok(ctx.texts.includes("100%"));
   assert.ok(ctx.texts.includes("3–1"));
   assert.ok(!ctx.texts.some((text) => text === "undefined" || text === "null"));
+
+  const result = canvas();
+  const resultScene = timeline.scenes.find((scene) => scene.type === "result");
+  paintEditorialSummary(result, { timeline, time: resultScene.start + 0.2 });
+  assert.equal(result.placements.find((item) => item.text === "3")?.color, "#fbfaf5", "placar branco fica legível no painel escuro");
+  assert.equal(result.placements.find((item) => item.text === "1")?.color, "#fbfaf5", "placar visitante mantém contraste");
+  assert.equal(result.placements.find((item) => item.text === "PC")?.color, "#fbfaf5", "fallback de iniciais permanece visível sem logo");
 });
 
 test("relacionados e anúncios preservam imagem, nome e contexto, sem depender de collage", () => {
@@ -68,7 +77,7 @@ test("relacionados e anúncios preservam imagem, nome e contexto, sem depender d
   const announceTimeline = buildAnnounceTimeline({ kind: "individual", people: [player], phrase: "A nova temporada." });
   const announce = canvas();
   paintEditorialAnnounce(announce, { timeline: announceTimeline, time: 3.2, assets: { players: [{ initials: "N" }], byId: { p1: { initials: "N" } } } });
-  assert.ok(announce.fills.includes("#f0efe9"));
+  assert.ok(announce.fills.some((fill) => typeof fill === "object"));
   assert.ok(announce.texts.includes("Nunes"));
   assert.ok(announce.texts.some((text) => text.includes("MC")));
 });

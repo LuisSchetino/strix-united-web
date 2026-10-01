@@ -1,5 +1,6 @@
 import {
   AGENDA_FPS,
+  AGENDA_MOTION_PAGE_SIZE,
   MEDIA_FORMATS,
   agendaDurationSeconds,
   beatDuration,
@@ -49,6 +50,7 @@ export function buildAgendaTimeline(matches = [], { format = "story" } = {}) {
   const beat = beatDuration(count);
   const finale = finaleDuration(count);
   const scenes = [];
+  const pages = [];
 
   if (!count) {
     return {
@@ -63,6 +65,9 @@ export function buildAgendaTimeline(matches = [], { format = "story" } = {}) {
       lockupStart: 0,
       safe: safeArea(spec.id),
       scenes: [],
+      pages: [],
+      pageSize: AGENDA_MOTION_PAGE_SIZE,
+      pageDuration: 0,
       matches: [],
     };
   }
@@ -74,20 +79,26 @@ export function buildAgendaTimeline(matches = [], { format = "story" } = {}) {
     end: introEnd,
   });
 
-  const matchScenes = matches.map((match, index) => {
-    const start = introEnd + index * beat;
-    return {
-      id: `match-${match.id || index}`,
-      type: "match",
-      index,
+  for (let offset = 0; offset < count; offset += AGENDA_MOTION_PAGE_SIZE) {
+    const pageIndex = pages.length;
+    const pageMatches = matches.slice(offset, offset + AGENDA_MOTION_PAGE_SIZE);
+    const start = introEnd + pageIndex * beat;
+    const page = {
+      id: `fixtures-${pageIndex + 1}`,
+      type: "page",
+      index: pageIndex,
+      pageIndex,
+      pageCount: Math.ceil(count / AGENDA_MOTION_PAGE_SIZE),
       start,
       end: start + beat,
-      match,
+      matches: pageMatches,
+      firstMatchIndex: offset,
     };
-  });
-  scenes.push(...matchScenes);
+    pages.push(page);
+    scenes.push(page);
+  }
 
-  const finaleStart = introEnd + count * beat;
+  const finaleStart = introEnd + pages.length * beat;
   scenes.push({
     id: "finale",
     type: "finale",
@@ -108,6 +119,9 @@ export function buildAgendaTimeline(matches = [], { format = "story" } = {}) {
     lockupStart: duration,
     safe: safeArea(spec.id),
     scenes,
+    pages,
+    pageSize: AGENDA_MOTION_PAGE_SIZE,
+    pageDuration: beat,
     matches,
   };
 }

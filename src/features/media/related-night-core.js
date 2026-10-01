@@ -4,7 +4,7 @@ import { saoPauloDay, todayAgendaMatches } from "../agenda/agenda-time.js";
 import { formatAgendaDay, MEDIA_FORMATS } from "./agenda-media-core.js";
 
 export const RELATED_NIGHT_TEMPLATE_ID = "related-night";
-export const RELATED_NIGHT_TEMPLATE_VERSION = "related-night-editorial-v1";
+export const RELATED_NIGHT_TEMPLATE_VERSION = "related-night-studio-v2";
 export const RELATED_NIGHT_FPS = 30;
 
 export const LINEUP_SLOT_POSITIONS = Object.freeze([
