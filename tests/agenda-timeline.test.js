@@ -120,7 +120,7 @@ test("easing premium não é linear e o painter cobre intro, jogo e finale", () 
   paintAgendaFrame(ctx, { timeline, time: Math.max(0, timeline.duration - 0.2), assets, dayLabel: "02 SET 2026" });
   const texts = ctx.calls.filter((call) => Array.isArray(call) && call[0] === "fillText").map((call) => call[1]);
   assert.ok(texts.includes("AGENDA"));
-  assert.ok(texts.includes("PROGRAMAÇÃO"));
+  assert.ok(texts.includes("DO DIA"));
   assert.ok(texts.includes("AGENDA COMPLETA"));
   assert.ok(texts.includes("STRIX UNITED"));
   assert.ok(!texts.includes("MATCHDAY"));
@@ -139,8 +139,8 @@ test("easing premium não é linear e o painter cobre intro, jogo e finale", () 
   assert.equal(timeline.scenes.at(-1).type, "finale");
 });
 
-test("agenda-day-v8 mantém palco persistente entre os jogos", () => {
-  assert.equal(AGENDA_TEMPLATE_VERSION, "agenda-day-v8");
+test("agenda-day-v7 mantém palco persistente entre os jogos", () => {
+  assert.equal(AGENDA_TEMPLATE_VERSION, "agenda-day-v7");
   const timeline = buildAgendaTimeline(matches(5), { format: "story" });
   const assets = {
     strix: { bitmap: null, initials: "SU", name: "Strix United" },
@@ -225,7 +225,7 @@ test("opening v7 é tipográfico e o painter separa palco de conteúdo variável
   });
   const texts = ctx.calls.filter((call) => Array.isArray(call) && call[0] === "fillText").map((call) => call[1]);
   assert.ok(texts.includes("AGENDA"));
-  assert.ok(texts.includes("PROGRAMAÇÃO"));
+  assert.ok(texts.includes("DO DIA"));
   assert.ok(texts.includes("03 JOGOS"));
   assert.ok(typeScale("story").title >= 170);
 });

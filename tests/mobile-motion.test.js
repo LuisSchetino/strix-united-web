@@ -21,14 +21,14 @@ test("motion system centralizes tokens and honors reduced motion", async () => {
   assert.doesNotMatch(pkg, /framer-motion|"motion"\s*:/);
 });
 
-test("shared MatchDisplay keeps equal home/away columns around the score", async () => {
+test("shared MatchDisplay preserves name crest score order", async () => {
   const source = await read("src/ui/MatchDisplay.jsx");
-  const home = source.indexOf('side="home"');
+  const home = source.indexOf("match-display-home");
   const separator = source.indexOf("<i>×</i>");
-  const away = source.indexOf('side="away"');
+  const away = source.indexOf("match-display-away");
   assert.ok(home >= 0 && separator > home && away > separator);
   assert.match(source, /homeName[\s\S]*homeLogo[\s\S]*homeScore/);
-  assert.match(source, /awayName[\s\S]*awayLogo[\s\S]*awayScore/);
+  assert.match(source, /awayScore[\s\S]*awayLogo[\s\S]*awayName/);
 });
 
 test("mobile history uses cards, sheet and horizontal swipe without page table overflow", async () => {

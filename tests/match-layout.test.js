@@ -21,7 +21,6 @@ test("escudos do histórico ficam dentro de um container com limites rígidos", 
   assert.match(clubLogo, /onError: \(\) => setFailed\(true\)/);
   assert.match(matchDisplayCss, /\.match-display-mark\{[^}]*max-width:34px[^}]*max-height:34px[^}]*overflow:hidden/s);
   assert.match(matchDisplayCss, /\.match-display-mark img\{[^}]*width:100%[^}]*height:100%[^}]*object-fit:contain/s);
-  assert.match(matchDisplayCss, /grid-template-columns:minmax\(0,1fr\) minmax\(var\(--matchup-center\),auto\) minmax\(0,1fr\)/);
   assert.match(css, /\.progressive-history \.team-mark[^}]*max-width:34px[^}]*max-height:34px[^}]*overflow:hidden/s);
   assert.match(css, /\.progressive-history \.team-mark img[^}]*width:100%[^}]*height:100%[^}]*object-fit:contain/s);
   assert.match(css, /\.match-detail-score \.team-mark\{[^}]*overflow:hidden[^}]*border-radius:14px/s);
@@ -29,10 +28,8 @@ test("escudos do histórico ficam dentro de um container com limites rígidos", 
   assert.match(css, /grid-template-columns:112px minmax\(320px,1fr\) 100px minmax\(120px,\.55fr\) 110px/);
   assert.match(component, /JOGADOR<\/span><span>NOTA<\/span><span>G<\/span><span>A<\/span><span>PASSES<\/span><span>CHUTES<\/span><span>DESARMES<\/span><span>DEFESAS<\/span>/s);
   assert.match(component, /function StatIcon/);
-  assert.match(matchDisplay, /match-display-team match-display-\$\{side\}/);
-  assert.match(matchDisplay, /TeamColumn side="home" name=\{homeName\} logo=\{homeLogo\}/);
-  assert.match(matchDisplay, /TeamColumn side="away" name=\{awayName\} logo=\{awayLogo\}/);
-  assert.match(matchDisplay, /matchup-score[\s\S]*homeScore[\s\S]*awayScore/);
+  assert.match(matchDisplay, /className="match-display-team match-display-home"[\s\S]*homeName[\s\S]*homeLogo[\s\S]*homeScore/);
+  assert.match(matchDisplay, /className="match-display-team match-display-away"[\s\S]*awayScore[\s\S]*awayLogo[\s\S]*awayName/);
   assert.match(component, /is-disconnected/);
   assert.match(component, /CAIU DA PARTIDA/);
   assert.match(css, /\.match-flow-backdrop\{z-index:2500\}/);

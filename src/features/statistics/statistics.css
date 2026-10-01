@@ -221,9 +221,6 @@
   grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
   gap: 12px;
 }
-.statistics-keeper-grid.is-featured {
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
-}
 .statistics-goalkeeper-card header p {
   margin: 3px 0 0;
   color: #6a8ba0;

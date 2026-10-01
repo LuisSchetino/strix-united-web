@@ -1,49 +1,16 @@
-/* Matchup: [ HOME ] [ CENTER ] [ AWAY ]. Equal team columns, centred crest above a
-   centred name, the same box for every crest. Sizes are variants, not overrides. */
-.matchup{
-  --matchup-logo:40px;
-  --matchup-name:12px;
-  --matchup-score:24px;
-  --matchup-gap:8px;
-  --matchup-center:72px;
-  display:grid;
-  grid-template-columns:minmax(0,1fr) minmax(var(--matchup-center),auto) minmax(0,1fr);
-  align-items:center;
-  column-gap:clamp(8px,2vw,20px);
-  min-width:0;
-}
-.matchup.is-xs{--matchup-logo:28px;--matchup-name:10px;--matchup-score:17px;--matchup-gap:5px;--matchup-center:44px}
-.matchup.is-sm{--matchup-logo:32px;--matchup-name:11px;--matchup-score:20px;--matchup-gap:6px;--matchup-center:58px}
-.matchup.is-md{--matchup-logo:44px;--matchup-name:12px;--matchup-score:26px;--matchup-gap:8px;--matchup-center:72px}
-.matchup.is-lg{--matchup-logo:64px;--matchup-name:14px;--matchup-score:36px;--matchup-gap:10px;--matchup-center:96px}
-.matchup.is-xl{--matchup-logo:clamp(84px,11vw,132px);--matchup-name:clamp(13px,1.4vw,17px);--matchup-score:clamp(40px,5vw,64px);--matchup-gap:14px;--matchup-center:clamp(110px,12vw,170px)}
-.matchup-team{display:grid;justify-items:center;align-content:start;gap:var(--matchup-gap);min-width:0;text-align:center}
-.matchup-name{display:-webkit-box;max-width:100%;overflow:hidden;-webkit-box-orient:vertical;-webkit-line-clamp:2;color:#f5f5f5;font-size:var(--matchup-name);font-weight:850;letter-spacing:.04em;line-height:1.15;text-transform:uppercase;overflow-wrap:anywhere}
-.matchup-mark{position:relative;display:grid;place-items:center;flex:0 0 auto;width:var(--matchup-logo);height:var(--matchup-logo);max-width:var(--matchup-logo);max-height:var(--matchup-logo);overflow:hidden;border:1px solid rgba(255,255,255,.14);border-radius:calc(var(--matchup-logo) * .24);background:#15181c;color:#d6d9dd;font-size:calc(var(--matchup-logo) * .26);font-weight:950;line-height:1}
-.matchup-mark img{position:absolute;inset:0;display:block;width:100%;height:100%;max-width:100%;max-height:100%;object-fit:contain}
-.matchup-mark.has-image:not(.is-framed){overflow:visible;border-color:transparent;border-radius:0;background:transparent;box-shadow:none}
-.matchup-center{display:grid;place-items:center;min-width:0;text-align:center}
-.matchup-score{display:inline-flex;align-items:baseline;gap:calc(var(--matchup-gap) * .9);color:#f5f5f5;font:800 var(--matchup-score)/1 Rajdhani,Inter,sans-serif;font-variant-numeric:tabular-nums}
-.matchup-score i{color:#6f767e;font-size:.62em;font-style:normal;font-weight:700}
-.matchup-vs{color:#aeb4bb;font:800 calc(var(--matchup-score) * .7)/1 Rajdhani,Inter,sans-serif;letter-spacing:.12em}
-.match-display-mark{max-width:34px;max-height:34px;overflow:hidden}
-.match-display-mark img{width:100%;height:100%;object-fit:contain}
-.matchup .match-display-mark{max-width:var(--matchup-logo);max-height:var(--matchup-logo)}
-.matchup.match-detail-score,
-.matchup.match-teams,
-.matchup.fixture-clubs{
-  display:grid;
-  grid-template-columns:minmax(0,1fr) minmax(var(--matchup-center),auto) minmax(0,1fr);
-  background:transparent;
-}
-.matchup>.matchup-team{
-  display:grid!important;
-  justify-items:center;
-  text-align:center;
-  flex-direction:unset!important;
-}
+.match-display{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:8px;min-width:0}
+.match-display-team{display:flex;align-items:center;gap:8px;min-width:0}.match-display-home{justify-content:flex-end;text-align:right}.match-display-away{justify-content:flex-start;text-align:left}
+.match-display-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:850}
+.match-display-team>strong{flex:0 0 auto;color:#f5f5f5;font:800 21px Rajdhani,Inter,sans-serif;font-variant-numeric:tabular-nums}
+.match-display>i{color:#8e969f;font-style:normal;font-weight:950}
+.match-display-mark{position:relative;display:grid;place-items:center;flex:0 0 34px;width:34px;height:34px;max-width:34px;max-height:34px;overflow:hidden;border:1px solid rgba(255,255,255,.14);border-radius:10px;background:#15181c;color:#d6d9dd;font-size:8px;font-weight:950;line-height:1}
+.match-display-mark img{position:absolute;inset:0;display:block;width:100%;height:100%;max-width:100%;max-height:100%;object-fit:contain}
+.match-display-mark.has-image:not(.is-framed){overflow:visible;border-color:transparent;border-radius:0;background:transparent;box-shadow:none}
+.match-display.is-compact{gap:6px}.match-display.is-compact .match-display-team{gap:6px}.match-display.is-compact .match-display-mark{flex-basis:30px;width:30px;height:30px}.match-display.is-compact .match-display-team>strong{font-size:18px}
 @media(max-width:700px){
-  .matchup{column-gap:8px}
-  .matchup.is-xl{--matchup-logo:72px;--matchup-score:38px;--matchup-center:96px}
-  .matchup.is-lg{--matchup-logo:52px;--matchup-score:30px;--matchup-center:80px}
+  .match-display{gap:5px}
+  .match-display-team{gap:5px}
+  .match-display-name{display:-webkit-box;overflow:hidden;text-overflow:clip;white-space:normal;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-height:1.05;font-size:clamp(10px,3.2vw,13px)}
+  .match-display-team>strong{font-size:clamp(20px,6vw,27px)}
+  .match-display-mark{flex-basis:42px;width:42px;height:42px;max-width:42px;max-height:42px}
 }

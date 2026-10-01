@@ -1,5 +1,5 @@
 import { opponentInitials } from "./agenda-media-core.js";
-import { logoDrawRect, paintAmbient as paintHouseAmbient } from "./agenda-paint.js";
+import { logoDrawRect } from "./agenda-paint.js";
 import { easeInOutCubic, easeOutExpo, easeOutQuart, reveal } from "./agenda-timeline.js";
 import { summarySceneAt } from "./summary-timeline.js";
 
@@ -54,9 +54,29 @@ function drawMark(ctx, asset, x, y, box, alpha = 1) {
 }
 
 function paintAmbient(ctx, timeline, time) {
-  paintHouseAmbient(ctx, timeline, time, null, "intro", { owl: false });
   const { width, height } = timeline;
-  const sweep = ((time * 0.08) % 1.3) - 0.2;
+  ctx.fillStyle = VOID;
+  ctx.fillRect(0, 0, width, height);
+  ctx.save();
+  ctx.globalAlpha = 0.07;
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 1;
+  for (let index = 0; index < 14; index += 1) {
+    const x = width * (0.08 + index * 0.07) + Math.sin(time * 0.18 + index) * 6;
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x - 40, height);
+    ctx.stroke();
+  }
+  ctx.restore();
+  ctx.save();
+  ctx.globalAlpha = 0.045;
+  ctx.fillStyle = INK;
+  ctx.font = `800 ${Math.round(width * 0.42)}px Rajdhani, sans-serif`;
+  ctx.textAlign = "center";
+  ctx.fillText("STRIX", width * 0.5 + Math.sin(time * 0.14) * 10, height * 0.38);
+  ctx.restore();
+  const sweep = ((time * 0.12) % 1.3) - 0.2;
   const light = ctx.createLinearGradient(width * sweep, 0, width * sweep + 240, 0);
   light.addColorStop(0, "rgba(255,255,255,0)");
   light.addColorStop(0.5, "rgba(255,255,255,0.045)");

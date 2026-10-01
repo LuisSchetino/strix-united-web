@@ -2,7 +2,7 @@
 .matches-list>header,.matches-list article{grid-template-columns:120px minmax(280px,1fr) 105px minmax(110px,.55fr) 90px auto}.matches-list article>span>small{display:block;margin-top:3px;color:#7098b1;font-size:10px}.import-preview{opacity:.92}
 
 /* FC27 dark-blue system: no cyan panels or oversized native-looking controls. */
-:root{--fc27-blue:#f5f5f5;--fc27-blue-deep:#101318;--fc27-label:#aeb4bb;--fc27-line:#343a41;--fc27-surface:#0b0d10;--fc27-surface-raised:#101318}
+:root{--fc27-blue:#003faf;--fc27-blue-deep:#071a2a;--fc27-label:#2e709c;--fc27-line:#1b4766;--fc27-surface:#071522;--fc27-surface-raised:#0a1d2c}
 .data-page-header span,.data-card small,.match-details-modal header span,.squad-preview>span,.import-workbench>header span,.import-link>span,.import-players>span,.match-player-data header span,.matches-hero span,.manual-form-grid label,.position-picker legend,.member-picker legend{color:var(--fc27-label)!important}
 .data-card,.empty-section,.analysis-line,.squad-list article,.import-workbench,.matches-list,.match-manual-modal,.match-details-modal{border-color:var(--fc27-line)}
 .data-card,.empty-section,.analysis-line{background:linear-gradient(145deg,#091925,#060f18)}

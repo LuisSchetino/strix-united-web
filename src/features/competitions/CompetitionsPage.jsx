@@ -360,10 +360,9 @@ const fixtureLogo = (fixture, side) =>
   fixture[`${side}Logo`] ||
   "";
 
-function FixtureClubs({ fixture, size = "sm" }) {
+function FixtureClubs({ fixture }) {
   return <MatchDisplay
     className="fixture-clubs"
-    size={size}
     homeName={fixture.home_team_name}
     homeLogo={fixtureLogo(fixture, "home")}
     homeScore={fixture.home_score}
@@ -632,7 +631,7 @@ function Knockout({ view, accent }) {
                       <article
                         className={`${/\bstrix\b/i.test(fixtureTitle(fixture)) ? "is-strix " : ""}${fixture.placeholder ? "is-pending" : ""}`}
                       >
-                        <FixtureClubs fixture={fixture} size="xs" />
+                        <FixtureClubs fixture={fixture} />
                       </article>
                     </div>
                   );
@@ -930,7 +929,7 @@ function CompetitionExplorer({
           {view.strixFixture && (
             <section className="provider-next-match">
               <span>{view.strixFixture.round_label} · {competition.organization || view.standings.organization || "FONTE OFICIAL"}</span>
-              <FixtureClubs fixture={view.strixFixture} size="lg" />
+              <FixtureClubs fixture={view.strixFixture} />
               <p>{dateTime(view.strixFixture.scheduled_at)}</p>
             </section>
           )}

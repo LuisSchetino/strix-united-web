@@ -1,5 +1,5 @@
 /* Final FC27 corrections: stable modal viewport, compact review and strong-blue labels. */
-:root{--fc27-label:#aeb4bb}
+:root{--fc27-label:#377ed6}
 /* A transformed page creates a containing block for fixed descendants. That
    was clipping every dialog at the page's visible height on desktop. Keep the
    entry motion as a fade only, so every existing and future modal is fixed to

@@ -3,7 +3,7 @@ import { lookAssetFingerprint } from "./media-look.js";
 import { CUTOUT_TEMPLATE_SEEDS } from "./cutout-text.js";
 
 export const AGENDA_TEMPLATE_ID = "agenda-day";
-export const AGENDA_TEMPLATE_VERSION = "agenda-day-v8";
+export const AGENDA_TEMPLATE_VERSION = "agenda-day-v7";
 export const AGENDA_FPS = 30;
 
 export const MEDIA_FORMATS = Object.freeze({
