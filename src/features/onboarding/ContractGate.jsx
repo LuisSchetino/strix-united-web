@@ -40,9 +40,79 @@ export function ContractGate({ client, session, profile, players = [], onShown, 
   const [phase, setPhase] = useState("idle");
   const [error, setError] = useState("");
   const [signed, setSigned] = useState(null);
+  const [canContinue, setCanContinue] = useState(false);
+  const [mediaRecord, setMediaRecord] = useState(null);
+  const [mediaError, setMediaError] = useState("");
+  const [videoUrl, setVideoUrl] = useState("");
+  const videoUrlRef = useRef("");
   const identity = useMemo(() => resolveContractIdentity({ session, profile, players }), [session, profile, players]);
   const today = useMemo(() => contractDateLabel(), []);
   const busy = phase === "saving";
+
+  useEffect(() => {
+    if (phase !== "done") return undefined;
+    const timer = window.setTimeout(() => setCanContinue(true), reducedMotion() ? 500 : 1900);
+    return () => window.clearTimeout(timer);
+  }, [phase]);
+
+  useEffect(() => {
+    if (phase !== "done" || !signed) return undefined;
+    let cancelled = false;
+    (async () => {
+      try {
+        const [{ buildAnnounceTimeline }, jobs, { resolveAnnouncePhrase }, { withMediaLook }] = await Promise.all([
+          import("../media/announce-timeline.js"),
+          import("../media/media-jobs.js"),
+          import("../media/announce-core.js"),
+          import("../media/media-look.js"),
+        ]);
+        const person = {
+          name: identity.name,
+          handle: identity.handle,
+          position: identity.role,
+          photo: identity.avatar,
+          extraRole: identity.role,
+          announceType: "jogador",
+        };
+        const phrase = resolveAnnouncePhrase(person, { type: "jogador" });
+        const timeline = withMediaLook(buildAnnounceTimeline({
+          kind: "individual",
+          format: "story",
+          people: [person],
+          phrase: phrase.text,
+          title: "ELENCO FC 27",
+          announceType: "jogador",
+        }), "campaign");
+        const job = await jobs.startAnnounceRender({
+          kind: "individual",
+          format: "story",
+          people: [person],
+          phrase: phrase.text,
+          phraseId: phrase.id,
+          title: "ELENCO FC 27",
+          announceType: "jogador",
+          timeline,
+        });
+        if (cancelled) return;
+        if (job?.result?.blob) {
+          if (videoUrlRef.current) URL.revokeObjectURL(videoUrlRef.current);
+          const url = URL.createObjectURL(job.result.blob);
+          videoUrlRef.current = url;
+          setVideoUrl(url);
+          setMediaRecord(job.result);
+        } else {
+          setMediaError(job?.error || "");
+        }
+      } catch (cause) {
+        if (!cancelled) setMediaError(cause?.message || "Não foi possível gerar o vídeo.");
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [phase, signed, identity]);
+
+  useEffect(() => () => {
+    if (videoUrlRef.current) URL.revokeObjectURL(videoUrlRef.current);
+  }, []);
 
   const sign = async () => {
     if (!ready || busy || !client) return;
@@ -59,7 +129,6 @@ export function ContractGate({ client, session, profile, players = [], onShown, 
       if (updateError) throw updateError;
       setSigned(payload);
       setPhase("done");
-      window.setTimeout(() => onSigned?.(payload), reducedMotion() ? 500 : 1900);
     } catch (cause) {
       setPhase("idle");
       setError(cause?.message === "signature_empty"
@@ -104,6 +173,23 @@ export function ContractGate({ client, session, profile, players = [], onShown, 
                 <path d={signed.signature.d} pathLength="1" />
               </svg>
               <p><b>VÍNCULO CONFIRMADO</b><span>Bem-vindo ao Strix · temporada {CONTRACT_SEASON}</span></p>
+              {videoUrl && <video className="contract-video-preview" src={videoUrl} muted playsInline loop autoPlay />}
+              {canContinue && <div className="contract-signed-actions">
+                <button
+                  type="button"
+                  className="secondary"
+                  disabled={!mediaRecord}
+                  onClick={() => {
+                    if (!mediaRecord) return;
+                    import("../media/media-jobs.js").then(({ downloadBlob }) => {
+                      downloadBlob(mediaRecord.blob, mediaRecord.fileName || "strix-vinculo.mp4");
+                    });
+                  }}
+                >
+                  {mediaRecord ? "BAIXAR VÍDEO" : mediaError ? "VÍDEO INDISPONÍVEL" : "GERANDO VÍDEO…"}
+                </button>
+                <button type="button" className="primary" onClick={() => onSigned?.(signed)}>CONTINUAR</button>
+              </div>}
             </div>
           ) : (
             <SignaturePad ref={padRef} disabled={busy} onChange={(_strokes, meaningful) => { setReady(meaningful); if (meaningful) setError(""); }} />

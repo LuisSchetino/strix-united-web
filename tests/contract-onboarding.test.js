@@ -122,6 +122,10 @@ test("onboarding persiste no usuário autenticado e bloqueia o app até assinar"
   assert.match(gate, /disabled=\{!ready \|\| busy\}/);
   assert.match(gate, /ASSINAR E CONTINUAR/);
   assert.match(gate, /CONTRATO STRIX UNITED · FC27/);
+  assert.match(gate, /BAIXAR VÍDEO/);
+  assert.match(gate, /startAnnounceRender/);
+  assert.match(gate, /downloadBlob/);
+  assert.match(css, /contract-signed-actions/);
   assert.match(pad, /onPointerDown/);
   assert.match(pad, /onPointerMove/);
   assert.match(pad, /onPointerCancel/);

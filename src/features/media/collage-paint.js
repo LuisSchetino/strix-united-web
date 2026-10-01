@@ -10,9 +10,9 @@ import {
   paintCutoutText,
 } from "./cutout-text.js";
 
-const V2_PINK = "#e94b9b";
-const V2_CYAN = "#3ec8f5";
-const V2_YELLOW = "#f2c94c";
+const V2_PINK = "#efece6";
+const V2_CYAN = "#c8ccd0";
+const V2_YELLOW = "#a3a8ae";
 const MONTHS = "JAN|FEV|MAR|ABR|MAI|JUN|JUL|AGO|SET|OUT|NOV|DEZ";
 
 function normalizeHeadline(value) {

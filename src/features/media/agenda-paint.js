@@ -171,95 +171,79 @@ export function paintAmbient(ctx, timeline, time, assets, phase = "intro", optio
   ctx.fillStyle = VOID;
   ctx.fillRect(0, 0, width, height);
 
-  const driftA = (time * (phase === "intro" ? 32 : 18)) % 140;
-  const driftB = (time * (phase === "intro" ? -18 : -11)) % 180;
+  const breath = Math.sin(time * 0.35);
+  const cell = 80;
   ctx.save();
-  ctx.globalAlpha = 0.07;
-  ctx.strokeStyle = "#e5dfd6";
+  ctx.globalAlpha = 0.045 + breath * 0.008;
+  ctx.strokeStyle = INK;
   ctx.lineWidth = 1;
-  for (let x = -200 + driftA; x < width + 120; x += 72) {
+  for (let x = 0; x <= width; x += cell) {
     ctx.beginPath();
     ctx.moveTo(x, 0);
-    ctx.lineTo(x + height * 0.16, height);
+    ctx.lineTo(x, height);
     ctx.stroke();
   }
-  ctx.globalAlpha = 0.035;
-  ctx.lineWidth = 2;
-  for (let x = -240 + driftB; x < width + 160; x += 118) {
+  for (let y = 0; y <= height; y += cell) {
     ctx.beginPath();
-    ctx.moveTo(x, height);
-    ctx.lineTo(x + height * 0.1, 0);
+    ctx.moveTo(0, y);
+    ctx.lineTo(width, y);
     ctx.stroke();
   }
   ctx.restore();
 
-  const breath = Math.sin(time * 0.55);
   ctx.save();
-  ctx.globalAlpha = (phase === "intro" ? 0.04 : 0.028) + breath * 0.006;
+  ctx.globalAlpha = (phase === "intro" ? 0.05 : 0.03) + breath * 0.006;
   ctx.fillStyle = INK;
-  ctx.font = `800 ${Math.round(width * (phase === "intro" ? 0.48 : 0.42))}px Rajdhani, sans-serif`;
+  ctx.font = `800 ${Math.round(width * (phase === "intro" ? 0.52 : 0.4))}px Rajdhani, sans-serif`;
   ctx.textAlign = "center";
-  const wordY = phase === "intro" ? height * 0.4 : phase === "finale" ? height * 0.22 : height * 0.18;
-  ctx.fillText("STRIX", width * 0.5 + Math.sin(time * 0.16) * 14, wordY);
+  const wordY = phase === "intro" ? height * 0.42 : phase === "finale" ? height * 0.2 : height * 0.16;
+  ctx.fillText("STRIX", width * 0.5, wordY);
   ctx.restore();
 
   if (phase === "intro" && timeline.matches?.length) {
     ctx.save();
-    ctx.globalAlpha = 0.05 + breath * 0.012;
+    ctx.globalAlpha = 0.04 + breath * 0.01;
     ctx.fillStyle = INK;
     ctx.textAlign = "center";
-    ctx.font = `800 ${Math.round(width * 0.58)}px Rajdhani, sans-serif`;
-    ctx.fillText(
-      String(timeline.matches.length).padStart(2, "0"),
-      width * 0.5 + Math.cos(time * 0.14) * 12,
-      height * 0.8 + Math.sin(time * 0.18) * 8,
-    );
+    ctx.font = `800 ${Math.round(width * 0.46)}px Rajdhani, sans-serif`;
+    ctx.fillText(String(timeline.matches.length).padStart(2, "0"), width * 0.5, height * 0.82);
     ctx.restore();
   }
 
   const owl = options.owl === false || phase !== "match"
     ? null
-    : { x: width * 0.08, y: height * 0.9, box: width * 0.22, alpha: 0.01 };
+    : { x: width * 0.1, y: height * 0.9, box: width * 0.18, alpha: 0.012 };
   if (assets?.strix && owl) {
     ctx.save();
-    ctx.globalAlpha = owl.alpha + breath * 0.004;
-    drawLogo(ctx, assets.strix, owl.x + Math.sin(time * 0.2) * 8, owl.y, Math.round(owl.box), 1, 1);
+    ctx.globalAlpha = owl.alpha + breath * 0.003;
+    drawLogo(ctx, assets.strix, owl.x, owl.y, Math.round(owl.box), 1, 1);
     ctx.restore();
   }
 
-  const sweep = ((time * 0.11) % 1.35) - 0.18;
-  const sweepX = width * sweep;
-  const light = ctx.createLinearGradient(sweepX, 0, sweepX + 260, 0);
-  light.addColorStop(0, "rgba(255,255,255,0)");
-  light.addColorStop(0.5, "rgba(255,255,255,0.04)");
-  light.addColorStop(1, "rgba(255,255,255,0)");
-  ctx.fillStyle = light;
+  const focus = ctx.createRadialGradient(width * 0.5, height * 0.42, 20, width * 0.5, height * 0.42, width * 0.72);
+  focus.addColorStop(0, "rgba(255,255,255,0.035)");
+  focus.addColorStop(1, "rgba(255,255,255,0)");
+  ctx.fillStyle = focus;
   ctx.fillRect(0, 0, width, height);
 
-  const spot = ctx.createRadialGradient(width * 0.2, height * 0.12, 8, width * 0.2, height * 0.12, width * 0.65);
-  spot.addColorStop(0, "rgba(255,255,255,0.04)");
-  spot.addColorStop(1, "rgba(255,255,255,0)");
-  ctx.fillStyle = spot;
-  ctx.fillRect(0, 0, width, height);
-
-  const veil = ctx.createRadialGradient(width * 0.5, height * 0.48, 40, width * 0.5, height * 0.48, width * 0.78);
-  veil.addColorStop(0, "rgba(5,6,7,0.78)");
-  veil.addColorStop(0.55, "rgba(5,6,7,0.42)");
-  veil.addColorStop(1, "rgba(5,6,7,0.08)");
+  const veil = ctx.createRadialGradient(width * 0.5, height * 0.5, 30, width * 0.5, height * 0.5, width * 0.82);
+  veil.addColorStop(0, "rgba(5,6,7,0.18)");
+  veil.addColorStop(0.62, "rgba(5,6,7,0.55)");
+  veil.addColorStop(1, "rgba(5,6,7,0.88)");
   ctx.fillStyle = veil;
   ctx.fillRect(0, 0, width, height);
 
   ctx.save();
-  ctx.globalAlpha = 0.055;
+  ctx.globalAlpha = 0.05;
   ctx.fillStyle = INK;
-  const grainShift = Math.floor(time * 56);
-  for (let index = 0; index < 160; index += 1) {
+  const grainShift = Math.floor(time * 28);
+  for (let index = 0; index < 140; index += 1) {
     const seed = (index * 131 + grainShift * 17) % 9973;
     ctx.fillRect(seed % width, (seed * 19) % height, 2, 2);
   }
   ctx.restore();
 
-  paintCorners(ctx, timeline, 0.32 + Math.sin(time * 0.75) * 0.05);
+  paintCorners(ctx, timeline, 0.28 + breath * 0.04);
 }
 
 export function paintSceneSweep(ctx, timeline, time) {
@@ -323,34 +307,16 @@ function paintIntro(ctx, timeline, time, dayLabel) {
   ctx.restore();
 
   ctx.save();
-  ctx.globalAlpha = title * 0.2;
-  const glow = ctx.createRadialGradient(x, titleY + type.title * 0.4, 12, x, titleY + type.title * 0.4, 380);
-  glow.addColorStop(0, "rgba(239,236,230,0.32)");
-  glow.addColorStop(1, "rgba(239,236,230,0)");
-  ctx.fillStyle = glow;
-  ctx.fillRect(x - 420, titleY - type.title, 840, type.title * 2.8);
-  ctx.restore();
-
-  ctx.save();
   ctx.globalAlpha = title;
   ctx.fillStyle = INK;
   ctx.textAlign = "center";
-  ctx.font = `700 ${type.title}px Rajdhani, sans-serif`;
-  const settle = 1.08 - title * 0.08;
-  ctx.translate(x, titleY);
-  ctx.scale(settle, settle);
   ctx.beginPath();
-  ctx.rect(-width * 0.5, -type.title, width * Math.max(title, 0.08), type.title * 2.5);
+  ctx.rect(0, titleY - type.title, width * Math.max(title, 0.08), type.title * 2.4);
   ctx.clip();
-  ctx.fillText("AGENDA", 0, 0);
-  ctx.fillText("DO DIA", 0, type.title * 0.96);
-  const sweepX = -280 + title * 620;
-  const sweep = ctx.createLinearGradient(sweepX, 0, sweepX + 220, 0);
-  sweep.addColorStop(0, "rgba(255,255,255,0)");
-  sweep.addColorStop(0.5, "rgba(255,255,255,0.18)");
-  sweep.addColorStop(1, "rgba(255,255,255,0)");
-  ctx.fillStyle = sweep;
-  ctx.fillRect(-300, -type.title, 600, type.title * 2.3);
+  ctx.font = `700 ${Math.round(type.title * 0.38)}px Inter, sans-serif`;
+  ctx.fillText("PROGRAMAÇÃO", x, titleY - type.title * 0.18);
+  ctx.font = `700 ${type.title}px Rajdhani, sans-serif`;
+  ctx.fillText("AGENDA", x, titleY + type.title * 0.78);
   ctx.restore();
 
   ctx.save();
@@ -672,21 +638,17 @@ function paintFinale(ctx, timeline, time, assets, dayLabel) {
     ctx.font = `700 ${layout.timeH}px Rajdhani, sans-serif`;
     ctx.fillText(match.kickoff || "", width / 2, zones.timeY);
 
-    const float = Math.sin(time * 0.7 + index) * 2;
-    const leftX = width / 2 - layout.span * 0.12;
-    const rightX = width / 2 + layout.span * 0.12;
-    const nameSize = Math.min(type.finaleName * (layout.density === "medium" ? 1.12 : 1), layout.matchupH * 0.46);
-    ctx.textAlign = "right";
-    ctx.font = `700 ${nameSize}px Rajdhani, sans-serif`;
-    ctx.fillText(fitText(ctx, "STRIX UNITED", layout.nameMax, ctx.font), leftX - logoBox * 0.72, zones.matchupMid + 8);
-    drawLogo(ctx, assets.strix, leftX, zones.matchupMid + float, logoBox, 1, 1);
+    const leftX = width / 2 - layout.span * 0.18;
+    const rightX = width / 2 + layout.span * 0.18;
+    const nameSize = Math.min(type.finaleName * (layout.density === "medium" ? 1.05 : 0.92), layout.matchupH * 0.32);
+    drawLogo(ctx, assets.strix, leftX, zones.matchupMid - nameSize * 0.35, logoBox, 1, 1);
+    drawLogo(ctx, assets.opponents[index], rightX, zones.matchupMid - nameSize * 0.35, logoBox, 1, 1);
     ctx.textAlign = "center";
     ctx.font = `700 ${type.vs}px Rajdhani, sans-serif`;
-    ctx.fillText("×", width / 2, zones.matchupMid + 10);
-    drawLogo(ctx, assets.opponents[index], rightX, zones.matchupMid - float, logoBox, 1, 1);
-    ctx.textAlign = "left";
+    ctx.fillText("×", width / 2, zones.matchupMid);
     ctx.font = `700 ${nameSize}px Rajdhani, sans-serif`;
-    ctx.fillText(fitText(ctx, (match.opponent || "").toUpperCase(), layout.nameMax, ctx.font), rightX + logoBox * 0.72, zones.matchupMid + 8);
+    ctx.fillText(fitText(ctx, "STRIX UNITED", layout.nameMax, ctx.font), leftX, zones.matchupMid + logoBox * 0.58);
+    ctx.fillText(fitText(ctx, (match.opponent || "").toUpperCase(), layout.nameMax, ctx.font), rightX, zones.matchupMid + logoBox * 0.58);
     ctx.textAlign = "center";
     ctx.fillStyle = MUTED;
     ctx.font = `800 ${layout.compH}px Inter, sans-serif`;

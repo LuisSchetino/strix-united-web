@@ -229,15 +229,76 @@
 .agenda-game>button:hover{color:#fff}
 .analysis-player-picker>i{background:#4b5159}
 
-/* ---------- Central sem jogos: logo + background vivo, nada mais ---------- */
+/* ---------- Transmissão / noite de jogo ---------- */
+.page-home .match-hero.is-broadcast{
+  position:relative;
+  isolation:isolate;
+  display:grid;
+  justify-items:center;
+  gap:clamp(22px,3vw,36px);
+  min-height:clamp(420px,62vh,640px);
+  padding:clamp(28px,4vw,48px) clamp(18px,4vw,56px) clamp(22px,3vw,36px)!important;
+  overflow:hidden;
+  background:#050607!important;
+  box-shadow:none!important;
+}
+.page-home .match-hero.is-broadcast:before,
+.page-home .match-hero.is-broadcast:after{display:none!important}
+.broadcast-stage{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.broadcast-grid{
+  position:absolute;inset:0;opacity:.22;
+  background-image:
+    linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);
+  background-size:80px 80px;
+  mask-image:radial-gradient(ellipse 70% 60% at 50% 42%,#000 20%,transparent 78%);
+}
+.broadcast-rule{position:absolute;left:8%;right:8%;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.16),transparent)}
+.broadcast-rule.is-top{top:18%}
+.broadcast-rule.is-bottom{bottom:16%}
+.broadcast-light{position:absolute;width:42%;height:58%;top:8%;opacity:.55;filter:blur(8px);animation:sp-breathe 14s ease-in-out infinite}
+.broadcast-light.is-home{left:4%;background:radial-gradient(ellipse at 40% 40%,rgba(255,255,255,.07),transparent 68%)}
+.broadcast-light.is-away{right:4%;background:radial-gradient(ellipse at 60% 40%,rgba(255,255,255,.07),transparent 68%);animation-delay:-7s}
+.broadcast-floor{position:absolute;left:10%;right:10%;bottom:0;height:38%;background:radial-gradient(ellipse at 50% 100%,rgba(255,255,255,.05),transparent 70%)}
+.broadcast-grain{
+  position:absolute;inset:0;opacity:.09;
+  background-image:repeating-linear-gradient(0deg,rgba(255,255,255,.08) 0 1px,transparent 1px 3px);
+  mix-blend-mode:overlay;
+}
+.broadcast-vignette{position:absolute;inset:0;box-shadow:inset 0 0 160px 40px #050607}
+.broadcast-head,.broadcast-matchup,.hero-actions,.broadcast-foot{position:relative;z-index:1;width:min(1080px,100%)}
+.broadcast-head{display:flex;align-items:end;justify-content:space-between;gap:16px}
+.broadcast-kicker{display:inline-flex;align-items:center;gap:10px;color:#d8dce0;font-size:11px;font-weight:900;letter-spacing:.18em}
+.broadcast-kicker i{width:7px;height:7px;border-radius:50%;background:#f5f5f5;box-shadow:0 0 10px rgba(255,255,255,.35)}
+.broadcast-head>b{color:#f5f5f5;font:800 13px/1 Inter,sans-serif;letter-spacing:.08em}
+.broadcast-matchup{padding:8px 0 4px}
+.broadcast-center{display:grid;justify-items:center;gap:8px;min-width:110px}
+.broadcast-center small{color:#8e969f;font-size:9px;font-weight:900;letter-spacing:.16em}
+.broadcast-center b{color:#f5f5f5;font:800 clamp(28px,4vw,42px)/1 Rajdhani,Inter,sans-serif;letter-spacing:.16em}
+.broadcast-center time{color:#d8dce0;font:800 clamp(22px,3vw,32px)/1 Rajdhani,Inter,sans-serif;font-variant-numeric:tabular-nums}
+.page-home .match-hero.is-broadcast .hero-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:10px}
+.page-home .match-hero.is-broadcast .hero-actions .primary,
+.page-home .match-hero.is-broadcast .hero-actions .secondary{
+  min-height:46px;padding:0 18px;border:1px solid rgba(255,255,255,.18);border-radius:8px;
+  background:transparent;color:#f5f5f5;box-shadow:none;letter-spacing:.12em;
+}
+.page-home .match-hero.is-broadcast .hero-actions .primary{background:#f2f2f2;color:#090a0b;border-color:#f2f2f2}
+.page-home .match-hero.is-broadcast .hero-actions .primary:hover{background:#fff}
+.page-home .match-hero.is-broadcast .hero-actions .secondary:hover{background:#15181d;border-color:rgba(255,255,255,.32)}
+.broadcast-foot{display:flex;justify-content:space-between;gap:16px;color:#8e969f;font-size:10px;font-weight:850;letter-spacing:.14em}
+.broadcast-foot i{font-style:normal;color:#d8dce0}
+
+/* ---------- Central sem jogos: logo + profundidade institucional ---------- */
 .page-home .match-hero.is-free-night{
   position:relative;
   display:grid!important;
   place-items:center;
-  min-height:clamp(340px,50vh,500px);
+  min-height:clamp(360px,54vh,560px);
   padding:0!important;
   overflow:hidden;
   isolation:isolate;
+  background:#050607!important;
+  box-shadow:none!important;
 }
 .match-hero.is-free-night:before,
 .match-hero.is-free-night:after{display:none!important}
@@ -246,47 +307,74 @@
   content:"";
   position:absolute;
   inset:0;
-  opacity:.5;
+  opacity:.45;
   background:
-    repeating-linear-gradient(90deg,transparent 0 79px,rgba(255,255,255,.035) 79px 80px),
-    radial-gradient(ellipse 60% 70% at 50% 50%,rgba(255,255,255,.05),transparent 70%);
+    repeating-linear-gradient(90deg,transparent 0 79px,rgba(255,255,255,.028) 79px 80px),
+    repeating-linear-gradient(0deg,transparent 0 79px,rgba(255,255,255,.02) 79px 80px);
 }
+.free-night-ambient{
+  position:absolute;inset:0;
+  background:
+    radial-gradient(ellipse 62% 48% at 50% 46%,rgba(255,255,255,.05),transparent 68%),
+    radial-gradient(ellipse 40% 24% at 50% 100%,rgba(255,255,255,.03),transparent 72%);
+  animation:sp-breathe 12s ease-in-out infinite;
+}
+.free-night-halo{
+  position:absolute;left:50%;top:50%;
+  width:min(58vw,400px);aspect-ratio:1;
+  translate:-50% -50%;
+  border-radius:50%;
+  background:radial-gradient(circle,rgba(255,255,255,.08),transparent 70%);
+  animation:sp-breathe 16s ease-in-out infinite;
+}
+.free-night-grain{
+  position:absolute;inset:0;opacity:.07;
+  background-image:repeating-linear-gradient(0deg,rgba(255,255,255,.1) 0 1px,transparent 1px 3px);
+  mix-blend-mode:overlay;
+}
+.free-night-vignette{position:absolute;inset:0;box-shadow:inset 0 0 180px 50px #050607}
 .free-night-beam{
   position:absolute;
-  top:-20%;
-  height:140%;
-  width:22%;
-  left:-30%;
-  opacity:0;
-  transform:skewX(-18deg);
-  background:linear-gradient(90deg,transparent,rgba(255,255,255,.08) 50%,transparent);
-  animation:sp-beam 13s linear infinite;
+  top:18%;
+  height:64%;
+  width:18%;
+  left:18%;
+  opacity:.12;
+  background:radial-gradient(ellipse at 50% 50%,rgba(255,255,255,.08),transparent 70%);
+  animation:sp-breathe 18s ease-in-out infinite;
 }
-.free-night-beam.is-b{width:12%;animation-duration:17s;animation-delay:-6s}
-.free-night-beam.is-c{width:30%;animation-duration:21s;animation-delay:-13s;background:linear-gradient(90deg,transparent,rgba(255,255,255,.045) 50%,transparent)}
+.free-night-beam.is-b{left:auto;right:16%;width:14%;animation-delay:-8s}
+.free-night-beam.is-c{left:36%;width:28%;opacity:.08;animation-delay:-4s}
 .free-night-ring{
   position:absolute;
   left:50%;top:50%;
   width:min(62vw,420px);aspect-ratio:1;
-  border:1px solid rgba(255,255,255,.07);
+  border:1px solid rgba(255,255,255,.05);
   border-radius:50%;
   translate:-50% -50%;
-  animation:sp-ring 9s ease-in-out infinite;
+  animation:sp-ring 14s ease-in-out infinite;
 }
-.free-night-ring.is-b{width:min(92vw,640px);border-color:rgba(255,255,255,.04);animation-delay:-4.5s}
-.free-night-logo{position:relative;z-index:1;display:grid;place-items:center;animation:sp-float 8s ease-in-out infinite}
-.free-night-logo .crest{width:clamp(124px,17vw,196px);height:auto;filter:drop-shadow(0 0 26px rgba(255,255,255,.12))!important}
+.free-night-ring.is-b{width:min(92vw,640px);border-color:rgba(255,255,255,.03);animation-delay:-7s}
+.free-night-logo{position:relative;z-index:1;display:grid;place-items:center;animation:sp-float 10s ease-in-out infinite}
+.free-night-logo .crest{width:clamp(140px,18vw,220px);height:auto;filter:drop-shadow(0 0 22px rgba(255,255,255,.1))!important}
 @keyframes sp-beam{
-  0%{left:-35%;opacity:0}
-  15%,85%{opacity:1}
-  100%{left:115%;opacity:0}
+  0%,100%{opacity:.08}
+  50%{opacity:.16}
 }
 @keyframes sp-ring{
-  0%,100%{opacity:.55;scale:.97}
-  50%{opacity:1;scale:1.03}
+  0%,100%{opacity:.4;scale:.98}
+  50%{opacity:.7;scale:1.02}
 }
-@keyframes sp-float{50%{translate:0 -5px}}
+@keyframes sp-float{50%{translate:0 -4px}}
 
+@media(max-width:700px){
+  .page-home .match-hero.is-broadcast{min-height:0;padding:22px 16px 20px!important;gap:18px}
+  .broadcast-head,.broadcast-foot{flex-direction:column;align-items:center;text-align:center}
+  .broadcast-rule.is-top,.broadcast-rule.is-bottom{left:6%;right:6%}
+  .page-home .match-hero.is-broadcast .hero-actions{width:100%}
+  .page-home .match-hero.is-broadcast .hero-actions .primary,
+  .page-home .match-hero.is-broadcast .hero-actions .secondary{flex:1 1 160px}
+}
 @media(max-width:580px){
   .page-home .match-hero.is-free-night{min-height:clamp(280px,42vh,380px)}
   .free-night-ring.is-b{display:none}
@@ -297,7 +385,7 @@
   .agenda-confirm-dialog,
   .competition-delete-dialog,
   .competition-import-preview,
-  .free-night-beam,.free-night-ring,.free-night-logo,
+  .free-night-beam,.free-night-ring,.free-night-logo,.free-night-ambient,.free-night-halo,.broadcast-light,
   .competition-url-row .primary:disabled{animation:none!important}
-  .free-night-beam{display:none}
+  .free-night-beam{opacity:.08}
 }

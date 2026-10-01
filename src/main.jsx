@@ -22,6 +22,7 @@ import { resolveAgendaTeamIdentity, resolveTeamIdentity } from "./features/teams
 import { notify, RollingLabel, ToastViewport } from "./ui/motion/motion.jsx";
 import { ClubLogo } from "./ui/ClubLogo.jsx";
 import { ActionMenu } from "./ui/ActionMenu.jsx";
+import { Matchup } from "./ui/MatchDisplay.jsx";
 import { LaunchGate } from "./features/launch/LaunchGate.jsx";
 import { ContractGate, ContractValidating } from "./features/onboarding/ContractGate.jsx";
 import { hasSignedContract } from "./features/onboarding/contract-core.js";
@@ -1294,22 +1295,33 @@ function CentralLive({ workspace, navigate }) {
   return (
     <section className="page-home page-enter">
       {heroMatch ? (
-      <section className="match-hero">
-        <div className="stadium-light stadium-left" /><div className="stadium-light stadium-right" /><div className="smoke smoke-a" /><div className="smoke smoke-b" />
-        <div className="hero-meta"><span>{hero.isToday ? "TRANSMISSÃO · NOITE DE JOGO" : "PRÓXIMA PARTIDA"}</span><b>{`${datePart(heroMatch.scheduled_at)} · ${timePart(heroMatch.scheduled_at)}`}</b></div>
-        <div className="hero-teams">
-          <div><Crest /><strong>STRIX UNITED</strong></div>
-          <div className="versus"><small>{heroMatch.competition_name || "PARTIDA"}</small><b>VS</b><i>{timePart(heroMatch.scheduled_at)}</i></div>
-          <div><Avatar name={heroMatch.opponent_name} logo={nextLogo} priority /><strong>{heroMatch.opponent_name}</strong></div>
+      <section className="match-hero is-broadcast" aria-label={`${hero.isToday ? "Noite de jogo" : "Próxima partida"}: Strix United contra ${heroMatch.opponent_name}`}>
+        <div className="broadcast-stage" aria-hidden="true">
+          <i className="broadcast-grid" /><i className="broadcast-rule is-top" /><i className="broadcast-rule is-bottom" />
+          <i className="broadcast-light is-home" /><i className="broadcast-light is-away" /><i className="broadcast-floor" />
+          <i className="broadcast-grain" /><i className="broadcast-vignette" />
         </div>
+        <header className="broadcast-head">
+          <span className="broadcast-kicker"><i aria-hidden="true" />{hero.isToday ? "TRANSMISSÃO · NOITE DE JOGO" : "PRÓXIMA PARTIDA"}</span>
+          <b>{`${datePart(heroMatch.scheduled_at)} · ${timePart(heroMatch.scheduled_at)}`}</b>
+        </header>
+        <Matchup
+          size="xl"
+          className="broadcast-matchup"
+          priority
+          homeName="STRIX UNITED"
+          homeLogo={STRIX_BRAND.logo}
+          awayName={heroMatch.opponent_name}
+          awayLogo={nextLogo}
+          center={<div className="broadcast-center"><small>{heroMatch.competition_name || "PARTIDA"}</small><b>VS</b><time>{timePart(heroMatch.scheduled_at)}</time></div>}
+        />
         <div className="hero-actions"><button className="primary" onClick={() => navigate("agenda")}><Icon name="squad" size={17} />ABRIR ESCALAÇÃO</button><button className="secondary" onClick={() => navigate("agenda")}>DETALHES DA PARTIDA <Icon name="arrow" size={16} /></button></div>
-        <div className="stadium-caption"><span>ARENA STRIX · SÃO PAULO</span><i>{heroMatch.status === "live" && hero.isToday ? "AO VIVO" : hero.isToday ? "HOJE" : "PRÓXIMO COMPROMISSO"}</i></div>
+        <footer className="broadcast-foot"><span>ARENA STRIX · SÃO PAULO</span><i>{heroMatch.status === "live" && hero.isToday ? "AO VIVO" : hero.isToday ? "HOJE" : "PRÓXIMO COMPROMISSO"}</i></footer>
       </section>
       ) : (
       <section className="match-hero is-free-night" aria-label="Strix United">
         <div className="free-night-field" aria-hidden="true">
-          <i className="free-night-beam is-a" /><i className="free-night-beam is-b" /><i className="free-night-beam is-c" />
-          <i className="free-night-ring is-a" /><i className="free-night-ring is-b" />
+          <i className="free-night-ambient" /><i className="free-night-halo" /><i className="free-night-grain" /><i className="free-night-vignette" />
         </div>
         <div className="free-night-logo"><Crest priority /></div>
       </section>
@@ -1328,7 +1340,7 @@ function GameRowLive({ game, index, workspace }) {
   const status = game.temporal_status === "overdue" ? "ATRASADO" : game.temporal_status === "today" ? "HOJE" : index === 0 ? "PRÓXIMO" : "AGENDADO";
   return <article className="upcoming-game-card">
     <header><span>{game.round_label || game.competition_name || "PARTIDA"}</span><time>{datePart(game.scheduled_at)} · {timePart(game.scheduled_at)}</time></header>
-    <div className="upcoming-game-versus"><div><b>STRIX UNITED</b><Crest /></div><i>×</i><div><Avatar name={game.opponent_name} logo={logo} /><b>{game.opponent_name}</b></div></div>
+    <Matchup size="md" className="upcoming-game-matchup" homeName="STRIX UNITED" homeLogo={STRIX_BRAND.logo} awayName={game.opponent_name} awayLogo={logo} />
     <footer><em>{status}</em></footer>
   </article>;
 }
@@ -1610,7 +1622,14 @@ function AgendaModal({ entry, mode = "new", presets, roster = [], assetUrl, stan
           )}
           <div className="agenda-modal-body">
             {readOnly ? <section className="agenda-view-matchup" aria-label="Confronto da partida">
-              <div className="agenda-view-clubs"><div><Crest /><b>STRIX UNITED</b></div><strong>VS</strong><div><Avatar name={form.opponent || "?"} logo={form.logo} /><b>{form.opponent}</b></div></div>
+              <Matchup
+                size="lg"
+                className="agenda-view-clubs"
+                homeName="STRIX UNITED"
+                homeLogo={STRIX_BRAND.logo}
+                awayName={form.opponent || "ADVERSÁRIO"}
+                awayLogo={form.logo}
+              />
               <time>{form.date} · {form.time}</time>
               <small>{form.competition}</small>
             </section> : <div className="agenda-form">
@@ -2183,8 +2202,8 @@ function AgendaLive({ navigate, workspace, profile }) {
             <button className="agenda-game-open" type="button" aria-label={`Abrir escalação de ${item.opponent}`} onClick={() => { setActions(null); setModal({ entry: item, mode: "view" }); }}>
               <time className={tab === "next" ? "future-kickoff" : ""}>{tab === "next" && <span>{item.date}</span>}<b>{item.time}</b></time>
               <div className="agenda-match">
-                <Avatar name={item.opponent} logo={item.logo} />
-                <div>{item.previousOpponent && <small className="replaced-opponent"><s>{item.previousOpponent}</s> → TROCADO</small>}<small>STRIX UNITED VS</small><b>{item.opponent}</b></div>
+                {item.previousOpponent && <small className="replaced-opponent"><s>{item.previousOpponent}</s> → TROCADO</small>}
+                <Matchup size="sm" className="agenda-matchup" homeName="STRIX UNITED" homeLogo={STRIX_BRAND.logo} awayName={item.opponent} awayLogo={item.logo} />
               </div>
               <span className="game-competition">{item.competition}</span>
               <em className={item.status === "EM BREVE" ? "soon" : ""}>{item.status}</em>

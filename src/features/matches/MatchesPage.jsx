@@ -50,8 +50,9 @@ function MatchScoreline({
   awayLogo,
   awayScore,
   className = "",
+  size = "md",
 }) {
-  return <MatchDisplay {...{ homeName, homeLogo, homeScore, awayName, awayLogo, awayScore, className }} />;
+  return <MatchDisplay {...{ homeName, homeLogo, homeScore, awayName, awayLogo, awayScore, className, size }} />;
 }
 
 function MatchPreview({ match, workspace }) {
@@ -564,6 +565,9 @@ function StatIcon({ name }) {
     rating: <path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9L12 3Z"/>,
     goals: <><circle cx="12" cy="12" r="8"/><path d="m12 8 3 2-1 4h-4l-1-4 3-2Z"/></>,
     assists: <><path d="M4 16c4-6 8-8 16-8"/><path d="m15 4 5 4-4 5"/></>,
+    mom: <path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9L12 3Z"/>,
+    discipline: <><path d="M8 4h8v16H8z"/><path d="M8 8h8"/></>,
+    clean: <><path d="M12 3 20 7v6c0 5-3.4 7.6-8 9-4.6-1.4-8-4-8-9V7l8-4Z"/><path d="m9 12 2 2 4-4"/></>,
   };
   return <svg className="match-stat-icon" viewBox="0 0 24 24" aria-hidden="true">{paths[name] || paths.rating}</svg>;
 }
@@ -590,26 +594,33 @@ function PlayerMatchSheet({ player, match, workspace, close }) {
   const tacklesMade = hasOwnValue(player.tackles) && Number.isFinite(Number(player.tackles)) ? Number(player.tackles) : null;
   const tackleAttempts = Number(player.tackleAttempts ?? player.tacklesAttempts);
   const normalMetrics = [
-    ["GOLS", player.goals], ["ASSISTÊNCIAS", player.assists], ["G+A", hasOwnValue(player.goals) && hasOwnValue(player.assists) ? Number(player.goals) + Number(player.assists) : null],
-    ["CHUTES", player.shots], ["PASSES", Number.isFinite(passesMade) && Number.isFinite(passesAttempted) ? `${passesMade} / ${passesAttempted}` : null],
-    ["PRECISÃO", passesAttempted > 0 && Number.isFinite(passesMade) ? `${((passesMade / passesAttempted) * 100).toFixed(1)}%` : null],
-    ["DESARMES", tacklesMade],
-    ["DESARMES TENTADOS", Number.isFinite(tackleAttempts) ? tackleAttempts : null],
-    ["EFICIÊNCIA", tacklesMade !== null && Number.isFinite(tackleAttempts) && tackleAttempts > 0 ? `${((tacklesMade / tackleAttempts) * 100).toFixed(1)}%` : null],
-    ["MOTM", player.mom === 1 || player.mom === true ? "SIM" : hasOwnValue(player.mom) ? "NÃO" : null],
-    ["VERMELHO", player.redcards], ["CLEAN SHEET DEF", player.cleansheetsdef],
+    ["GOLS", player.goals, "goals"], ["ASSISTÊNCIAS", player.assists, "assists"],
+    ["G+A", hasOwnValue(player.goals) && hasOwnValue(player.assists) ? Number(player.goals) + Number(player.assists) : null, "assists"],
+    ["CHUTES", player.shots, "shots"],
+    ["PASSES", Number.isFinite(passesMade) && Number.isFinite(passesAttempted) ? `${passesMade} / ${passesAttempted}` : null, "passes"],
+    ["PRECISÃO", passesAttempted > 0 && Number.isFinite(passesMade) ? `${((passesMade / passesAttempted) * 100).toFixed(1)}%` : null, "passes"],
+    ["DESARMES", tacklesMade, "tackles"],
+    ["DESARMES TENTADOS", Number.isFinite(tackleAttempts) ? tackleAttempts : null, "tackles"],
+    ["EFICIÊNCIA", tacklesMade !== null && Number.isFinite(tackleAttempts) && tackleAttempts > 0 ? `${((tacklesMade / tackleAttempts) * 100).toFixed(1)}%` : null, "tackles"],
+    ["MOTM", player.mom === 1 || player.mom === true ? "SIM" : hasOwnValue(player.mom) ? "NÃO" : null, "mom"],
+    ["VERMELHO", player.redcards, "discipline"], ["CLEAN SHEET DEF", player.cleansheetsdef, "clean"],
   ];
   const goalkeeperMetrics = [
-    ["DEFESAS · TOTAL EA", player.saves], ["GOOD DIRECTION", player.goodDirectionSaves], ["REFLEX", player.reflexSaves],
-    ["CROSS", player.crossSaves], ["BALL DIVE", player.ballDiveSaves], ["PARRY", player.parrySaves],
-    ["PUNCH", player.punchSaves], ["CLEAN SHEET", player.cleansheetsgk],
+    ["DEFESAS · TOTAL EA", player.saves, "saves"], ["GOOD DIRECTION", player.goodDirectionSaves, "saves"],
+    ["REFLEX", player.reflexSaves, "saves"], ["CROSS", player.crossSaves, "saves"],
+    ["BALL DIVE", player.ballDiveSaves, "saves"], ["PARRY", player.parrySaves, "saves"],
+    ["PUNCH", player.punchSaves, "saves"], ["CLEAN SHEET", player.cleansheetsgk, "clean"],
   ];
   const dateLabel = match.played_at ? formatDate(match.played_at) : "Data indisponível";
+  const rating = hasOwnValue(player.rating) ? player.rating : "—";
   return createPortal(<div className="player-match-sheet-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && close()}>
     <section ref={dialogRef} tabIndex={-1} className="player-match-sheet" role="dialog" aria-modal="true" aria-label={`Ficha pós-jogo de ${name}`}>
       <header><div><span>FICHA PÓS-JOGO · {dateLabel}</span><h2>{name}</h2><p>{position}{archetype ? ` · ${archetype.name}` : ""} · Strix {match.strix_score} × {match.opponent_score} {match.opponent_name}</p></div><CloseButton onClick={close}/></header>
-      <div className="player-match-sheet-rating"><small>NOTA EA</small><strong>{hasOwnValue(player.rating) ? player.rating : "—"}</strong></div>
-      <div className="player-match-sheet-grid">{[...normalMetrics, ...(goalkeeper ? goalkeeperMetrics : [])].filter(([, value]) => value !== null && value !== undefined && value !== "").map(([label, value]) => <article key={label}><small>{label}</small><b>{value}</b></article>)}</div>
+      <div className="player-match-sheet-rating">
+        <div><StatIcon name="rating"/><small>NOTA EA</small></div>
+        <strong>{rating}</strong>
+      </div>
+      <div className="player-match-sheet-grid">{[...normalMetrics, ...(goalkeeper ? goalkeeperMetrics : [])].filter(([, value]) => value !== null && value !== undefined && value !== "").map(([label, value, icon]) => <article key={label}><StatIcon name={icon}/><small>{label}</small><b>{value}</b></article>)}</div>
       {!goalkeeper && <p className="player-match-sheet-note">Métricas defensivas e disciplina conforme os campos fornecidos pela EA.</p>}
       <footer><button type="button" className="secondary" onClick={close}>FECHAR</button></footer>
     </section>
@@ -681,6 +692,7 @@ function MatchDetails({ match, workspace, close }) {
             <em className={`match-result-badge ${result.toLowerCase()}`}>{result}</em>
             <MatchScoreline
               className="match-detail-score"
+              size="xl"
               homeName="STRIX UNITED"
               homeLogo={STRIX_BRAND.logo}
               homeScore={match.strix_score}
@@ -708,7 +720,7 @@ function MatchDetails({ match, workspace, close }) {
                 <header role="row"><span>JOGADOR</span><span>NOTA</span><span>G</span><span>A</span><span>PASSES</span><span>CHUTES</span><span>DESARMES</span><span>DEFESAS</span></header>
                 {players.map((player, index) => (
                   <article role="row" className={`${Number(player.rating) === bestRating && bestRating > 0 ? "is-best " : ""}${disconnected(player) ? "is-disconnected" : ""}`} key={player.id || player.eaName || index}>
-                    <div><b><button type="button" className="match-player-profile-trigger" onClick={() => setSelectedPlayer(player)} aria-label={`Abrir ficha de ${canonicalPlayerName(player.name || player.eaName, workspace.players, workspace.aliases)} nesta partida`}>{canonicalPlayerName(player.name || player.eaName, workspace.players, workspace.aliases)}</button></b><small>{disconnected(player) && <em className="disconnect-badge">CAIU DA PARTIDA</em>}{!disconnected(player) && Number(player.rating) === bestRating && bestRating > 0 && <em className="match-best-rating"><StatIcon name="rating"/> MELHOR NOTA</em>}{Number(player.goals) === maxGoals && maxGoals > 0 && <em><StatIcon name="goals"/> ARTILHEIRO</em>}{Number(player.assists) === maxAssists && maxAssists > 0 && <em><StatIcon name="assists"/> ASSISTÊNCIA</em>}{Number(player.passesMade) === maxPasses && maxPasses > 0 && <em>MAIS PASSES</em>}</small></div>
+                    <div><b><button type="button" className="match-player-profile-trigger" onClick={() => setSelectedPlayer(player)} aria-label={`Abrir ficha de ${canonicalPlayerName(player.name || player.eaName, workspace.players, workspace.aliases)} nesta partida`}>{canonicalPlayerName(player.name || player.eaName, workspace.players, workspace.aliases)}</button></b><small>{disconnected(player) && <em className="disconnect-badge">CAIU DA PARTIDA</em>}{!disconnected(player) && Number(player.rating) === bestRating && bestRating > 0 && <em className="match-best-rating"><StatIcon name="rating"/> MELHOR NOTA</em>}{Number(player.goals) === maxGoals && maxGoals > 0 && <em><StatIcon name="goals"/> ARTILHEIRO</em>}{Number(player.assists) === maxAssists && maxAssists > 0 && <em><StatIcon name="assists"/> ASSISTÊNCIA</em>}{Number(player.passesMade) === maxPasses && maxPasses > 0 && <em><StatIcon name="passes"/> MAIS PASSES</em>}</small></div>
                     <strong>{player.rating ?? "—"}</strong><span>{player.goals ?? "—"}</span><span>{player.assists ?? "—"}</span><span>{player.passes ?? "—"}</span><span>{player.shots ?? "—"}</span><span>{player.tackles ?? "—"}</span><span>{player.saves ?? "—"}</span>
                   </article>
                 ))}
@@ -801,6 +813,7 @@ function MatchHistory({ workspace, canManage, detail, edit, remove }) {
               </span>
               <MatchScoreline
                 className="match-teams"
+                size="sm"
                 homeName="STRIX"
                 homeLogo={STRIX_BRAND.logo}
                 homeScore={match.strix_score}
