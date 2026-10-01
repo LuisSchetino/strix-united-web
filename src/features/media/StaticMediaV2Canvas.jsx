@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { STATIC_MEDIA_V2_CANVAS } from "./static-media-v2-core.js";
+import "./static-media-v2.css";
 
 /** Shared preview canvas: fixed export coordinates, responsive on-screen scale. */
 export function StaticMediaV2Canvas({ children, artboardRef, label, size = STATIC_MEDIA_V2_CANVAS }) {

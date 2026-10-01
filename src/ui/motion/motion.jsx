@@ -1,4 +1,5 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { CloseIcon } from "../CloseButton.jsx";
 import "./motion.css";
 
 const seenNumbers = new Set();
@@ -152,7 +153,7 @@ function ToastItem({ toast, depth, dismiss }) {
     onPointerUp={pointerUp} onPointerCancel={() => { start.current = null; setDrag(0); }} onClick={() => Math.abs(drag) < 5 && dismiss(toast.id)}>
     <span aria-hidden="true">{toast.tone === "error" ? "!" : toast.tone === "warning" ? "i" : "✓"}</span>
     <div><small>{toast.tone === "error" ? "ALGO DEU ERRADO" : toast.tone === "warning" ? "ATENÇÃO" : "TUDO CERTO"}</small><b>{toast.message}</b></div>
-    <em aria-hidden="true">×</em><i aria-hidden="true" />
+    <em aria-hidden="true"><CloseIcon size={14} /></em><i aria-hidden="true" />
   </button>;
 }
 

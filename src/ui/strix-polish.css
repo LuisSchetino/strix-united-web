@@ -1,0 +1,303 @@
+/* Strix FC27 consistency layer.
+   Loaded last. One surface language for menus, dialogs and the empty Central:
+   black, graphite, off-white, hairlines. The analytical blue is reserved for
+   data values (statistics.css) and never paints structure here. */
+
+:root{
+  --sp-surface:#0b0d10;
+  --sp-raised:#101318;
+  --sp-hover:#15181d;
+  --sp-line:rgba(255,255,255,.08);
+  --sp-line-strong:rgba(255,255,255,.14);
+  --sp-text:#f5f5f5;
+  --sp-soft:#d8dce0;
+  --sp-muted:#8e969f;
+  --sp-kicker:#aeb4bb;
+  }
+
+/* ---------- Menus: one editorial surface, no per-item boxes ---------- */
+.agenda-game .agenda-actions,
+.action-menu-popover{
+  min-width:224px;
+  padding:4px 0;
+  overflow:hidden;
+  border:1px solid var(--sp-line-strong);
+  border-radius:12px;
+  background:var(--sp-surface)!important;
+  box-shadow:0 14px 34px #000a;
+  animation:sp-menu-in var(--motion-control) var(--motion-ease) both;
+}
+.agenda-game .agenda-actions>button,
+.action-menu-popover>button{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  width:100%;
+  min-height:44px;
+  margin:0!important;
+  padding:0 16px!important;
+  border:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+  color:var(--sp-soft)!important;
+  font:800 11px/1 Inter,sans-serif!important;
+  letter-spacing:.06em!important;
+  text-align:left;
+  transition:background var(--motion-micro) ease,color var(--motion-micro) ease;
+}
+.agenda-game .agenda-actions>button+button,
+.action-menu-popover>button+button{border-top:1px solid var(--sp-line)!important}
+.agenda-game .agenda-actions>button svg,
+.action-menu-popover>button svg{flex:0 0 15px;color:var(--sp-muted);transition:color var(--motion-micro) ease}
+.agenda-game .agenda-actions>button:hover,
+.agenda-game .agenda-actions>button:focus-visible,
+.action-menu-popover>button:hover,
+.action-menu-popover>button:focus-visible{
+  background:var(--sp-hover)!important;
+  color:#fff!important;
+  outline:0;
+}
+.agenda-game .agenda-actions>button:hover svg,
+.agenda-game .agenda-actions>button:focus-visible svg,
+.action-menu-popover>button:hover svg,
+.action-menu-popover>button:focus-visible svg{color:#fff;transform:none}
+.agenda-game .agenda-actions>button:focus-visible,
+.action-menu-popover>button:focus-visible{outline:0!important;box-shadow:inset 2px 0 0 #f5f5f5}
+/* Destructive actions stay in the black/white family; weight carries the warning. */
+.agenda-game .agenda-actions>button.danger,
+.action-menu-popover>button.is-danger{color:var(--sp-soft)!important}
+.agenda-game .agenda-actions>button.delete,
+.action-menu-popover>button.is-danger{color:#fff!important;font-weight:900!important}
+.agenda-game .agenda-actions>button.delete svg,
+.action-menu-popover>button.is-danger svg{color:#fff}
+.action-menu-popover>button.is-danger:hover,
+.action-menu-popover>button.is-danger:focus-visible{background:var(--sp-hover)!important;color:#fff!important}
+@keyframes sp-menu-in{
+  from{opacity:0;translate:0 6px}
+  to{opacity:1;translate:0 0}
+}
+
+/* ---------- Confirmation dialogs: centered, neutral, same shell ---------- */
+.modal-backdrop.is-centered{
+  place-items:center!important;
+  align-items:center!important;
+  justify-items:center!important;
+  padding:20px!important;
+  overflow-y:auto;
+}
+.agenda-confirm-dialog,
+.competition-delete-dialog{
+  width:min(440px,100%)!important;
+  align-self:center!important;
+  border:1px solid var(--sp-line-strong)!important;
+  border-radius:16px!important;
+  background:var(--sp-surface)!important;
+  box-shadow:0 30px 90px #000!important;
+  color:var(--sp-text);
+  animation:sp-dialog-in var(--motion-modal) var(--motion-ease) both;
+}
+.agenda-confirm-dialog>header{
+  padding:20px 22px!important;
+  border-bottom:1px solid var(--sp-line)!important;
+}
+.agenda-confirm-dialog>header span,
+.competition-delete-dialog>span{color:var(--sp-kicker)!important}
+.agenda-confirm-dialog h2,
+.competition-delete-dialog h2{font-size:21px;letter-spacing:-.02em;color:var(--sp-text)}
+.agenda-confirm-dialog p,
+.competition-delete-dialog>p{color:var(--sp-muted)!important}
+.agenda-confirm-dialog>footer{
+  padding:16px 22px!important;
+  border-top:1px solid var(--sp-line)!important;
+}
+.agenda-confirm-dialog .close-button,
+.competition-import-modal>header>.close-button{
+  width:42px;height:42px;min-width:42px;min-height:42px;
+  border:1px solid #ffffff24;border-radius:50%;
+  background:#14181d;color:#e8eaec;font-size:0;
+}
+/* The decisive action has the highest contrast, not a red block. */
+.agenda-confirm-danger,
+.competition-danger{
+  min-height:40px;
+  padding:0 16px;
+  border:1px solid #f5f5f5!important;
+  border-radius:9px;
+  background:#f5f5f5!important;
+  color:#050607!important;
+  font-size:10px;
+  font-weight:900;
+  letter-spacing:.08em;
+  transition:background var(--motion-micro) ease,transform var(--motion-micro) var(--motion-ease);
+}
+.agenda-confirm-danger:hover,
+.competition-danger:hover{background:#fff!important}
+.agenda-confirm-danger:active,
+.competition-danger:active{transform:scale(.98)}
+@keyframes sp-dialog-in{
+  from{opacity:0;translate:0 8px;scale:.985}
+  to{opacity:1;translate:0 0;scale:1}
+}
+
+/* ---------- Adicionar campeonato: Strix container, competition content ---------- */
+.competition-modal-layer{background:rgba(3,4,5,.84)}
+.competition-import-modal,
+.archive-preview{
+  border:1px solid var(--sp-line-strong);
+  border-radius:18px;
+  background:var(--sp-surface);
+  box-shadow:0 30px 90px #000;
+}
+.competition-import-modal>header{
+  align-items:flex-start;
+  gap:18px;
+  padding:22px 24px;
+  border-bottom:1px solid var(--sp-line);
+  background:var(--sp-raised);
+}
+.competition-import-modal>header span,
+.archive-preview>span{color:var(--sp-kicker)}
+.competition-import-modal h2{margin:6px 0 4px;font-size:22px;letter-spacing:-.02em}
+.competition-import-modal header p{color:var(--sp-muted);font-size:12px}
+.competition-url-row{align-items:end;padding:22px 24px}
+.competition-url-row label{color:var(--sp-kicker);letter-spacing:.12em}
+.competition-url-row input,
+.archive-preview input{
+  height:46px;
+  border:1px solid var(--sp-line-strong);
+  border-radius:10px;
+  background:var(--sp-raised);
+  color:var(--sp-text);
+  transition:border-color var(--motion-micro) ease,box-shadow var(--motion-micro) ease,background var(--motion-micro) ease;
+}
+.competition-url-row input::placeholder{color:#5f6670}
+.competition-url-row input:hover{border-color:#ffffff33}
+.competition-url-row input:focus,
+.archive-preview input:focus{
+  outline:0;
+  border-color:#dfe2e5;
+  box-shadow:0 0 0 3px #ffffff12;
+  background:#13171c;
+}
+.competition-url-row .primary{min-height:46px;padding:0 22px;white-space:nowrap}
+.competition-url-row .primary:disabled,
+.competition-import-preview>footer .primary:disabled{
+  opacity:.6;
+  cursor:wait;
+  animation:sp-breathe 1.4s ease-in-out infinite;
+}
+.competition-import-modal>.competition-error{margin:0 24px 6px}
+.competition-import-preview{
+  margin:0 24px 24px;
+  background:
+    radial-gradient(circle at 16% 0,color-mix(in srgb,var(--competition-accent) 14%,transparent),transparent 46%),
+    var(--sp-surface);
+  animation:sp-rise var(--motion-section) var(--motion-ease) both;
+}
+.competition-preview-hero>img,
+.competition-preview-hero>span{background:#ffffff0d}
+.competition-preview-hero p{color:var(--sp-muted)}
+.competition-import-preview dl{background:var(--sp-line)}
+.competition-import-preview dl div{background:var(--sp-surface)}
+.competition-import-preview dt{color:var(--sp-muted);letter-spacing:.08em}
+.competition-import-preview dd{color:var(--sp-text)}
+.palette-picker>span{color:var(--sp-kicker);letter-spacing:.1em}
+.palette-picker button{transition:transform var(--motion-micro) var(--motion-ease),box-shadow var(--motion-micro) ease}
+.palette-picker button:hover{transform:scale(1.08)}
+.competition-import-preview>footer{border-top:1px solid var(--sp-line)}
+.competition-import-preview a{color:var(--sp-soft);letter-spacing:.08em;text-decoration:none;border-bottom:1px solid var(--sp-line-strong)}
+.competition-import-preview a:hover{color:#fff;border-bottom-color:#fff}
+@keyframes sp-rise{
+  from{opacity:0;translate:0 10px}
+  to{opacity:1;translate:0 0}
+}
+@keyframes sp-breathe{50%{opacity:.85}}
+
+/* ---------- Texto descritivo: neutro, nunca azul-acinzentado ---------- */
+.data-page-header{border-bottom-color:var(--sp-line)!important}
+.data-page-header p,
+.competitions-header-copy>p,
+.statistics-stat-card>p,
+.statistics-no-data,
+.statistics-section-heading>p,
+.statistics-criterion,
+.statistics-v3 .statistics-goalkeeper-card>header p,
+.statistics-v3 .statistics-goalkeeper-card>header small{color:var(--sp-muted)!important}
+.agenda-match small{color:var(--sp-muted)}
+.game-competition{color:var(--sp-kicker)}
+.agenda-game>button{color:var(--sp-muted)}
+.agenda-game>button:hover{color:#fff}
+.analysis-player-picker>i{background:#4b5159}
+
+/* ---------- Central sem jogos: logo + background vivo, nada mais ---------- */
+.page-home .match-hero.is-free-night{
+  position:relative;
+  display:grid!important;
+  place-items:center;
+  min-height:clamp(340px,50vh,500px);
+  padding:0!important;
+  overflow:hidden;
+  isolation:isolate;
+}
+.match-hero.is-free-night:before,
+.match-hero.is-free-night:after{display:none!important}
+.free-night-field{position:absolute;inset:0;z-index:0;overflow:hidden;pointer-events:none}
+.free-night-field:before{
+  content:"";
+  position:absolute;
+  inset:0;
+  opacity:.5;
+  background:
+    repeating-linear-gradient(90deg,transparent 0 79px,rgba(255,255,255,.035) 79px 80px),
+    radial-gradient(ellipse 60% 70% at 50% 50%,rgba(255,255,255,.05),transparent 70%);
+}
+.free-night-beam{
+  position:absolute;
+  top:-20%;
+  height:140%;
+  width:22%;
+  left:-30%;
+  opacity:0;
+  transform:skewX(-18deg);
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.08) 50%,transparent);
+  animation:sp-beam 13s linear infinite;
+}
+.free-night-beam.is-b{width:12%;animation-duration:17s;animation-delay:-6s}
+.free-night-beam.is-c{width:30%;animation-duration:21s;animation-delay:-13s;background:linear-gradient(90deg,transparent,rgba(255,255,255,.045) 50%,transparent)}
+.free-night-ring{
+  position:absolute;
+  left:50%;top:50%;
+  width:min(62vw,420px);aspect-ratio:1;
+  border:1px solid rgba(255,255,255,.07);
+  border-radius:50%;
+  translate:-50% -50%;
+  animation:sp-ring 9s ease-in-out infinite;
+}
+.free-night-ring.is-b{width:min(92vw,640px);border-color:rgba(255,255,255,.04);animation-delay:-4.5s}
+.free-night-logo{position:relative;z-index:1;display:grid;place-items:center;animation:sp-float 8s ease-in-out infinite}
+.free-night-logo .crest{width:clamp(124px,17vw,196px);height:auto;filter:drop-shadow(0 0 26px rgba(255,255,255,.12))!important}
+@keyframes sp-beam{
+  0%{left:-35%;opacity:0}
+  15%,85%{opacity:1}
+  100%{left:115%;opacity:0}
+}
+@keyframes sp-ring{
+  0%,100%{opacity:.55;scale:.97}
+  50%{opacity:1;scale:1.03}
+}
+@keyframes sp-float{50%{translate:0 -5px}}
+
+@media(max-width:580px){
+  .page-home .match-hero.is-free-night{min-height:clamp(280px,42vh,380px)}
+  .free-night-ring.is-b{display:none}
+}
+@media(prefers-reduced-motion:reduce){
+  .agenda-game .agenda-actions,
+  .action-menu-popover,
+  .agenda-confirm-dialog,
+  .competition-delete-dialog,
+  .competition-import-preview,
+  .free-night-beam,.free-night-ring,.free-night-logo,
+  .competition-url-row .primary:disabled{animation:none!important}
+  .free-night-beam{display:none}
+}

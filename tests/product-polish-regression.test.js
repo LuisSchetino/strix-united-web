@@ -50,13 +50,12 @@ test("announcement studio keeps filtering, selection, ordering and export action
     read("../src/features/media/AnnounceStudio.jsx"),
     read("../src/features/media/announce.css"),
   ]);
-  for (const feature of ["announce-filter-types", "announce-filter-positions", "SELEÇÃO", "SÓ JOGADORES", "SÓ ESTRUTURA", "announce-person-index", "Subir ${person.name}", "Descer ${person.name}", "announce-generate", "announce-history-item"]) {
+  for (const feature of ["announce-filters", "SÓ JOGADORES", "SÓ ESTRUTURA", "announce-person-index", "Subir ${person.name}", "Descer ${person.name}", "announce-generate", "ArchiveList", "<Options>"]) {
     assert.ok(page.includes(feature) || css.includes(feature), `missing media UI feature: ${feature}`);
   }
   assert.match(page, /VISUALIZAR/);
   assert.match(page, /BAIXAR/);
-  assert.match(css, /\.media-page>\.announce-studio\{grid-column:1\/-1/);
-  assert.match(css, /@media\(max-width:580px\)/);
+  assert.match(css, /\.announce-people\{[^}]*overflow:auto/);
 });
 
 test("empty agenda widget exposes only the centered crest with an accessible action label", async () => {

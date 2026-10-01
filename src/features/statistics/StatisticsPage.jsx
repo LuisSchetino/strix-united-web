@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   IconArrowRight, IconArrowsLeftRight, IconBallFootball, IconChartBar, IconHandStop,
@@ -44,11 +44,15 @@ function RankingModal({ ranking, metric, title, suffix = "", close }) {
     <section ref={dialogRef} tabIndex={-1} className="statistics-ranking-modal" role="dialog" aria-modal="true" aria-label={`Ranking completo de ${title}`}>
       <header><div><span>ESTATÍSTICAS · FC27</span><h2>Ranking completo</h2><p>{title}</p><RastroDataSignature label="Analytics by" /></div><CloseButton onClick={close} /></header>
       <div className="statistics-ranking-list">{ranking.map((player, index) => <article className={index < 3 ? `is-top is-top-${index + 1}` : ""} key={player.handle}>
-        <strong>{index + 1}</strong><div><b>{player.name}</b>{player.handle !== player.name && <small>{displayHandle(player.handle)}</small>}<em>{player.positions?.join(" · ") || "EA FC"}{player.memberType ? ` · ${player.memberType}` : ""}</em></div><div className="statistics-ranking-value"><span>{display(player[metric], suffix)}</span>{index > 0 && leader > Number(player[metric] || 0) && <small>-{Number((leader - Number(player[metric] || 0)).toFixed(1))} do líder</small>}</div>
+        <strong>{index + 1}</strong><div><b>{player.name}</b>{player.handle !== player.name && <small>{displayHandle(player.handle)}</small>}<em>{player.positions?.join(" · ") || "EA FC"}{player.memberType ? ` · ${player.memberType}` : ""}</em></div><div className="statistics-ranking-value"><span><RatingValue metric={metric} value={player[metric]} suffix={suffix}/></span>{index > 0 && leader > Number(player[metric] || 0) && <small>-{Number((leader - Number(player[metric] || 0)).toFixed(1))} do líder</small>}</div>
       </article>)}</div>
     </section>
   </div>, document.body);
 }
+
+const RatingValue = ({ metric, value, suffix }) => metric === "averageRating" && value !== null && value !== undefined
+  ? <span className="statistics-rating-value"><IconStar size={13} stroke={1.9} aria-hidden="true" focusable="false"/>{display(value, suffix)}</span>
+  : display(value, suffix);
 
 function RankingCard({ title, metric, players, icon: Icon, suffix = "", criterion }) {
   const [open, setOpen] = useState(false);
@@ -56,7 +60,7 @@ function RankingCard({ title, metric, players, icon: Icon, suffix = "", criterio
   const top = ranking.slice(0, 5);
   return <article className="statistics-ranking-card">
     <header><span><Icon size={19} stroke={1.7}/></span><div><small>RANKING</small><h3>{title}</h3></div></header>
-    {top.length ? <ol>{top.map((player, index) => <li key={player.handle}><em>{index + 1}</em><div><b>{player.name}</b><small>{player.handle !== player.name ? displayHandle(player.handle) : `${player.games} jogo(s)`}</small></div><strong>{display(player[metric], suffix)}</strong></li>)}</ol> : <p className="statistics-no-data">Amostra insuficiente.</p>}
+    {top.length ? <ol>{top.map((player, index) => <li key={player.handle}><em>{index + 1}</em><div><b>{player.name}</b><small>{player.handle !== player.name ? displayHandle(player.handle) : `${player.games} jogo(s)`}</small></div><strong><RatingValue metric={metric} value={player[metric]} suffix={suffix}/></strong></li>)}</ol> : <p className="statistics-no-data">Amostra insuficiente.</p>}
     {criterion && <p className="statistics-criterion">{criterion}</p>}
     {ranking.length > 5 && <button type="button" onClick={() => setOpen(true)}>VER RANKING <IconArrowRight size={15}/></button>}
     {open && <RankingModal ranking={ranking} metric={metric} title={title} suffix={suffix} close={() => setOpen(false)}/>}
@@ -64,23 +68,36 @@ function RankingCard({ title, metric, players, icon: Icon, suffix = "", criterio
 }
 
 function GoalkeeperCard({ player }) {
-  const metrics = [
-    ["DEFESAS", player.saves, player.metricSamples?.saves > 0],
-    ["DEFESAS / JOGO", player.savesPerGame, player.metricSamples?.saves > 0 && player.goalkeeperGames > 0],
-    ["CLEAN SHEETS", player.cleanSheetsGk, player.metricSamples?.cleansheetsgk > 0],
-    ["CLEAN SHEETS DEF", player.cleanSheetsDef, player.metricSamples?.cleansheetsdef > 0],
-    ["NOTA MÉDIA", player.averageRating, player.ratings > 0],
-    ["MOTM", player.mom, player.metricSamples?.mom > 0],
-    ["CARTÕES VERMELHOS", player.redcards, player.metricSamples?.redcards > 0],
-    ["REFLEX SAVES", player.reflexSaves, player.metricSamples?.reflexSaves > 0],
-    ["GOOD DIRECTION SAVES", player.goodDirectionSaves, player.metricSamples?.goodDirectionSaves > 0],
-    ["CROSS SAVES", player.crossSaves, player.metricSamples?.crossSaves > 0],
-    ["BALL DIVE SAVES", player.ballDiveSaves, player.metricSamples?.ballDiveSaves > 0],
-    ["PARRY SAVES", player.parrySaves, player.metricSamples?.parrySaves > 0],
-    ["PUNCH SAVES", player.punchSaves, player.metricSamples?.punchSaves > 0],
+  const sampled = (metric) => player.metricSamples?.[metric] > 0;
+  const headline = [
+    ["DEFESAS", player.saves, sampled("saves")],
+    ["DEFESAS / JOGO", player.savesPerGame, sampled("saves") && player.goalkeeperGames > 0],
     ["GOLS SOFRIDOS", player.goalsAgainst, player.goalsAgainstSamples > 0],
+    ["NOTA MÉDIA", player.averageRating, player.ratings > 0],
+  ];
+  const record = [
+    ["CLEAN SHEETS", player.cleanSheetsGk, sampled("cleansheetsgk")],
+    ["CLEAN SHEETS DEF", player.cleanSheetsDef, sampled("cleansheetsdef")],
+    ["MOTM", player.mom, sampled("mom")],
+    ["CARTÕES VERMELHOS", player.redcards, sampled("redcards")],
   ].filter(([, , present]) => present);
-  return <article className="statistics-goalkeeper-card"><header><span><IconHandStop size={23}/></span><div><small>GOLEIRO · FC27</small><h3>{player.name}</h3>{player.handle !== player.name && <p>{displayHandle(player.handle)}</p>}</div></header><dl>{metrics.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{display(value)}</dd></div>)}</dl></article>;
+  const subtypes = [
+    ["REFLEX SAVES", player.reflexSaves, sampled("reflexSaves")],
+    ["GOOD DIRECTION SAVES", player.goodDirectionSaves, sampled("goodDirectionSaves")],
+    ["CROSS SAVES", player.crossSaves, sampled("crossSaves")],
+    ["BALL DIVE SAVES", player.ballDiveSaves, sampled("ballDiveSaves")],
+    ["PARRY SAVES", player.parrySaves, sampled("parrySaves")],
+    ["PUNCH SAVES", player.punchSaves, sampled("punchSaves")],
+  ].filter(([, , present]) => present);
+  return <article className="statistics-goalkeeper-card">
+    <header><span><IconHandStop size={23}/></span><div><small>GOLEIROS · FC27</small><h3>{player.name}</h3>{player.handle !== player.name && <p>{displayHandle(player.handle)}</p>}</div></header>
+    <dl className="statistics-keeper-headline">{headline.map(([label, value, present]) => <div key={label} className={present ? "" : "is-empty"}><dt>{label}</dt><dd>{present ? display(value) : "—"}</dd></div>)}</dl>
+    {record.length > 0 && <dl className="statistics-keeper-record">{record.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{display(value)}</dd></div>)}</dl>}
+    {subtypes.length > 0 && <section className="statistics-keeper-subtypes" aria-label="Subtipos de defesa disponíveis">
+      <header><small>SUBTIPOS DE DEFESA DISPONÍVEIS</small><span>Registros próprios da EA; não substituem o total oficial de defesas.</span></header>
+      <ul>{subtypes.map(([label, value]) => <li key={label}><i aria-hidden="true"/><span>{label}</span><b>{display(value)}</b></li>)}</ul>
+    </section>}
+  </article>;
 }
 
 function NightSummary({ matches, workspace }) {
@@ -134,24 +151,54 @@ function TeamData({ team }) {
   return <div className="statistics-panel-enter"><section className="statistics-team-identity"><ClubLogo name="Strix United" url={STRIX_BRAND.logo} sizes="(max-width:700px) 96px, 150px"/><div><span>DADOS DO TIME</span><h2>STRIX UNITED</h2><p>Club ID · {FC27_CLUB.clubId} <i aria-hidden="true">·</i> {FC27_CLUB.platform}</p></div></section><section className="statistics-team-grid">{cards.map(([metric, label, value, suffix, note, tooltip], index) => <StatCard key={metric} metric={metric} label={label} value={value} suffix={suffix} note={note} tooltip={tooltip} index={index}/>)}</section></div>;
 }
 
-function PlayerProfile({ player, players, matches, workspace }) {
+const LIMITED_SAMPLE_GAMES = 3;
+function sampleStatus(player) {
+  if (player.noSample || !(player.validGames > 0)) return { key: "none", label: "SEM AMOSTRA" };
+  if (player.validGames < LIMITED_SAMPLE_GAMES) return { key: "limited", label: "AMOSTRA LIMITADA" };
+  return { key: "ok", label: "AMOSTRA SUFICIENTE" };
+}
+
+function PlayerProfile({ player, players, matches, workspace, onClose }) {
   const profile = useMemo(() => buildPlayerProfile(player, matches, { aliases: workspace.aliases }), [player, matches, workspace.aliases]);
   if (!player || !profile) return null;
   const archetype = player.archetypeSnapshots?.at(-1);
   const archetypeInfo = archetype ? describeEaArchetype(archetype.archetypeId) : null;
   const positions = player.positions?.length ? player.positions.join(" · ") : player.eaPositions?.join(" · ") || "EA FC";
+  const rosterEntry = (workspace.players || []).find((item) => String(item.id) === String(player.playerId));
+  const shirt = rosterEntry?.shirt_number;
+  const status = sampleStatus(player);
+  const lastGame = profile.appearances.find((row) => row.match);
+  const lastMatch = lastGame?.match;
+  const lastScore = lastMatch && Number.isFinite(Number(lastMatch.strix_score)) && Number.isFinite(Number(lastMatch.opponent_score)) ? `${Number(lastMatch.strix_score)}–${Number(lastMatch.opponent_score)}` : "";
+  const dateLabel = (value) => value ? new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short" }).format(new Date(value)) : "Data indisponível";
+  const jump = (id) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
   const contextMetrics = player.goalkeeper ? [["averageRating", "NOTA MÉDIA"], ["savesPerGame", "DEFESAS / JOGO"], ["cleanSheets", "CLEAN SHEETS"]] : [["averageRating", "NOTA MÉDIA"], ["passAccuracy", "PRECISÃO DE PASSE"], ["tackles", "DESARMES"]];
   const comparisonLabels = [["rating", "NOTA MÉDIA", ""], ["passAccuracy", "PRECISÃO", "%"], ["tacklesPerGame", "DESARMES / JOGO", ""], ["goalAssists", "G+A RECENTE", ""]];
-  const dateLabel = (value) => value ? new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short" }).format(new Date(value)) : "Data indisponível";
   const recordValue = (record) => record.label.includes("PRECISÃO") ? `${Number(record.value).toFixed(1)}%` : record.label === "MAIOR NOTA EA" ? Number(record.value).toFixed(1) : Number.isInteger(Number(record.value)) ? Number(record.value) : Number(record.value).toFixed(1);
   return <section className="statistics-individual-profile">
-    <header className="statistics-profile-identity"><div><span>FICHA INDIVIDUAL · FC27</span><h2>{player.name}</h2><p>{positions}{player.memberType ? ` · ${player.memberType}` : ""}{archetypeInfo ? ` · ${archetypeInfo.name}` : ""}</p></div><small>{player.noSample ? "Sem amostra de partidas" : `${player.validGames || 0} atuações válidas · ${player.games || 0} registros EA`}</small></header>
+    <header className="statistics-profile-identity statistics-player-card">
+      <div className="statistics-player-card-main">
+        <span className="statistics-player-card-number" aria-label={shirt == null ? "Sem número" : `Camisa ${shirt}`}>{shirt == null || shirt === "" ? "—" : String(shirt).padStart(2, "0")}</span>
+        <div><span>FICHA INDIVIDUAL · FC27 · TEMPORADA 2026/27</span><h2>{player.name}</h2><p>{[displayHandle(player.handle) !== displayHandle(player.name) ? displayHandle(player.handle) : "", positions, player.memberType && player.memberType !== "complete" ? player.memberType : ""].filter(Boolean).join(" · ")}{archetypeInfo?.verified ? ` · ${archetypeInfo.name}` : ""}</p></div>
+      </div>
+      <div className="statistics-player-card-side">
+        <ul className="statistics-player-status" aria-label="Status no elenco">
+          <li>ATIVO</li>
+          {String(player.memberType || "").toLowerCase().startsWith("teste") && <li>EM TESTE</li>}
+          <li className={`is-sample is-${status.key}`}>{status.label}</li>
+        </ul>
+        <small>{player.noSample ? "Sem atuações registradas" : `${player.validGames || 0} atuações válidas · ${player.games || 0} registros EA`}</small>
+        {onClose && <CloseButton onClick={onClose} label="Fechar ficha" />}
+      </div>
+    </header>
+    {lastMatch && <section className="statistics-last-game" aria-label="Última atuação"><small>ÚLTIMA ATUAÇÃO</small><b>{lastMatch.opponent_name || lastMatch.opponent || "Partida"}</b>{lastScore && <span>{lastScore}</span>}<span>{dateLabel(lastMatch.played_at)}</span>{lastGame.rating != null && Number.isFinite(Number(lastGame.rating)) && <strong>NOTA {Number(lastGame.rating).toFixed(1)}</strong>}{Number.isFinite(Number(lastGame.goals)) && Number.isFinite(Number(lastGame.assists)) && <em>G/A {Number(lastGame.goals)}/{Number(lastGame.assists)}</em>}</section>}
+    <nav className="statistics-profile-shortcuts" aria-label="Atalhos da ficha"><button type="button" onClick={() => jump("statistics-profile-form")}>VER FORMA</button><button type="button" onClick={() => jump("statistics-profile-records")}>VER RECORDES</button></nav>
     <div className="statistics-profile-season"><article><small>TEMPORADA · NOTA</small><strong>{display(player.averageRating)}</strong></article><article><small>G · A · G+A</small><strong>{observed(player, "goals")} · {observed(player, "assists")} · {player.metricSamples?.goals > 0 && player.metricSamples?.assists > 0 ? display(player.goalAssists) : "—"}</strong></article><article><small>PASSES CERTOS</small><strong>{observed(player, "passesMade")}</strong></article><article><small>DESARMES</small><strong>{observed(player, "tackles")}</strong></article><article><small>MOTM</small><strong>{observed(player, "mom")}</strong></article></div>
     <div className="statistics-profile-lower">
-      <section className="statistics-profile-form"><header><div><span>{profile.recent.length ? `ÚLTIMOS ${profile.recent.length}` : player.noSample ? "SEM AMOSTRA" : "FORMA RECENTE"}</span><h3>Forma recente</h3></div></header>{profile.recent.length ? <ol>{profile.recent.map((row, index) => <li key={`${row.match.id || row.match.played_at}-${index}`}><strong>{Number(row.rating).toFixed(1)}</strong><span>{row.match.opponent_name || row.match.opponent || "Adversário"}</span><small>{dateLabel(row.match.played_at)}</small></li>)}</ol> : <p>Sem notas EA válidas neste recorte.</p>}
+      <section id="statistics-profile-form" className="statistics-profile-form"><header><div><span>{profile.recent.length ? `ÚLTIMOS ${profile.recent.length}` : player.noSample ? "SEM AMOSTRA" : "FORMA RECENTE"}</span><h3>Forma recente</h3></div></header>{profile.recent.length ? <ol>{profile.recent.map((row, index) => <li key={`${row.match.id || row.match.played_at}-${index}`}><strong>{Number(row.rating).toFixed(1)}</strong><span>{row.match.opponent_name || row.match.opponent || "Adversário"}</span><small>{dateLabel(row.match.played_at)}</small></li>)}</ol> : <p>Sem notas EA válidas neste recorte.</p>}
         <div className="statistics-form-comparisons">{comparisonLabels.map(([key, label, suffix]) => { const item = profile.comparisons[key]; return item ? <article key={key}><small>{label}</small><b>{display(item.recent, suffix)}</b><span>{item.delta > 0 ? "+" : ""}{display(item.delta, item.suffix === "pp" ? " pp" : "")} vs temporada</span></article> : null; })}</div>
       </section>
-      <section className="statistics-profile-records"><header><div><span>RECORDE PESSOAL</span><h3>Recordes FC27</h3></div></header>{profile.records.length ? <ul>{profile.records.slice(0, player.goalkeeper ? 6 : 7).map((record) => <li key={record.label}><span><small>{record.label}</small><b>{recordValue(record)}</b></span><em>{record.match.opponent_name || record.match.opponent || "Partida"} · {dateLabel(record.match.played_at)}</em></li>)}</ul> : <p>Sem amostra individual válida para recordes.</p>}
+      <section id="statistics-profile-records" className="statistics-profile-records"><header><div><span>RECORDE PESSOAL</span><h3>Recordes FC27</h3></div></header>{profile.records.length ? <ul>{profile.records.slice(0, player.goalkeeper ? 6 : 7).map((record) => <li key={record.label}><span><small>{record.label}</small><b>{recordValue(record)}</b></span><em>{record.match.opponent_name || record.match.opponent || "Partida"} · {dateLabel(record.match.played_at)}</em></li>)}</ul> : <p>Sem amostra individual válida para recordes.</p>}
         <div className="statistics-position-context"><small>CONTEXTO · {player.goalkeeper ? "GOL" : "POSIÇÃO"}</small>{contextMetrics.map(([metric, label]) => { const context = buildPositionContext(player, players, metric); const hasMetricSample = metric === "averageRating" ? player.ratings > 0 : metric === "cleanSheets" ? (player.metricSamples?.cleansheetsdef || 0) + (player.metricSamples?.cleansheetsgk || 0) > 0 : Boolean(player.metricSamples?.[metric]) || metric === "savesPerGame" && player.goalkeeperGames > 0; return <span key={metric}><b>{label}</b><em>{!hasMetricSample || context.insufficient ? "Sem amostra suficiente" : `${context.rank}º entre ${context.total} ${context.group === "GOL" ? "GKs" : context.group === "DEF" ? "DEFs" : context.group === "ATA" ? "ATAs" : "MEIs"}`}</em></span>; })}</div>
       </section>
     </div>
@@ -163,11 +210,15 @@ function PlayersData({ players, matches, workspace }) {
   const eligibleProfiles = useMemo(() => buildPlayerProfileChoices(players, workspace.players, workspace.aliases), [players, workspace.players, workspace.aliases]);
   const profileKey = (player) => String(player.playerId || player.eaPlayerIds?.[0] || player.handle);
   const [selectedPlayerKey, setSelectedPlayerKey] = useState("");
-  const selectedPlayer = eligibleProfiles.find((player) => profileKey(player) === selectedPlayerKey) || eligibleProfiles[0] || null;
+  const selectedPlayer = eligibleProfiles.find((player) => profileKey(player) === selectedPlayerKey) || null;
+  const profileRef = useRef(null);
+  useEffect(() => {
+    if (selectedPlayerKey) profileRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [selectedPlayerKey]);
   const line = players.filter((player) => player.active !== false && !player.goalkeeper).sort((a, b) => Number(b[sort] || 0) - Number(a[sort] || 0) || b.games - a.games);
   const keepers = players.filter((player) => player.active !== false && player.goalkeeper);
   const sortOptions = [["averageRating", "Nota"], ["goals", "Gols"], ["assists", "Assistências"], ["goalAssists", "G+A"], ["mom", "MOTM"], ["passesMade", "Passes certos"], ["passAccuracy", "Precisão"], ["shots", "Finalizações"], ["shotConversion", "Conversão"], ["tackles", "Desarmes"], ["tackleAccuracy", "Eficiência desarme"]];
-  return <div className="statistics-panel-enter"><section className="statistics-individual-roster"><header><div><span>FICHA DO ELENCO</span><h2>Leitura individual.</h2><p>Todo o elenco ativo, com ou sem atuação registrada.</p></div><small>{eligibleProfiles.length} jogadores ativos</small></header><div className="statistics-roster-list" aria-label="Elenco ativo — dados individuais">{eligibleProfiles.map((player) => { const key = profileKey(player); const position = player.positions?.join(" · ") || player.eaPositions?.join(" · ") || "Posição não definida"; const sample = player.noSample ? "Sem amostra" : `${player.validGames || 0} jogos válidos`; return <button type="button" key={key} className={`statistics-roster-row${profileKey(selectedPlayer || {}) === key ? " is-selected" : ""}`} aria-pressed={profileKey(selectedPlayer || {}) === key} onClick={() => setSelectedPlayerKey(key)}><span className="statistics-roster-name"><b>{player.name}</b><small>{position}</small></span><span className={`statistics-roster-sample${player.noSample ? " is-empty" : ""}`}>{sample}</span><span className="statistics-roster-data"><small>NOTA</small><b>{display(player.averageRating)}</b></span><span className="statistics-roster-data"><small>G · A</small><b>{observed(player, "goals")} · {observed(player, "assists")}</b></span><span className="statistics-roster-open" aria-hidden="true"><IconArrowRight size={18}/></span></button>; })}</div></section>{selectedPlayer && <PlayerProfile player={selectedPlayer} players={eligibleProfiles} matches={matches} workspace={workspace}/>}<div className="statistics-sort"><div><span>ORDENAR JOGADORES DE LINHA</span><RastroDataSignature label="Data by" /></div><SelectControl value={sort} onChange={setSort} options={sortOptions} label="Ordenar jogadores de linha" /></div><section className="statistics-player-table"><header><span>JOGADOR</span><span>EA ID</span><span>J</span><span>NOTA</span><span>GOLS</span><span>ASSIST.</span><span>G+A</span><span>CHUTES</span><span>CONV.</span><span>PASSES</span><span>PRECISÃO</span><span>DESARMES</span><span>TENTATIVAS</span><span>EFIC.</span><span>MOTM</span><span>% MOTM</span><span>VERMELHOS</span><span>CS DEF</span><span>ARQUÉTIPO RECENTE</span></header>{line.length ? line.map((player) => { const recentArchetype = player.archetypeSnapshots?.at(-1); const archetype = recentArchetype ? describeEaArchetype(recentArchetype.archetypeId) : null; const passesKnown = player.metricSamples?.passesMade > 0 && player.metricSamples?.passesAttempts > 0; const tackleEfficiencyKnown = player.metricSamples?.tackleAttempts > 0 && player.metricSamples?.tackles > 0; const conversionKnown = player.metricSamples?.shots > 0 && player.metricSamples?.goals > 0; return <article className={player.disconnected ? "is-disconnected" : ""} key={player.handle}><b>{player.name}<small>{player.handle !== player.name ? displayHandle(player.handle) : player.positions?.join(" · ")}</small>{player.disconnected && <em>CAIU DA PARTIDA</em>}</b><span data-label="EA ID" title={player.eaPlayerIds?.join(", ") || undefined}>{player.eaPlayerIds?.join(", ") || "—"}</span><span data-label="JOGOS">{player.games}</span><span data-label="NOTA">{display(player.averageRating)}</span><span data-label="GOLS">{observed(player, "goals")}</span><span data-label="ASSIST.">{observed(player, "assists")}</span><span data-label="G+A">{player.metricSamples?.goals > 0 && player.metricSamples?.assists > 0 ? player.goalAssists : "—"}</span><span data-label="CHUTES">{observed(player, "shots")}</span><span data-label="CONV.">{conversionKnown ? display(player.shotConversion, "%") : "—"}</span><span data-label="PASSES">{passesKnown ? `${player.passesMade}/${player.passAttempts}` : "—"}</span><span data-label="PRECISÃO">{passesKnown ? display(player.passAccuracy, "%") : "—"}</span><span data-label="DESARMES">{observed(player, "tackles")}</span><span data-label="TENTATIVAS">{observed(player, "tackleAttempts")}</span><span data-label="EFIC.">{tackleEfficiencyKnown ? display(player.tackleAccuracy, "%") : "—"}</span><span data-label="MOTM">{observed(player, "mom")}</span><span data-label="% MOTM">{player.metricSamples?.mom > 0 ? display(player.motmPercentage, "%") : "—"}</span><span data-label="VERMELHOS">{observed(player, "redcards")}</span><span data-label="CS DEF">{observed(player, "cleansheetsdef", player.cleanSheetsDef)}</span><span data-label="ARQUÉTIPO RECENTE">{archetype ? <span className="statistics-archetype" title={recentArchetype.playedAt ? `Snapshot da partida · ${recentArchetype.playedAt}` : "Snapshot de partida"}>{archetype.name}</span> : "—"}</span></article>; }) : <p className="statistics-no-data">Importe partidas com dados individuais para montar esta leitura.</p>}</section>{keepers.length > 0 && <><section className="statistics-section-heading"><div><span>LEITURA POR POSIÇÃO</span><h2>Goleiros.</h2></div><p>Métricas específicas, sem priorizar chutes ou desarmes.</p></section><section className="statistics-keeper-grid">{keepers.map((player) => <GoalkeeperCard key={player.handle} player={player}/>)}</section></>}</div>;
+  return <div className="statistics-panel-enter"><section className="statistics-individual-roster"><header><div><span>FICHA DO ELENCO</span><h2>Leitura individual.</h2><p>Todo o elenco ativo, com ou sem atuação registrada. Abra uma ficha para ver forma e recordes.</p></div><small>{eligibleProfiles.length} jogadores ativos</small></header><div className="statistics-roster-list" aria-label="Elenco ativo — dados individuais">{eligibleProfiles.map((player) => { const key = profileKey(player); const position = player.positions?.join(" · ") || player.eaPositions?.join(" · ") || "Posição não definida"; const sample = player.noSample ? "Sem amostra" : `${player.validGames || 0} jogos válidos`; return <button type="button" key={key} className={`statistics-roster-row${profileKey(selectedPlayer || {}) === key ? " is-selected" : ""}`} aria-pressed={profileKey(selectedPlayer || {}) === key} onClick={() => setSelectedPlayerKey(key)}><span className="statistics-roster-name"><b>{player.name}</b><small>{position}</small></span><span className={`statistics-roster-sample${player.noSample ? " is-empty" : ""}`}>{sample}</span><span className="statistics-roster-data"><small>NOTA</small><b>{display(player.averageRating)}</b></span><span className="statistics-roster-data"><small>G · A</small><b>{observed(player, "goals")} · {observed(player, "assists")}</b></span><span className="statistics-roster-open" aria-hidden="true"><IconArrowRight size={18}/></span></button>; })}</div></section>{selectedPlayer && <div ref={profileRef} className="statistics-profile-anchor"><PlayerProfile player={selectedPlayer} players={eligibleProfiles} matches={matches} workspace={workspace} onClose={() => setSelectedPlayerKey("")}/></div>}<div className="statistics-sort"><div><span>ORDENAR JOGADORES DE LINHA</span><RastroDataSignature label="Data by" /></div><SelectControl value={sort} onChange={setSort} options={sortOptions} label="Ordenar jogadores de linha" /></div><section className="statistics-player-table"><header><span>JOGADOR</span><span>EA ID</span><span>J</span><span>NOTA</span><span>GOLS</span><span>ASSIST.</span><span>G+A</span><span>CHUTES</span><span>CONV.</span><span>PASSES</span><span>PRECISÃO</span><span>DESARMES</span><span>TENTATIVAS</span><span>EFIC.</span><span>MOTM</span><span>% MOTM</span><span>VERMELHOS</span><span>CS DEF</span><span>ARQUÉTIPO RECENTE</span></header>{line.length ? line.map((player) => { const recentArchetype = player.archetypeSnapshots?.at(-1); const archetype = recentArchetype ? describeEaArchetype(recentArchetype.archetypeId) : null; const passesKnown = player.metricSamples?.passesMade > 0 && player.metricSamples?.passesAttempts > 0; const tackleEfficiencyKnown = player.metricSamples?.tackleAttempts > 0 && player.metricSamples?.tackles > 0; const conversionKnown = player.metricSamples?.shots > 0 && player.metricSamples?.goals > 0; return <article className={player.disconnected ? "is-disconnected" : ""} key={player.handle}><b>{player.name}<small>{player.handle !== player.name ? displayHandle(player.handle) : player.positions?.join(" · ")}</small>{player.disconnected && <em>CAIU DA PARTIDA</em>}</b><span data-label="EA ID" title={player.eaPlayerIds?.join(", ") || undefined}>{player.eaPlayerIds?.join(", ") || "—"}</span><span data-label="JOGOS">{player.games}</span><span data-label="NOTA">{display(player.averageRating)}</span><span data-label="GOLS">{observed(player, "goals")}</span><span data-label="ASSIST.">{observed(player, "assists")}</span><span data-label="G+A">{player.metricSamples?.goals > 0 && player.metricSamples?.assists > 0 ? player.goalAssists : "—"}</span><span data-label="CHUTES">{observed(player, "shots")}</span><span data-label="CONV.">{conversionKnown ? display(player.shotConversion, "%") : "—"}</span><span data-label="PASSES">{passesKnown ? `${player.passesMade}/${player.passAttempts}` : "—"}</span><span data-label="PRECISÃO">{passesKnown ? display(player.passAccuracy, "%") : "—"}</span><span data-label="DESARMES">{observed(player, "tackles")}</span><span data-label="TENTATIVAS">{observed(player, "tackleAttempts")}</span><span data-label="EFIC.">{tackleEfficiencyKnown ? display(player.tackleAccuracy, "%") : "—"}</span><span data-label="MOTM">{observed(player, "mom")}</span><span data-label="% MOTM">{player.metricSamples?.mom > 0 ? display(player.motmPercentage, "%") : "—"}</span><span data-label="VERMELHOS">{observed(player, "redcards")}</span><span data-label="CS DEF">{observed(player, "cleansheetsdef", player.cleanSheetsDef)}</span><span data-label="ARQUÉTIPO RECENTE">{archetype ? <span className="statistics-archetype" title={recentArchetype.playedAt ? `Snapshot da partida · ${recentArchetype.playedAt}` : "Snapshot de partida"}>{archetype.name}</span> : "—"}</span></article>; }) : <p className="statistics-no-data">Importe partidas com dados individuais para montar esta leitura.</p>}</section>{keepers.length > 0 && <><section className="statistics-section-heading"><div><span>LEITURA POR POSIÇÃO</span><h2>Goleiros.</h2></div><p>Métricas específicas, sem priorizar chutes ou desarmes.</p></section><section className="statistics-keeper-grid">{keepers.map((player) => <GoalkeeperCard key={player.handle} player={player}/>)}</section></>}</div>;
 }
 
 export function StatisticsPage({ workspace, matches = workspace.matches || [] }) {

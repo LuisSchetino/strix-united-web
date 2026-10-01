@@ -1,0 +1,49 @@
+warning: in the working copy of 'package.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/features/media/AnnounceStudio.jsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/features/media/MediaPage.jsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/features/media/StaticMediaV2Canvas.jsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/features/media/announce.css', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/features/media/media-jobs.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/features/media/media-look.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/features/media/media.css', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/features/media/static-media-v2.css', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/features/statistics/StatisticsPage.jsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/features/statistics/statistics.css', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/main.jsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/ui-bugfix.css', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/ui/ActionMenu.jsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/ui/action-menu.css', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/ui/motion/motion.css', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/ui/motion/motion.jsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/visual-announce-ui.jsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/visual-test.jsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/agenda-livre.test.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/media-look.test.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/media-page.test.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/product-polish-regression.test.js', LF will be replaced by CRLF the next time Git touches it
+ package.json                               |   2 [32m+[m[31m-[m
+ src/features/media/AnnounceStudio.jsx      | 641 [32m+++++++++++[m[31m----------------[m
+ src/features/media/MediaLookSwitch.jsx     |  34 [31m--[m
+ src/features/media/MediaPage.jsx           | 671 [32m++[m[31m---------------------------[m
+ src/features/media/StaticMediaV2Canvas.jsx |   1 [32m+[m
+ src/features/media/StaticMediaV2Studio.jsx |  95 [31m----[m
+ src/features/media/announce.css            | 159 [32m++[m[31m-----[m
+ src/features/media/media-jobs.js           |   8 [32m+[m
+ src/features/media/media-look.js           |  35 [32m+[m[31m-[m
+ src/features/media/media.css               | 313 [32m++++++++[m[31m------[m
+ src/features/media/static-media-v2.css     |  46 [32m+[m[31m-[m
+ src/features/statistics/StatisticsPage.jsx | 101 [32m+++[m[31m--[m
+ src/features/statistics/statistics.css     |  62 [32m+++[m
+ src/main.jsx                               |  61 [32m+[m[31m--[m
+ src/ui-bugfix.css                          |   9 [32m+[m[31m-[m
+ src/ui/ActionMenu.jsx                      |   3 [32m+[m[31m-[m
+ src/ui/action-menu.css                     |   4 [32m+[m[31m-[m
+ src/ui/motion/motion.css                   |  35 [32m+[m[31m-[m
+ src/ui/motion/motion.jsx                   |   3 [32m+[m[31m-[m
+ src/visual-announce-ui.jsx                 |  82 [32m+++[m[31m-[m
+ src/visual-test.jsx                        |  37 [32m+[m[31m-[m
+ tests/agenda-livre.test.js                 |  22 [32m+[m[31m-[m
+ tests/media-look.test.js                   |  27 [32m+[m[31m-[m
+ tests/media-page.test.js                   |  79 [32m++[m[31m--[m
+ tests/product-polish-regression.test.js    |   5 [32m+[m[31m-[m
+ 25 files changed, 895 insertions(+), 1640 deletions(-)

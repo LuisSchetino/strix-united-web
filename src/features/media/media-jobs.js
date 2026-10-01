@@ -146,6 +146,7 @@ export async function startAgendaRender({
       emit({
         status: "ready",
         stage: "cached",
+        template: AGENDA_TEMPLATE_ID,
         format,
         fingerprint,
         progress: { stage: "finishing", ratio: 1 },
@@ -160,6 +161,7 @@ export async function startAgendaRender({
   emit({
     status: "running",
     stage: "preparing",
+    template: AGENDA_TEMPLATE_ID,
     format,
     fingerprint,
     progress: { stage: "preparing", loaded: 0, total: 0 },
@@ -237,6 +239,7 @@ export async function startRelatedNightRender({
       emit({
         status: "ready",
         stage: "cached",
+        template: RELATED_NIGHT_TEMPLATE_ID,
         format,
         fingerprint,
         progress: { stage: "finishing", ratio: 1 },
@@ -251,6 +254,7 @@ export async function startRelatedNightRender({
   emit({
     status: "running",
     stage: "preparing",
+    template: RELATED_NIGHT_TEMPLATE_ID,
     format,
     fingerprint,
     progress: { stage: "preparing", loaded: 0, total: 0 },
@@ -336,6 +340,7 @@ export async function startSummaryRender({
       emit({
         status: "ready",
         stage: "cached",
+        template: SUMMARY_TEMPLATE_ID,
         format,
         fingerprint,
         progress: { stage: "finishing", ratio: 1 },
@@ -350,6 +355,7 @@ export async function startSummaryRender({
   emit({
     status: "running",
     stage: "preparing",
+    template: SUMMARY_TEMPLATE_ID,
     format,
     fingerprint,
     progress: { stage: "preparing", loaded: 0, total: 0 },
@@ -442,6 +448,7 @@ export async function startAnnounceRender({
       emit({
         status: "ready",
         stage: "cached",
+        template: ANNOUNCE_TEMPLATE_ID,
         format,
         fingerprint,
         progress: { stage: "finishing", ratio: 1 },
@@ -456,6 +463,7 @@ export async function startAnnounceRender({
   emit({
     status: "running",
     stage: "preparing",
+    template: ANNOUNCE_TEMPLATE_ID,
     format,
     fingerprint,
     progress: { stage: "preparing", loaded: 0, total: 0 },

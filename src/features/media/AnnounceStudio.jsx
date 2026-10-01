@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
-import { MotionTabs, notify, useReducedMotion } from "../../ui/motion/motion.jsx";
+import { RollingLabel, notify, useReducedMotion } from "../../ui/motion/motion.jsx";
 import { SelectControl } from "../../ui/SelectControl.jsx";
 import {
   ANNOUNCE_CACHE_DAY,
@@ -21,15 +20,32 @@ import {
 import { announceFrameTime, renderAnnounceFrame } from "./announce-frame.js";
 import { buildAnnounceTimeline } from "./announce-timeline.js";
 import { loadAnnounceAssets } from "./media-assets.js";
-import { MediaLookBadge, MediaLookSwitch } from "./MediaLookSwitch.jsx";
 import { withMediaLook } from "./media-look.js";
+import { downloadBlob, listCachedRenders, startAnnounceRender } from "./media-jobs.js";
+import { MEDIA_FORMAT_LABELS, mediaGenerateLabel, resolveMediaOutput } from "./media-renderer.js";
+import { STATIC_MEDIA_V2_CANVAS } from "./static-media-v2-core.js";
+import { STATIC_MEDIA_V2_TEMPLATE_REGISTRY } from "./static-media-v2-templates.js";
+import { StaticMediaV2Canvas } from "./StaticMediaV2Canvas.jsx";
+import { exportStaticMediaV2Png } from "./static-media-v2-export.js";
 import {
-  downloadBlob,
-  listCachedRenders,
-  progressLabel,
-  startAnnounceRender,
-  subscribeMediaJob,
-} from "./media-jobs.js";
+  ArchiveList,
+  FormatGroup,
+  MediaNotice,
+  MediaProgress,
+  MediaToolbar,
+  MediaWorkspace,
+  Options,
+  PieceActions,
+  PreviewCanvas,
+  PreviewStage,
+  RailBlock,
+  StageEmpty,
+  StageLoading,
+  ToolbarFact,
+  ToolbarGroup,
+  isImageRecord,
+  recordToArchiveItem,
+} from "./MediaShell.jsx";
 import "./announce.css";
 
 const ROLE_OPTIONS = Object.values(ANNOUNCE_ROLES).map((role) => [role.id, role.label.toUpperCase()]);
@@ -42,87 +58,13 @@ const TYPE_OPTIONS = [
   ["conselho", "CONSELHO"],
   ["manager", "MANAGER"],
 ];
+const CONTENT_ITEMS = [["individual", "INDIVIDUAL"], ["team", "TIME"], ["seletiva", "SELETIVA"]];
+const SELETIVA = Object.values(STATIC_MEDIA_V2_TEMPLATE_REGISTRY)[0];
+const pad = (value) => String(value).padStart(2, "0");
 
-function PreviewCanvas({ timeline, assets, format, label }) {
-  const canvasRef = useRef(null);
-  const frameRef = useRef(0);
-  const reduced = useReducedMotion();
-  const [paused, setPaused] = useState(false);
-  useEffect(() => { frameRef.current = 0; }, [assets, timeline]);
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || !timeline?.totalFrames || !assets) return undefined;
-    const ctx = canvas.getContext("2d", { alpha: false });
-    let raf = 0;
-    const tick = () => {
-      const timeSec = announceFrameTime(frameRef.current % timeline.totalFrames, timeline);
-      renderAnnounceFrame(ctx, { timeline, timeSec, assets });
-      if (!reduced && !paused && !timeline.still && !document.hidden) {
-        frameRef.current += 1;
-        raf = requestAnimationFrame(tick);
-      }
-    };
-    const visibility = () => { cancelAnimationFrame(raf); if (!document.hidden) tick(); };
-    document.addEventListener("visibilitychange", visibility);
-    tick();
-    return () => { cancelAnimationFrame(raf); document.removeEventListener("visibilitychange", visibility); };
-  }, [assets, format, timeline, reduced, paused]);
-  return (
-    <div className="media-preview-stage">
-      <canvas
-        ref={canvasRef}
-        width={timeline.width}
-        height={timeline.height}
-        className={format === "feed" ? "is-feed" : ""}
-        aria-label={label}
-      />
-      {!reduced && !timeline.still && (
-        <button type="button" className="media-playback" aria-pressed={paused} onClick={() => setPaused((value) => !value)}>
-          {paused ? "Reproduzir preview" : "Pausar preview"}
-        </button>
-      )}
-    </div>
-  );
-}
-
-function isImageRecord(record) {
-  return record?.mime === "image/png" || String(record?.fileName || "").endsWith(".png") || record?.blob?.type === "image/png";
-}
-
-function Viewer({ record, close }) {
-  const dialogRef = useRef(null);
-  const url = useMemo(() => (record?.blob ? URL.createObjectURL(record.blob) : ""), [record]);
-  const image = isImageRecord(record);
-  useEffect(() => () => { if (url) URL.revokeObjectURL(url); }, [url]);
-  useEffect(() => {
-    if (!url) return undefined;
-    const dialog = dialogRef.current;
-    const previous = document.activeElement;
-    const overflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    dialog?.showModal();
-    return () => { dialog?.close(); document.body.style.overflow = overflow; previous?.focus?.({ preventScroll: true }); };
-  }, [url]);
-  if (!record || !url) return null;
-  return createPortal(
-    <dialog ref={dialogRef} className="media-viewer" aria-label="Visualizar anúncio gerado" onCancel={(event) => { event.preventDefault(); close(); }} onMouseDown={(event) => event.target === event.currentTarget && close()}>
-      <section>
-        <header>
-          <span>{image ? "POST PRONTO" : "REELS PRONTO"}</span>
-          <h2>{record.fileName}</h2>
-        </header>
-        {image ? <img src={url} alt={record.fileName} /> : <video src={url} controls autoPlay playsInline />}
-        <div className="media-inline-actions">
-          <button type="button" className="primary" onClick={() => downloadBlob(record.blob, record.fileName)}>
-            {image ? "BAIXAR PNG" : "BAIXAR MP4"}
-          </button>
-          <button type="button" className="secondary" onClick={close}>FECHAR</button>
-        </div>
-      </section>
-    </dialog>,
-    document.body,
-  );
-}
+const Chevron = ({ up = false }) => (
+  <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" focusable="false"><path d={up ? "m6 15 6-6 6 6" : "m6 9 6 6 6-6"} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+);
 
 function moveItem(ids, index, offset) {
   const next = [...ids];
@@ -132,7 +74,7 @@ function moveItem(ids, index, offset) {
   return next;
 }
 
-export function AnnounceStudio({ workspace, mediaLook = "campaign", onMediaLook }) {
+export function AnnounceStudio({ workspace, look, job, running, openViewer }) {
   const draft = useMemo(() => readAnnounceDraft() || {}, []);
   const [kind, setKind] = useState(draft.kind === "team" ? "team" : "individual");
   const [format, setFormat] = useState(draft.format === "feed" ? "feed" : "story");
@@ -146,17 +88,13 @@ export function AnnounceStudio({ workspace, mediaLook = "campaign", onMediaLook 
   const [title, setTitle] = useState(draft.title || "ELENCO FC 27");
   const [usedPhraseIds, setUsedPhraseIds] = useState(Array.isArray(draft.usedPhraseIds) ? draft.usedPhraseIds : []);
   const [assets, setAssets] = useState(null);
-  const [job, setJob] = useState(null);
   const [cache, setCache] = useState([]);
-  const [history, setHistory] = useState([]);
-  const [viewer, setViewer] = useState(null);
   const dragIndex = useRef(null);
   const migrated = useRef(false);
+  const isSeletiva = kind === "seletiva";
+  const pieceKind = isSeletiva ? "individual" : kind;
 
-  const people = useMemo(
-    () => applyAnnounceRoles(collectAnnouncePeople(workspace), pendingRoles),
-    [workspace, pendingRoles],
-  );
+  const people = useMemo(() => applyAnnounceRoles(collectAnnouncePeople(workspace), pendingRoles), [workspace, pendingRoles]);
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLocaleLowerCase("pt-BR");
@@ -165,131 +103,79 @@ export function AnnounceStudio({ workspace, mediaLook = "campaign", onMediaLook 
       if (groupFilter === "structure" && !isStructureRole(person.extraRole)) return false;
       if (["GOL", "DEF", "MEI", "ATA"].includes(groupFilter) && person.group !== groupFilter) return false;
       if (!needle) return true;
-      return [person.name, person.nick, person.position, person.extraBadge]
-        .join(" ")
-        .toLocaleLowerCase("pt-BR")
-        .includes(needle);
+      return [person.name, person.nick, person.position, person.extraBadge].join(" ").toLocaleLowerCase("pt-BR").includes(needle);
     });
   }, [people, query, groupFilter]);
 
   const selected = useMemo(() => {
     const byId = new Map(people.map((person) => [person.id, person]));
-    if (kind === "individual") {
+    if (pieceKind === "individual") {
       const person = byId.get(selectedIds[0]) || filtered[0] || people[0];
       return person ? [person] : [];
     }
     return selectedIds.map((id) => byId.get(id)).filter(Boolean);
-  }, [people, selectedIds, kind, filtered]);
+  }, [people, selectedIds, pieceKind, filtered]);
 
   const phrase = useMemo(() => {
-    if (kind !== "individual" || !selected[0]) return { id: "", text: "", source: "auto" };
-    return resolveAnnouncePhrase(selected[0], {
-      type: announceType,
-      phraseId,
-      custom: customPhrase,
-      usedIds: usedPhraseIds,
-    });
-  }, [kind, selected, announceType, phraseId, customPhrase, usedPhraseIds]);
+    if (pieceKind !== "individual" || !selected[0]) return { id: "", text: "", source: "auto" };
+    return resolveAnnouncePhrase(selected[0], { type: announceType, phraseId, custom: customPhrase, usedIds: usedPhraseIds });
+  }, [pieceKind, selected, announceType, phraseId, customPhrase, usedPhraseIds]);
 
   const timeline = useMemo(() => withMediaLook(buildAnnounceTimeline({
-    kind,
-    format,
-    people: selected,
-    phrase: phrase.text,
-    title,
-    announceType,
-  }), mediaLook), [kind, format, selected, phrase.text, title, announceType, mediaLook]);
+    kind: pieceKind, format, people: selected, phrase: phrase.text, title, announceType,
+  }), look), [pieceKind, format, selected, phrase.text, title, announceType, look]);
 
   const fingerprintKey = selected.map((person) => person.id).join(",");
 
   useEffect(() => {
-    return subscribeMediaJob(setJob);
-  }, []);
+    if (isSeletiva) return undefined;
+    let cancelled = false;
+    setAssets(null);
+    loadAnnounceAssets(selected).then((result) => { if (!cancelled) setAssets(result); });
+    return () => { cancelled = true; };
+  }, [fingerprintKey, isSeletiva]);
 
   useEffect(() => {
-    let cancelled = false;
-    loadAnnounceAssets(selected).then((result) => {
-      if (!cancelled) setAssets(result);
-    });
-    return () => { cancelled = true; };
-  }, [fingerprintKey]);
-
-  const refreshCache = () => {
-    listCachedRenders(ANNOUNCE_CACHE_DAY, { template: ANNOUNCE_TEMPLATE_ID }).then(setCache);
-  };
-
-  useEffect(() => { refreshCache(); }, []);
+    let alive = true;
+    listCachedRenders(ANNOUNCE_CACHE_DAY, { template: ANNOUNCE_TEMPLATE_ID }).then((rows) => { if (alive) setCache(rows); });
+    return () => { alive = false; };
+  }, [job?.status, job?.result?.id]);
 
   useEffect(() => {
     writeAnnounceDraft({
-      kind,
-      format,
-      query,
-      groupFilter,
-      selectedIds,
-      announceType,
-      phraseId,
-      customPhrase,
-      title,
-      usedPhraseIds,
+      kind: pieceKind, format, query, groupFilter, selectedIds, announceType, phraseId, customPhrase, title, usedPhraseIds,
     });
-  }, [kind, format, query, groupFilter, selectedIds, announceType, phraseId, customPhrase, title, usedPhraseIds]);
+  }, [pieceKind, format, query, groupFilter, selectedIds, announceType, phraseId, customPhrase, title, usedPhraseIds]);
 
   useEffect(() => {
     if (migrated.current) return undefined;
     const legacy = readStoredAnnounceRoles();
     const entries = Object.entries(legacy).filter(([, role]) => role && role !== "jogador");
-    if (entries.length) {
-      setPendingRoles((current) => ({ ...Object.fromEntries(entries), ...current }));
-    }
+    if (entries.length) setPendingRoles((current) => ({ ...Object.fromEntries(entries), ...current }));
     if (!workspace?.saveStructureRole || !entries.length) return undefined;
     migrated.current = true;
-    Promise.allSettled(entries.map(([id, role]) => workspace.saveStructureRole(id, role)))
-      .then((results) => {
-        if (results.some((result) => result.status === "fulfilled")) clearStoredAnnounceRoles();
-      });
+    Promise.allSettled(entries.map(([id, role]) => workspace.saveStructureRole(id, role))).then((results) => {
+      if (results.some((result) => result.status === "fulfilled")) clearStoredAnnounceRoles();
+    });
     return undefined;
   }, [workspace]);
-
-  useEffect(() => {
-    if (job?.status === "ready" && job.result?.template === ANNOUNCE_TEMPLATE_ID) {
-      setHistory((current) => {
-        const next = [job.result, ...current.filter((item) => item.id !== job.result.id)];
-        return next.slice(0, 6);
-      });
-      refreshCache();
-    }
-  }, [job?.status, job?.result?.id]);
 
   const setRole = async (id, role) => {
     setPendingRoles((current) => ({ ...current, [id]: role }));
     if (!workspace?.saveStructureRole) return;
     try {
       await workspace.saveStructureRole(id, role);
-      setPendingRoles((current) => {
-        const next = { ...current };
-        delete next[id];
-        return next;
-      });
+      setPendingRoles((current) => { const next = { ...current }; delete next[id]; return next; });
     } catch (error) {
       notify(error?.message || "A função oficial não pôde ser salva no elenco. Aplique a migration structure_role.", "error");
     }
   };
 
   const toggleSelected = (id) => {
-    if (kind === "individual") {
-      setSelectedIds([id]);
-      return;
-    }
-    setSelectedIds((current) => current.includes(id)
-      ? current.filter((item) => item !== id)
-      : [...current, id]);
+    if (pieceKind === "individual") { setSelectedIds([id]); return; }
+    setSelectedIds((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
   };
-
-  const selectFiltered = (predicate) => {
-    setSelectedIds(filtered.filter(predicate).map((person) => person.id));
-  };
-
+  const selectFiltered = (predicate) => setSelectedIds(filtered.filter(predicate).map((person) => person.id));
   const shufflePhrase = () => {
     if (!selected[0]) return;
     const next = pickAnnouncePhrase(selected[0], { type: announceType, currentId: phrase.id, usedIds: usedPhraseIds });
@@ -298,229 +184,216 @@ export function AnnounceStudio({ workspace, mediaLook = "campaign", onMediaLook 
   };
 
   const generate = async (force = false) => {
-    if (!selected.length || job?.status === "running") return;
+    if (!selected.length || running) return;
     const next = await startAnnounceRender({
-      kind,
-      format,
-      people: selected,
-      phrase: phrase.text,
-      phraseId: phrase.id,
-      title,
-      announceType,
-      timeline,
-      force,
+      kind: pieceKind, format, people: selected, phrase: phrase.text, phraseId: phrase.id, title, announceType, timeline, force,
     });
     if (next.status === "error") notify(next.error || "Não foi possível gerar o anúncio.", "error");
     else if (next.status === "ready") {
-      if (phrase.id && phrase.id !== "custom") {
-        setUsedPhraseIds((current) => [...current.filter((id) => id !== phrase.id), phrase.id].slice(-8));
-      }
+      if (phrase.id && phrase.id !== "custom") setUsedPhraseIds((current) => [...current.filter((id) => id !== phrase.id), phrase.id].slice(-8));
       notify(format === "feed" ? "Post gerado." : "Reels gerado.");
+      if (next.result) openViewer(next.result);
     }
   };
 
-  const running = job?.status === "running";
-  const ratio = Number.isFinite(job?.progress?.ratio)
-    ? job.progress.ratio
-    : (job?.progress?.total ? job.progress.loaded / job.progress.total : null);
-  const readyRecord = job?.result && job.fingerprint
-    ? job.result
-    : cache.find((row) => row.format === format) || history[0] || null;
+  const output = resolveMediaOutput({ sectionId: "announce", kind: pieceKind, format });
+  const mine = job?.template === ANNOUNCE_TEMPLATE_ID;
+  const record = (mine && job?.status === "ready" && job.result && (isImageRecord(job.result) === (output.type === "image")) ? job.result : null)
+    || cache.find((row) => row.format === format) || null;
+  const meta = isSeletiva
+    ? "Divulgação de posições abertas"
+    : `${pad(selected.length)} ${selected.length === 1 ? "nome na peça" : "nomes na peça"}`;
+
+  const toolbar = (
+    <MediaToolbar title="Anúncios FC27" meta={meta}>
+      <ToolbarGroup label="CONTEÚDO" items={CONTENT_ITEMS} active={kind} onChange={(value) => {
+        setKind(value);
+        if (value === "individual") setSelectedIds((current) => current.slice(0, 1));
+      }} />
+      {isSeletiva ? <ToolbarFact label="FORMATO" value="STORY 9:16 · PNG" /> : <FormatGroup value={format} onChange={setFormat} />}
+    </MediaToolbar>
+  );
+
+  if (isSeletiva) {
+    return <>{toolbar}<SeletivaPanel /></>;
+  }
+
+  const archive = cache.slice(0, 6).map((row) => recordToArchiveItem(row, {
+    label: isImageRecord(row) ? "POST 4:5 · PNG" : "REELS 9:16 · MP4", unit: "nome", onView: () => openViewer(row),
+  }));
 
   return (
-    <section className="announce-studio">
-      <header className="media-hero">
-        <div>
-          <span>ANÚNCIOS FC 27</span>
-          <h1>Central de anúncio da temporada.</h1>
-          <p>Peças individuais e do plantel, em Reels e Post, a partir do elenco oficial do Strix.</p>
-        </div>
-        <div className="media-hero-meta">
-          <span>{kind === "team" ? "TIME" : "INDIVIDUAL"} · {format === "feed" ? "POST 4:5" : "REELS 9:16"}</span>
-          <b>{String(selected.length).padStart(2, "0")}</b>
-          <small>{selected.length === 1 ? "nome na peça" : "nomes na peça"}</small>
-        </div>
-      </header>
-
-      <div className="announce-controls">
-        <MotionTabs
-          className="media-tabs"
-          items={[["individual", "INDIVIDUAL"], ["team", "TIME"]]}
-          active={kind}
-          onChange={(value) => {
-            setKind(value);
-            setSelectedIds((current) => (value === "individual" ? current.slice(0, 1) : current));
-          }}
-          label="Gerador"
-        />
-        <MotionTabs
-          className="media-tabs"
-          items={[["story", "REELS 9:16"], ["feed", "POST 4:5"]]}
-          active={format}
-          onChange={setFormat}
-          label="Formato"
-        />
-        <MediaLookSwitch value={mediaLook} onChange={(value) => onMediaLook?.(value)} />
-      </div>
-
-      <div className="media-layout announce-layout">
-        <aside className="media-side announce-side">
-          <h2>Conteúdo</h2>
-          <p className="announce-note">Função oficial persiste no elenco. Ordem, frase e formato ficam no rascunho desta máquina.</p>
-          <p className="announce-draft">Rascunho da geração gravado automaticamente neste aparelho.</p>
-          <label className="announce-search">
-            <span>BUSCAR</span>
-            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Nome, nick ou posição" />
-          </label>
-          <div className="announce-filter-groups" aria-label="Filtros do elenco">
-            <div className="announce-filters announce-filter-types" aria-label="Tipo de integrante">
-              {[["all", "TODOS"], ["players", "JOGADORES"], ["structure", "ESTRUTURA"]].map(([id, label]) => (
-                <button key={id} type="button" className={groupFilter === id ? "is-active" : ""} onClick={() => setGroupFilter(id)}>{label}</button>
-              ))}
-            </div>
-            <div className="announce-filters announce-filter-positions" aria-label="Posição">
-              {[["GOL", "GOL"], ["DEF", "DEF"], ["MEI", "MEI"], ["ATA", "ATA"]].map(([id, label]) => (
-                <button key={id} type="button" className={groupFilter === id ? "is-active" : ""} onClick={() => setGroupFilter(id)}>{label}</button>
-              ))}
-            </div>
-          </div>
-          {kind === "team" && (
-            <div className="announce-bulk">
-              <span>SELEÇÃO</span>
-              <button type="button" onClick={() => selectFiltered(() => true)}>TODOS</button>
-              <button type="button" onClick={() => selectFiltered((person) => !isStructureRole(person.extraRole))}>SÓ JOGADORES</button>
-              <button type="button" onClick={() => selectFiltered((person) => isStructureRole(person.extraRole))}>SÓ ESTRUTURA</button>
-              <button type="button" className="is-reset" onClick={() => setSelectedIds([])}>LIMPAR</button>
-            </div>
-          )}
-          <ul className="announce-people">
-            {filtered.map((person) => {
-              const on = selected.some((item) => item.id === person.id);
-              const order = selectedIds.indexOf(person.id);
-              return (
-                <li
-                  key={person.id}
-                  className={on ? "is-selected" : ""}
-                  draggable={kind === "team" && on}
-                  onDragStart={() => { dragIndex.current = selectedIds.indexOf(person.id); }}
-                  onDragOver={(event) => event.preventDefault()}
-                  onDrop={() => {
-                    const from = dragIndex.current;
-                    const to = selectedIds.indexOf(person.id);
-                    if (from < 0 || to < 0 || from === to) return;
-                    setSelectedIds(moveItem(selectedIds, from, to - from));
-                  }}
-                >
-                  <button type="button" className="announce-person" onClick={() => toggleSelected(person.id)} aria-pressed={on}>
-                    <span className="announce-person-index" aria-label={on ? `Ordem ${order + 1}` : "Não selecionado"}>{on ? String(order + 1).padStart(2, "0") : "—"}</span>
-                    <span className="announce-person-copy"><b>{person.name}</b><small>{[person.position, person.extraBadge || ANNOUNCE_ROLES[person.extraRole]?.label].filter(Boolean).join(" · ")}</small></span>
-                  </button>
-                  <SelectControl
-                    label="Função oficial"
-                    value={person.extraRole}
-                    options={ROLE_OPTIONS}
-                    onChange={(value) => setRole(person.id, value)}
-                  />
-                  {kind === "team" && on && (
-                    <div className="announce-order" aria-label={`Ordenar ${person.name}`}>
-                      <button type="button" aria-label={`Subir ${person.name}`} disabled={order === 0} onClick={() => setSelectedIds(moveItem(selectedIds, order, -1))}>↑</button>
-                      <button type="button" aria-label={`Descer ${person.name}`} disabled={order === selectedIds.length - 1} onClick={() => setSelectedIds(moveItem(selectedIds, order, 1))}>↓</button>
-                    </div>
-                  )}
-                </li>
-              );
-            })}
-            {!filtered.length && <li className="announce-empty">Nenhum nome encontrado no elenco ativo.</li>}
-          </ul>
-          {kind === "individual" ? (
-            <div className="announce-phrase">
-              <h2>Configuração</h2>
-              <SelectControl label="Tipo do anúncio" value={announceType} options={TYPE_OPTIONS} onChange={(value) => { setAnnounceType(value); setPhraseId(""); }} />
-              <SelectControl
-                label="Frase"
-                value={phrasesForPerson(selected[0], announceType).some((item) => item.id === (phraseId || phrase.id)) ? (phraseId || phrase.id) : (phrasesForPerson(selected[0], announceType)[0]?.id || "")}
-                options={phrasesForPerson(selected[0], announceType).map((item) => [item.id, item.text])}
-                onChange={(value) => { setPhraseId(value); setCustomPhrase(""); }}
-              />
-              <div className="announce-phrase-actions">
-                <button type="button" className="secondary" onClick={shufflePhrase}>SORTEAR OUTRA</button>
-              </div>
-              <label className="announce-search">
-                <span>EDITAR FRASE</span>
-                <textarea value={customPhrase} onChange={(event) => setCustomPhrase(event.target.value)} rows={3} placeholder={phrase.text} />
-              </label>
-            </div>
-          ) : (
-            <SelectControl
-              label="Título da peça"
-              value={title}
-              options={ANNOUNCE_TITLES.map((item) => [item, item])}
-              onChange={setTitle}
+    <>
+      {toolbar}
+      <MediaWorkspace
+        stage={
+          <PreviewStage
+            pieceKey={`announce:${pieceKind}:${format}:${look}:${fingerprintKey}:${phrase.id}`}
+            ratio={format} caption={MEDIA_FORMAT_LABELS[format]} state={!selected.length ? "empty" : assets ? "ready" : "loading"} label="Preview do anúncio FC27"
+          >
+            {!selected.length ? <StageEmpty title="Escolha quem entra na peça." hint="Selecione ao menos uma pessoa do elenco ativo." />
+              : assets && timeline.totalFrames
+                ? <PreviewCanvas timeline={timeline} assets={assets} format={format} frameTime={announceFrameTime} renderFrame={renderAnnounceFrame} label="Preview do anúncio FC27" />
+                : <StageLoading />}
+          </PreviewStage>
+        }
+        actions={
+          <>
+            <PieceActions
+              primary={<button type="button" className="primary announce-generate" disabled={!selected.length || running} onClick={() => generate(false)}><RollingLabel>{running && mine ? "GERANDO…" : mediaGenerateLabel(output)}</RollingLabel></button>}
+              secondary={record && <>
+                <button type="button" className="secondary" onClick={() => openViewer(record)}>VISUALIZAR</button>
+                <button type="button" className="secondary" onClick={() => downloadBlob(record.blob, record.fileName)}>{isImageRecord(record) ? "BAIXAR PNG" : "BAIXAR MP4"}</button>
+              </>}
+              tertiary={record && <button type="button" className="media-link announce-regenerate" disabled={!selected.length || running} onClick={() => generate(true)}>Gerar novamente</button>}
             />
-          )}
-        </aside>
-
-        <article className="media-preview-card">
-          <header>
-            <span>PREVIEW</span>
-            <h2>{format === "feed" ? "Post 1080×1350" : "Reels 1080×1920"}</h2>
-            <MediaLookBadge value={mediaLook} />
-          </header>
-          <div className={`media-preview-frame ${format === "feed" ? "is-feed" : ""} ${selected.length ? "" : "is-empty"}`}>
-            {selected.length && assets && timeline.totalFrames ? (
-              <PreviewCanvas
-                timeline={timeline}
-                assets={assets}
-                format={format}
-                label="Preview do anúncio FC 27"
-              />
-            ) : (
-              <p>Selecione ao menos uma pessoa do elenco para ver o anúncio.</p>
-            )}
-          </div>
-          <div className="media-actions">
-            <button type="button" className="primary announce-generate" disabled={!selected.length || running} onClick={() => generate(false)}>
-              {format === "feed" ? "GERAR PNG" : "GERAR MP4"}
-            </button>
-            <button type="button" className="secondary" disabled={!readyRecord} onClick={() => readyRecord && setViewer(readyRecord)}>
-              VISUALIZAR
-            </button>
-            <button type="button" className="secondary" disabled={!readyRecord} onClick={() => readyRecord && downloadBlob(readyRecord.blob, readyRecord.fileName)}>
-              {format === "feed" ? "BAIXAR PNG" : "BAIXAR MP4"}
-            </button>
-            <button type="button" className="secondary announce-regenerate" disabled={!selected.length || running} onClick={() => generate(true)}>
-              GERAR NOVAMENTE
-            </button>
-          </div>
-          {running && (
-            <div className="media-progress">
-              <b>{progressLabel(job.progress) || "Gerando anúncio"}</b>
-              <i><em style={{ transform: `scaleX(${determinateScale(ratio)})` }} /></i>
-            </div>
-          )}
-          {job?.status === "error" && <p className="media-error">{job.error}</p>}
-          <section className="media-cache">
-            <header className="announce-history-heading"><div><span>ARQUIVO</span><h2>Últimas gerações</h2></div><small>{history.length || cache.length} disponíveis</small></header>
-            {(history.length ? history : cache.slice(0, 6)).map((record) => (
-              <article className="announce-history-item" key={record.id}>
-                <div className="announce-history-format"><small>{isImageRecord(record) ? "POST" : "REELS"}</small><b>{isImageRecord(record) ? "4:5" : "9:16"}</b></div>
-                <p title={record.fileName}>{record.fileName}</p>
-                <div className="media-inline-actions">
-                  <button type="button" className="secondary" aria-label={`Visualizar ${record.fileName}`} onClick={() => setViewer(record)}>VER</button>
-                  <button type="button" className="secondary" aria-label={`Baixar ${record.fileName}`} onClick={() => downloadBlob(record.blob, record.fileName)}>BAIXAR</button>
+            <MediaProgress job={job} />
+            {job?.status === "error" && mine && <MediaNotice tone="error" title="A geração não terminou.">{job.error}</MediaNotice>}
+          </>
+        }
+        rail={
+          <>
+            <RailBlock kicker={pieceKind === "team" ? "ELENCO DA PEÇA" : "QUEM ENTRA"} aside={pieceKind === "team" && selectedIds.length ? `${pad(selectedIds.length)} selecionados` : ""} className="announce-roster">
+              <label className="announce-search">
+                <span className="visually-hidden">Buscar no elenco</span>
+                <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar nome, nick ou posição" />
+              </label>
+              <div className="announce-filters" aria-label="Filtros do elenco">
+                {[["all", "TODOS"], ["players", "JOGADORES"], ["structure", "ESTRUTURA"], ["GOL", "GOL"], ["DEF", "DEF"], ["MEI", "MEI"], ["ATA", "ATA"]].map(([id, label]) => (
+                  <button key={id} type="button" className={groupFilter === id ? "is-active" : ""} aria-pressed={groupFilter === id} onClick={() => setGroupFilter(id)}>{label}</button>
+                ))}
+              </div>
+              {pieceKind === "team" && (
+                <div className="announce-bulk" aria-label="Seleção em massa">
+                  <button type="button" onClick={() => selectFiltered(() => true)}>TODOS</button>
+                  <button type="button" onClick={() => selectFiltered((person) => !isStructureRole(person.extraRole))}>SÓ JOGADORES</button>
+                  <button type="button" onClick={() => selectFiltered((person) => isStructureRole(person.extraRole))}>SÓ ESTRUTURA</button>
+                  <button type="button" className="is-reset" onClick={() => setSelectedIds([])}>LIMPAR</button>
                 </div>
-              </article>
-            ))}
-            {!history.length && !cache.length && <p className="announce-history-empty">Nenhuma peça gerada nesta sessão.</p>}
-          </section>
-        </article>
-      </div>
-      {viewer && <Viewer record={viewer} close={() => setViewer(null)} />}
-    </section>
+              )}
+              <ul className="announce-people">
+                {filtered.map((person) => {
+                  const on = selected.some((item) => item.id === person.id);
+                  const order = selectedIds.indexOf(person.id);
+                  return (
+                    <li
+                      key={person.id}
+                      className={on ? "is-selected" : ""}
+                      draggable={pieceKind === "team" && on}
+                      onDragStart={() => { dragIndex.current = selectedIds.indexOf(person.id); }}
+                      onDragOver={(event) => event.preventDefault()}
+                      onDrop={() => {
+                        const from = dragIndex.current;
+                        const to = selectedIds.indexOf(person.id);
+                        if (from < 0 || to < 0 || from === to) return;
+                        setSelectedIds(moveItem(selectedIds, from, to - from));
+                      }}
+                    >
+                      <button type="button" className="announce-person" onClick={() => toggleSelected(person.id)} aria-pressed={on}>
+                        <span className="announce-person-index" aria-label={on ? `Ordem ${order + 1}` : "Não selecionado"}>{on && order >= 0 ? pad(order + 1) : on ? "•" : "—"}</span>
+                        <span className="announce-person-copy"><b>{person.name}</b><small>{[person.position, person.extraBadge || ANNOUNCE_ROLES[person.extraRole]?.label].filter(Boolean).join(" · ")}</small></span>
+                      </button>
+                      {pieceKind === "team" && on && order >= 0 && (
+                        <div className="announce-order" aria-label={`Ordenar ${person.name}`}>
+                          <button type="button" aria-label={`Subir ${person.name}`} disabled={order === 0} onClick={() => setSelectedIds(moveItem(selectedIds, order, -1))}><Chevron up /></button>
+                          <button type="button" aria-label={`Descer ${person.name}`} disabled={order === selectedIds.length - 1} onClick={() => setSelectedIds(moveItem(selectedIds, order, 1))}><Chevron /></button>
+                        </div>
+                      )}
+                      {on && (
+                        <div className="announce-role">
+                          <SelectControl label={`Função oficial de ${person.name}`} value={person.extraRole} options={ROLE_OPTIONS} onChange={(value) => setRole(person.id, value)} />
+                        </div>
+                      )}
+                    </li>
+                  );
+                })}
+                {!filtered.length && <li className="announce-empty">Nenhum nome encontrado no elenco ativo.</li>}
+              </ul>
+            </RailBlock>
+            <Options>
+              {pieceKind === "individual" ? (
+                <>
+                  <SelectControl label="Tipo do anúncio" value={announceType} options={TYPE_OPTIONS} onChange={(value) => { setAnnounceType(value); setPhraseId(""); }} />
+                  <SelectControl
+                    label="Frase"
+                    value={phrasesForPerson(selected[0], announceType).some((item) => item.id === (phraseId || phrase.id)) ? (phraseId || phrase.id) : (phrasesForPerson(selected[0], announceType)[0]?.id || "")}
+                    options={phrasesForPerson(selected[0], announceType).map((item) => [item.id, item.text])}
+                    onChange={(value) => { setPhraseId(value); setCustomPhrase(""); }}
+                  />
+                  <button type="button" className="secondary" onClick={shufflePhrase}>SORTEAR OUTRA FRASE</button>
+                  <label className="announce-field">
+                    <span>EDITAR FRASE</span>
+                    <textarea value={customPhrase} onChange={(event) => setCustomPhrase(event.target.value)} rows={3} placeholder={phrase.text} />
+                  </label>
+                </>
+              ) : (
+                <SelectControl label="Título da peça" value={title} options={ANNOUNCE_TITLES.map((item) => [item, item])} onChange={setTitle} />
+              )}
+            </Options>
+            <ArchiveList items={archive} empty="Nenhuma peça gerada ainda." />
+          </>
+        }
+      />
+    </>
   );
 }
 
-function determinateScale(ratio) {
-  if (!Number.isFinite(ratio)) return 0.15;
-  return Math.max(0.04, Math.min(1, ratio));
+/** Static "Seletiva" art, living inside the same shell as every other announcement. */
+function SeletivaPanel() {
+  const template = SELETIVA;
+  const Template = template.Component;
+  const reduced = useReducedMotion();
+  const [draft, setDraft] = useState(template.defaultCopy);
+  const [status, setStatus] = useState("idle");
+  const [error, setError] = useState("");
+  const artboardRef = useRef(null);
+  const fileName = useMemo(() => template.fileName(draft), [template, draft]);
+
+  const update = (key, value) => {
+    setDraft((current) => ({ ...current, [key]: template.sanitizeInput(key, value) }));
+    setStatus("idle");
+    setError("");
+  };
+  const exportPng = async () => {
+    if (!artboardRef.current || status === "exporting") return;
+    setStatus("exporting");
+    setError("");
+    try {
+      await exportStaticMediaV2Png(artboardRef.current, fileName, STATIC_MEDIA_V2_CANVAS);
+      setStatus("ready");
+    } catch (exportError) {
+      setError(exportError?.message || "Não foi possível exportar o PNG.");
+      setStatus("error");
+    }
+  };
+
+  return (
+    <MediaWorkspace
+      stage={
+        <PreviewStage pieceKey={`seletiva:${template.id}`} ratio="story" caption="STORY 9:16 · PNG" label={`Preview do template ${template.name}`}>
+          <StaticMediaV2Canvas artboardRef={artboardRef} label={`Canvas do template ${template.name}`}><Template copy={draft} /></StaticMediaV2Canvas>
+        </PreviewStage>
+      }
+      actions={
+        <>
+          <PieceActions primary={<button type="button" className="primary" disabled={status === "exporting"} onClick={() => void exportPng()}><RollingLabel>{status === "exporting" ? "PREPARANDO PNG…" : "EXPORTAR PNG"}</RollingLabel></button>} />
+          {status === "ready" && <MediaNotice tone="info">PNG {STATIC_MEDIA_V2_CANVAS.width} × {STATIC_MEDIA_V2_CANVAS.height} exportado.</MediaNotice>}
+          {status === "error" && <MediaNotice tone="error" title="A exportação falhou.">{error}</MediaNotice>}
+        </>
+      }
+      rail={
+        <RailBlock kicker="TEXTO DA PEÇA" aside={`${template.name}`} className={reduced ? "announce-roster is-reduced" : "announce-roster"}>
+          <div className="announce-fields">
+            {template.fields.map(({ key, label, maxLength, prominent }) => (
+              <label key={key} className={`announce-field${prominent ? " is-headline" : ""}`}>
+                <span>{label}</span>
+                <input value={draft[key]} maxLength={maxLength} onChange={(event) => update(key, event.target.value)} />
+              </label>
+            ))}
+          </div>
+          <p className="media-block-empty">{fileName}</p>
+        </RailBlock>
+      }
+    />
+  );
 }

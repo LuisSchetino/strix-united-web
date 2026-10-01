@@ -3,38 +3,40 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
+const centralSources = () => Promise.all([
+  read("src/features/media/MediaPage.jsx"),
+  read("src/features/media/MediaSections.jsx"),
+  read("src/features/media/AnnounceStudio.jsx"),
+  read("src/features/media/MediaShell.jsx"),
+]);
 
-test("Mídia vira gerador automático da Agenda do Dia sem misturar EA Sync", async () => {
-  const page = await read("src/features/media/MediaPage.jsx");
+test("Mídia segue gerando Agenda, Relacionados, Resumo e Anúncios sem misturar EA Sync", async () => {
+  const [page, sections, announce, shell] = await centralSources();
+  const all = [page, sections, announce, shell].join("\n");
   const main = await read("src/main.jsx");
   const editor = await read("src/features/agenda/NightRelatedEditor.jsx");
   const jobs = await read("src/features/media/media-jobs.js");
   const assets = await read("src/features/media/media-assets.js");
   assert.match(main, /features\/media\/MediaPage/);
-  assert.match(page, /AGENDA DO DIA/);
-  assert.match(page, /Nenhuma partida agendada para hoje/);
-  assert.match(page, /GERAR VÍDEO/);
-  assert.match(page, /STORY 9:16/);
-  assert.match(page, /FEED 4:5/);
-  assert.match(page, /BAIXAR MP4/);
-  assert.match(page, /RELACIONADOS DA NOITE/);
-  assert.match(page, /ANÚNCIOS FC 27/);
-  assert.match(page, /\[\["video", "VÍDEO · V1"\], \["static", "ARTE ESTÁTICA · V2"\]\]/);
-  assert.doesNotMatch(page, /\["seletiva", "SELETIVA"\]/);
-  assert.match(page, /<StaticMediaV2Studio \/>/);
-  assert.match(page, /AnnounceStudio workspace=\{workspace\}/);
-  assert.match(page, /AnnounceStudio/);
-  assert.match(page, /MediaLookSwitch/);
-  assert.match(page, /withMediaLook/);
-  assert.match(page, /GERAR STORY/);
-  assert.match(page, /Salve a lista para gerar o vídeo/);
-  assert.match(page, /NightRelatedEditor/);
-  assert.match(page, /describeTonightRelated/);
-  assert.doesNotMatch(page, /união desses jogadores/);
-  assert.doesNotMatch(page, /RESERVA|BANCO|SUPLENTE|XI TITULAR/);
-  assert.doesNotMatch(page, /proclubs\.ea\.com/);
-  assert.doesNotMatch(page, /services\/ea-sync/);
-  assert.doesNotMatch(page, /GAME DAY|GameDayEditor|gameday/);
+  assert.match(sections, /Agenda do dia/);
+  assert.match(sections, /Nenhuma partida hoje/);
+  assert.match(sections, /GERAR VÍDEO|mediaGenerateLabel/);
+  assert.match(sections, /Relacionados da noite/);
+  assert.match(sections, /Resumo da semana/);
+  assert.match(sections, /Falta salvar a lista/);
+  assert.match(sections, /NightRelatedEditor/);
+  assert.match(sections, /describeTonightRelated/);
+  assert.match(sections, /startAgendaRender/);
+  assert.match(sections, /startRelatedNightRender/);
+  assert.match(sections, /startSummaryRender/);
+  assert.match(announce, /Anúncios FC27/);
+  assert.match(announce, /startAnnounceRender/);
+  assert.match(page, /<AnnounceStudio/);
+  assert.doesNotMatch(all, /união desses jogadores/);
+  assert.doesNotMatch(all, /RESERVA|BANCO|SUPLENTE|XI TITULAR/);
+  assert.doesNotMatch(all, /proclubs\.ea\.com/);
+  assert.doesNotMatch(all, /services\/ea-sync/);
+  assert.doesNotMatch(all, /GAME DAY|GameDayEditor|gameday/);
   assert.doesNotMatch(main, /NightRelatedEditor/);
   assert.doesNotMatch(main, /action-gameday|Abrir Game Day/);
   assert.match(editor, /PREENCHER PELAS ESCALAÇÕES/);
@@ -61,7 +63,7 @@ test("logos do painter não usam círculo cinza e compartilham a mesma caixa óp
 
 test("encode usa H.264 e nunca troca logo depois que o render começa", async () => {
   const encode = await read("src/features/media/encode-mp4.js");
-  const page = await read("src/features/media/MediaPage.jsx");
+  const [, sections] = await centralSources();
   const assets = await read("src/features/media/media-assets.js");
   const jobs = await read("src/features/media/media-jobs.js");
   assert.match(encode, /VideoEncoder/);
@@ -72,10 +74,10 @@ test("encode usa H.264 e nunca troca logo depois que o render começa", async ()
   assert.match(encode, /agendaFrameTime/);
   assert.match(encode, /encodeQueueSize/);
   assert.doesNotMatch(encode, /desynchronized/);
-  assert.match(page, /renderAgendaFrame/);
-  assert.match(page, /agendaFrameTime/);
-  assert.match(page, /renderRelatedNightFrame/);
-  assert.match(page, /relatedNightFrameTime/);
+  assert.match(sections, /renderAgendaFrame/);
+  assert.match(sections, /agendaFrameTime/);
+  assert.match(sections, /renderRelatedNightFrame/);
+  assert.match(sections, /relatedNightFrameTime/);
   assert.match(assets, /loadAgendaAssets/);
   assert.match(jobs, /startAnnounceRender/);
   assert.match(assets, /loadAnnounceAssets/);
@@ -83,9 +85,8 @@ test("encode usa H.264 e nunca troca logo depois que o render começa", async ()
   assert.doesNotMatch(encode, /html-to-image/);
 });
 
-test("V2 é uma saída estática compartilhada e Seletiva é um template registrado separado da V1", async () => {
-  const page = await read("src/features/media/MediaPage.jsx");
-  const studio = await read("src/features/media/StaticMediaV2Studio.jsx");
+test("Seletiva continua sendo template estático registrado, agora dentro de Anúncios", async () => {
+  const [, , announce] = await centralSources();
   const template = await read("src/features/media/SeletivaTemplate.jsx");
   const logo = await read("src/features/media/StaticMediaV2Logo.jsx");
   const core = await read("src/features/media/static-media-v2-core.js");
@@ -98,18 +99,18 @@ test("V2 é uma saída estática compartilhada e Seletiva é um template registr
   assert.match(registry, /SeletivaTemplate/);
   assert.match(registry, /sanitizeSeletivaInput/);
   assert.match(canvas, /STATIC_MEDIA_V2_CANVAS/);
+  assert.match(canvas, /import "\.\/static-media-v2\.css"/, "o artboard da Seletiva precisa do próprio CSS");
   assert.match(exporter, /exportStaticMediaV2Png/);
   assert.match(exporter, /toBlob\(element/);
   assert.match(exporter, /downloadBlob\(blob, fileName\)/);
   assert.match(template, /StaticMediaV2Logo/);
   assert.match(logo, /STRIX_BRAND\.logo/);
   assert.match(template, /size = SELETIVA_POSTER_SIZE/);
-  assert.match(studio, /Templates estáticos/);
-  assert.match(studio, /STATIC_MEDIA_V2_TEMPLATE_REGISTRY/);
-  assert.doesNotMatch(studio, /startAgendaRender|startRelatedNightRender|startSummaryRender|startAnnounceRender/);
+  assert.match(announce, /STATIC_MEDIA_V2_TEMPLATE_REGISTRY/);
+  assert.match(announce, /exportStaticMediaV2Png/);
+  assert.match(announce, /\["seletiva", "SELETIVA"\]/);
+  assert.doesNotMatch(announce, /startAgendaRender|startRelatedNightRender|startSummaryRender/);
   assert.match(job, /startAgendaRender/);
   assert.match(job, /startRelatedNightRender/);
   assert.match(job, /startSummaryRender/);
-  assert.match(page, /<AnnounceStudio workspace=\{workspace\}/);
-  assert.doesNotMatch(page, /\["seletiva", "SELETIVA"\]/);
 });

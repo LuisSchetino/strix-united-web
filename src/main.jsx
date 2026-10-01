@@ -23,6 +23,8 @@ import { notify, RollingLabel, ToastViewport } from "./ui/motion/motion.jsx";
 import { ClubLogo } from "./ui/ClubLogo.jsx";
 import { ActionMenu } from "./ui/ActionMenu.jsx";
 import { LaunchGate } from "./features/launch/LaunchGate.jsx";
+import { ContractGate, ContractValidating } from "./features/onboarding/ContractGate.jsx";
+import { hasSignedContract } from "./features/onboarding/contract-core.js";
 import { LAUNCH_CONFIG, clearLaunchAccessVerification, consumeLaunchReturn, isLaunchUnlocked, launchGateDecision, readLaunchAccessVerification, rememberLaunchAccess } from "./launch.js";
 import { preloadClubLogos } from "./ui/provider-assets.js";
 import { STRIX_BRAND } from "./brand.js";
@@ -34,6 +36,7 @@ import "./performance-polish.css";
 import "./quality-polish.css";
 import "./ui-bugfix.css";
 import "./mobile-safe.css";
+import "./ui/strix-polish.css";
 import { saveRosterPlayer } from "./features/squad/player-save.js";
 import { FC27_CLUB_ID as EA_CLUB_ID, isStrixClubId, readStrixKeyed } from "../shared/fc27-club.js";
 import { useDialog } from "./ui/useDialog.js";
@@ -1290,33 +1293,27 @@ function CentralLive({ workspace, navigate }) {
   const nextLogo = heroMatch?.resolved_opponent_logo_url || (heroMatch?.opponent_logos?.storage_path ? workspace.assetUrl(heroMatch.opponent_logos.storage_path) : "");
   return (
     <section className="page-home page-enter">
-      <section className={`match-hero${heroMatch ? "" : " is-free-night"}`}>
+      {heroMatch ? (
+      <section className="match-hero">
         <div className="stadium-light stadium-left" /><div className="stadium-light stadium-right" /><div className="smoke smoke-a" /><div className="smoke smoke-b" />
-        <div className="hero-meta"><span>{heroMatch ? (hero.isToday ? "TRANSMISSÃO · NOITE DE JOGO" : "PRÓXIMA PARTIDA") : "AGENDA LIVRE"}</span><b>{heroMatch ? `${datePart(heroMatch.scheduled_at)} · ${timePart(heroMatch.scheduled_at)}` : "SEM JOGOS HOJE"}</b></div>
-        <div className={`hero-teams${heroMatch ? "" : " is-free-night"}`}>
+        <div className="hero-meta"><span>{hero.isToday ? "TRANSMISSÃO · NOITE DE JOGO" : "PRÓXIMA PARTIDA"}</span><b>{`${datePart(heroMatch.scheduled_at)} · ${timePart(heroMatch.scheduled_at)}`}</b></div>
+        <div className="hero-teams">
           <div><Crest /><strong>STRIX UNITED</strong></div>
-          {heroMatch ? (
-            <>
-              <div className="versus"><small>{heroMatch.competition_name || "PARTIDA"}</small><b>VS</b><i>{timePart(heroMatch.scheduled_at)}</i></div>
-              <div><Avatar name={heroMatch.opponent_name} logo={nextLogo} priority /><strong>{heroMatch.opponent_name}</strong></div>
-            </>
-          ) : (
-            <>
-              <div className="versus is-free">
-                <small>SEM JOGOS HOJE</small>
-                <b>NOITE LIVRE</b>
-                <i>Nenhum compromisso programado</i>
-              </div>
-              <div>
-                <span className="free-night-mark" aria-hidden="true" />
-                <strong>AGENDA LIVRE</strong>
-              </div>
-            </>
-          )}
+          <div className="versus"><small>{heroMatch.competition_name || "PARTIDA"}</small><b>VS</b><i>{timePart(heroMatch.scheduled_at)}</i></div>
+          <div><Avatar name={heroMatch.opponent_name} logo={nextLogo} priority /><strong>{heroMatch.opponent_name}</strong></div>
         </div>
         <div className="hero-actions"><button className="primary" onClick={() => navigate("agenda")}><Icon name="squad" size={17} />ABRIR ESCALAÇÃO</button><button className="secondary" onClick={() => navigate("agenda")}>DETALHES DA PARTIDA <Icon name="arrow" size={16} /></button></div>
-        <div className="stadium-caption"><span>ARENA STRIX · SÃO PAULO</span><i>{heroMatch?.status === "live" && hero.isToday ? "AO VIVO" : hero.isToday ? "HOJE" : heroMatch ? "PRÓXIMO COMPROMISSO" : "AGENDA LIVRE"}</i></div>
+        <div className="stadium-caption"><span>ARENA STRIX · SÃO PAULO</span><i>{heroMatch.status === "live" && hero.isToday ? "AO VIVO" : hero.isToday ? "HOJE" : "PRÓXIMO COMPROMISSO"}</i></div>
       </section>
+      ) : (
+      <section className="match-hero is-free-night" aria-label="Strix United">
+        <div className="free-night-field" aria-hidden="true">
+          <i className="free-night-beam is-a" /><i className="free-night-beam is-b" /><i className="free-night-beam is-c" />
+          <i className="free-night-ring is-a" /><i className="free-night-ring is-b" />
+        </div>
+        <div className="free-night-logo"><Crest priority /></div>
+      </section>
+      )}
       <div className="content-grid central-agenda-grid">
         <section className="panel schedule">
           <header className="panel-heading"><div><span>AGENDA DA NOITE</span><h2>Jogos de hoje</h2></div><button onClick={() => navigate("agenda")}>Ver agenda <Icon name="arrow" size={15} /></button></header>
@@ -2210,7 +2207,7 @@ function AgendaLive({ navigate, workspace, profile }) {
       </section>
       {showPresets && <PresetPanel presets={presets} setPresets={setPresets} roster={workspace.players} assetUrl={workspace.assetUrl} onClose={() => setShowPresets(false)} />}
       {modal && <AgendaModal entry={modal.entry} mode={modal.mode} presets={presets} roster={workspace.players} assetUrl={workspace.assetUrl} standings={agendaStandingComparison(modal.entry?.db, workspace.competitionSources, workspace.competitionTeams)} defaultDate={defaultNewDate} suggestTimeForDate={suggestTimeForDate} onClose={() => setModal(null)} onEdit={modal.entry && canEditLineup(profile) ? () => setModal({ entry: modal.entry, mode: "edit" }) : undefined} logoForOpponent={(name) => { const logo = matchingLogo(workspace.logos, name); return logo?.storage_path ? workspace.assetUrl(logo.storage_path) : catalogLogo(name); }} onSave={(payload, mode) => void run(async () => { await workspace.saveAgenda(payload, mode, modal.entry?.db); setModal(null); })} />}
-      {pendingAction && <ViewportDialog className="modal-backdrop" onMouseDown={() => setPendingAction(null)}>
+      {pendingAction && <ViewportDialog className="modal-backdrop is-centered" onMouseDown={() => setPendingAction(null)}>
         <article className="agenda-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="agenda-confirm-title" onMouseDown={(event) => event.stopPropagation()}>
           <header>
             <div><span>CONFIRMAR AÇÃO</span><h2 id="agenda-confirm-title">{pendingAction.type === "delete" ? "Excluir partida?" : "Cancelar jogo?"}</h2></div>
@@ -2984,7 +2981,9 @@ function App() {
     [mobileOpen, setMobileOpen] = useState(false),
     [command, setCommand] = useState(false),
     [createOpen, setCreateOpen] = useState(false),
-    [player, setPlayer] = useState(null);
+    [player, setPlayer] = useState(null),
+    [contractSignedFor, setContractSignedFor] = useState(""),
+    [contractShownFor, setContractShownFor] = useState("");
   const syncRoute = () => {
     setActive(pageFromLocation());
     setRoute((current) => {
@@ -3114,6 +3113,20 @@ function App() {
     );
   if (!workspace.loading && auth.profile.access_tier !== "dev" && workspace.systemFlags.some((flag) => flag.key === "site_maintenance" && flag.enabled)) {
     return <MaintenanceScreen onRetry={() => window.location.reload()} onBack={auth.signOut} />;
+  }
+  // Primeiro login: contrato de vínculo da temporada, ligado ao usuário autenticado.
+  const contractUser = auth.session?.user;
+  // The gate stays mounted from the moment it opens until the confirmation ends, even though
+  // the session refresh that follows `updateUser` already reports the contract as signed.
+  const contractPending = Boolean(contractUser) && contractSignedFor !== contractUser.id
+    && (!hasSignedContract(contractUser) || contractShownFor === contractUser.id);
+  if (contractPending) {
+    // The contract only renders once the session, the profile and the roster all
+    // belong to the same, fully revalidated user. Anything else is a validation state.
+    const identityReady = !auth.loading && !workspace.loading && auth.profile?.user_id === contractUser.id;
+    return identityReady || contractShownFor === contractUser.id
+      ? <ContractGate client={auth.client} session={auth.session} profile={auth.profile} players={workspace.players} onShown={() => setContractShownFor(contractUser.id)} onSigned={() => setContractSignedFor(contractUser.id)} onSignOut={auth.signOut} />
+      : <ContractValidating />;
   }
   const title = locationState.kind === "not-found"
     ? "Não encontrada"

@@ -1,28 +1,27 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import {
-  MEDIA_LOOK_OPTIONS,
-  normalizeMediaLook,
-  withMediaLook,
-} from "../src/features/media/media-look.js";
+import { MEDIA_LOOKS, normalizeMediaLook, withMediaLook } from "../src/features/media/media-look.js";
 import { isCollageLook } from "../src/features/media/collage-paint.js";
 import { fingerprintAnnounceRender } from "../src/features/media/announce-core.js";
 import { fingerprintAgendaRender } from "../src/features/media/agenda-media-core.js";
 import { fingerprintRelatedNightRender } from "../src/features/media/related-night-core.js";
 import { fingerprintSummaryRender } from "../src/features/media/summary-core.js";
 
-test("V1 e V2 convivem no seletor de mídia", async () => {
-  const page = await readFile(new URL("../src/features/media/MediaPage.jsx", import.meta.url), "utf8");
-  const studio = await readFile(new URL("../src/features/media/AnnounceStudio.jsx", import.meta.url), "utf8");
-  assert.deepEqual(MEDIA_LOOK_OPTIONS.map(([id]) => id), ["campaign", "collage"]);
+test("V1 e V2 existem como painters internos e nenhuma tela deixa o usuário escolher", async () => {
+  const [page, sections, studio, shell] = await Promise.all([
+    "MediaPage.jsx", "MediaSections.jsx", "AnnounceStudio.jsx", "MediaShell.jsx",
+  ].map((name) => readFile(new URL(`../src/features/media/${name}`, import.meta.url), "utf8")));
+  assert.deepEqual(Object.keys(MEDIA_LOOKS), ["campaign", "collage"]);
   assert.equal(normalizeMediaLook("collage"), "collage");
   assert.equal(normalizeMediaLook("campaign"), "campaign");
-  assert.match(page, /V1 — Campanha FC27|MediaLookSwitch/);
-  assert.match(studio, /MediaLookSwitch/);
-  assert.match(page, /renderAgendaFrame/);
-  assert.match(page, /renderRelatedNightFrame/);
-  assert.match(page, /renderSummaryFrame/);
+  for (const source of [page, sections, studio, shell]) {
+    assert.doesNotMatch(source, /MediaLookSwitch|MediaLookBadge|mediaLook=|onMediaLook|setLook|readStoredMediaLook|writeStoredMediaLook/);
+    assert.doesNotMatch(source, /V1 — |V2 — |VÍDEO · V1|ARTE ESTÁTICA · V2|TEMPLATE VISUAL/);
+  }
+  assert.match(sections, /renderAgendaFrame/);
+  assert.match(sections, /renderRelatedNightFrame/);
+  assert.match(sections, /renderSummaryFrame/);
 });
 
 test("timeline collage usa o segundo painter sem apagar a campanha", async () => {

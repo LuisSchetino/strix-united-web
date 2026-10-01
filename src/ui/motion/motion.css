@@ -1,10 +1,35 @@
 :root {
-  --motion-fast: 150ms;
-  --motion-normal: 240ms;
-  --motion-slow: 380ms;
-  --motion-ease: cubic-bezier(0.22, 1, 0.36, 1);
-  --motion-spring: cubic-bezier(0.2, 0.9, 0.25, 1.15);
+  /* Motion tokens: the single source of truth. Change a value here and every
+     surface follows. JS mirrors these in motion-tokens.js. */
+  --motion-micro: 140ms;   /* hover, press, focus, color */
+  --motion-control: 200ms; /* tabs, segmented controls, menus, toggles */
+  --motion-modal: 220ms;   /* dialogs and sheets */
+  --motion-section: 320ms; /* content swaps inside a stable shell */
+  --motion-hero: 560ms;    /* preview assembly and settle */
+  --motion-stagger: 45ms;  /* step between structure → preview → actions → rail */
+  --motion-ease: cubic-bezier(0.22, 1, 0.36, 1);   /* decelerate: entering */
+  --motion-ease-in: cubic-bezier(0.4, 0, 1, 1);    /* accelerate: leaving */
+  --motion-ease-inout: cubic-bezier(0.65, 0, 0.35, 1);
   --motion-enter-y: 6px;
+  --motion-section-y: 10px;
+  /* Legacy names stay valid but resolve to the tokens above. The old spring
+     overshot; nothing in the product bounces any more. */
+  --motion-fast: var(--motion-micro);
+  --motion-normal: var(--motion-control);
+  --motion-slow: var(--motion-section);
+  --motion-spring: var(--motion-ease);
+}
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-micro: 1ms;
+    --motion-control: 1ms;
+    --motion-modal: 1ms;
+    --motion-section: 1ms;
+    --motion-hero: 1ms;
+    --motion-stagger: 0ms;
+    --motion-enter-y: 0px;
+    --motion-section-y: 0px;
+  }
 }
 .motion-tabs {
   position: relative;

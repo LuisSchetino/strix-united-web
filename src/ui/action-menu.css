@@ -38,9 +38,9 @@
   background:#101318;
   box-shadow:0 22px 58px #000c;
   transform-origin:top right;
-  animation:action-menu-in 160ms var(--motion-ease,cubic-bezier(.2,.8,.2,1)) both;
+  animation:action-menu-in var(--motion-control) var(--motion-ease) both;
 }
-.action-menu-popover.is-leaving{animation:action-menu-out 140ms ease both}
+.action-menu-popover.is-leaving{animation:action-menu-out var(--motion-micro) ease both}
 .action-menu-popover>button{
   display:flex;
   align-items:center;
