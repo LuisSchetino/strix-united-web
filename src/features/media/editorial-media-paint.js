@@ -100,9 +100,16 @@ function drawBase(ctx, timeline, { section, date = "", counter = "", time = 0 } 
   ctx.lineTo(width * 0.88 + drift, height * 0.78);
   ctx.stroke();
   ctx.restore();
-  drawChromeRibbons(ctx, width, height, time, s);
 
-  // A restrained moving scan line supplies motion even during readable holds.
+  // Vertical light columns drift slowly. They are the stage motion, not a metal ribbon.
+  const column = ((time * 0.07) % 1) * width;
+  ctx.save();
+  ctx.globalAlpha = 0.05;
+  ctx.fillStyle = "#f5f5f5";
+  ctx.fillRect(column, 0, Math.max(1, 2 * s), height);
+  ctx.fillRect((column + width * 0.37) % width, 0, Math.max(1, s), height);
+  ctx.restore();
+
   const sweepX = ((time * 0.28) % 1.7 - 0.32) * width;
   ctx.save(); ctx.globalAlpha = 0.11;
   ctx.fillStyle = makeMetal(ctx, sweepX, 0, sweepX + 70 * s, 0, "#c6c7c2");
@@ -156,29 +163,15 @@ function matchCounter(index, count) {
   return `${String(Math.max(1, index + 1)).padStart(2, "0")} / ${String(count).padStart(2, "0")}`;
 }
 
-function drawWipe(ctx, width, height, progress, s) {
-  const p = clamp(progress);
-  if (p >= 0.78) return;
-  const x = -width * 0.26 + (p / 0.78) * width * 1.52;
+function drawWipe(ctx, width, height, progress) {
+  const open = ease(clamp(progress));
+  if (open >= 0.98) return;
+  const band = (1 - open) * height * 0.5;
   ctx.save();
-  ctx.globalAlpha = 0.9 * (1 - ease(p / 0.78) * 0.22);
-  ctx.fillStyle = makeMetal(ctx, x - 90 * s, 0, x + 100 * s, height, "#e5e3dc");
-  ctx.beginPath();
-  ctx.moveTo(x, 0);
-  ctx.lineTo(x + 74 * s, 0);
-  ctx.lineTo(x - 80 * s, height);
-  ctx.lineTo(x - 154 * s, height);
-  ctx.closePath?.();
-  ctx.fill();
-  ctx.globalAlpha *= 0.7;
-  ctx.fillStyle = "#151719";
-  ctx.beginPath();
-  ctx.moveTo(x + 86 * s, 0);
-  ctx.lineTo(x + 108 * s, 0);
-  ctx.lineTo(x - 46 * s, height);
-  ctx.lineTo(x - 68 * s, height);
-  ctx.closePath?.();
-  ctx.fill();
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = "#050607";
+  ctx.fillRect(0, 0, width, band);
+  ctx.fillRect(0, height - band, width, band + 2);
   ctx.restore();
 }
 
@@ -186,7 +179,7 @@ function drawRevealLabel(ctx, text, x, y, size, progress, options = {}) {
   const p = ease(progress);
   ctx.save();
   ctx.globalAlpha *= p;
-  ctx.translate((1 - p) * (options.offset ?? 44), 0);
+  ctx.translate(0, (1 - p) * (options.offset ?? 36));
   drawText(ctx, text, x, y, size, options);
   ctx.restore();
 }
@@ -205,14 +198,14 @@ function paintMatchComposition(ctx, timeline, match, assets, progress, index, co
   drawRevealLabel(ctx, match.competition || "AMISTOSO", width / 2, y + 132 * s, 24 * s, p, { color: WHITE, weight: 800, align: "center", maxWidth: w - 90 * s });
   drawRule(ctx, width / 2 - 42 * s, y + 164 * s, width / 2 + 42 * s, "#c7c8c4", 2 * s);
   const logoY = y + h * 0.51;
-  const size = score ? Math.min(192 * s, h * 0.30) : Math.min(236 * s, h * 0.34);
+  const size = score ? Math.min(248 * s, h * 0.38) : Math.min(300 * s, h * 0.42);
   ctx.save(); ctx.translate(x + w * 0.25, logoY); ctx.scale(0.84 + p * 0.16, 0.84 + p * 0.16); drawLogo(ctx, assets?.strix, 0, 0, size, "STRIX", WHITE); ctx.restore();
   ctx.save(); ctx.translate(x + w * 0.75, logoY); ctx.scale(0.84 + p * 0.16, 0.84 + p * 0.16); drawLogo(ctx, assets?.opponent || assets?.opponents?.[index], 0, 0, size, match.opponent, WHITE); ctx.restore();
   if (score) {
     drawNumber(ctx, match.strix_score, width * 0.405, logoY + 5 * s, 108 * s, "center", WHITE);
     drawText(ctx, "–", width / 2, logoY + 4 * s, 42 * s, { color: "#c4c4bf", weight: 500, align: "center" });
     drawNumber(ctx, match.opponent_score, width * 0.595, logoY + 5 * s, 108 * s, "center", WHITE);
-  } else drawText(ctx, "VS", width / 2, logoY, 43 * s, { color: WHITE, weight: 900, family: "Rajdhani, Inter, sans-serif", align: "center" });
+  } else drawText(ctx, "VS", width / 2, logoY, 72 * s, { color: WHITE, weight: 900, family: "Rajdhani, Inter, sans-serif", align: "center" });
   drawText(ctx, "STRIX UNITED", x + w * 0.25, y + h * 0.78, 32 * s, { color: WHITE, weight: 900, align: "center", maxWidth: w * 0.34 });
   drawText(ctx, match.opponent || "ADVERSÁRIO", x + w * 0.75, y + h * 0.78, 30 * s, { color: WHITE, weight: 900, align: "center", maxWidth: w * 0.36 });
   const when = [match.dateLabel || dayLabel, match.kickoff].filter(Boolean).join("  ·  ");
@@ -235,31 +228,31 @@ function paintFixtureRow(ctx, timeline, match, { index, totalCount, pageCount, p
   ctx.save();
   ctx.globalAlpha *= progress;
   ctx.translate(-(1 - progress) * (64 + rowIndex * 7) * s, (1 - progress) * 20 * s);
-  ctx.fillStyle = rowIndex % 2 === 0 ? PAPER : "#e2e0d9";
+  ctx.fillStyle = rowIndex % 2 === 0 ? "#12161a" : "#0c0f12";
   ctx.fillRect(left, rowY, rowW, rowH);
-  ctx.fillStyle = "#111316"; ctx.fillRect(left, rowY, 10 * s, rowH);
+  ctx.fillStyle = "#f5f5f5"; ctx.fillRect(left, rowY, 8 * s, rowH * ease(progress));
   ctx.strokeStyle = "#ffffff85"; ctx.lineWidth = 1.1 * s; ctx.strokeRect(left + s, rowY + s, rowW - 2 * s, rowH - 2 * s);
 
   const metaW = (rows === 1 ? 310 : 278) * s;
-  drawText(ctx, `${String(index + 1).padStart(2, "0")}  /  ${String(totalCount).padStart(2, "0")}`, left + 29 * s, rowY + 30 * s * scale, 12 * s * scale, { color: "#676b6d", weight: 900 });
-  drawText(ctx, match.competition || "AMISTOSO", left + 29 * s, rowY + 66 * s * scale, 19 * s * scale, { color: GRAPHITE, weight: 900, maxWidth: metaW - 48 * s });
-  if (match.round) drawText(ctx, match.round, left + 29 * s, rowY + 96 * s * scale, 13 * s * scale, { color: "#676b6d", weight: 700, maxWidth: metaW - 48 * s });
+  drawText(ctx, `${String(index + 1).padStart(2, "0")}  /  ${String(totalCount).padStart(2, "0")}`, left + 29 * s, rowY + 30 * s * scale, 12 * s * scale, { color: "#aeb4bb", weight: 900 });
+  drawText(ctx, match.competition || "AMISTOSO", left + 29 * s, rowY + 66 * s * scale, 22 * s * scale, { color: WHITE, weight: 900, maxWidth: metaW - 48 * s });
+  if (match.round) drawText(ctx, match.round, left + 29 * s, rowY + 96 * s * scale, 13 * s * scale, { color: "#aeb4bb", weight: 700, maxWidth: metaW - 48 * s });
   drawRule(ctx, left + 29 * s, rowY + rowH * 0.59, left + metaW - 20 * s, "#12141635", s);
-  drawText(ctx, "HORÁRIO", left + 29 * s, rowY + rowH * 0.70, 10 * s * scale, { color: "#777a7a", weight: 900 });
-  drawText(ctx, match.kickoff || "A DEFINIR", left + 29 * s, rowY + rowH * 0.86, (match.kickoff ? 43 : 27) * s * scale, { color: INK, weight: 900, family: "Rajdhani, Inter, sans-serif" });
+  drawText(ctx, "HORÁRIO", left + 29 * s, rowY + rowH * 0.70, 10 * s * scale, { color: "#8e969f", weight: 900 });
+  drawText(ctx, match.kickoff || "A DEFINIR", left + 29 * s, rowY + rowH * 0.86, (match.kickoff ? 52 : 27) * s * scale, { color: WHITE, weight: 900, family: "Rajdhani, Inter, sans-serif" });
 
   const matchupLeft = left + metaW;
   const matchupW = rowW - metaW - 22 * s;
   const strixX = matchupLeft + matchupW * 0.25;
   const opponentX = matchupLeft + matchupW * 0.75;
   const logoY = rowY + rowH * 0.43;
-  const logoCap = rows === 1 ? 190 : rows === 2 ? 138 : rows === 3 ? 106 : 88;
+  const logoCap = rows === 1 ? 250 : rows === 2 ? 176 : rows === 3 ? 132 : 108;
   const logoSize = Math.min(logoCap * s, rowH * 0.36);
   ctx.save(); ctx.translate(strixX, logoY); ctx.scale(0.91 + progress * 0.09, 0.91 + progress * 0.09); drawLogo(ctx, strixAsset, 0, 0, logoSize, "STRIX"); ctx.restore();
   ctx.save(); ctx.translate(opponentX, logoY); ctx.scale(0.91 + progress * 0.09, 0.91 + progress * 0.09); drawLogo(ctx, asset, 0, 0, logoSize, match.opponent); ctx.restore();
-  drawText(ctx, "VS", (strixX + opponentX) / 2, logoY, 20 * s * scale, { color: "#65696a", weight: 900, family: "Rajdhani, Inter, sans-serif", align: "center" });
-  drawText(ctx, "STRIX UNITED", strixX, rowY + rowH * 0.81, 15 * s * scale, { color: INK, weight: 900, align: "center", maxWidth: matchupW * 0.46 });
-  drawText(ctx, match.opponent || "ADVERSÁRIO", opponentX, rowY + rowH * 0.81, 15 * s * scale, { color: INK, weight: 900, align: "center", maxWidth: matchupW * 0.46 });
+  drawText(ctx, "VS", (strixX + opponentX) / 2, logoY, 28 * s * scale, { color: WHITE, weight: 900, family: "Rajdhani, Inter, sans-serif", align: "center" });
+  drawText(ctx, "STRIX UNITED", strixX, rowY + rowH * 0.81, 18 * s * scale, { color: WHITE, weight: 900, align: "center", maxWidth: matchupW * 0.46 });
+  drawText(ctx, match.opponent || "ADVERSÁRIO", opponentX, rowY + rowH * 0.81, 18 * s * scale, { color: WHITE, weight: 900, align: "center", maxWidth: matchupW * 0.46 });
   ctx.restore();
 }
 
@@ -321,9 +314,9 @@ function drawResultsStats(ctx, timeline, period, progress) {
   values.forEach(([label, value], index) => {
     const col = index % 2; const row = Math.floor(index / 2); const x = left + col * (cellW + gap); const y = top + row * (cellH + gap);
     const reveal = ease(progress - index * 0.075);
-    ctx.save(); ctx.globalAlpha *= reveal; ctx.translate(0, (1 - reveal) * 24 * s); ctx.fillStyle = WHITE; ctx.fillRect(x, y, cellW, cellH); ctx.strokeStyle = HAIR; ctx.lineWidth = s; ctx.strokeRect(x, y, cellW, cellH);
-    drawText(ctx, label, x + 24 * s, y + 42 * s, 17 * s, { color: "#676b6d", weight: 900 });
-    drawText(ctx, value, x + 24 * s, y + cellH * 0.62, 48 * s, { color: INK, weight: 900, family: "Rajdhani, Inter, sans-serif", maxWidth: cellW - 48 * s });
+    ctx.save(); ctx.globalAlpha *= reveal; ctx.translate(0, (1 - reveal) * 24 * s); ctx.fillStyle = "#12161a"; ctx.fillRect(x, y, cellW, cellH); ctx.strokeStyle = "#ffffff24"; ctx.lineWidth = s; ctx.strokeRect(x, y, cellW, cellH);
+    drawText(ctx, label, x + 24 * s, y + 42 * s, 17 * s, { color: "#aeb4bb", weight: 900 });
+    drawText(ctx, value, x + 24 * s, y + cellH * 0.62, 52 * s, { color: WHITE, weight: 900, family: "Rajdhani, Inter, sans-serif", maxWidth: cellW - 48 * s });
     ctx.restore();
   });
 }

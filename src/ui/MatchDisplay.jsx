@@ -17,9 +17,10 @@ export function MatchDisplay({
   awayScore,
   className = "",
   compact = false,
+  layout = "inline",
 }) {
   return (
-    <div className={`match-display${compact ? " is-compact" : ""} ${className}`.trim()}>
+    <div className={`match-display${compact ? " is-compact" : ""}${layout === "ledger" ? " is-ledger" : ""} ${className}`.trim()}>
       <div className="match-display-team match-display-home">
         <span className="match-display-name">{homeName}</span>
         <TeamMark name={homeName} url={homeLogo} />

@@ -287,6 +287,84 @@
 }
 @keyframes sp-float{50%{translate:0 -5px}}
 
+.sidebar-user{
+  display:grid!important;
+  grid-template-columns:auto minmax(0,1fr) 44px;
+  align-items:center;
+  width:100%!important;
+  max-width:100%;
+  box-sizing:border-box;
+  overflow:hidden;
+}
+.sidebar-user>span{min-width:0}
+.sidebar-user .sidebar-signout{grid-column:3;margin:0}
+
+.page-home .match-hero{min-height:460px}
+.page-home .hero-teams{
+  max-width:1040px!important;
+  grid-template-columns:minmax(0,1fr) minmax(160px,.72fr) minmax(0,1fr)!important;
+  gap:36px!important;
+  margin:52px auto 40px!important;
+  align-items:center!important;
+}
+.page-home .hero-teams>div:not(.versus){
+  display:grid;
+  grid-template-rows:156px auto!important;
+  justify-items:center;
+  align-items:center;
+  gap:16px!important;
+}
+.page-home .hero-teams :is(.crest,.avatar,.club-logo){
+  width:140px!important;
+  height:140px!important;
+  margin:0!important;
+  padding:0!important;
+  align-self:center;
+}
+.page-home .hero-teams .versus{min-height:156px!important;gap:8px}
+.page-home .hero-teams .versus small{font-size:13px!important;font-weight:900;letter-spacing:.18em}
+.page-home .hero-teams .versus b{font-size:84px!important;line-height:.9;letter-spacing:.04em}
+.page-home .hero-teams .versus i{font-size:16px!important;font-weight:800}
+.page-home .hero-teams strong{font-size:16px!important;font-weight:850;letter-spacing:.08em;min-height:0!important}
+
+.central-night-list .upcoming-game-card{min-height:92px;padding:18px 22px!important;gap:22px!important}
+.central-night-list .upcoming-game-versus{align-items:center!important;gap:18px!important}
+.central-night-list .upcoming-game-versus>div{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) 64px;
+  align-items:center!important;
+  gap:14px!important;
+}
+.central-night-list .upcoming-game-versus>div:last-child{grid-template-columns:64px minmax(0,1fr)!important}
+.central-night-list .upcoming-game-versus :is(.crest,.avatar,.club-logo){
+  width:64px!important;height:64px!important;margin:0!important;padding:0!important;align-self:center;
+}
+.central-night-list .upcoming-game-versus b{font-size:15px!important;line-height:1.15}
+.central-night-list .upcoming-game-card>header span,
+.central-night-list .upcoming-game-card>header time{font-size:12px!important}
+
+.agenda-list .agenda-match,.agenda-view-clubs{align-items:center!important}
+.agenda-match :is(.crest,.avatar,.club-logo),
+.agenda-view-clubs :is(.crest,.avatar,.club-logo){
+  margin-top:0!important;
+  align-self:center;
+  padding:0!important;
+}
+.agenda-view-clubs :is(.crest,.avatar,.club-logo){width:88px!important;height:88px!important}
+
+@media(max-width:700px){
+  .page-home .hero-teams{grid-template-columns:minmax(0,1fr) 72px minmax(0,1fr)!important;gap:12px!important;margin:28px auto 22px!important}
+  .page-home .hero-teams>div:not(.versus){grid-template-rows:84px auto!important}
+  .page-home .hero-teams :is(.crest,.avatar,.club-logo){width:76px!important;height:76px!important}
+  .page-home .hero-teams .versus{min-height:84px!important}
+  .page-home .hero-teams .versus b{font-size:40px!important}
+  .page-home .hero-teams .versus small{font-size:9px!important}
+  .page-home .hero-teams strong{font-size:11px!important}
+  .central-night-list .upcoming-game-versus :is(.crest,.avatar,.club-logo){width:52px!important;height:52px!important}
+  .central-night-list .upcoming-game-versus>div{grid-template-columns:minmax(0,1fr) 52px!important}
+  .central-night-list .upcoming-game-versus>div:last-child{grid-template-columns:52px minmax(0,1fr)!important}
+}
+
 @media(max-width:580px){
   .page-home .match-hero.is-free-night{min-height:clamp(280px,42vh,380px)}
   .free-night-ring.is-b{display:none}

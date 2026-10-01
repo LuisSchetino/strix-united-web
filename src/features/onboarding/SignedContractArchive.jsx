@@ -4,6 +4,7 @@ import { CloseButton } from "../../ui/CloseButton.jsx";
 import { useDialog } from "../../ui/useDialog.js";
 import { downloadSignedContractPdf } from "./contract-pdf.js";
 import { CONTRACT_COMMITMENT, CONTRACT_SEASON, SIGNATURE_VIEWBOX } from "./contract-core.js";
+import { downloadBlob, renderSignatureMp4 } from "./contract-motion.js";
 import "./contract-archive.css";
 
 export function ContractArchiveAction({ onClick, compact = false }) {
@@ -23,7 +24,24 @@ const dateLabel = (value) => {
 export function SignedContractArchive({ contract, identity, onClose }) {
   const dialogRef = useDialog(onClose, { enabled: true, lockScroll: true });
   const [replay, setReplay] = useState(0);
+  const [video, setVideo] = useState(null);
+  const [rendering, setRendering] = useState(false);
+  const [videoError, setVideoError] = useState("");
   const backdropRef = useRef(null);
+  const downloadVideo = async () => {
+    if (rendering) return;
+    setVideoError("");
+    try {
+      const blob = video || await (setRendering(true), renderSignatureMp4({ contract, identity }));
+      setVideo(blob);
+      const handle = String(identity?.handle || identity?.name || "strix").replace(/[^\w.-]+/g, "-").toLowerCase();
+      downloadBlob(blob, `strix-contrato-${handle}.mp4`);
+    } catch (error) {
+      setVideoError(error?.message || "Não foi possível gerar o vídeo da assinatura.");
+    } finally {
+      setRendering(false);
+    }
+  };
   if (!contract?.signature?.d) return null;
   return createPortal(
     <div ref={backdropRef} className="contract-archive-backdrop" onMouseDown={(event) => { if (event.target === backdropRef.current) onClose(); }}>
@@ -51,8 +69,10 @@ export function SignedContractArchive({ contract, identity, onClose }) {
           <small>Uma cópia pessoal do compromisso e do traço armazenados no seu perfil.</small>
         </div>
         <footer>
+          {videoError && <p className="contract-archive-error" role="alert">{videoError}</p>}
           <button type="button" className="secondary" onClick={() => setReplay((value) => value + 1)}>REVER ANIMAÇÃO</button>
-          <button type="button" className="primary" onClick={() => downloadSignedContractPdf(contract, identity)}>BAIXAR PDF</button>
+          <button type="button" className="secondary" onClick={() => downloadSignedContractPdf(contract, identity)}>BAIXAR PDF</button>
+          <button type="button" className="primary" disabled={rendering} onClick={() => void downloadVideo()}>{rendering ? "GERANDO…" : "BAIXAR VÍDEO"}</button>
         </footer>
       </article>
     </div>,

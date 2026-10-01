@@ -25,7 +25,7 @@ import { ActionMenu } from "./ui/ActionMenu.jsx";
 import { LaunchGate } from "./features/launch/LaunchGate.jsx";
 import { ContractGate, ContractValidating } from "./features/onboarding/ContractGate.jsx";
 import { hasSignedContract, readContract, resolveContractIdentity } from "./features/onboarding/contract-core.js";
-import { ContractArchiveAction, SignedContractArchive } from "./features/onboarding/SignedContractArchive.jsx";
+import { SignedContractArchive } from "./features/onboarding/SignedContractArchive.jsx";
 import { LAUNCH_CONFIG, clearLaunchAccessVerification, consumeLaunchReturn, isLaunchUnlocked, launchGateDecision, readLaunchAccessVerification, rememberLaunchAccess } from "./launch.js";
 import { preloadClubLogos } from "./ui/provider-assets.js";
 import { STRIX_BRAND } from "./brand.js";
@@ -1073,8 +1073,6 @@ function Sidebar({
   setMobileOpen,
   profile,
   signOut,
-  hasContract,
-  onOpenContract,
 }) {
   const warmRoute = (id) => () => { void preloadRoute(id); };
   const [mobile, setMobile] = useState(() => window.matchMedia("(max-width:900px)").matches);
@@ -1146,12 +1144,11 @@ function Sidebar({
       </div>
       <div className="sidebar-dock">
       <RastroSignature compact={collapsed} />
-      {collapsed ? <div className="sidebar-compact-account">{hasContract && <ContractArchiveAction compact onClick={onOpenContract}/>}<button type="button" className="sidebar-signout" onClick={signOut} aria-label="Sair da conta" data-tooltip="Sair da conta"><Icon name="logout" size={19}/></button></div> : <div className="sidebar-user">
+      {collapsed ? <div className="sidebar-compact-account"><button type="button" className="sidebar-signout" onClick={signOut} aria-label="Sair da conta" data-tooltip="Sair da conta"><Icon name="logout" size={19}/></button></div> : <div className="sidebar-user">
         <Avatar name={profile.display_name} logo={profile.avatar_url} kind="photo" size="sm" />
         <span>
           <b>{profile.display_name}</b>
           <small>{tierLabel(profile.access_tier)}</small>
-          {hasContract && <ContractArchiveAction onClick={onOpenContract}/>}
         </span>
         <button type="button" className="sidebar-signout" onClick={signOut} title="Sair da conta" aria-label="Sair da conta">
           <Icon name="logout" size={15} />
@@ -2268,8 +2265,9 @@ function SquadPageV2({ workspace, profile }) {
   return <section className="data-page page-enter"><header className="data-page-header"><div><span>ELENCO DO CLUBE</span><h1>Squad FC 27.</h1><p>Perfis reais, posições múltiplas e status do vínculo visíveis antes de salvar.</p></div>{canManage && <button className="primary" onClick={() => setModal(true)}><Icon name="plus" size={16}/>ADICIONAR JOGADOR</button>}</header>{(workspace.error || error) && <p className="matches-error">{error || workspace.error}</p>}<section className="squad-list">{workspace.players.filter((player) => player.is_active).length ? workspace.players.filter((player) => player.is_active).map((player) => <article key={player.id}><Avatar name={player.display_name} logo={player.avatar_path ? workspace.assetUrl(player.avatar_path) : ""}/><div><b>{player.display_name}</b><small>{player.positions?.join(" · ") || "Posição não definida"}</small></div>{player.member_type === "teste" && <em className="test-tag">TESTE{player.trial_expires_at ? ` · até ${datePart(player.trial_expires_at)}` : ""}</em>}{canManage && <button className="icon-button" aria-label={`Remover ${player.display_name}`} onClick={() => void workspace.removePlayer(player.id).catch((removeError) => setError(removeError.message))}><Icon name="trash" size={16}/></button>}</article>) : <div className="matches-empty">O elenco FC 27 começa vazio. Adicione os jogadores oficiais quando estiver pronto.</div>}</section>{modal && <div className="match-manual-backdrop"><form className="match-manual-modal squad-modal-v2" onSubmit={submit}><header><div><span>ELENCO · NOVO PERFIL</span><h2>Adicionar jogador</h2><p>O preview acompanha a ficha antes de entrar no elenco.</p></div><button type="button" className="icon-button" onClick={close} aria-label="Fechar"><Icon name="close"/></button></header><div className="squad-editor"><section className="manual-form-grid"><label className="manual-full">NOME DE EXIBIÇÃO<input autoFocus value={draft.display_name} onChange={(event) => setDraft((current) => ({ ...current, display_name:event.target.value }))} placeholder="Como aparece no time"/></label><label className="manual-full logo-drop">FOTO DO JOGADOR<input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => setPhoto(event.target.files?.[0] || null)}/><span><Icon name="upload" size={17}/>{photo ? photo.name : "Enviar foto do computador"}</span></label><fieldset className="position-picker manual-full"><legend>POSIÇÕES EM QUE JOGA</legend>{positions.map((position) => <button type="button" className={draft.positions.includes(position) ? "selected" : ""} key={position} onClick={() => setDraft((current) => ({ ...current, positions:current.positions.includes(position) ? current.positions.filter((item) => item !== position) : [...current.positions, position] }))}>{position}</button>)}</fieldset><fieldset className="member-picker manual-full"><legend>VÍNCULO COM O TIME</legend><button type="button" className={draft.member_type === "complete" ? "selected" : ""} onClick={() => setDraft((current) => ({ ...current, member_type:"complete", trial_expires_at:"" }))}><b>COMPLETE</b><small>Fixo no elenco</small></button><button type="button" className={draft.member_type === "teste" ? "selected" : ""} onClick={() => setDraft((current) => ({ ...current, member_type:"teste" }))}><b>TESTE</b><small>Identificado em toda a escalação</small></button></fieldset>{draft.member_type === "teste" && <label className="manual-full">TESTE ATÉ<input type="date" value={draft.trial_expires_at} onChange={(event) => setDraft((current) => ({ ...current, trial_expires_at:event.target.value }))}/></label>}</section><aside className="squad-preview"><span>PREVIEW DO ELENCO</span><Avatar name={draft.display_name || "?"} logo={previewUrl}/><small>{draft.positions[0] || "POSIÇÃO"}</small><h3>{draft.display_name || "NOME DO JOGADOR"}</h3><p>{draft.member_type === "teste" ? "Jogador em teste" : "Jogador completo"}</p></aside></div><footer><button type="button" className="secondary" onClick={close}>CANCELAR</button><button className="primary"><Icon name="upload" size={16}/>SALVAR JOGADOR</button></footer></form></div>}</section>;
 }
 
-function SquadPageV3({ workspace, profile }) {
+function SquadPageV3({ workspace, profile, contract = null, identity = null }) {
   const [saving, setSaving] = useState(false);
+  const [contractOpen, setContractOpen] = useState(false);
   const savingRef = useRef(false);
   const returnFocusRef = useRef(null);
   const canCreate = canCreatePlayer(profile);
@@ -2351,6 +2349,9 @@ function SquadPageV3({ workspace, profile }) {
     ["attackers", "ATACANTES", "ATA"],
   ];
   const activePlayers = workspace.players.filter((player) => player.is_active);
+  const personKey = (value) => String(value ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLocaleLowerCase("pt-BR");
+  const ownNames = new Set([identity?.name, profile?.display_name].map(personKey).filter(Boolean));
+  const ownsContract = (player) => Boolean(contract?.signature?.d) && ownNames.has(personKey(player.display_name));
   const gamesForPlayer = (player) => {
     const names = new Set([
       normalizeTeamName(player.display_name),
@@ -2373,7 +2374,7 @@ function SquadPageV3({ workspace, profile }) {
             <header><div><span>{title}</span><small>{description}</small></div><b>{players.length}</b></header>
             {players.length ? <div className="squad-list squad-compact-list">{players.map((player) => <article className="squad-player-card" key={player.id}>
               <Avatar name={player.display_name} logo={player.avatar_path ? workspace.assetUrl(player.avatar_path) : player.external_avatar_url || ""} kind="photo" size="md" />
-              <div className="squad-card-identity"><b>{player.display_name}</b><small>{player.positions?.join(" · ") || "Posição não definida"}</small><span>{gamesForPlayer(player)} jogo(s)</span></div>
+              <div className="squad-card-identity"><b>{player.display_name}</b><small>{player.positions?.join(" · ") || "Posição não definida"}</small><span>{gamesForPlayer(player)} jogo(s)</span>{ownsContract(player) && <button type="button" className="squad-contract-action" onClick={() => setContractOpen(true)}>MEU CONTRATO</button>}</div>
               <strong className="squad-shirt-number">{player.shirt_number === null || player.shirt_number === undefined ? "—" : `#${String(player.shirt_number).padStart(2, "0")}`}</strong>
               <em className={`member-tag ${player.member_type || "elenco"}`}>{player.member_type === "teste" ? `TESTE${player.trial_expires_at ? ` · até ${datePart(player.trial_expires_at)}` : ""}` : player.member_type === "complete" ? "COMPLETE" : "ELENCO"}</em>
               {(canEdit || canArchive) && <div className="squad-context"><ActionMenu className="squad-more" label={`Ações de ${player.display_name}`} items={[canEdit && { id: "edit", icon: "edit", label: "Editar", onSelect: () => openEdit(player) }, canArchive && { id: "archive", icon: "trash", label: "Arquivar", tone: "danger", onSelect: () => { void workspace.removePlayer(player.id).catch((removeError) => setError(removeError.message)); } }].filter(Boolean)} /></div>}
@@ -2381,6 +2382,7 @@ function SquadPageV3({ workspace, profile }) {
           </section>
         );
       }) : <div className="matches-empty">O elenco FC 27 começa vazio. Adicione os jogadores oficiais quando estiver pronto.</div>}
+      {contractOpen && contract && <SignedContractArchive contract={contract} identity={identity} onClose={() => setContractOpen(false)} />}
       {editing !== null && <ViewportDialog className="match-manual-backdrop squad-dialog-layer" onClose={() => { if (!savingRef.current) close(); }}><form className="match-manual-modal squad-modal-v2" role="dialog" aria-modal="true" aria-labelledby="squad-editor-title" aria-busy={saving} onSubmit={save}>
         <header><div><span>ELENCO · {editing?.id ? "EDITAR PERFIL" : "NOVO PERFIL"}</span><h2 id="squad-editor-title">{editing?.id ? "Editar jogador" : "Adicionar jogador"}</h2><p>O preview acompanha a ficha antes de entrar no elenco.</p></div><CloseButton onClick={close} disabled={saving} /></header>
         <div className="squad-editor"><section className="manual-form-grid">
@@ -2986,7 +2988,6 @@ function App() {
     [command, setCommand] = useState(false),
     [createOpen, setCreateOpen] = useState(false),
     [player, setPlayer] = useState(null),
-    [contractArchiveOpen, setContractArchiveOpen] = useState(false),
     [contractSignedFor, setContractSignedFor] = useState(""),
     [contractShownFor, setContractShownFor] = useState("");
   const syncRoute = () => {
@@ -3158,8 +3159,6 @@ function App() {
         setMobileOpen={setMobileOpen}
         profile={auth.profile}
         signOut={auth.signOut}
-        hasContract={Boolean(signedContract)}
-        onOpenContract={() => { setMobileOpen(false); setContractArchiveOpen(true); }}
       />
       <main className="workspace">
         <header className="topbar">
@@ -3209,7 +3208,7 @@ function App() {
         ) : active === "partidas" ? (
           <FeatureBoundary type="table"><MatchesPage profile={auth.profile} workspace={workspace} client={auth.client} /></FeatureBoundary>
         ) : active === "elenco" ? (
-          <SquadPageV3 workspace={workspace} profile={auth.profile} />
+          <SquadPageV3 workspace={workspace} profile={auth.profile} contract={signedContract} identity={contractIdentity} />
         ) : active === "campeonatos" ? (
           <FeatureBoundary type="competitions"><CompetitionsPage profile={auth.profile} workspace={workspace} client={auth.client} /></FeatureBoundary>
         ) : (
@@ -3221,7 +3220,6 @@ function App() {
         <Command close={() => setCommand(false)} navigate={navigate} workspace={workspace} profile={auth.profile} />
       )}
       <Profile player={player} close={() => setPlayer(null)} />
-      {contractArchiveOpen && signedContract && <SignedContractArchive contract={signedContract} identity={contractIdentity} onClose={() => setContractArchiveOpen(false)}/>}
       <ToastViewport />
     </div>
   );

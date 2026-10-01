@@ -37,7 +37,7 @@ test("painter nightshift compõe abertura, wipe e páginas legíveis de Agenda",
   paintEditorialAgenda(settled, { timeline, time: timeline.introEnd + 0.42, assets: { strix: { initials: "SU" }, opponents: [{ initials: "PC" }] } });
 
   assert.ok(early.fills.some((fill) => typeof fill === "object"), "o palco aplica gradação carvão em vez de uma tela branca lisa");
-  assert.ok(settled.fills.includes("#efeee8"));
+  assert.ok(settled.fills.includes("#12161a"));
   assert.ok(settled.texts.includes("COPA YESHUA"));
   assert.ok(settled.texts.includes("POA CITY"));
   assert.ok(settled.texts.includes("STRIX UNITED"));

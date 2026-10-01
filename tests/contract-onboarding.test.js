@@ -135,10 +135,12 @@ test("contrato assinado pode ser revisto e baixado sem reenviar assinatura", asy
     read("../src/features/onboarding/SignedContractArchive.jsx"),
     read("../src/features/onboarding/contract-archive.css"),
   ]);
-  assert.match(main, /ContractArchiveAction/);
-  assert.match(main, /SignedContractArchive contract=\{signedContract\}/);
+  assert.doesNotMatch(main, /ContractArchiveAction/, "o contrato não fica no menu");
+  assert.match(main, /<SquadPageV3 workspace=\{workspace\} profile=\{auth\.profile\} contract=\{signedContract\} identity=\{contractIdentity\} \/>/);
   assert.match(archive, /REVER ANIMAÇÃO/);
   assert.match(archive, /BAIXAR PDF/);
+  assert.match(archive, /BAIXAR VÍDEO/);
+  assert.match(archive, /renderSignatureMp4/);
   assert.match(archive, /downloadSignedContractPdf\(contract, identity\)/);
   assert.match(archive, /lockScroll: true/);
   assert.match(archive, /aria-modal="true"/);

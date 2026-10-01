@@ -133,7 +133,7 @@ function Summary({ team, players, matches, workspace }) {
     ["MAIS PASSES CERTOS", "passesMade", IconArrowsLeftRight], ["PASSES TENTADOS", "passAttempts", IconChartBar],
     ["FINALIZAÇÕES", "shots", IconShoe], ["DESARMES CERTOS", "tackles", IconShieldCheck],
     ["GOLS + ASSISTÊNCIAS", "goalAssists", IconArrowsLeftRight], ["MOTM", "mom", IconStar],
-    ["CLEAN SHEETS", "cleanSheets", IconShieldCheck], ["DEFESAS DE GOLEIRO", "saves", IconHandStop],
+    ["CLEAN SHEETS", "cleanSheets", IconShieldCheck],
   ];
   const keepers = players.filter((player) => player.active !== false && player.goalkeeper).sort((a, b) => b.games - a.games);
   return <div className="statistics-panel-enter"><NightSummary matches={matches} workspace={workspace}/><section className="statistics-overview-grid">{cards.map(([metric, label, value, suffix, note], index) => <StatCard key={metric} metric={metric} label={label} value={value} suffix={suffix} note={note} index={index}/>)}</section><section className="statistics-section-heading"><div><span>DESTAQUES DA TEMPORADA</span><h2>Quem está produzindo.</h2></div><p>Jogadores desconectados são preservados no histórico, mas não distorcem os rankings.</p></section><section className="statistics-rankings-grid">{rankings.map(([title, metric, Icon, suffix, criterion]) => <RankingCard key={metric} title={title} metric={metric} players={players} icon={Icon} suffix={suffix} criterion={criterion}/>)}</section>{keepers.length > 0 && <section className="statistics-keeper-grid">{keepers.map((player) => <GoalkeeperCard key={player.handle} player={player}/>)}</section>}</div>;

@@ -7,6 +7,13 @@
 .match-display-mark img{position:absolute;inset:0;display:block;width:100%;height:100%;max-width:100%;max-height:100%;object-fit:contain}
 .match-display-mark.has-image:not(.is-framed){overflow:visible;border-color:transparent;border-radius:0;background:transparent;box-shadow:none}
 .match-display.is-compact{gap:6px}.match-display.is-compact .match-display-team{gap:6px}.match-display.is-compact .match-display-mark{flex-basis:30px;width:30px;height:30px}.match-display.is-compact .match-display-team>strong{font-size:18px}
+.match-display.is-ledger{grid-template-columns:minmax(52px,1fr) 34px 2.8ch 14px 2.8ch 34px minmax(96px,1.45fr);column-gap:10px;align-items:center;justify-items:center}
+.match-display.is-ledger .match-display-team{display:contents}
+.match-display.is-ledger .match-display-name{width:100%}
+.match-display.is-ledger .match-display-home .match-display-name{justify-self:center;text-align:center}
+.match-display.is-ledger .match-display-away .match-display-name{justify-self:stretch;text-align:left}
+.match-display.is-ledger .match-display-mark,.match-display.is-ledger>i{justify-self:center}
+.match-display.is-ledger .match-display-team>strong{justify-self:center;width:2.8ch;text-align:center}
 @media(max-width:700px){
   .match-display{gap:5px}
   .match-display-team{gap:5px}
