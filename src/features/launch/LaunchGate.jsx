@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { ClubLogo } from "../../ui/ClubLogo.jsx";
 import { STRIX_BRAND } from "../../brand.js";
 import { useReducedMotion } from "../../ui/motion/motion.jsx";
@@ -8,6 +8,7 @@ import {
   countdownParts,
   displayRemainingMs,
   isLaunchUnlocked,
+  isOfficialLaunchHost,
   rememberLaunchReturn,
 } from "../../launch.js";
 import "./launch.css";
@@ -54,6 +55,34 @@ export function LaunchGate({ mode = "countdown", config = LAUNCH_CONFIG, previou
   const parts = countdownParts(displayRemainingMs(now, config));
   const hostname = typeof window === "undefined" ? "" : window.location.hostname;
   const showInternal = mode === "countdown" && Boolean(onInternalAccess) && canShowInternalAccess(hostname);
+
+  const handleInternalAccess = async () => {
+    rememberLaunchReturn(`${window.location.pathname}${window.location.search}${window.location.hash}`);
+    setSigningIn(true);
+    setSignInError("");
+    try {
+      await onInternalAccess();
+    } catch (cause) {
+      setSignInError(cause.message || "Não foi possível iniciar o acesso interno.");
+      setSigningIn(false);
+    }
+  };
+  // The keyboard path always runs the latest handler and the latest `signingIn`,
+  // without re-subscribing the listener on every render.
+  const internalAccessRef = useRef({ run: handleInternalAccess, busy: signingIn });
+  internalAccessRef.current = { run: handleInternalAccess, busy: signingIn };
+
+  useEffect(() => {
+    if (mode !== "countdown" || !onInternalAccess || !isOfficialLaunchHost(window.location.hostname)) return undefined;
+    const handleKeyDown = (event) => {
+      if (!(event.ctrlKey && event.shiftKey && event.altKey && String(event.key).toLowerCase() === "d")) return;
+      event.preventDefault();
+      if (event.repeat || internalAccessRef.current.busy) return;
+      void internalAccessRef.current.run();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [mode, onInternalAccess]);
 
   useEffect(() => {
     if (mode === "bootstrap") return undefined;
@@ -128,17 +157,7 @@ export function LaunchGate({ mode = "countdown", config = LAUNCH_CONFIG, previou
           type="button"
           className="launch-internal"
           disabled={signingIn}
-          onClick={async () => {
-            rememberLaunchReturn(`${window.location.pathname}${window.location.search}${window.location.hash}`);
-            setSigningIn(true);
-            setSignInError("");
-            try {
-              await onInternalAccess();
-            } catch (cause) {
-              setSignInError(cause.message || "Não foi possível iniciar o acesso interno.");
-              setSigningIn(false);
-            }
-          }}
+          onClick={handleInternalAccess}
         >
           {signingIn ? "Abrindo acesso…" : "Acesso interno"}
         </button>
