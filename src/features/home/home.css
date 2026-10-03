@@ -856,3 +856,98 @@
 .home-stage.is-recent + .home-ledger {
   grid-template-columns: minmax(0, 1fr);
 }
+
+/* ------------------------------------------------------- living states
+   After the entrance, the hero keeps a quiet pulse so the page never sits
+   still: the now line crosses again every few seconds, the free-night rings
+   breathe and an arc of light orbits the crest. All of it pauses for
+   reduced motion. */
+.home-intro .home-intro-sweep {
+  animation:
+    home-sweep 900ms var(--motion-ease) 420ms both,
+    home-sweep 1400ms var(--motion-ease) 4s infinite;
+}
+.home-now.is-free-night {
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.9fr);
+  min-height: clamp(340px, 46vh, 480px);
+}
+.free-night-composition {
+  min-height: 320px;
+}
+.home .free-night-ring {
+  width: min(64vw, 300px);
+}
+.home .free-night-ring.is-b {
+  width: min(86vw, 460px);
+}
+.home-intro .free-night-ring.is-a {
+  animation:
+    home-ring-in 560ms var(--motion-ease) 180ms both,
+    home-ring-breathe var(--motion-breathe) ease-in-out 1s infinite;
+}
+.home-intro .free-night-ring.is-b {
+  animation:
+    home-ring-in 640ms var(--motion-ease) 300ms both,
+    home-ring-breathe var(--motion-breathe) ease-in-out 4s infinite;
+}
+.free-night-orbit {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: min(64vw, 300px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg, transparent 0 78%, rgba(255, 255, 255, 0.5) 92%, transparent 100%);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 1.5px), #000 calc(100% - 1px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 1.5px), #000 calc(100% - 1px));
+  translate: -50% -50%;
+  animation: home-orbit var(--motion-ambient) linear 900ms infinite;
+  opacity: 0;
+}
+.home-intro .free-night-logo {
+  animation:
+    home-focus 620ms var(--motion-ease) both,
+    home-float var(--motion-breathe) ease-in-out 1.2s infinite;
+}
+.free-night-copy {
+  align-self: end;
+  justify-items: end;
+  padding-bottom: var(--space-4);
+  text-align: right;
+}
+.free-night-when {
+  justify-content: flex-end;
+}
+.free-night-fixture {
+  justify-content: flex-end;
+}
+@keyframes home-ring-breathe {
+  0%, 100% { scale: 1; opacity: 1; }
+  50% { scale: 1.035; opacity: 0.55; }
+}
+@keyframes home-orbit {
+  from { opacity: 1; transform: rotate(0deg); }
+  to { opacity: 1; transform: rotate(360deg); }
+}
+@keyframes home-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+@media (max-width: 720px) {
+  .home-now.is-free-night {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .free-night-copy {
+    justify-items: start;
+    text-align: left;
+  }
+  .free-night-when,
+  .free-night-fixture {
+    justify-content: flex-start;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .free-night-orbit {
+    display: none;
+  }
+}

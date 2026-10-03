@@ -91,7 +91,24 @@ function loadYouTubeApi() {
   return youtubeApiPromise;
 }
 
-function LibraryPlayer({ item, progress, close, saveProgress }) {
+const clockLabel = (seconds) => {
+  const value = Math.max(0, Math.floor(Number(seconds) || 0));
+  const hours = Math.floor(value / 3600);
+  const minutes = Math.floor((value % 3600) / 60);
+  const rest = `${String(minutes).padStart(hours ? 2 : 1, "0")}:${String(value % 60).padStart(2, "0")}`;
+  return hours ? `${hours}:${rest}` : rest;
+};
+const PLAYER_ICONS = {
+  play: "M8 5.5v13l10.5-6.5z",
+  pause: "M8 5.5v13M16 5.5v13",
+  sound: "M4 9.5h3.5L12 6v12l-4.5-3.5H4zM15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11",
+  mute: "M4 9.5h3.5L12 6v12l-4.5-3.5H4zM16 9.5l5 5M21 9.5l-5 5",
+  full: "M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5",
+};
+const PlayerIcon = ({ name }) => <svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18"><path d={PLAYER_ICONS[name]} /></svg>;
+const externalLabel = (type) => type === "youtube" ? "ABRIR NO YOUTUBE" : type === "drive" ? "ABRIR NO DRIVE" : "ABRIR ORIGINAL";
+
+function LibraryPlayer({ item, progress, close, saveProgress, onExternalOpen }) {
   const source = librarySource(item.source_url);
   const targetRef = useRef(null);
   const playerRef = useRef(null);
@@ -99,6 +116,10 @@ function LibraryPlayer({ item, progress, close, saveProgress }) {
   const lastCommittedRef = useRef(-1);
   const [status, setStatus] = useState("Carregando player…");
   const [playerState, setPlayerState] = useState("loading");
+  // Strix player over the YouTube IFrame API: our controls, YouTube's stream.
+  const [clock, setClock] = useState({ time: 0, duration: 0, playing: false, muted: false });
+  const uiTimerRef = useRef(0);
+  const frameRef = useRef(null);
   const commit = (position, duration) =>
     saveProgress(progressPatch(position, duration, progress));
 
@@ -113,13 +134,19 @@ function LibraryPlayer({ item, progress, close, saveProgress }) {
       if (!alive || !targetRef.current) return;
       playerRef.current = new YT.Player(targetRef.current, {
         videoId: source.id,
-        playerVars: { rel: 0, playsinline: 1 },
+        playerVars: { rel: 0, playsinline: 1, controls: 0, modestbranding: 1, iv_load_policy: 3, fs: 0 },
         events: {
           onReady: (event) => {
             if (progress?.last_position_seconds)
               event.target.seekTo(progress.last_position_seconds, true);
             setPlayerState("ready");
             setStatus("Pronto para assistir");
+            window.clearInterval(uiTimerRef.current);
+            uiTimerRef.current = window.setInterval(() => {
+              const player = event.target;
+              if (!player?.getCurrentTime) return;
+              setClock({ time: player.getCurrentTime(), duration: player.getDuration(), playing: player.getPlayerState() === 1, muted: player.isMuted() });
+            }, 250);
           },
           onError: () => {
             setPlayerState("error");
@@ -150,6 +177,7 @@ function LibraryPlayer({ item, progress, close, saveProgress }) {
     return () => {
       alive = false;
       window.clearInterval(intervalRef.current);
+      window.clearInterval(uiTimerRef.current);
       const player = playerRef.current;
       if (player?.getCurrentTime)
         commit(player.getCurrentTime(), player.getDuration());
@@ -177,7 +205,7 @@ function LibraryPlayer({ item, progress, close, saveProgress }) {
           </div>
           <CloseButton onClick={close} />
         </header>
-        <div className={`library-player-frame is-${playerState}`}>
+        <div ref={frameRef} className={`library-player-frame is-${playerState}${source.type === "youtube" ? " is-strix-player" : ""}`}>
           {playerState === "loading" && (
             <div className="library-player-loading">
               <i />
@@ -185,6 +213,7 @@ function LibraryPlayer({ item, progress, close, saveProgress }) {
             </div>
           )}
           {source.type === "youtube" && source.id && <div ref={targetRef} />}
+          {source.type === "youtube" && playerState === "ready" && <button type="button" className="strix-player-surface" aria-label={clock.playing ? "Pausar" : "Reproduzir"} onClick={() => (clock.playing ? playerRef.current?.pauseVideo() : playerRef.current?.playVideo())}>{!clock.playing && <span><PlayerIcon name="play" /></span>}</button>}
           {source.type === "drive" && (
             <iframe
               src={source.embedUrl}
@@ -248,13 +277,26 @@ function LibraryPlayer({ item, progress, close, saveProgress }) {
             </div>
           )}
         </div>
+        {source.type === "youtube" && playerState === "ready" && (
+          <div className="strix-player-controls">
+            <button type="button" onClick={() => (clock.playing ? playerRef.current?.pauseVideo() : playerRef.current?.playVideo())} aria-label={clock.playing ? "Pausar" : "Reproduzir"}><PlayerIcon name={clock.playing ? "pause" : "play"} /></button>
+            <time>{clockLabel(clock.time)}</time>
+            <input type="range" min="0" max={Math.max(1, Math.floor(clock.duration))} step="1" value={Math.floor(clock.time)} aria-label="Posição do vídeo" style={{ "--played": `${clock.duration ? (clock.time / clock.duration) * 100 : 0}%` }} onChange={(event) => { const next = Number(event.target.value); playerRef.current?.seekTo(next, true); setClock((current) => ({ ...current, time: next })); }} />
+            <time>{clockLabel(clock.duration)}</time>
+            <button type="button" onClick={() => (clock.muted ? playerRef.current?.unMute() : playerRef.current?.mute())} aria-label={clock.muted ? "Ativar som" : "Silenciar"}><PlayerIcon name={clock.muted ? "mute" : "sound"} /></button>
+            <button type="button" onClick={() => (document.fullscreenElement ? document.exitFullscreen?.() : frameRef.current?.requestFullscreen?.())} aria-label="Tela cheia"><PlayerIcon name="full" /></button>
+          </div>
+        )}
         <footer>
           <span className={`library-provider-note is-${source.type}`}>
             {status}
           </span>
-          <button type="button" className="secondary" onClick={close}>
-            FECHAR
-          </button>
+          <div className="library-player-actions">
+            <a className="secondary library-external" href={source.type === "youtube" && source.id ? `https://www.youtube.com/watch?v=${source.id}` : item.source_url} target="_blank" rel="noopener noreferrer" onClick={() => onExternalOpen?.()}>{externalLabel(source.type)} <span aria-hidden="true">↗</span></a>
+            <button type="button" className="secondary" onClick={close}>
+              FECHAR
+            </button>
+          </div>
         </footer>
       </section>
     </div>,
@@ -486,7 +528,14 @@ export function LibraryPage({ client, profile }) {
       : client
           .from("library_view_progress")
           .insert({ item_id: itemId, ...payload });
-    const { error: saveError } = await query;
+    let { error: saveError } = await query;
+    const EXTRA = ["external_open_count", "last_external_open_at"];
+    if (saveError && EXTRA.some((key) => key in payload) && /external_open|PGRST204|column/i.test(`${saveError.code} ${saveError.message}`)) {
+      const fallback = Object.fromEntries(Object.entries(payload).filter(([key]) => !EXTRA.includes(key)));
+      ({ error: saveError } = await (current
+        ? client.from("library_view_progress").update(fallback).eq("item_id", itemId).eq("user_id", profile.user_id)
+        : client.from("library_view_progress").insert({ item_id: itemId, ...fallback })));
+    }
     if (!saveError) await refresh();
   };
   const tabs = [
@@ -586,6 +635,10 @@ export function LibraryPage({ client, profile }) {
           )}
           close={() => setSelected(null)}
           saveProgress={(patch) => saveProgress(selected.id, patch)}
+          onExternalOpen={() => {
+            const own = progress.find((row) => row.item_id === selected.id && row.user_id === profile.user_id);
+            void saveProgress(selected.id, { external_open_count: Number(own?.external_open_count || 0) + 1, last_external_open_at: new Date().toISOString(), last_accessed_at: new Date().toISOString() });
+          }}
         />
       )}{" "}
       {pendingRemove && createPortal(

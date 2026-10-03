@@ -49,3 +49,17 @@ test("acompanhamento por membro sai só das linhas reais de progresso", () => {
   assert.equal(progressStatus(null, items[2]), "none");
   assert.equal(progressStatus({ progress_percent: 0 }, items[2]), "opened");
 });
+
+test("abertura em outra aba e foto do membro vêm das colunas reais quando existem", () => {
+  const items = [{ id: "a", category: "review", tags: [], source_url: "https://youtu.be/x1" }];
+  const external = { item_id: "a", user_id: "u1", viewer_display_name: "Obeen", viewer_avatar_url: "https://cdn/obeen.png", progress_percent: 0, external_open_count: 2, last_external_open_at: "2026-10-02T21:43:00Z", last_accessed_at: "2026-10-02T21:43:00Z" };
+  assert.equal(progressStatus(external, items[0]), "external");
+  const [member] = memberTracking(items, [external]);
+  assert.equal(member.avatar, "https://cdn/obeen.png");
+  assert.equal(member.externalOpens, 2);
+  // Without the new columns (migration not applied) nothing is inferred.
+  const plain = { item_id: "a", user_id: "u2", viewer_display_name: "Nunes", progress_percent: 0, last_accessed_at: "2026-10-02T21:00:00Z" };
+  assert.equal(progressStatus(plain, items[0]), "opened");
+  assert.equal(memberTracking(items, [plain])[0].avatar, "");
+  assert.equal(memberTracking(items, [plain])[0].externalOpens, 0);
+});

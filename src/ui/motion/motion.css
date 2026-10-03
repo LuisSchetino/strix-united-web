@@ -6,7 +6,10 @@
   --motion-modal: 220ms;   /* dialogs and sheets */
   --motion-section: 320ms; /* content swaps inside a stable shell */
   --motion-hero: 560ms;    /* preview assembly and settle */
-  --motion-stagger: 45ms;  /* step between structure → preview → actions → rail */
+  --motion-stagger: 45ms;
+  /* Ambient loops: the slow life of a page at rest (light, breath, orbit). */
+  --motion-breathe: 7s;
+  --motion-ambient: 9s;  /* step between structure → preview → actions → rail */
   --motion-ease: cubic-bezier(0.22, 1, 0.36, 1);   /* decelerate: entering */
   --motion-ease-in: cubic-bezier(0.4, 0, 1, 1);    /* accelerate: leaving */
   --motion-ease-inout: cubic-bezier(0.65, 0, 0.35, 1);

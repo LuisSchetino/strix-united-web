@@ -101,6 +101,8 @@ export function progressStatus(row, item) {
   if (row.completed_at) return "completed";
   const trackable = librarySource(item?.source_url).trackable;
   if (trackable && Number(row.progress_percent) > 0) return "in-progress";
+  // Opened only outside the site (YouTube / Drive tab): recorded, not measured.
+  if (Number(row.external_open_count) > 0) return "external";
   return "opened";
 }
 
@@ -108,6 +110,7 @@ export const PROGRESS_LABEL = Object.freeze({
   completed: "Concluído",
   "in-progress": "Em andamento",
   opened: "Aberto",
+  external: "Abriu em outra aba",
   none: "Sem registro",
 });
 
@@ -116,7 +119,8 @@ export function memberTracking(items = [], progress = []) {
   const members = new Map();
   for (const row of asArray(progress)) {
     if (!live.has(row.item_id) || !row.user_id) continue;
-    const member = members.get(row.user_id) || { userId: row.user_id, name: row.viewer_display_name || "Membro", rows: [] };
+    const member = members.get(row.user_id) || { userId: row.user_id, name: row.viewer_display_name || "Membro", avatar: "", rows: [] };
+    if (!member.avatar && row.viewer_avatar_url) member.avatar = row.viewer_avatar_url;
     member.rows.push(row);
     members.set(row.user_id, member);
   }
@@ -129,7 +133,8 @@ export function memberTracking(items = [], progress = []) {
       const opened = pool.filter((item) => member.rows.some((row) => row.item_id === item.id)).length;
       return { id: category.id, label: category.label, total: pool.length, done, opened };
     }).filter((entry) => entry.total > 0);
-    return { ...member, opened: member.rows.length, completed, total: live.size, lastAccess, byCategory };
+    const externalOpens = member.rows.reduce((sum, row) => sum + (Number(row.external_open_count) || 0), 0);
+    return { ...member, opened: member.rows.length, completed, total: live.size, lastAccess, externalOpens, byCategory };
   }).sort((left, right) => String(right.lastAccess || "").localeCompare(String(left.lastAccess || "")));
 }
 

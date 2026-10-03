@@ -3,7 +3,7 @@ import { IconArrowsExchange, IconBallFootball, IconHandStop, IconRadar2, IconShi
 import { AnimatedNumber, SegmentedControl } from "../../ui/motion/motion.jsx";
 import { canViewAnalysis } from "../../access.js";
 import { AccessDenied } from "../../ui/AccessDenied.jsx";
-import { RastroDataSignature } from "../../ui/RastroBrand.jsx";
+import { RastroDataSignature, RastroWatermark } from "../../ui/RastroBrand.jsx";
 import { DataTrend } from "../../ui/DataTrend.jsx";
 import { SelectControl } from "../../ui/SelectControl.jsx";
 import { analysisInsightKind, buildAnalysis, buildPlayerComparison, comparePeriods, playerComparisonState, selectAnalysisPeriod } from "./analysis-core.js";
@@ -96,7 +96,7 @@ export function AnalysisPage({ workspace, profile, matches = workspace.matches |
     ["GOLEIRO E NOTA", IconHandStop, [["DEFESAS", team.metricSamples?.saves ? team.saves : null, "", "defesas registradas"], ["DEFESAS / JOGO", team.metricSamples?.saves ? team.savesPerGame : null, "", "média por partida"], ["NOTA MÉDIA · TIME", team.averageRating, "", "partidas com nota EA", null, "rating"]]],
   ];
   const periodLabel = ({ last5: "Últimos 5 jogos", last10: "Últimos 10 jogos", season: "Temporada" })[period] || period.replace("competition:", "");
-  return <section className="data-page page-enter analysis-v2">
+  return <section className="data-page page-enter analysis-v2"><RastroWatermark label="Rastro Analytics" />
     <PageHeader title="O que o jogo está dizendo." description="Leituras determinísticas para apoiar decisões, sem completar lacunas com suposições." aside={<RastroDataSignature label="Data by" />} />
     <div className="analysis-filters">
       <SegmentedControl

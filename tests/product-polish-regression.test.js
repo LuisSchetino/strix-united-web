@@ -14,7 +14,9 @@ test("team statistics use canonical FC27 identity and scoped Rastro data accents
   assert.doesNotMatch(page, /625257/);
   // STRIX UI ≠ RASTRO UI: data values read in Strix off-white; Rastro Blue
   // only appears inside Rastro-scoped selectors (the signature).
-  assert.match(css, /\.statistics-v3 \.statistics-stat-card>strong\{color:var\(--text-1\)!important\}/);
+  // Measured season values speak in data blue; an empty metric stays a quiet dash.
+  assert.match(css, /\.statistics-v3 \.statistics-stat-card>strong\.data-value\{color:var\(--data\)!important\}/);
+  assert.match(css, /\.statistics-v3 \.statistics-stat-card>strong\{color:var\(--text-4\)!important\}/);
   const rules = [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)];
   const leaks = rules.filter(([, selector, body]) => /rastro-blue|#2f80ff|47,\s*128,\s*255/i.test(body) && !/rastro/i.test(selector.split("*/").pop()));
   assert.deepEqual(leaks.map(([, selector]) => selector.trim()), []);

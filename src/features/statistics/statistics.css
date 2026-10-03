@@ -672,15 +672,15 @@
 .statistics-v3 .statistics-team-grid .statistics-stat-card>strong,
 .statistics-v3 .statistics-ranking-card>ol>li>strong,
 .statistics-v3 .statistics-ranking-value>span,
-.statistics-v3 .statistics-goalkeeper-card dd{color:var(--text-1)!important}
-.statistics-v3 .statistics-ranking-card>ol>li>em{color:var(--text-1)!important}
+.statistics-v3 .statistics-goalkeeper-card dd{color:var(--data)!important}
+.statistics-v3 .statistics-ranking-card>ol>li>em{color:var(--data)!important}
 .statistics-v3 .statistics-ranking-card>ol>li:nth-child(2)>em,
 .statistics-v3 .statistics-ranking-card>ol>li:nth-child(3)>em,
-.statistics-v3 .statistics-ranking-card>ol>li:nth-child(n)>em{color:var(--text-1)!important}
-.statistics-v3 .statistics-ranking-list article>strong{background:rgba(245,245,245,0.084)!important;color:var(--text-1)!important}
+.statistics-v3 .statistics-ranking-card>ol>li:nth-child(n)>em{color:var(--data)!important}
+.statistics-v3 .statistics-ranking-list article>strong{background:rgba(245,245,245,0.084)!important;color:var(--data)!important}
 .statistics-v3 .statistics-ranking-list article.is-top-1>strong,
 .statistics-v3 .statistics-ranking-list article.is-top-2>strong,
-.statistics-v3 .statistics-ranking-list article.is-top-3>strong{background:rgba(245,245,245,0.140)!important;color:var(--text-1)!important}
+.statistics-v3 .statistics-ranking-list article.is-top-3>strong{background:rgba(245,245,245,0.140)!important;color:var(--data)!important}
 .statistics-v3 .statistics-ranking-list article.is-top-1:before,
 .statistics-v3 .statistics-ranking-list article.is-top-2:before,
 .statistics-v3 .statistics-ranking-list article.is-top-3:before{background:var(--line-3)!important}
@@ -693,20 +693,20 @@
 .statistics-v3 .statistics-player-table>article{min-width:1720px;grid-template-columns:minmax(145px,1.5fr) repeat(17,minmax(55px,.6fr)) minmax(125px,1fr)}
 .statistics-v3 .statistics-player-table>header span:last-child{min-width:125px}
 .statistics-v3 .statistics-player-table>article>span[data-label="EA ID"]{max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.statistics-ranking-modal .statistics-ranking-list article>strong{background:rgba(245,245,245,0.084)!important;color:var(--text-1)!important}
+.statistics-ranking-modal .statistics-ranking-list article>strong{background:rgba(245,245,245,0.084)!important;color:var(--data)!important}
 .statistics-ranking-modal .statistics-ranking-list article.is-top-1>strong,
 .statistics-ranking-modal .statistics-ranking-list article.is-top-2>strong,
-.statistics-ranking-modal .statistics-ranking-list article.is-top-3>strong{background:rgba(245,245,245,0.140)!important;color:var(--text-1)!important}
+.statistics-ranking-modal .statistics-ranking-list article.is-top-3>strong{background:rgba(245,245,245,0.140)!important;color:var(--data)!important}
 .statistics-ranking-modal .statistics-ranking-list article.is-top-1:before,
 .statistics-ranking-modal .statistics-ranking-list article.is-top-2:before,
 .statistics-ranking-modal .statistics-ranking-list article.is-top-3:before{background:var(--line-3)!important}
-.statistics-ranking-modal .statistics-ranking-value>span{color:var(--text-1)!important}
+.statistics-ranking-modal .statistics-ranking-value>span{color:var(--data)!important}
 @media(max-width:760px){.statistics-v3 .statistics-player-table{overflow:visible}.statistics-v3 .statistics-player-table>article{min-width:0;grid-template-columns:1fr 1fr}.statistics-v3 .statistics-player-table>header{display:none}.statistics-v3 .statistics-player-table>article>b{grid-column:1/-1}.statistics-v3 .statistics-player-table>article>span[data-label="EA ID"]{max-width:none;overflow-wrap:anywhere;white-space:normal}}
 
 /* Rastro blue is reserved for analytics data, not navigation or generic controls. */
 .statistics-v3 .statistics-stat-card>span{color:var(--text-3)!important}
 .statistics-v3 .statistics-stat-card>span svg{color:var(--text-3)!important}
-.statistics-v3 .statistics-stat-card>strong{color:var(--text-1)!important}
+.statistics-v3 .statistics-stat-card>strong{color:var(--text-4)!important}.statistics-v3 .statistics-stat-card>strong.data-value{color:var(--data)!important}
 .statistics-team-identity p{color:#aeb4bb;font-size:11px}
 .statistics-team-identity p i{padding-inline:4px;color:#69717a;font-style:normal}
 .statistics-individual-select,.statistics-individual-profile{border:1px solid var(--strix-border,#25292e);border-radius:12px;background:#0b0d10;color:#e8e9ea}
@@ -1183,4 +1183,103 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .night-edition-rule { animation: none; }
+}
+
+/* Dados do time: each metric carries its mark in a ring; the ring draws a
+   blue arc once and the mark keeps a slow pulse of light. Labels stay white. */
+.statistics-v3 .statistics-stat-card.has-mark {
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: var(--space-3);
+}
+.statistics-v3 .statistics-stat-card.has-mark > :not(.stat-mark) {
+  grid-column: 2;
+}
+.statistics-v3 .statistics-stat-card.has-mark > small {
+  color: var(--text-1) !important;
+}
+.stat-mark {
+  position: relative;
+  grid-row: 1 / span 3;
+  align-self: start;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px var(--line-2);
+  color: var(--data);
+}
+.stat-mark::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(from -90deg, var(--data) 0turn, var(--data) var(--sweep, 0.28turn), transparent var(--sweep, 0.28turn));
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1.5px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1.5px));
+  animation: stat-mark-arc var(--motion-hero) var(--motion-ease) both;
+  animation-delay: calc(var(--i, 0) * 70ms);
+}
+.stat-mark::after {
+  content: "";
+  position: absolute;
+  inset: 8px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--data-soft), transparent 70%);
+  animation: stat-mark-pulse 3.6s ease-in-out infinite;
+  animation-delay: calc(var(--i, 0) * 300ms);
+}
+.stat-mark svg {
+  position: relative;
+  z-index: 1;
+}
+@property --sweep {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0turn;
+}
+@keyframes stat-mark-arc {
+  from { --sweep: 0turn; }
+  to { --sweep: 0.28turn; }
+}
+@keyframes stat-mark-pulse {
+  0%, 100% { opacity: 0.25; transform: scale(0.85); }
+  50% { opacity: 1; transform: scale(1.15); }
+}
+
+/* Resumo da noite opens on demand. */
+.night-edition-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+.night-edition-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.night-edition-toggle svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  transition: transform var(--motion-control) var(--motion-ease);
+}
+.night-edition-toggle[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+.night-edition-body {
+  display: grid;
+  gap: var(--space-5);
+  animation: data-arrive var(--motion-section) var(--motion-ease) both;
+}
+.night-edition {
+  padding-bottom: var(--space-5);
+  border-bottom: 1px solid var(--line-1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .stat-mark::before,
+  .stat-mark::after {
+    animation: none;
+  }
 }

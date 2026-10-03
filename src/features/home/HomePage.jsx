@@ -58,9 +58,9 @@ function FreeNight({ upcoming, navigate }) {
   return (
     <section className="home-now home-intro is-free-night" aria-labelledby="home-free-title">
       <div className="free-night-composition" aria-hidden="true">
-        <i className="free-night-ring is-a" /><i className="free-night-ring is-b" />
+        <i className="free-night-ring is-a" /><i className="free-night-ring is-b" /><i className="free-night-orbit" />
         <i className="home-intro-sweep" />
-        <div className="free-night-logo"><Strix size={148} priority /></div>
+        <div className="free-night-logo"><Strix size={188} priority /></div>
       </div>
       <div className="free-night-copy">
         {upcoming ? <>

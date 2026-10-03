@@ -28,8 +28,9 @@ const clock = (seconds) => {
 const initials = (name) => String(name || "?").trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toLocaleUpperCase("pt-BR");
 const categoryLabel = (id) => LIBRARY_CATEGORIES.find((category) => category.id === id)?.label || "Biblioteca";
 
-/** The member's mark: initials inside a ring that fills to the completed share. */
-function ProgressRing({ name, done, total, size = 56 }) {
+/** The member's mark: photo (or initials) inside a ring that fills to the completed share. */
+function ProgressRing({ name, avatar = "", done, total, size = 56 }) {
+  const [failed, setFailed] = useState(false);
   const radius = size / 2 - 3;
   const length = 2 * Math.PI * radius;
   const share = total ? done / total : 0;
@@ -39,7 +40,7 @@ function ProgressRing({ name, done, total, size = 56 }) {
         <circle className="tracking-ring-track" cx={size / 2} cy={size / 2} r={radius} />
         <circle className="tracking-ring-value" cx={size / 2} cy={size / 2} r={radius} strokeDasharray={length} style={{ "--offset": length * (1 - share), "--length": length }} />
       </svg>
-      <b>{initials(name)}</b>
+      {avatar && !failed ? <img src={avatar} alt="" loading="lazy" decoding="async" onError={() => setFailed(true)} /> : <b>{initials(name)}</b>}
     </span>
   );
 }
@@ -54,10 +55,10 @@ function MemberPanel({ member, items, close }) {
     <div className="tracking-layer" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && close()}>
       <section ref={dialogRef} tabIndex={-1} className="tracking-panel" role="dialog" aria-modal="true" aria-labelledby="tracking-panel-title">
         <header className="tracking-panel-head">
-          <ProgressRing name={member.name} done={member.completed} total={member.total} size={64} />
+          <ProgressRing name={member.name} avatar={member.avatar} done={member.completed} total={member.total} size={64} />
           <div>
             <h2 id="tracking-panel-title">{member.name}</h2>
-            <p><b className="data-value">{member.completed}</b> de {member.total} concluídos · {member.opened} {member.opened === 1 ? "aberto" : "abertos"} · último acesso {accessLabel(member.lastAccess)}</p>
+            <p><b className="data-value">{member.completed}</b> de {member.total} concluídos · {member.opened} {member.opened === 1 ? "aberto" : "abertos"}{member.externalOpens > 0 ? ` · ${member.externalOpens}× em outra aba` : ""} · último acesso {accessLabel(member.lastAccess)}</p>
           </div>
           <CloseButton onClick={close} label="Fechar acompanhamento" />
         </header>
@@ -83,20 +84,21 @@ function MemberPanel({ member, items, close }) {
                   <small>{categoryLabel(primaryCategory(item))}{item.duration_seconds ? ` · ${clock(item.duration_seconds)}` : ""}</small>
                 </div>
                 <div className="tracking-content-progress">
-                  {row && trackable ? <>
+                  {row && trackable && (Number(row.progress_percent) > 0 || row.completed_at) ? <>
                     <strong className="data-value">{Math.round(Number(row.progress_percent) || 0)}%</strong>
                     <span className="data-meter" aria-hidden="true"><i style={{ "--value": (Number(row.progress_percent) || 0) / 100 }} /></span>
-                  </> : <strong className="is-quiet">{row ? "Sem medição" : "—"}</strong>}
+                  </> : <strong className="is-quiet">{!row ? "—" : status === "external" ? "Fora do site" : trackable ? "Não iniciado" : "Sem medição"}</strong>}
                 </div>
                 <dl>
                   <div><dt>Status</dt><dd className={`tracking-status is-${status}`}>{PROGRESS_LABEL[status]}</dd></div>
                   <div><dt>Último acesso</dt><dd>{accessLabel(row?.last_accessed_at)}</dd></div>
-                  {row && trackable && <div><dt>Parou em</dt><dd>{clock(row.last_position_seconds)}</dd></div>}
+                  {row && trackable && Number(row.progress_percent) > 0 && <div><dt>Parou em</dt><dd>{clock(row.last_position_seconds)}</dd></div>}
+                  {Number(row?.external_open_count) > 0 && <div><dt>Em outra aba</dt><dd className="tracking-external">{row.external_open_count}× · {accessLabel(row.last_external_open_at)}</dd></div>}
                 </dl>
               </li>
             ))}
           </ol>
-          <p className="tracking-note">Progresso medido pelo player da Biblioteca. Vídeos do Google Drive registram só a abertura.</p>
+          <p className="tracking-note">Progresso medido pelo player da Biblioteca. Vídeos do Google Drive registram só a abertura. "Em outra aba" conta quem abriu o material no YouTube ou no Drive pelo botão do player.</p>
         </div>
       </section>
     </div>,
@@ -117,8 +119,8 @@ export function LibraryTracking({ items, progress }) {
           {members.map((member, index) => (
             <li key={member.userId} className="data-arrive" style={{ "--i": Math.min(index, 12) }}>
               <button type="button" onClick={() => setOpenId(member.userId)} aria-haspopup="dialog">
-                <ProgressRing name={member.name} done={member.completed} total={member.total} />
-                <span className="tracking-member-name"><b>{member.name}</b><small>Último acesso {accessLabel(member.lastAccess)}</small></span>
+                <ProgressRing name={member.name} avatar={member.avatar} done={member.completed} total={member.total} />
+                <span className="tracking-member-name"><b>{member.name}</b><small>Último acesso {accessLabel(member.lastAccess)}{member.externalOpens > 0 ? ` · ${member.externalOpens}× em outra aba` : ""}</small></span>
                 <span className="tracking-member-score"><strong><span className="data-value">{member.completed}</span>/{member.total}</strong><small>concluídos</small></span>
                 <span className="tracking-member-shelves" aria-hidden="true">{member.byCategory.slice(0, 4).map((entry) => <i key={entry.id} title={`${entry.label} ${entry.done}/${entry.total}`}><em>{entry.label}</em><span className="data-meter"><i style={{ "--value": entry.total ? entry.done / entry.total : 0 }} /></span></i>)}</span>
               </button>

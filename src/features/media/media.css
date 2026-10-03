@@ -979,3 +979,58 @@ dialog.media-viewer.is-closing section {
     animation: none;
   }
 }
+
+/* ---------------------------------------------------------- living stage
+   The set stays alive while you work: the key light breathes behind the piece,
+   a beam crosses the stage every few seconds and the piece catches it. */
+.media-stage-frame::before {
+  animation: media-key-light var(--motion-breathe) ease-in-out infinite;
+}
+.media-stage-frame::after {
+  content: "";
+  position: absolute;
+  inset: -4% 0;
+  z-index: 0;
+  background: linear-gradient(100deg, transparent 42%, rgba(255, 255, 255, 0.07) 50%, transparent 58%);
+  transform: translateX(-60%);
+  pointer-events: none;
+  animation: media-beam var(--motion-ambient) var(--motion-ease-inout) 1.5s infinite;
+}
+.media-stage-piece {
+  z-index: 1;
+}
+.media-stage-piece::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  background: linear-gradient(115deg, transparent 40%, rgba(255, 255, 255, 0.12) 50%, transparent 60%);
+  transform: translateX(-120%);
+  pointer-events: none;
+  animation: media-piece-glint var(--motion-ambient) var(--motion-ease-inout) 2.1s infinite;
+}
+@keyframes media-key-light {
+  0%, 100% { opacity: 0.75; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.06); }
+}
+@keyframes media-beam {
+  0%, 60% { transform: translateX(-60%); opacity: 0; }
+  65% { opacity: 1; }
+  85% { transform: translateX(60%); opacity: 1; }
+  100% { transform: translateX(60%); opacity: 0; }
+}
+@keyframes media-piece-glint {
+  0%, 62% { transform: translateX(-120%); }
+  82%, 100% { transform: translateX(120%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .media-stage-frame::before,
+  .media-stage-frame::after,
+  .media-stage-piece::before {
+    animation: none;
+  }
+  .media-stage-frame::after,
+  .media-stage-piece::before {
+    display: none;
+  }
+}

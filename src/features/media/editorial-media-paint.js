@@ -571,6 +571,12 @@ function personLabel(person) {
   return initialsOf(person?.name);
 }
 
+// Structure roles get their own light: gold for the board, blue for the council.
+const ROLE_ACCENT = Object.freeze({
+  diretoria: { line: "#d9b45a", glow: "217,180,90" },
+  conselho: { line: "#2F80FF", glow: "47,128,255" },
+});
+
 function paintPersonScene(ctx, timeline, person, asset, elapsed, { counter = "", sceneLength = 3, time = 0, upper = false, phrase = "", phraseFrom = 0.6 } = {}) {
   const { width, height } = timeline;
   const s = scaleOf(timeline);
@@ -580,23 +586,57 @@ function paintPersonScene(ctx, timeline, person, asset, elapsed, { counter = "",
   drawPortrait(ctx, timeline, asset, { top, bottom: photoBottom, label: personLabel(person), time, zoom: remap(elapsed, 0, sceneLength) });
   const x = M * s;
   const max = width - 2 * M * s;
-  const baseY = photoBottom + 10 * s;
+  const accent = ROLE_ACCENT[String(person.extraRole || "").toLowerCase()] || null;
+  if (accent) {
+    // A coloured light rises from under the portrait and breathes slowly.
+    const breathe = 0.75 + Math.sin(time * 1.6) * 0.25;
+    const glow = ctx.createRadialGradient?.(width / 2, photoBottom, 0, width / 2, photoBottom, width * 0.75);
+    if (glow) {
+      glow.addColorStop(0, `rgba(${accent.glow},${(0.26 * breathe * Math.min(1, elapsed * 1.5)).toFixed(3)})`);
+      glow.addColorStop(1, `rgba(${accent.glow},0)`);
+      ctx.save();
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, top, width, height - top);
+      ctx.restore();
+    }
+  }
+  const baseY = photoBottom + 18 * s;
   if (counter) drawRise(ctx, counter, x, baseY, 24 * s, remap(elapsed, 0.1, 0.6), { color: MUTED, weight: 700, tracking: 0.1 });
   const name = upper ? String(person.name || "").toUpperCase() : person.name;
-  const nameSize = (feed ? 110 : 132) * s;
+  const nameSize = (feed ? 126 : 156) * s;
   const fitted = fitName(ctx, name, nameSize, 800, max);
-  let y = baseY + 96 * s;
+  let y = baseY + 44 * s + fitted.size * 0.62;
   fitted.lines.forEach((line, lineIndex) => {
     drawRise(ctx, line, x - 4 * s, y, fitted.size, remap(elapsed, 0.16 + lineIndex * 0.08, 0.8 + lineIndex * 0.08), { color: WHITE, weight: 800, tracking: -0.035 });
     y += fitted.size * 0.98;
   });
+  if (accent) {
+    // The role's line grows under the name, with a short shine travelling along it.
+    const lineY = y - fitted.size * 0.34;
+    const grow = ease(remap(elapsed, 0.5, 1.2));
+    const length = Math.min(max, 420 * s) * grow;
+    ctx.save();
+    ctx.fillStyle = accent.line;
+    ctx.fillRect(x, lineY, length, Math.max(2, 4 * s));
+    const shine = ((time * 0.6) % 1) * length;
+    const sheen = ctx.createLinearGradient?.(x + shine - 60 * s, 0, x + shine + 60 * s, 0);
+    if (sheen && grow >= 1) {
+      sheen.addColorStop(0, "rgba(255,255,255,0)");
+      sheen.addColorStop(0.5, "rgba(255,255,255,0.85)");
+      sheen.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.fillStyle = sheen;
+      ctx.fillRect(x, lineY, length, Math.max(2, 4 * s));
+    }
+    ctx.restore();
+    y += 18 * s;
+  }
   const detailY = y + 4 * s;
   const position = person.position || "";
   const badge = person.extraBadge || "";
   setFont(ctx, 700, 34 * s);
   if (position) drawRise(ctx, position, x, detailY, 34 * s, remap(elapsed, 0.3, 0.95), { color: SOFT, weight: 700, tracking: 0.08 });
   const positionW = position ? ctx.measureText(position).width + 28 * s : 0;
-  if (badge) drawRise(ctx, badge, x + positionW, detailY, 34 * s, remap(elapsed, 0.34, 1), { color: MUTED, weight: 700, tracking: 0.08 });
+  if (badge) drawRise(ctx, badge, x + positionW, detailY, 34 * s, remap(elapsed, 0.34, 1), { color: accent ? accent.line : MUTED, weight: 800, tracking: 0.08 });
   if (phrase) drawRise(ctx, phrase, x, detailY + 80 * s, 36 * s, remap(elapsed, phraseFrom, phraseFrom + 0.7), { color: SOFT, weight: 600, maxWidth: max });
 }
 

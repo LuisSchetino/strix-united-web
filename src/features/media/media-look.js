@@ -40,7 +40,7 @@ export function withMediaLook(timeline, look) {
 export function lookAssetFingerprint(look, extra = {}) {
   const resolved = normalizeMediaLook(look);
   // Bumped with the now-line direction so every render made with the previous look is regenerated.
-  if (resolved === "editorial") return "strix-nowline-v3";
+  if (resolved === "editorial") return "strix-nowline-v4";
   if (resolved !== "collage") return "";
   const seed = extra.seed == null ? "" : String(extra.seed);
   const mode = extra.mode ? String(extra.mode) : "";

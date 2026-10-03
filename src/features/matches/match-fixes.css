@@ -154,3 +154,20 @@
 .rastro-watermark{position:absolute;display:grid;justify-items:center;pointer-events:none;color:var(--rastro-blue)}
 .rastro-watermark img{object-fit:contain}
 .rastro-watermark span{font-size:9px;letter-spacing:.16em;text-transform:uppercase}
+
+/* Ficha pós-jogo: readable sizes, and an incomplete last row sits centred. */
+.player-match-sheet{width:min(620px,100%)}
+.player-match-sheet>header span{font-size:11px}
+.player-match-sheet>header h2{font-size:30px}
+.player-match-sheet>header p{font-size:14px}
+.player-match-sheet-rating small{font-size:12px}
+.player-match-sheet-grid{display:flex;flex-wrap:wrap;justify-content:center}
+.player-match-sheet-grid article{flex:0 0 calc(100% / 3);min-height:84px;padding:14px 16px;box-sizing:border-box}
+.player-match-sheet-grid small{font-size:11px;letter-spacing:.08em}
+.player-match-sheet-grid b{font-size:26px}
+.player-match-sheet-grid .match-stat-icon{width:22px;height:22px}
+.player-match-sheet-note{font-size:12px;padding:12px 20px}
+@media(max-width:700px){.player-match-sheet-grid article{flex-basis:50%;min-height:72px}.player-match-sheet-grid article:nth-child(3n){border-right:1px solid #282c30}.player-match-sheet-grid article:nth-child(2n){border-right:0}}
+
+/* Match honours are measured: they speak in data blue. */
+.match-player-table>article em.match-player-tag{border-color:var(--data-line)!important;background:var(--data-subtle)!important;color:var(--data)!important}
