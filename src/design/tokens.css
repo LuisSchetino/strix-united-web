@@ -1,0 +1,197 @@
+/* ==========================================================================
+   STRIX UNITED · design tokens
+   The single source for color, type, space, radius, line, depth and layering.
+   Motion tokens live in src/ui/motion/motion.css (mirrored in motion-tokens.js).
+
+   STRIX UI is ink, graphite, off-white and hairlines.
+   RASTRO UI is the partner signature and the only owner of Rastro Blue:
+   --rastro-* tokens may be read inside .rastro-* / [data-rastro] scopes only.
+
+   Breakpoints (media queries cannot read custom properties; keep these in sync):
+     --bp-phone  560px   single column, bottom navigation
+     --bp-tablet 900px   sidebar becomes a drawer
+     --bp-wide   1180px  two-column workspaces open up
+   ========================================================================== */
+
+:root {
+  color-scheme: dark;
+
+  /* Ink: the ground and every surface stacked on it. */
+  --ink-0: #050607;   /* page */
+  --ink-1: #0b0d10;   /* surface */
+  --ink-2: #101318;   /* raised surface, inputs */
+  --ink-3: #15181d;   /* hover, selected fill */
+  --ink-4: #1c2026;   /* pressed, strong fill */
+  --ink-5: #262b32;   /* graphite: dividers that must read as objects */
+
+  /* Text on ink. Contrast on --ink-0: 18.6 / 12.7 / 6.8 / 4.9. */
+  --text-1: #f5f5f5;  /* off-white: titles, values */
+  --text-2: #c9cdd2;  /* body */
+  --text-3: #8e969f;  /* secondary, meta */
+  --text-4: #767e88;  /* labels and quiet meta; 4.9:1 on ink-0, 4.4:1 on ink-2 */
+  --text-on-light: #08090a;
+
+  /* Hairlines. */
+  --line-1: rgba(255, 255, 255, 0.06);
+  --line-2: rgba(255, 255, 255, 0.1);
+  --line-3: rgba(255, 255, 255, 0.16);
+  --line-focus: rgba(245, 245, 245, 0.72);
+
+  /* Light surfaces (primary action, active segmented thumb). */
+  --paper-1: #f3f3f3;
+  --paper-2: #ffffff;
+
+  /* State. Used for system feedback only, never as decoration. */
+  --state-danger: #e5484d;
+  --state-danger-soft: rgba(229, 72, 77, 0.14);
+  --state-warning: #e8b04a;
+  --state-warning-soft: rgba(232, 176, 74, 0.14);
+  --state-success: #4cc38a;
+  --state-success-soft: rgba(76, 195, 138, 0.14);
+
+  /* Partner scopes. */
+  --rastro-blue: #2F80FF;
+  --rastro-blue-soft: rgba(47, 128, 255, 0.16);
+  --rastro-blue-subtle: rgba(47, 128, 255, 0.08);
+  --next-clubs-accent: #c7ff2f;
+
+  /* Type. One family; contrast comes from size, weight and tracking. */
+  --font-sans: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --text-label: 11px;       /* uppercase labels, tracked */
+  --text-xs: 12px;
+  --text-sm: 13px;
+  --text-md: 15px;          /* body */
+  --text-lg: 18px;
+  --text-xl: 22px;
+  --text-2xl: 28px;
+  --text-3xl: 36px;
+  --text-display: clamp(34px, 4.2vw, 54px);  /* page titles */
+  --text-score: clamp(44px, 6vw, 76px);      /* scores, kickoff times */
+  --track-display: -0.035em;
+  --track-tight: -0.02em;
+  --track-label: 0.12em;
+  --leading-tight: 1.02;
+  --leading-snug: 1.25;
+  --leading-body: 1.5;
+
+  /* Space: 4pt scale. */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --gutter: clamp(16px, 3vw, 32px);
+  --page-max: 1240px;
+
+  /* Radius. */
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-pill: 999px;
+
+  /* Depth. Offset + soft blur; never a zero-offset glow. */
+  --shadow-raise: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 10px 28px rgba(0, 0, 0, 0.35);
+  --shadow-pop: 0 18px 48px rgba(0, 0, 0, 0.62);
+  --shadow-sheet: 0 -16px 48px rgba(0, 0, 0, 0.6);
+
+  /* Touch. */
+  --hit: 44px;
+
+  /* Layers. */
+  --z-raised: 2;
+  --z-sticky: 20;
+  --z-sidebar: 30;
+  --z-dock: 40;
+  --z-scrim: 900;
+  --z-drawer: 950;
+  --z-modal: 1000;
+  --z-menu: 1100;
+  --z-toast: 1200;
+
+  /* Shell metrics. */
+  --sidebar-w: 248px;
+  --sidebar-w-compact: 72px;
+  --topbar-h: 64px;
+  --tabbar-h: 64px;
+
+  /* Legacy aliases. Older layers read these names; they resolve here. */
+  --strix-bg: var(--ink-0);
+  --strix-surface: var(--ink-1);
+  --strix-surface-1: var(--ink-1);
+  --strix-surface-2: var(--ink-2);
+  --strix-surface-raised: var(--ink-2);
+  --strix-surface-soft: var(--ink-3);
+  --strix-border: var(--line-2);
+  --strix-border-strong: var(--line-3);
+  --strix-text: var(--text-1);
+  --strix-muted: var(--text-3);
+  --strix-subtle: var(--text-4);
+  --strix-blue: var(--text-1);
+  --strix-deep: var(--ink-3);
+  --strix-glow: rgba(255, 255, 255, 0.12);
+  --fc27-blue: var(--text-1);
+  --fc27-blue-deep: var(--ink-2);
+  --fc27-label: #aeb4bb;
+  --fc27-line: var(--ink-5);
+  --fc27-surface: var(--ink-1);
+  --fc27-surface-raised: var(--ink-2);
+  --sp-surface: var(--ink-1);
+  --sp-raised: var(--ink-2);
+  --sp-hover: var(--ink-3);
+  --sp-line: var(--line-2);
+  --sp-line-strong: var(--line-3);
+  --sp-text: var(--text-1);
+  --sp-soft: #d8dce0;
+  --sp-muted: var(--text-3);
+  --sp-kicker: #aeb4bb;
+  --ui-space-1: var(--space-2);
+  --ui-space-2: var(--space-4);
+  --ui-space-3: var(--space-6);
+  --ui-space-4: var(--space-8);
+}
+
+/* Browser surfaces carry the system too. */
+html {
+  background: var(--ink-0);
+  color: var(--text-1);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  scrollbar-color: var(--ink-5) transparent;
+}
+::selection {
+  background: rgba(245, 245, 245, 0.88);
+  color: var(--text-on-light);
+}
+:focus-visible {
+  outline: 2px solid var(--line-focus);
+  outline-offset: 2px;
+}
+input,
+textarea {
+  caret-color: var(--text-1);
+}
+time,
+.tabular,
+[data-tabular] {
+  font-variant-numeric: tabular-nums;
+}
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: var(--radius-pill);
+  background: var(--ink-5) padding-box;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}

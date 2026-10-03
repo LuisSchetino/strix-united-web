@@ -1,6 +1,6 @@
 import React, { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { IconDots, IconPencil, IconTrash } from "@tabler/icons-react";
+import { IconDots, IconFileText, IconPencil, IconTrash } from "@tabler/icons-react";
 import { motionMs } from "./motion/motion-tokens.js";
 import "./action-menu.css";
 
@@ -8,6 +8,7 @@ const OPEN_EVENT = "strix-action-menu-open";
 const ICONS = {
   dots: IconDots,
   edit: IconPencil,
+  file: IconFileText,
   trash: IconTrash,
 };
 

@@ -6,15 +6,18 @@ import { RASTRO_BRAND } from "../src/brand.js";
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 
 test("Rastro brand blue stays on analytics tokens, not on generic UI tokens", async () => {
-  const [brandCss, selectCss] = await Promise.all([
+  const [brandCss, selectCss, tokens] = await Promise.all([
     read("../src/fc27-brand.css"),
     read("../src/ui/select-control.css"),
+    read("../src/design/tokens.css"),
   ]);
   assert.equal(RASTRO_BRAND.color, "#2F80FF");
-  assert.match(brandCss, /--rastro-blue:\s*#2F80FF/i);
-  assert.match(brandCss, /--rastro-blue-soft:\s*rgba\(47,128,255/);
-  assert.match(brandCss, /--strix-blue:\s*#f5f5f5/);
-  assert.match(brandCss, /--fc27-blue:\s*#f5f5f5/);
+  assert.match(tokens, /--rastro-blue:\s*#2F80FF/i);
+  assert.match(tokens, /--rastro-blue-soft:\s*rgba\(47,\s*128,\s*255/);
+  // Legacy "blue" names resolve to off-white: structure never turns blue.
+  assert.match(tokens, /--strix-blue:\s*var\(--text-1\)/);
+  assert.match(tokens, /--fc27-blue:\s*var\(--text-1\)/);
+  assert.match(tokens, /--text-1:\s*#f5f5f5/);
   assert.match(brandCss, /\.rastro-signature b\{color:var\(--rastro-blue\)/);
   assert.doesNotMatch(selectCss, /var\(--rastro-blue\)/);
   const statisticsCss = await read("../src/features/statistics/statistics.css");

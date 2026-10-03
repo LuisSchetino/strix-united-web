@@ -1,4 +1,5 @@
 import { FC27_CLUB_ID, isStrixClubId, readStrixKeyed } from "../../../shared/fc27-club.js";
+import { readOpponentClubId } from "../teams/ea-club-logo.js";
 
 export const EA_CLUB_ID = FC27_CLUB_ID;
 
@@ -33,6 +34,15 @@ const readNumber = (source, keys) => {
     }
   }
   return null;
+};
+
+const readMotm = (stats, player) => {
+  const keys = ["mom", "manOfTheMatch", "manofthematch", "motm", "isMom"];
+  const numeric = readNumber(stats, keys) ?? readNumber(player, keys);
+  if (numeric === 1) return 1;
+  const raw = keys.map((key) => stats?.[key] ?? player?.[key]).find((value) => value !== undefined && value !== null && value !== "");
+  if (raw === true || /^(true|yes|sim)$/i.test(String(raw || ""))) return 1;
+  return numeric;
 };
 
 const clubName = (club, fallback) => club?.name
@@ -99,7 +109,7 @@ export function eaPlayerRows(raw, clubId = EA_CLUB_ID) {
         ballDiveSaves: readNumber(stats, ["ballDiveSaves"]),
         parrySaves: readNumber(stats, ["parrySaves"]),
         punchSaves: readNumber(stats, ["punchSaves"]),
-        mom: readNumber(stats, ["mom"]),
+        mom: readMotm(stats, player),
         redcards: readNumber(stats, ["redcards"]),
         cleansheetsdef: readNumber(stats, ["cleansheetsdef"]),
         cleansheetsgk: readNumber(stats, ["cleansheetsgk"]),
@@ -153,6 +163,7 @@ export function normalizeEaMatch(raw, index = 0, clubId = EA_CLUB_ID) {
     dateLabel: date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "America/Sao_Paulo" }),
     timeLabel: date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" }),
     opponent: clubName(opponent, "Adversário EA"),
+    opponentClubId: readOpponentClubId(raw),
     strixScore: clubGoals(strix),
     opponentScore: clubGoals(opponent),
     competition: "Amistoso",

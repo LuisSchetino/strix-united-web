@@ -11,15 +11,30 @@ import { MEDIA_FORMAT_LABELS } from "./media-renderer.js";
  * shell; the structure (nav → toolbar → workspace) never moves.         *
  * ------------------------------------------------------------------ */
 
+/**
+ * The pauta: every piece the night can produce, what it uses and whether it is
+ * ready. Choosing a piece swaps the studio content; the pauta never moves.
+ */
 export function MediaNav({ sections, active, onChange }) {
   return (
-    <SegmentedControl
-      className="media-nav"
-      items={sections.map((section) => [section.id, section.label])}
-      active={active}
-      onChange={onChange}
-      label="Áreas da Central de mídia"
-    />
+    <nav className="media-nav" aria-label="Peças da Central de mídia">
+      <ol>
+        {sections.map((section) => (
+          <li key={section.id}>
+            <button
+              type="button"
+              className={`media-pauta-item is-${section.state || "ready"}${active === section.id ? " is-active" : ""}`}
+              aria-current={active === section.id ? "true" : undefined}
+              onClick={() => onChange(section.id)}
+            >
+              <span className="media-pauta-title">{section.title}</span>
+              {section.meta && <span className="media-pauta-meta">{section.meta}</span>}
+              {section.stateLabel && <em>{section.stateLabel}</em>}
+            </button>
+          </li>
+        ))}
+      </ol>
+    </nav>
   );
 }
 
@@ -62,26 +77,54 @@ export function MediaWorkspace({ stage, actions, rail }) {
   );
 }
 
-const Corner = ({ position }) => <i className={`media-corner is-${position}`} aria-hidden="true" />;
-
 /**
  * The protagonist. `pieceKey` identifies the piece (section + content + format);
  * when it changes the previous piece is replaced by a new one that assembles
  * and settles instead of snapping.
  */
-export function PreviewStage({ pieceKey, ratio = "story", label, state = "ready", children, caption }) {
+export function PreviewStage({ pieceKey, ratio = "story", label, state = "ready", children, caption, job = null, showingResult = false }) {
   return (
     <section className="media-stage" aria-label={label}>
-      <div className="media-stage-head"><span>PREVIEW</span>{caption && <b>{caption}</b>}</div>
-      <div className={`media-stage-frame is-${ratio}`} data-state={state}>
-        <Corner position="tl" /><Corner position="tr" /><Corner position="bl" /><Corner position="br" />
-        <div className="media-stage-piece" key={pieceKey}>
+      <div className="media-stage-head"><span>{showingResult ? "PRONTO PARA POSTAR" : "PRÉVIA"}</span>{caption && <b>{caption}</b>}</div>
+      <div className={`media-stage-frame is-${ratio}`} data-state={showingResult ? "result" : state}>
+        <div className="media-stage-piece" key={showingResult ? `result:${pieceKey}` : pieceKey}>
           <i className="media-piece-sweep" aria-hidden="true" />
           {children}
+          <StageProgress job={job} />
         </div>
       </div>
     </section>
   );
+}
+
+/** Generation happens on the piece itself: the preview dims and the progress runs across it. */
+export function jobPercent(job) {
+  const ratio = Number.isFinite(job?.progress?.ratio) ? job.progress.ratio : (job?.progress?.total ? job.progress.loaded / job.progress.total : null);
+  return Number.isFinite(ratio) ? Math.round(Math.max(0, Math.min(1, ratio)) * 100) : null;
+}
+
+export function StageProgress({ job }) {
+  if (job?.status !== "running") return null;
+  const percent = jobPercent(job);
+  const determinate = percent !== null;
+  const ratio = determinate ? percent / 100 : 0;
+  return (
+    <div className="media-stage-progress" role="status" aria-live="polite">
+      <b>{progressLabel(job.progress) || "Gerando"}</b>
+      {percent !== null && <strong>{percent}%</strong>}
+      <i className={determinate ? "" : "is-indeterminate"}><em style={determinate ? { transform: `scaleX(${Math.max(0.03, ratio)})` } : undefined} /></i>
+    </div>
+  );
+}
+
+/** The finished file, playing where the preview was. */
+export function StageResult({ record }) {
+  const url = useMemo(() => (record?.blob ? URL.createObjectURL(record.blob) : ""), [record]);
+  useEffect(() => () => { if (url) URL.revokeObjectURL(url); }, [url]);
+  if (!url) return null;
+  return isImageRecord(record)
+    ? <img className="media-stage-result" src={url} alt={`Peça gerada: ${record.fileName}`} />
+    : <video className="media-stage-result" src={url} controls autoPlay muted loop playsInline aria-label={`Vídeo gerado: ${record.fileName}`} />;
 }
 
 const PlayIcon = () => <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor" /></svg>;

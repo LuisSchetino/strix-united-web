@@ -55,9 +55,13 @@ test("estrutura estável: nav → toolbar → workspace com preview protagonista
   for (const part of ["MediaNav", "MediaToolbar", "ToolbarGroup", "FormatGroup", "MediaWorkspace", "PreviewStage", "PreviewCanvas", "PieceActions", "ArchiveList", "Options", "MediaViewer", "MediaBoundary"]) {
     assert.match(shell, new RegExp(`export (function|class) ${part}\\b`), part);
   }
-  assert.match(css, /grid-template-areas:"stage actions" "stage rail"/);
-  assert.match(css, /grid-template-areas:"stage" "actions" "rail"/);
-  assert.match(css, /min-height:calc\(var\(--stage-h\) \+ var\(--stage-pad\) \* 2\)/, "o quadro reserva a altura: trocar de formato não desloca o layout");
+  assert.match(css, /grid-template-areas:\s*"stage actions" "stage rail"/);
+  assert.match(css, /grid-template-areas:\s*"stage" "actions" "rail"/);
+  assert.match(css, /min-height:\s*calc\(var\(--stage-h\) \+ var\(--stage-pad\) \* 2\)/, "o quadro reserva a altura: trocar de formato não desloca o layout");
+  // pauta → peça → resultado: generation runs on the stage and the file plays in place.
+  for (const part of ["StageProgress", "StageResult"]) assert.match(shell, new RegExp(`export function ${part}\\b`), part);
+  assert.match(css, /\.media-stage-progress/);
+  assert.match(css, /\.media-pauta-item/);
   assert.match(css, /@keyframes media-piece-in/);
   assert.match(css, /@keyframes media-section-in/);
 });

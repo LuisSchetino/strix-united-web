@@ -2,18 +2,17 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { ClubLogo } from "../../ui/ClubLogo.jsx";
 import { STRIX_BRAND } from "../../brand.js";
 import { SignaturePad } from "./SignaturePad.jsx";
+import { ContractInstrument } from "./ContractInstrument.jsx";
+import { downloadSignedContractPdf, renderContractVideo } from "./contract-export-lazy.js";
+import { downloadBlob } from "../../lib/download-blob.js";
 import {
-  CONTRACT_COMMITMENT,
   CONTRACT_METADATA_KEY,
   CONTRACT_SEASON,
-  SIGNATURE_VIEWBOX,
   buildContractPayload,
   contractDateLabel,
   resolveContractIdentity,
 } from "./contract-core.js";
 import "./contract.css";
-
-const reducedMotion = () => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
 /** Enquanto a sessão revalida, o contrato não aparece: nunca mostramos a identidade errada. */
 export function ContractValidating() {
@@ -35,11 +34,15 @@ export function ContractValidating() {
  */
 export function ContractGate({ client, session, profile, players = [], onShown, onSigned, onSignOut }) {
   const padRef = useRef(null);
+  const sheetRef = useRef(null);
   useEffect(() => { onShown?.(); }, []);
   const [ready, setReady] = useState(false);
   const [phase, setPhase] = useState("idle");
   const [error, setError] = useState("");
   const [signed, setSigned] = useState(null);
+  const [video, setVideo] = useState(null);
+  const [rendering, setRendering] = useState(false);
+  const [videoError, setVideoError] = useState("");
   const identity = useMemo(() => resolveContractIdentity({ session, profile, players }), [session, profile, players]);
   const today = useMemo(() => contractDateLabel(), []);
   const busy = phase === "saving";
@@ -59,12 +62,26 @@ export function ContractGate({ client, session, profile, players = [], onShown, 
       if (updateError) throw updateError;
       setSigned(payload);
       setPhase("done");
-      window.setTimeout(() => onSigned?.(payload), reducedMotion() ? 500 : 1900);
     } catch (cause) {
       setPhase("idle");
       setError(cause?.message === "signature_empty"
         ? "A assinatura ficou grande demais. Limpe e assine novamente."
         : "Não foi possível registrar a assinatura. Tente novamente.");
+    }
+  };
+
+  const downloadVideo = async () => {
+    if (!signed) return;
+    setVideoError("");
+    try {
+      const blob = video || await renderContractVideo(sheetRef.current);
+      setVideo(blob);
+      const handle = String(identity.handle || identity.name || "strix").replace(/[^\w.-]+/g, "-").toLowerCase();
+      downloadBlob(blob, `strix-contrato-${handle}.${blob.type?.includes("webm") ? "webm" : "mp4"}`);
+    } catch (cause) {
+      setVideoError(cause?.message || "Não foi possível gerar o vídeo da assinatura.");
+    } finally {
+      setRendering(false);
     }
   };
 
@@ -76,45 +93,35 @@ export function ContractGate({ client, session, profile, players = [], onShown, 
         <i className="contract-corner is-bl" aria-hidden="true" /><i className="contract-corner is-br" aria-hidden="true" />
         <header className="contract-head">
           <ClubLogo name="Strix United" url={STRIX_BRAND.logo} priority sizes="64px" className="contract-crest" />
-          <div><span>STRIX UNITED</span><b>FC27</b></div>
+          <div><span>CONTRATO STRIX UNITED · FC27</span><b>FC27</b></div>
           <em>TEMPORADA {CONTRACT_SEASON}</em>
         </header>
-        <div className="contract-title">
-          <small>CONTRATO STRIX UNITED · FC27</small>
-          <h1 id="contract-title">Contrato de vínculo</h1>
+        <h1 id="contract-title" className="visually-hidden">Contrato de vínculo</h1>
+        <div ref={sheetRef}>
+        <ContractInstrument
+          identity={identity}
+          season={CONTRACT_SEASON}
+          signedAtLabel={phase === "done" ? today : ""}
+          signature={phase === "done" ? signed?.signature?.d : ""}
+        >
+          <SignaturePad ref={padRef} disabled={busy} onChange={(_strokes, meaningful) => { setReady(meaningful); if (meaningful) setError(""); }} />
+        </ContractInstrument>
         </div>
-        <dl className="contract-fields">
-          <div><dt>NOME</dt><dd>{identity.name}</dd></div>
-          {identity.handle && <div><dt>@</dt><dd>{identity.handle}</dd></div>}
-          {identity.role && <div><dt>FUNÇÃO</dt><dd>{identity.role}</dd></div>}
-          <div><dt>DATA</dt><dd>{today}</dd></div>
-        </dl>
-        <p className="contract-commitment">{CONTRACT_COMMITMENT}</p>
-        <section className="contract-signature" aria-label="Assinatura">
-          <header>
-            <span>ASSINATURA</span>
-            {phase !== "done" && <div>
-              <button type="button" onClick={() => padRef.current?.undo()} disabled={busy}>REFAZER</button>
-              <button type="button" onClick={() => padRef.current?.clear()} disabled={busy}>LIMPAR</button>
-            </div>}
-          </header>
-          {phase === "done" && signed ? (
-            <div className="contract-signed" role="status">
-              <svg viewBox={`0 0 ${SIGNATURE_VIEWBOX.width} ${SIGNATURE_VIEWBOX.height}`} aria-label="Assinatura registrada">
-                <path d={signed.signature.d} pathLength="1" />
-              </svg>
-              <p><b>VÍNCULO CONFIRMADO</b><span>Bem-vindo ao Strix · temporada {CONTRACT_SEASON}</span></p>
-            </div>
-          ) : (
-            <SignaturePad ref={padRef} disabled={busy} onChange={(_strokes, meaningful) => { setReady(meaningful); if (meaningful) setError(""); }} />
-          )}
-        </section>
+        {phase !== "done" && <div className="contract-pad-tools">
+          <button type="button" onClick={() => padRef.current?.undo()} disabled={busy}>REFAZER</button>
+          <button type="button" onClick={() => padRef.current?.clear()} disabled={busy}>LIMPAR</button>
+        </div>}
         {error && <p className="contract-error" role="alert">{error}</p>}
-        {phase !== "done" && <footer className="contract-actions">
+        {videoError && <p className="contract-error" role="alert">{videoError}</p>}
+        {phase !== "done" ? <footer className="contract-actions">
           <button type="button" className="primary" disabled={!ready || busy} onClick={() => void sign()}>
             {busy ? "REGISTRANDO…" : "ASSINAR E CONTINUAR"}
           </button>
           <button type="button" className="contract-switch" onClick={onSignOut} disabled={busy}>Não é você? Sair</button>
+        </footer> : <footer className="contract-actions contract-downloads">
+          <button type="button" className="secondary" disabled={rendering} onClick={() => downloadSignedContractPdf(sheetRef.current, CONTRACT_SEASON).catch((cause) => setVideoError(cause?.message || "Não foi possível gerar o PDF."))}>BAIXAR PDF</button>
+          <button type="button" className="secondary" disabled={rendering} onClick={() => { setRendering(true); void downloadVideo(); }}>{rendering ? "GERANDO…" : "BAIXAR VÍDEO"}</button>
+          <button type="button" className="primary" onClick={() => onSigned?.(signed)}>CONTINUAR</button>
         </footer>}
       </article>
     </main>

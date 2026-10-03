@@ -2,10 +2,6 @@
 .page-enter{animation-duration:160ms!important}
 
 /* Agenda rows keep the primary action and the actions menu as sibling controls. */
-.agenda-game-open{grid-column:1/5;display:grid;grid-template-columns:subgrid;align-items:center;gap:inherit;min-width:0;width:100%;padding:0;border:0;background:transparent;color:inherit;text-align:left;cursor:pointer}
-.agenda-game>.agenda-game-open{justify-self:stretch;letter-spacing:normal}
-.agenda-game>[data-agenda-menu-trigger]{grid-column:5;min-width:44px;min-height:44px;display:grid;place-items:center;justify-self:end;border-radius:9px}
-.agenda-game-open:focus-visible,.agenda-game>[data-agenda-menu-trigger]:focus-visible{outline:2px solid #d7dade;outline-offset:3px}
 
 /* Next Clubs remains an editorial accent, never a green surface. */
 .agenda-standing-compare{position:relative;overflow:hidden}
@@ -28,18 +24,18 @@
 
 /* Fast, informative entrance motion. */
 @media(min-width:701px) and (prefers-reduced-motion:no-preference){
-  .page-enter>.match-hero,.page-enter>.agenda-hero,.page-enter>.matches-hero,.page-enter>.data-page-header,.page-enter>.competitions-header,.page-enter>.gd-editor-header{animation-duration:160ms!important}
-  .page-enter>.content-grid,.page-enter>.agenda-tabs,.page-enter>.matches-feedback,.page-enter>.competition-selector,.page-enter>.gd-editor-shell{animation-duration:175ms!important;animation-delay:12ms!important}
-  .page-enter>.agenda-list,.page-enter>.progressive-history,.page-enter>.squad-list,.page-enter>.competition-inline{animation-duration:190ms!important;animation-delay:24ms!important}
+  .page-enter>.gd-editor-header{animation-duration:160ms!important}
+  .page-enter>.matches-feedback,.page-enter>.competition-selector,.page-enter>.gd-editor-shell{animation-duration:175ms!important;animation-delay:12ms!important}
+  .page-enter>.progressive-history,.page-enter>.competition-inline{animation-duration:190ms!important;animation-delay:24ms!important}
   .agenda-standing-compare>header{animation:performance-rise 180ms ease both}.agenda-standing-compare .agenda-standing-team{animation:performance-rise 190ms ease both}.agenda-standing-compare .agenda-standing-team:nth-child(1){animation-delay:24ms}.agenda-standing-compare .agenda-standing-team:nth-child(2){animation-delay:48ms}
-  .central-night-list>.upcoming-game-card,.agenda-list>.agenda-game{animation:performance-rise 190ms ease both}.central-night-list>.upcoming-game-card:nth-child(2),.agenda-list>.agenda-game:nth-child(3){animation-delay:28ms}.central-night-list>.upcoming-game-card:nth-child(3),.agenda-list>.agenda-game:nth-child(4){animation-delay:56ms}
+  
 }
 @keyframes performance-rise{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
 
 @media(max-width:760px){
-  .agenda-game{grid-template-columns:64px minmax(0,1fr) 48px!important}
-  .agenda-game-open{grid-column:1/3;grid-template-columns:subgrid}
-  .agenda-game>[data-agenda-menu-trigger]{grid-column:3;min-width:46px;min-height:46px}
+  
+  
+  
   .agenda-actions{position:fixed!important;z-index:70!important;left:12px!important;right:12px!important;top:auto!important;bottom:max(12px,env(safe-area-inset-bottom))!important;transform:none!important;min-width:0;padding:10px;border-radius:14px}
   .agenda-actions button{min-height:46px!important}
   .agenda-modal{height:calc(100dvh - max(12px,env(safe-area-inset-top)))!important;max-height:calc(100dvh - max(12px,env(safe-area-inset-top)))!important}
@@ -50,4 +46,4 @@
   .formation-roster-group>button{min-height:52px}
   .skeleton-metrics{grid-template-columns:repeat(2,1fr)}.skeleton-split{grid-template-columns:1fr}.skeleton-ranking{display:none}.skeleton-hero{min-height:270px;grid-template-columns:1fr 46px 1fr;gap:10px}.skeleton-hero i{width:62px}.skeleton-table-row{grid-template-columns:68px minmax(120px,1fr) 64px}.workspace-skeleton{margin-top:20px}
 }
-@media(prefers-reduced-motion:reduce){.motion-skeleton{animation:none!important}.agenda-standing-compare>header,.agenda-standing-team,.central-night-list>.upcoming-game-card,.agenda-list>.agenda-game{animation:none!important}}
+@media(prefers-reduced-motion:reduce){.motion-skeleton{animation:none!important}.agenda-standing-compare>header,.agenda-standing-team{animation:none!important}}

@@ -2,9 +2,11 @@ import React, { useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { CloseButton } from "../../ui/CloseButton.jsx";
 import { useDialog } from "../../ui/useDialog.js";
-import { downloadSignedContractPdf } from "./contract-pdf.js";
-import { CONTRACT_COMMITMENT, CONTRACT_SEASON, SIGNATURE_VIEWBOX } from "./contract-core.js";
-import { downloadBlob, renderSignatureMp4 } from "./contract-motion.js";
+import { downloadSignedContractPdf, renderContractVideo } from "./contract-export-lazy.js";
+import { CONTRACT_SEASON } from "./contract-core.js";
+import { ContractInstrument } from "./ContractInstrument.jsx";
+import { downloadBlob } from "../../lib/download-blob.js";
+import "./contract.css";
 import "./contract-archive.css";
 
 export function ContractArchiveAction({ onClick, compact = false }) {
@@ -28,21 +30,33 @@ export function SignedContractArchive({ contract, identity, onClose }) {
   const [rendering, setRendering] = useState(false);
   const [videoError, setVideoError] = useState("");
   const backdropRef = useRef(null);
+  const sheetRef = useRef(null);
   const downloadVideo = async () => {
     if (rendering) return;
     setVideoError("");
     try {
-      const blob = video || await (setRendering(true), renderSignatureMp4({ contract, identity }));
+      const blob = video || await (setRendering(true), renderContractVideo(sheetRef.current));
       setVideo(blob);
       const handle = String(identity?.handle || identity?.name || "strix").replace(/[^\w.-]+/g, "-").toLowerCase();
-      downloadBlob(blob, `strix-contrato-${handle}.mp4`);
+      downloadBlob(blob, `strix-contrato-${handle}.${blob.type?.includes("webm") ? "webm" : "mp4"}`);
     } catch (error) {
       setVideoError(error?.message || "Não foi possível gerar o vídeo da assinatura.");
     } finally {
       setRendering(false);
     }
   };
-  if (!contract?.signature?.d) return null;
+  if (!contract?.signature?.d) {
+    return createPortal(
+      <div ref={backdropRef} className="contract-archive-backdrop" onMouseDown={(event) => { if (event.target === backdropRef.current) onClose(); }}>
+        <article ref={dialogRef} className="contract-archive-dialog" role="dialog" aria-modal="true" aria-labelledby="contract-archive-title" tabIndex={-1}>
+          <header><div><span>STRIX UNITED · FC27</span><h2 id="contract-archive-title">Sem vínculo assinado.</h2></div><CloseButton onClick={onClose} label="Fechar contrato" /></header>
+          <p className="contract-archive-missing">{identity?.name || "Este membro"} ainda não assinou o contrato da temporada {CONTRACT_SEASON}.</p>
+          <footer><button type="button" className="primary" onClick={onClose}>FECHAR</button></footer>
+        </article>
+      </div>,
+      document.body,
+    );
+  }
   return createPortal(
     <div ref={backdropRef} className="contract-archive-backdrop" onMouseDown={(event) => { if (event.target === backdropRef.current) onClose(); }}>
       <article ref={dialogRef} className="contract-archive-dialog" role="dialog" aria-modal="true" aria-labelledby="contract-archive-title" tabIndex={-1}>
@@ -50,28 +64,13 @@ export function SignedContractArchive({ contract, identity, onClose }) {
           <div><span>ARQUIVO PESSOAL · STRIX UNITED</span><h2 id="contract-archive-title">Seu vínculo FC27.</h2></div>
           <CloseButton onClick={onClose} label="Fechar contrato" />
         </header>
-        <div className="contract-archive-document">
-          <div className="contract-archive-brand"><b>STRIX UNITED</b><span>FC 27 · TEMPORADA {contract.season || CONTRACT_SEASON}</span></div>
-          <h3>Contrato de vínculo</h3>
-          <dl>
-            <div><dt>NOME</dt><dd>{identity?.name || "Membro Strix"}</dd></div>
-            {identity?.handle && <div><dt>IDENTIFICAÇÃO</dt><dd>{identity.handle}</dd></div>}
-            <div><dt>FUNÇÃO</dt><dd>{identity?.role || "—"}</dd></div>
-            <div><dt>ASSINADO EM</dt><dd>{dateLabel(contract.signedAt)}</dd></div>
-          </dl>
-          <p className="contract-archive-commitment">{CONTRACT_COMMITMENT}</p>
-          <div className="contract-archive-signature">
-            <span>ASSINATURA REGISTRADA</span>
-            <svg key={replay} viewBox={`0 0 ${SIGNATURE_VIEWBOX.width} ${SIGNATURE_VIEWBOX.height}`} role="img" aria-label="Animação da assinatura do contrato">
-              <path d={contract.signature.d} pathLength="1" />
-            </svg>
-          </div>
-          <small>Uma cópia pessoal do compromisso e do traço armazenados no seu perfil.</small>
+        <div className="contract-archive-document" ref={sheetRef}>
+          <ContractInstrument identity={identity} season={contract.season || CONTRACT_SEASON} signedAtLabel={dateLabel(contract.signedAt)} signature={contract.signature.d} replayKey={replay} />
         </div>
         <footer>
           {videoError && <p className="contract-archive-error" role="alert">{videoError}</p>}
           <button type="button" className="secondary" onClick={() => setReplay((value) => value + 1)}>REVER ANIMAÇÃO</button>
-          <button type="button" className="secondary" onClick={() => downloadSignedContractPdf(contract, identity)}>BAIXAR PDF</button>
+          <button type="button" className="secondary" onClick={() => downloadSignedContractPdf(sheetRef.current, contract.season).catch((error) => setVideoError(error?.message || "Não foi possível gerar o PDF."))}>BAIXAR PDF</button>
           <button type="button" className="primary" disabled={rendering} onClick={() => void downloadVideo()}>{rendering ? "GERANDO…" : "BAIXAR VÍDEO"}</button>
         </footer>
       </article>

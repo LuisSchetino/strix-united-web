@@ -1,4 +1,3 @@
-import { paintAnnounceFrame } from "./announce-paint.js";
 import { paintEditorialAnnounce } from "./editorial-media-paint.js";
 import { announceSceneAt } from "./announce-timeline.js";
 
@@ -15,8 +14,8 @@ export function renderAnnounceFrame(ctx, {
   assets,
 } = {}) {
   const resolved = Number.isFinite(timeSec) ? timeSec : time;
-  if (timeline?.still) paintAnnounceFrame(ctx, { timeline, time: resolved, assets });
-  else paintEditorialAnnounce(ctx, { timeline, time: resolved, assets });
+  // Reels and Post share one direction: stills are the settled frame of the same painter.
+  paintEditorialAnnounce(ctx, { timeline, time: resolved, assets });
 }
 
 export function describeAnnounceFrame(timeline, timeSec) {

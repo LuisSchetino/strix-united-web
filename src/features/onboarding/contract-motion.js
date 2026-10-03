@@ -24,66 +24,74 @@ function paintSignatureFrame(ctx, time, { contract, identity, length }) {
   ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
   const x = 72;
-  const y = 280;
+  const y = 220;
   const w = WIDTH - 144;
-  const h = 1180;
-  ctx.fillStyle = "#101318";
-  ctx.strokeStyle = "rgba(255,255,255,.14)";
-  ctx.lineWidth = 2;
+  const h = 1360;
+  ctx.fillStyle = "#090b0d";
+  ctx.strokeStyle = "rgba(255,255,255,.72)";
+  ctx.lineWidth = 3;
   ctx.fillRect(x, y, w, h);
-  ctx.strokeRect(x, y, w, h);
+  ctx.strokeRect(x + 14, y + 14, w - 28, h - 28);
 
-  ctx.fillStyle = "#aeb4bb";
-  ctx.font = "700 22px Inter, Arial, sans-serif";
+  ctx.fillStyle = "#f5f5f5";
+  ctx.font = "800 28px Rajdhani, Inter, sans-serif";
   ctx.textAlign = "left";
   ctx.textBaseline = "alphabetic";
   ctx.fillText("STRIX UNITED", x + 48, y + 78);
+  ctx.font = "700 18px Inter, Arial, sans-serif";
+  ctx.fillStyle = "#c8ccd0";
+  ctx.fillText("FC 27 · SÃO PAULO", x + 48, y + 108);
   ctx.textAlign = "right";
-  ctx.fillText(`FC 27 · ${contract.season || CONTRACT_SEASON}`, x + w - 48, y + 78);
+  ctx.fillStyle = "#f5f5f5";
+  ctx.fillText(`Nº FC27-${contract.season || CONTRACT_SEASON}`, x + w - 48, y + 88);
   ctx.textAlign = "left";
-  ctx.strokeStyle = "rgba(255,255,255,.12)";
+  ctx.font = "800 52px Rajdhani, Inter, sans-serif";
+  ctx.fillText("CONTRATO DE VÍNCULO", x + 48, y + 190);
+  ctx.strokeStyle = "rgba(255,255,255,.7)";
+  ctx.lineWidth = 1.5;
   ctx.beginPath();
-  ctx.moveTo(x + 48, y + 108);
-  ctx.lineTo(x + w - 48, y + 108);
+  ctx.moveTo(x + 48, y + 214);
+  ctx.lineTo(x + w - 48, y + 214);
   ctx.stroke();
 
-  ctx.fillStyle = "#f5f5f5";
-  ctx.font = "800 64px Rajdhani, Inter, sans-serif";
-  ctx.fillText("CONTRATO DE VÍNCULO", x + 48, y + 210);
-  ctx.fillStyle = "#8e969f";
-  ctx.font = "700 18px Inter, Arial, sans-serif";
-  ctx.fillText("NOME", x + 48, y + 280);
-  ctx.fillText("IDENTIFICAÇÃO", x + w / 2, y + 280);
-  ctx.fillStyle = "#f5f5f5";
-  ctx.font = "800 32px Inter, Arial, sans-serif";
-  ctx.fillText(identity?.name || "MEMBRO STRIX", x + 48, y + 324);
-  ctx.fillText(identity?.handle || "—", x + w / 2, y + 324);
-  ctx.fillStyle = "#d8dce0";
-  ctx.font = "500 24px Inter, Arial, sans-serif";
-  const words = CONTRACT_COMMITMENT.split(" ");
-  let line = "";
-  let lineY = y + 430;
-  words.forEach((word) => {
-    const next = line ? `${line} ${word}` : word;
-    if (ctx.measureText(next).width > w - 96) {
-      ctx.fillText(line, x + 48, lineY);
-      line = word;
-      lineY += 36;
-    } else line = next;
+  ctx.fillStyle = "#f2f3f4";
+  ctx.font = "500 26px Inter, Arial, sans-serif";
+  const name = identity?.name || "MEMBRO STRIX";
+  const paragraphs = [
+    `CLUBE. Strix United FC27, sede em São Paulo. Temporada ${contract.season || CONTRACT_SEASON}.`,
+    `VINCULADO. ${name}${identity?.handle ? `, ${identity.handle}` : ""}, função ${identity?.role || "membro do elenco"}.`,
+    `CLÁUSULA 1ª. O vinculado integra o elenco do Strix United na temporada ${contract.season || CONTRACT_SEASON}.`,
+    `CLÁUSULA 2ª. ${CONTRACT_COMMITMENT}`,
+    "CLÁUSULA 3ª. A assinatura abaixo registra o aceite. Foro de São Paulo.",
+  ];
+  let lineY = y + 260;
+  paragraphs.forEach((paragraph) => {
+    const words = paragraph.split(" ");
+    let line = "";
+    words.forEach((word) => {
+      const next = line ? `${line} ${word}` : word;
+      if (ctx.measureText(next).width > w - 96) {
+        ctx.fillText(line, x + 48, lineY);
+        line = word;
+        lineY += 36;
+      } else line = next;
+    });
+    if (line) ctx.fillText(line, x + 48, lineY);
+    lineY += 52;
   });
-  if (line) ctx.fillText(line, x + 48, lineY);
 
   const padX = x + 48;
-  const padY = lineY + 48;
+  const padY = Math.min(lineY, y + h - 360);
   const padW = w - 96;
   const padH = 280;
-  ctx.fillStyle = "#07090b";
-  ctx.strokeStyle = "rgba(255,255,255,.14)";
+  ctx.fillStyle = "#101318";
+  ctx.strokeStyle = "rgba(255,255,255,.35)";
+  ctx.lineWidth = 1.5;
   ctx.fillRect(padX, padY, padW, padH);
   ctx.strokeRect(padX, padY, padW, padH);
-  ctx.fillStyle = "#aeb4bb";
+  ctx.fillStyle = "#c8ccd0";
   ctx.font = "700 16px Inter, Arial, sans-serif";
-  ctx.fillText("ASSINATURA REGISTRADA", padX + 24, padY + 36);
+  ctx.fillText("ASSINATURA DO VINCULADO", padX + 24, padY + 36);
 
   if (!contract?.signature?.d || typeof ctx.stroke !== "function") return;
   ctx.save();

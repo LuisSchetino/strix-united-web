@@ -73,39 +73,46 @@ export function buildSignedContractPdf(contract, identity = {}) {
   if (!contract?.signature?.d || !Number.isFinite(Date.parse(contract.signedAt))) {
     throw new Error("signed_contract_unavailable");
   }
+  const name = String(identity.name || "MEMBRO STRIX").toLocaleUpperCase("pt-BR");
+  const role = String(identity.role || "—");
+  const season = String(contract.season || CONTRACT_SEASON);
+  const ink = "0.96 0.96 0.95";
+  const muted = "0.78 0.80 0.82";
   const commands = [
-    "q 0.96 0.95 0.92 rg 0 0 595 842 re f Q",
-    "q 0.07 0.08 0.09 rg 54 780 5 24 re f Q",
-    line("STRIX UNITED", 70, 793, 10, "F2"),
-    line("FC 27  /  TEMPORADA 2026/27", 376, 793, 8, "F2", "0.35 0.36 0.37"),
-    rule(54, 766, 541, 766),
-    line("CONTRATO DE VÍNCULO", 54, 715, 25, "F2"),
-    line("STRIX UNITED  ·  FC27", 54, 695, 9, "F2", "0.36 0.37 0.38"),
-    line("NOME", 54, 650, 7, "F2", "0.42 0.43 0.44"),
-    line(String(identity.name || "MEMBRO STRIX").toLocaleUpperCase("pt-BR"), 54, 629, 14, "F2"),
-    line("IDENTIFICAÇÃO", 310, 650, 7, "F2", "0.42 0.43 0.44"),
-    line(String(identity.handle || identity.role || "STRIX UNITED").toLocaleLowerCase("pt-BR"), 310, 629, 11, "F1"),
-    rule(54, 610, 541, 610),
-    line("TEMPORADA", 54, 584, 7, "F2", "0.42 0.43 0.44"),
-    line(String(contract.season || CONTRACT_SEASON), 54, 563, 12, "F2"),
-    line("ASSINADO EM", 310, 584, 7, "F2", "0.42 0.43 0.44"),
-    line(dateTimeLabel(contract.signedAt), 310, 563, 10, "F2"),
-    line("FUNÇÃO", 54, 535, 7, "F2", "0.42 0.43 0.44"),
-    line(String(identity.role || "—"), 54, 516, 10, "F1"),
-    rule(54, 497, 541, 497),
-    line("COMPROMISSO", 54, 471, 7, "F2", "0.42 0.43 0.44"),
+    "q 0.035 0.04 0.05 rg 0 0 595 842 re f Q",
+    "0.92 0.92 0.91 RG 1.2 w 36 36 523 770 re S",
+    line("STRIX UNITED", 58, 764, 16, "F2", ink),
+    line("FC 27  ·  SÃO PAULO", 58, 748, 8, "F2", muted),
+    line(`Nº FC27-${season}`, 430, 756, 9, "F2", ink),
+    rule(58, 734, 537, 734, "0.92 0.92 0.91", 0.9),
+    line("CONTRATO DE VÍNCULO", 58, 708, 18, "F2", ink),
+    line(role, 58, 690, 10, "F2", ink),
+    line("IDENTIFICAÇÃO DAS PARTES", 58, 662, 9, "F2", ink),
   ];
-  wrapWords(CONTRACT_COMMITMENT, 76).slice(0, 3).forEach((text, index) => commands.push(line(text, 54, 448 - index * 17, 10, "F1", "0.18 0.19 0.20")));
+  const blocks = [
+    `CLUBE. Strix United FC27, agremiação com sede em São Paulo, neste instrumento representada pela sua direção. Registro interno da temporada ${season}.`,
+    `VINCULADO. ${name}${identity.handle ? `, identificado como ${identity.handle}` : ""}, função ${role}.`,
+    "As partes acima identificadas ajustam o presente contrato, que se rege pelas cláusulas seguintes.",
+    `CLÁUSULA 1ª. O vinculado integra o elenco do Strix United na temporada ${season}, na função ${role}.`,
+    `CLÁUSULA 2ª. ${CONTRACT_COMMITMENT}`,
+    `CLÁUSULA 3ª. A assinatura abaixo registra o aceite no perfil autenticado, em ${dateTimeLabel(contract.signedAt)}. Foro de São Paulo.`,
+  ];
+  let cursor = 642;
+  blocks.forEach((block) => {
+    wrapWords(block, 92).forEach((text) => {
+      commands.push(line(text, 58, cursor, 9, "F1", ink));
+      cursor -= 12;
+    });
+    cursor -= 6;
+  });
   commands.push(
-    rule(54, 394, 541, 394),
-    line("ASSINATURA DIGITAL", 54, 372, 7, "F2", "0.42 0.43 0.44"),
-    "0.75 0.74 0.71 RG 0.7 w 54 240 487 116 re S",
-    "0.06 0.07 0.08 RG 2.2 w 1 J 1 j",
+    line("ASSINATURA DO VINCULADO", 76, 360, 8, "F2", muted),
+    "0.92 0.92 0.91 RG 0.7 w 76 236 443 112 re S",
+    "0.96 0.96 0.95 RG 2.1 w 1 J 1 j",
     signatureCommands(contract),
-    line("Assinatura registrada no perfil autenticado", 54, 224, 8, "F1", "0.38 0.39 0.40"),
-    rule(54, 70, 541, 70),
-    line("CÓPIA PESSOAL · STRIX UNITED FC27", 54, 51, 7, "F2", "0.42 0.43 0.44"),
-    line("Este documento reproduz o compromisso e o traço armazenados no perfil.", 54, 37, 7, "F1", "0.48 0.49 0.50"),
+    rule(76, 228, 519, 228, "0.92 0.92 0.91", 0.8),
+    line(name, 76, 210, 11, "F2", ink),
+    line(`${identity.handle ? `${identity.handle}  ·  ` : ""}SÃO PAULO  ·  TEMPORADA ${season}`, 76, 194, 8, "F1", muted),
   );
 
   const stream = commands.filter(Boolean).join("\n");
@@ -130,16 +137,41 @@ export function buildSignedContractPdf(contract, identity = {}) {
   return new TextEncoder().encode(pdf);
 }
 
-export function downloadSignedContractPdf(contract, identity = {}) {
-  const bytes = buildSignedContractPdf(contract, identity);
-  const blob = new Blob([bytes], { type: "application/pdf" });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = `strix-fc27-contrato-${String(contract.season || CONTRACT_SEASON).replaceAll("/", "-")}.pdf`;
-  anchor.hidden = true;
-  document.body.append(anchor);
-  anchor.click();
-  anchor.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+/** One page whose only content is the JPEG of the on-screen contract. */
+export function pdfFromJpeg(jpegBytes, pixelWidth, pixelHeight) {
+  const jpeg = jpegBytes instanceof Uint8Array ? jpegBytes : new Uint8Array(jpegBytes);
+  if (!jpeg.byteLength || !pixelWidth || !pixelHeight) throw new Error("signed_contract_unavailable");
+  const pageWidth = 595;
+  const pageHeight = Math.max(1, Math.round(pageWidth * (pixelHeight / pixelWidth)));
+  const content = `q ${pageWidth} 0 0 ${pageHeight} 0 0 cm /Im0 Do Q`;
+  const encoder = new TextEncoder();
+  const chunks = [];
+  const push = (value) => chunks.push(typeof value === "string" ? encoder.encode(value) : value);
+  const length = () => chunks.reduce((total, chunk) => total + chunk.length, 0);
+  const offsets = [0];
+  push("%PDF-1.4\n");
+  const add = (body) => {
+    offsets.push(length());
+    push(`${offsets.length - 1} 0 obj\n`);
+    body.forEach(push);
+    push("\nendobj\n");
+  };
+  add(["<< /Type /Catalog /Pages 2 0 R >>"]);
+  add(["<< /Type /Pages /Kids [3 0 R] /Count 1 >>"]);
+  add([`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R >>`]);
+  add([
+    `<< /Type /XObject /Subtype /Image /Width ${pixelWidth} /Height ${pixelHeight} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpeg.byteLength} >>\nstream\n`,
+    jpeg,
+    "\nendstream",
+  ]);
+  add([`<< /Length ${content.length} >>\nstream\n${content}\nendstream`]);
+  const xref = length();
+  let xrefBody = `xref\n0 ${offsets.length}\n0000000000 65535 f \n`;
+  offsets.slice(1).forEach((offset) => { xrefBody += `${String(offset).padStart(10, "0")} 00000 n \n`; });
+  push(`${xrefBody}trailer\n<< /Size ${offsets.length} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`);
+  const total = length();
+  const pdf = new Uint8Array(total);
+  let cursor = 0;
+  chunks.forEach((chunk) => { pdf.set(chunk, cursor); cursor += chunk.length; });
+  return pdf;
 }

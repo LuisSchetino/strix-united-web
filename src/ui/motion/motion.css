@@ -137,7 +137,7 @@ button:focus-visible .rolling-label > span:nth-child(2) {
     background var(--motion-fast);
 }
 .motion-state-badge.is-loading {
-  color: #6acbff;
+  color: #bec0c4;
 }
 .motion-state-badge.is-success {
   color: #65e1ad;
@@ -170,13 +170,13 @@ button:focus-visible .rolling-label > span:nth-child(2) {
   gap: 11px;
   width: 100%;
   padding: 13px 14px 14px;
-  border: 1px solid #28607f;
+  border: 1px solid #595b5f;
   border-radius: 14px;
-  background: linear-gradient(135deg, #0a2031f8, #06131ef8);
+  background: linear-gradient(135deg, #1c1e22f8, #101216f8);
   color: #eaf7ff;
   box-shadow:
     0 20px 55px #000c,
-    inset 0 1px #bcecff12;
+    inset 0 1px #e2e4e812;
   text-align: left;
   pointer-events: auto;
   touch-action: pan-y;
@@ -227,13 +227,13 @@ button:focus-visible .rolling-label > span:nth-child(2) {
   line-height: 1.35;
 }
 .motion-toast small {
-  color: #60d5ff;
+  color: #c5c7cb;
   font-size: 7px;
   font-weight: 950;
   letter-spacing: 0.13em;
 }
 .motion-toast > em {
-  color: #66869c;
+  color: #808286;
   font-size: 18px;
   font-style: normal;
 }
@@ -268,7 +268,7 @@ button:focus-visible .rolling-label > span:nth-child(2) {
 .motion-skeleton {
   position: relative;
   overflow: hidden;
-  background: #0a2233;
+  background: #1e2024;
 }
 .motion-skeleton:after {
   content: "";
@@ -278,7 +278,7 @@ button:focus-visible .rolling-label > span:nth-child(2) {
   background: linear-gradient(
     100deg,
     transparent 20%,
-    #d4f1ff12 48%,
+    #eaecf012 48%,
     transparent 76%
   );
   animation: motion-shimmer 1.35s ease-in-out infinite;
@@ -296,12 +296,11 @@ button:focus-visible .rolling-label > span:nth-child(2) {
   animation: motion-overlay-in var(--motion-fast) ease both;
 }
 .motion-dialog-panel,
-.profile-modal,
 .command,
 .competition-import-modal,
 .archive-preview,
 .match-review-modal,
-.agenda-modal {
+.agenda-modal{
   animation: motion-dialog-in var(--motion-normal) var(--motion-spring) both;
 }
 @keyframes motion-overlay-in {
@@ -348,9 +347,9 @@ button:focus-visible .rolling-label > span:nth-child(2) {
   width: max-content;
   max-width: 180px;
   padding: 6px 8px;
-  border: 1px solid #2c526a;
+  border: 1px solid #4c4e52;
   border-radius: 7px;
-  background: #06131df5;
+  background: #101216f5;
   color: #ddecf5;
   font-size: 9px;
   font-weight: 800;
@@ -404,70 +403,8 @@ html,
 body,
 #root {
   max-width: 100%;
-  overflow-x: clip;
 }
-.app-shell,
-.workspace {
-  min-width: 0;
-}
-.workspace {
-  padding-bottom: calc(122px + env(safe-area-inset-bottom));
-}
-.now-playing {
-  bottom: calc(18px + env(safe-area-inset-bottom));
-}
-.top-actions {
-  position: relative;
-}
-.create-trigger svg {
-  transition: rotate var(--motion-normal) var(--motion-spring);
-}
-.create-trigger.is-open svg {
-  rotate: 45deg;
-}
-.create-menu {
-  position: absolute;
-  z-index: 80;
-  right: 0;
-  top: calc(100% + 9px);
-  display: grid;
-  width: 260px;
-  padding: 7px;
-  border: 1px solid #29506b;
-  border-radius: 14px;
-  background: #071722f8;
-  box-shadow: 0 22px 60px #000b;
-  transform-origin: top right;
-  animation: motion-menu-in var(--motion-fast) var(--motion-ease) both;
-}
-.create-menu button {
-  display: grid;
-  grid-template-columns: 30px minmax(0, 1fr);
-  align-items: center;
-  gap: 9px;
-  min-height: 48px;
-  border: 0;
-  border-radius: 9px;
-  padding: 7px 9px;
-  background: transparent;
-  color: #dff2fd;
-  text-align: left;
-}
-.create-menu button:hover,
-.create-menu button:focus-visible {
-  background: #0e2a3e;
-}
-.create-menu button span {
-  display: grid;
-  gap: 3px;
-}
-.create-menu b {
-  font-size: 11px;
-}
-.create-menu small {
-  color: #6d8da4;
-  font-size: 8px;
-}
+
 @keyframes motion-menu-in {
   from {
     opacity: 0;
@@ -496,7 +433,7 @@ body,
   border-radius: 9px;
 }
 .command-results button.selected {
-  background: #0e2d44;
+  background: #292b2f;
 }
 .command-results button span {
   display: grid;
@@ -506,15 +443,15 @@ body,
   font-size: 12px;
 }
 .command-results button small {
-  color: #67869c;
+  color: #808286;
   font-size: 8px;
 }
 .command-results button.selected small {
-  color: #80b9dd;
+  color: #b0b2b6;
 }
 .command-empty {
   padding: 34px;
-  color: #718da1;
+  color: #87898d;
   text-align: center;
 }
 .command > footer {
@@ -522,19 +459,19 @@ body,
   gap: 16px;
   padding: 10px 16px;
   border-top: 1px solid #ffffff0d;
-  color: #6f8ca1;
+  color: #86888c;
   font-size: 9px;
 }
 .command > footer kbd {
   margin-right: 3px;
-  color: #a9c3d3;
+  color: #bdbfc3;
 }
 .agenda-actions {
   transform-origin: bottom right;
   animation: motion-menu-in var(--motion-fast) var(--motion-ease) both;
 }
 .agenda-actions button:focus-visible {
-  outline: 2px solid #5cbfff;
+  outline: 2px solid #b4b6ba;
   outline-offset: -2px;
 }
 .workspace-skeleton {
@@ -569,8 +506,7 @@ body,
 }
 .primary,
 .secondary,
-.add-button,
-.competition-detail-hero aside button {
+.competition-detail-hero aside button{
   transition:
     transform var(--motion-fast) var(--motion-spring),
     background var(--motion-fast),
@@ -579,8 +515,7 @@ body,
 }
 .primary:active,
 .secondary:active,
-.add-button:active,
-.competition-detail-hero aside button:active {
+.competition-detail-hero aside button:active{
   transform: scale(0.98);
 }
 .icon-button svg,
@@ -618,21 +553,12 @@ body,
 }
 .gd-layer-controls button:focus-visible,
 .gd-editor-panel > nav button:focus-visible {
-  outline: 2px solid #55bdff;
+  outline: 2px solid #b2b4b8;
   outline-offset: -2px;
 }
 @media (max-width: 700px) {
-  .workspace {
-    padding-inline: 10px;
-    padding-bottom: calc(118px + env(safe-area-inset-bottom));
-  }
-  .now-playing {
-    left: 10px;
-    right: 10px;
-    bottom: calc(10px + env(safe-area-inset-bottom));
-    width: auto;
-    min-height: 62px;
-  }
+  
+  
   .command-backdrop {
     align-items: start;
     padding: calc(10px + env(safe-area-inset-top)) 10px 10px;
@@ -648,19 +574,8 @@ body,
   .command > footer span:first-child {
     display: none;
   }
-  .create-menu {
-    position: fixed;
-    left: 10px;
-    right: 10px;
-    top: auto;
-    bottom: calc(84px + env(safe-area-inset-bottom));
-    width: auto;
-    grid-template-columns: 1fr 1fr;
-    transform-origin: bottom right;
-  }
-  .create-menu button {
-    min-height: 58px;
-  }
+  
+  
   .skeleton-cards {
     grid-template-columns: 1fr;
   }
@@ -706,7 +621,7 @@ body,
 }
 .command-results button:hover,
 .command-results button:focus-visible {
-  border-color: #3c7ca2 !important;
+  border-color: #74767a !important;
   transform: translateY(-1px);
 }
 .command-results button > svg {
@@ -717,7 +632,7 @@ body,
     color var(--motion-fast);
 }
 .command-results button.selected > svg {
-  color: #66d1ff;
+  color: #c3c5c9;
   transform: translateX(2px);
 }
 .command-results button span {
@@ -739,12 +654,12 @@ body,
   z-index: 0;
   left: 0;
   top: 0;
-  border: 1px solid #3a8cba;
+  border: 1px solid #828488;
   border-radius: 11px;
-  background: linear-gradient(135deg, #103957, #0b263c);
+  background: linear-gradient(135deg, #34363a, #222428);
   box-shadow:
     0 10px 24px #0004,
-    inset 0 1px #9be1ff14;
+    inset 0 1px #d5d7db14;
   opacity: 0;
   pointer-events: none;
   transition:
@@ -826,35 +741,29 @@ body,
 }
 
 @media (min-width: 701px) and (prefers-reduced-motion: no-preference) {
-  .page-enter > .match-hero,
-  .page-enter > .agenda-hero,
-  .page-enter > .matches-hero,
-  .page-enter > .data-page-header,
-  .page-enter > .competitions-header,
-  .page-enter > .gd-editor-header {
+  
+  
+  .page-enter > .gd-editor-header{
     animation: motion-section-enter 430ms var(--motion-ease) both;
   }
-  .page-enter > .content-grid,
-  .page-enter > .agenda-tabs,
+  
+  
   .page-enter > .matches-feedback,
   .page-enter > .competition-selector,
-  .page-enter > .gd-editor-shell {
+  .page-enter > .gd-editor-shell{
     animation: motion-section-enter 460ms var(--motion-ease) 55ms both;
   }
-  .page-enter > .agenda-list,
+  
   .page-enter > .progressive-history,
-  .page-enter > .squad-list,
-  .page-enter > .competition-inline {
+  .page-enter > .competition-inline{
     animation: motion-section-enter 500ms var(--motion-ease) 95ms both;
   }
   .panel,
-  .agenda-game,
   .data-card,
-  .squad-list > article,
   .competition-overview-grid > article,
   .competition-selector > button,
   .competition-timeline > article,
-  .provider-next-match {
+  .provider-next-match{
     transition:
       transform var(--motion-normal) var(--motion-spring),
       border-color var(--motion-fast),
@@ -862,26 +771,21 @@ body,
       background var(--motion-fast);
   }
   .panel:hover,
-  .agenda-game:hover,
   .data-card:hover,
-  .squad-list > article:hover,
   .competition-overview-grid > article:hover,
   .competition-selector > button:hover,
   .competition-timeline > article:hover,
-  .provider-next-match:hover {
+  .provider-next-match:hover{
     transform: translateY(-2px);
-    border-color: #2d6c91;
+    border-color: #64666a;
     box-shadow: 0 14px 32px #0004;
   }
-  .primary:hover,
-  .add-button:hover {
+  .primary:hover{
     transform: translateY(-1px);
-    box-shadow: 0 9px 25px #087cd13d;
+    box-shadow: 0 9px 25px #77797d3d;
   }
   .primary:hover svg,
-  .secondary:hover svg,
-  .panel-heading button:hover svg,
-  .agenda-game > button:hover svg {
+  .secondary:hover svg{
     transform: translateX(2px);
   }
 }
@@ -911,8 +815,8 @@ body,
 .motion-toast{border-color:var(--strix-border-strong);background:linear-gradient(135deg,#15191ef8,#0b0d10f8);color:#f2f3f4}
 .motion-toast small{color:#aeb4bb}.motion-toast>em{color:#8e969f}
 .motion-skeleton{background:#15191e}.motion-skeleton:after{background:linear-gradient(100deg,transparent 20%,#ffffff12 48%,transparent 76%)}
-.create-menu,.command-selection-indicator{border-color:var(--strix-border-strong);background:linear-gradient(135deg,#171b20,#0d1014);box-shadow:0 22px 60px #000b}
-.create-menu button{color:#d8dce0}.create-menu button:hover,.create-menu button:focus-visible{background:#20252b}
+.command-selection-indicator{border-color:var(--strix-border-strong);background:linear-gradient(135deg,#171b20,#0d1014);box-shadow:0 22px 60px #000b}
+
 .command-results button:hover,.command-results button:focus-visible{border-color:#59616a!important}
 .command-results button.selected>svg{color:#f2f3f4}.command-results button.selected small{color:#b7bdc4}
 .agenda-actions button:focus-visible,.gd-layer-controls button:focus-visible,.gd-editor-panel>nav button:focus-visible{outline-color:#dfe2e5}

@@ -122,19 +122,19 @@ test("easing premium não é linear e o render cobre abertura, páginas completa
   const texts = ctx.calls.filter((call) => Array.isArray(call) && call[0] === "fillText").map((call) => call[1]);
   assert.ok(texts.includes("AGENDA"));
   assert.ok(texts.includes("DO DIA"));
-  assert.ok(texts.includes("PARTIDAS MARCADAS"));
+  assert.ok(texts.includes("HOJE"), "a página é a grade de horários de hoje");
   assert.ok(texts.includes("STRIX UNITED"));
-  assert.ok(texts.some((text) => String(text).includes("MATCHDAY")));
+  assert.ok(texts.includes("A NOITE COMEÇA ÀS"), "o encerramento usa o primeiro horário real da noite");
   assert.ok(texts.some((text) => String(text).toUpperCase().includes("WINNER")));
   const lateMatch = mockContext();
   const lastPage = timeline.scenes.filter((scene) => scene.type === "page").at(-1);
   renderAgendaFrame(lateMatch, { timeline, time: lastPage.end - 0.04, assets, dayLabel: "02 SET 2026" });
   const lateTexts = lateMatch.calls.filter((call) => Array.isArray(call) && call[0] === "fillText").map((call) => call[1]);
-  assert.ok(!lateTexts.includes("A NOITE TEM"));
+  assert.ok(!lateTexts.includes("A NOITE COMEÇA ÀS"));
   const lateIntro = mockContext();
   renderAgendaFrame(lateIntro, { timeline, time: timeline.introEnd - 0.04, assets, dayLabel: "02 SET 2026" });
   const introTexts = lateIntro.calls.filter((call) => Array.isArray(call) && call[0] === "fillText").map((call) => call[1]);
-  assert.ok(!introTexts.includes("PARTIDAS MARCADAS"));
+  assert.ok(!introTexts.includes("HOJE"));
   assert.equal(timeline.scenes.at(-1).type, "finale");
 });
 
@@ -159,12 +159,13 @@ test("nova identidade invalida o render anterior e mantém Strix em todas as pá
     renderAgendaFrame(ctx, { timeline, time, assets, dayLabel: "02 SET 2026" });
     const texts = ctx.calls.filter((call) => Array.isArray(call) && call[0] === "fillText").map((call) => call[1]);
     assert.ok(texts.some((text) => String(text).includes("STRIX UNITED")), `STRIX UNITED em ${time}`);
-    assert.ok(texts.some((text) => String(text).includes("VS")), `VS em ${time}`);
+    assert.ok(texts.some((text) => /^\d{2}:\d{2}$/.test(String(text))), `horário do jogo em ${time}`);
   }
   const finale = mockContext();
   renderAgendaFrame(finale, { timeline, time: timeline.finaleStart + 0.14, assets, dayLabel: "02 SET 2026" });
   const finaleTexts = finale.calls.filter((call) => Array.isArray(call) && call[0] === "fillText").map((call) => call[1]);
-  assert.ok(finaleTexts.includes("HORA E LUGAR."));
+  assert.ok(finaleTexts.includes("A NOITE COMEÇA ÀS"));
+  assert.ok(finaleTexts.includes(timeline.matches[0].kickoff), "o horário do encerramento é o do primeiro jogo");
 });
 
 test("agenda completa adapta 3/5/6 jogos e separa competição do matchup", () => {

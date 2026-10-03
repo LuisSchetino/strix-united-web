@@ -48,22 +48,24 @@ test("Adicionar campeonato usa o container Strix e preserva a cor da competiçã
 test("goleiros separam total oficial e subtipos, sem transformar ausência em zero", async () => {
   const page = await read("../src/features/statistics/StatisticsPage.jsx");
   const keeper = page.slice(page.indexOf("function GoalkeeperCard"), page.indexOf("function NightSummary"));
-  for (const label of ["DEFESAS", "DEFESAS / JOGO", "GOLS SOFRIDOS", "NOTA MÉDIA", "SUBTIPOS DE DEFESA DISPONÍVEIS", "GOLEIROS · FC27"]) assert.ok(keeper.includes(label), label);
+  for (const label of ["DEFESAS", "DEFESAS / JOGO", "GOLS SOFRIDOS", "NOTA MÉDIA", "GOLEIROS · FC27"]) assert.ok(keeper.includes(label), label);
   assert.match(keeper, /present \? display\(value\) : "—"/);
   assert.match(keeper, /filter\(\(\[, , present\]\) => present\)/);
-  assert.match(keeper, /não substituem o total oficial/);
-  for (const subtype of ["REFLEX SAVES", "GOOD DIRECTION SAVES", "CROSS SAVES", "BALL DIVE SAVES", "PARRY SAVES", "PUNCH SAVES"]) assert.ok(keeper.includes(subtype), subtype);
+  assert.doesNotMatch(keeper, /Tipos registrados pela EA/);
+  for (const subtype of ["REFLEXO", "DIREÇÃO BOA", "CRUZAMENTO", "MERGULHO", "ESPALMO", "SOCO"]) assert.ok(keeper.includes(subtype), subtype);
+  assert.doesNotMatch(keeper, /REFLEX SAVES|GOOD DIRECTION SAVES/);
 });
 
 test("ranking de notas usa estrela SVG e a ficha não inventa arquétipo", async () => {
-  const page = await read("../src/features/statistics/StatisticsPage.jsx");
+  const [page, sheet] = await Promise.all([read("../src/features/statistics/StatisticsPage.jsx"), read("../src/features/players/PlayerProfile.jsx")]);
   assert.match(page, /<IconStar size=\{13\}[^>]*aria-hidden="true"/);
   assert.match(page, /metric === "averageRating"/);
-  assert.match(page, /archetypeInfo\?\.verified/);
+  assert.match(sheet, /archetypeInfo\?\.verified/);
 });
 
 test("dados individuais: nenhuma ficha pré-selecionada, abre ao clicar e fecha com o CloseButton", async () => {
-  const page = await read("../src/features/statistics/StatisticsPage.jsx");
+  const [stats, sheet] = await Promise.all([read("../src/features/statistics/StatisticsPage.jsx"), read("../src/features/players/PlayerProfile.jsx")]);
+  const page = stats + sheet;
   assert.match(page, /\.find\(\(player\) => profileKey\(player\) === selectedPlayerKey\) \|\| null/);
   assert.doesNotMatch(page, /selectedPlayerKey\) \|\| eligibleProfiles\[0\]/);
   assert.match(page, /onClose=\{\(\) => setSelectedPlayerKey\(""\)\}/);

@@ -30,7 +30,8 @@ test("todos os MP4 ativos usam a linguagem editorial nova; artes still preservam
     "announce-frame.js", "agenda-frame.js", "related-night-frame.js", "summary-frame.js",
   ].map((name) => readFile(new URL(`../src/features/media/${name}`, import.meta.url), "utf8")));
   assert.match(announce, /paintEditorialAnnounce/);
-  assert.match(announce, /timeline\?\.still\) paintAnnounceFrame/);
+  // Reels and Post share one direction: the still is the settled frame of the editorial painter.
+  assert.doesNotMatch(announce, /paintAnnounceFrame/);
   assert.match(agenda, /paintEditorialAgenda/);
   assert.match(related, /paintEditorialRelated/);
   assert.match(summary, /paintEditorialSummary/);

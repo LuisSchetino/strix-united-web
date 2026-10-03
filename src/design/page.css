@@ -1,0 +1,84 @@
+/* ==========================================================================
+   STRIX UNITED · page frame
+   The shared page heading and the content column every route sits in.
+   ========================================================================== */
+
+.page-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-5) var(--space-8);
+  margin: var(--space-10) 0 var(--space-8);
+  padding: 0 0 var(--space-6);
+  border-bottom: 1px solid var(--line-1);
+}
+.page-header-text {
+  flex: 1 1 420px;
+  min-width: 0;
+}
+.page-header h1 {
+  margin: 0;
+  color: var(--text-1);
+  font-size: var(--text-display);
+  font-weight: 800;
+  letter-spacing: var(--track-display);
+  line-height: var(--leading-tight);
+  overflow-wrap: anywhere;
+}
+.page-header p {
+  max-width: 62ch;
+  margin: var(--space-3) 0 0;
+  color: var(--text-3);
+  font-size: var(--text-md);
+  line-height: var(--leading-body);
+}
+.page-header-side {
+  display: flex;
+  flex: 0 1 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2) var(--space-3);
+  min-width: 0;
+}
+.page-header-side > .rastro-data-signature {
+  align-self: center;
+}
+
+@media (max-width: 760px) {
+  .page-header {
+    align-items: stretch;
+    flex-direction: column;
+    margin: var(--space-6) 0 var(--space-6);
+    padding-bottom: var(--space-5);
+  }
+  .page-header-text {
+    flex-basis: auto;
+  }
+  .page-header-side {
+    justify-content: flex-start;
+  }
+  .page-header-side > :is(.primary, .secondary) {
+    flex: 1 1 auto;
+  }
+}
+
+/* One content column for every route. */
+.workspace > :is(.data-page, .matches-page, .competitions-page, .agenda-page, .media-page, .library-v2) {
+  width: 100%;
+  max-width: var(--page-max);
+  margin-inline: auto;
+}
+
+/* Grid pages size their single column to the viewport, never to the widest child's
+   min-content; wide children (tab strips, filters, tables) scroll inside themselves. */
+.workspace > :is(.data-page, .matches-page, .competitions-page, .agenda-page, .media-page) {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* Routes own no outer padding: the workspace gutter is the only side margin. */
+.workspace > :is(.data-page, .matches-page, .competitions-page, .agenda-page, .media-page, .library-v2) {
+  padding-inline: 0;
+  padding-top: 0;
+}

@@ -5,10 +5,10 @@ import { readFile } from "node:fs/promises";
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 
 test("sidebar avatar stays compact and does not share elenco preview size", async () => {
-  const [logoCss, main, polish] = await Promise.all([
+  const [logoCss, main, shell] = await Promise.all([
     read("../src/ui/club-logo.css"),
     read("../src/main.jsx"),
-    read("../src/interaction-polish.css"),
+    read("../src/design/shell.css"),
   ]);
   assert.match(logoCss, /\.club-logo\{[^}]*width:var\(--avatar-size\)/);
   assert.doesNotMatch(logoCss, /--avatar-size,100%/);
@@ -19,7 +19,7 @@ test("sidebar avatar stays compact and does not share elenco preview size", asyn
   assert.match(main, /size="sm"/);
   assert.match(main, /size="lg"/);
   assert.match(main, /const AVATAR_PX = \{ sm: 36, md: 46, lg: 116 \}/);
-  assert.match(polish, /\.sidebar-user>span\{min-width:0;flex:1\}/);
+  assert.match(shell, /\.sidebar-user > span \{[^}]*min-width: 0/);
   assert.doesNotMatch(logoCss, /\.sidebar-user \.avatar[^}]*116px/);
 });
 

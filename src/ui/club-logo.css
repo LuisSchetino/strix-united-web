@@ -64,7 +64,7 @@
   overflow:hidden;
   border-radius:50%;
 }
-.avatar-md,.squad-player-card>.avatar{
+.avatar-md{
   --avatar-size:46px;
   width:46px;
   height:46px;

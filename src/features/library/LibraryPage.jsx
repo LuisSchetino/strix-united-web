@@ -13,6 +13,7 @@ import {
   progressPatch,
 } from "./library-core.js";
 import "./library.css";
+import { PageHeader } from "../../ui/PageHeader.jsx";
 
 const formatDate = (value) =>
   value
@@ -496,18 +497,15 @@ export function LibraryPage({ client, profile }) {
   );
   return (
     <section className="data-page page-enter library-v2">
-      <header className="data-page-header">
-        <div>
-          <span>BIBLIOTECA FC27</span>
-          <h1>Jogadas e reviews.</h1>
-          <p>Conteúdo do time para assistir, revisar e retomar de onde parou.</p>
-        </div>
-        {canManage && (
+      <PageHeader
+        title="Jogadas e reviews."
+        description="Conteúdo do time para assistir, revisar e retomar de onde parou."
+        actions={canManage && (
           <button className="primary" onClick={() => setAdding(true)}>
-            + ADICIONAR MATERIAL
+            <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>ADICIONAR MATERIAL
           </button>
         )}
-      </header>
+      />
       <MotionTabs
         className="library-tabs"
         items={tabs}

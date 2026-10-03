@@ -36,6 +36,7 @@ import { sortBracketFixtures } from "../../../shared/bracket-slots.js";
 import { canManageCompetitions } from "../../access.js";
 import "./competitions.css";
 import "./competitions-inline.css";
+import { PageHeader } from "../../ui/PageHeader.jsx";
 
 const fallbackPalettes = {
   ccb: ["#793cff", "#fab721", "#cf4cff", "#1b8cff"],
@@ -1087,21 +1088,18 @@ export function CompetitionsPage({ profile, workspace, client }) {
     }));
   return (
     <section className="competitions-page page-enter">
-      <header className="data-page-header competitions-header">
-        <div className="competitions-header-copy">
-          <span>COMPETIÇÕES</span>
-          <h1>Competições</h1>
-          <p>Temporadas, fases e confrontos oficiais do Strix.</p>
-        </div>
-        <div className="competitions-header-actions">
-          <NextClubsSignature />
+      <PageHeader
+        title="Competições."
+        description="Temporadas, fases e confrontos oficiais do Strix."
+        aside={<NextClubsSignature />}
+        actions={<>
           {canManageCompetitions(profile) && (
             <button className="primary" onClick={() => setModal(true)}>
-              + ADICIONAR CAMPEONATO
+              <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>ADICIONAR CAMPEONATO
             </button>
           )}
-        </div>
-      </header>
+        </>}
+      />
       {workspace.schemaPending && (
         <p className="competition-warning">
           A estrutura de Competições ainda não está disponível.

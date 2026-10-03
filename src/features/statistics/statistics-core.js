@@ -138,7 +138,18 @@ export function buildPlayerProfile(player, matches = [], options = {}) {
       samples: gaRecent.length,
     } : null,
   };
-  const recordSpecs = [["MAIOR NOTA EA", "rating"], ["MAIS GOLS", "goals"], ["MAIS ASSISTÊNCIAS", "assists"], ["MAIS G+A", "goalAssists"], ["MAIS CHUTES", "shots"], ["MAIS PASSES CERTOS", "passesMade"], ["MAIOR PRECISÃO DE PASSE", "passAccuracy"], ["MAIS DESARMES", "tackles"], ["MAIS DEFESAS", "saves"], ["GOOD DIRECTION SAVES", "goodDirectionSaves"], ["REFLEX SAVES", "reflexSaves"]];
+  if (player.goalkeeper) {
+    const recentSaves = recent.filter((row) => hasNumber(row.saves));
+    const seasonSaves = appearances.filter((row) => hasNumber(row.saves));
+    if (recentSaves.length && seasonSaves.length) {
+      const recentAverage = recentSaves.reduce((sum, row) => sum + number(row.saves), 0) / recentSaves.length;
+      const seasonAverage = seasonSaves.reduce((sum, row) => sum + number(row.saves), 0) / seasonSaves.length;
+      comparisons.savesPerGame = { recent: Number(recentAverage.toFixed(1)), delta: Number((recentAverage - seasonAverage).toFixed(1)), suffix: "", samples: recentSaves.length };
+    }
+  }
+  const recordSpecs = player.goalkeeper
+    ? [["MAIOR NOTA EA", "rating"], ["MAIS DEFESAS", "saves"], ["MAIS DIREÇÃO BOA", "goodDirectionSaves"], ["MAIS REFLEXO", "reflexSaves"], ["MAIS CRUZAMENTOS", "crossSaves"], ["MAIS MERGULHOS", "ballDiveSaves"], ["MAIS ESPALMOS", "parrySaves"], ["MAIS SOCOS", "punchSaves"]]
+    : [["MAIOR NOTA EA", "rating"], ["MAIS GOLS", "goals"], ["MAIS ASSISTÊNCIAS", "assists"], ["MAIS G+A", "goalAssists"], ["MAIS CHUTES", "shots"], ["MAIS PASSES CERTOS", "passesMade"], ["MAIOR PRECISÃO DE PASSE", "passAccuracy"], ["MAIS DESARMES", "tackles"], ["MAIS DEFESAS", "saves"]];
   const records = recordSpecs.map(([label, key]) => {
     const candidates = appearances.map((row) => {
       const passes = passPair(row);
@@ -190,7 +201,7 @@ export function buildPositionContext(player, players = [], metric = "averageRati
   const ordered = [...comparable].sort((left, right) => number(right[metric]) - number(left[metric]));
   const selectedValue = ordered.find((item) => item.playerId === player.playerId || item.handle === player.handle)?.[metric];
   const rank = ordered.filter((item) => number(item[metric]) > number(selectedValue)).length + 1;
-  return { group, insufficient: rank < 1 || comparable.length < 2, rank: rank || null, total: comparable.length };
+  return { group, insufficient: !hasNumber(selectedValue), rank: rank || null, total: comparable.length };
 }
 
 export function saoPauloDay(value) {
@@ -217,14 +228,16 @@ export function summarizeNight(matches = [], date, options = {}) {
     if (forGoals > against) result.wins += 1; else if (forGoals < against) result.losses += 1; else result.draws += 1;
     for (const row of playerRows(match)) {
       if ((classifyPlayerData(row) !== "VALID" && classifyPlayerData(row) !== "PARTIAL") || (hasNumber(row.secondsPlayed) && Number(row.secondsPlayed) <= 0)) continue;
-      const name = canonicalPlayerName(row.eaName || row.name, options.players, options.aliases);
       const id = rowIdentity(row);
       const linked = (id ? indexByEaId.get(id) : null) || aliases.get(normalized(row.eaName || row.name));
+      if (Array.isArray(options.players) && (!linked?.roster || linked.roster.is_active === false)) continue;
+      const name = linked?.display || canonicalPlayerName(row.eaName || row.name, options.players, options.aliases);
       const playerKey = linked?.roster?.id ? `roster:${linked.roster.id}` : id ? `ea:${id}` : `name:${normalized(name)}`;
       if (!totals.has(playerKey)) totals.set(playerKey, { name, goals: 0, assists: 0, passes: 0, tackles: 0, saves: 0, mom: 0, ratingTotal: 0, ratingGames: 0 });
       const passes = passPair(row);
       add(playerKey, name, "goals", row.goals); add(playerKey, name, "assists", row.assists);
-      add(playerKey, name, "passes", passes.made); add(playerKey, name, "tackles", row.tackles); add(playerKey, name, "saves", row.saves); add(playerKey, name, "mom", Number(row.mom) === 1 || row.mom === true ? 1 : null);
+      add(playerKey, name, "passes", passes.made); add(playerKey, name, "tackles", row.tackles); add(playerKey, name, "saves", row.saves);
+      if (motmAwardRows(match, options).some((award) => award.nameKey === normalized(row.eaName || row.name) || (id && award.eaPlayerId === id))) add(playerKey, name, "mom", 1);
       const record = totals.get(playerKey);
       if (hasNumber(row.rating)) { record.ratingTotal += Number(row.rating); record.ratingGames += 1; }
     }
@@ -309,19 +322,55 @@ const aliasIndex = (players, aliases) => {
   return { index, indexByEaId, playersById };
 };
 
+const playedForAward = (row) => {
+  const quality = classifyPlayerData(row);
+  if (quality !== "VALID" && quality !== "PARTIAL") return false;
+  if (isDisconnectedPlayer(row)) return false;
+  if (hasNumber(row.secondsPlayed) && Number(row.secondsPlayed) <= 0) return false;
+  return hasNumber(row.rating) && Number(row.rating) > 0;
+};
+
+/** Strix MOTM is the highest rated active-roster player when the club did not lose. */
+export function motmAwardRows(match = {}, options = {}) {
+  const ours = match.strix_score ?? match.strixScore;
+  const theirs = match.opponent_score ?? match.opponentScore;
+  if (!hasNumber(ours) || !hasNumber(theirs) || number(ours) < number(theirs)) return [];
+  const hasCanonicalRoster = Array.isArray(options.players);
+  const { index: aliases, indexByEaId } = aliasIndex(options.players, options.aliases);
+  const eligible = [];
+  for (const row of playerRows(match)) {
+    if (!playedForAward(row)) continue;
+    const handle = String(row.eaName || row.name || row.id || "").trim();
+    const rawKey = normalized(handle);
+    const eaPlayerId = String(row.eaPlayerId ?? row.ea_player_id ?? "").trim();
+    const linked = (eaPlayerId ? indexByEaId.get(eaPlayerId) : null) || aliases.get(rawKey);
+    if (hasCanonicalRoster && (!linked?.roster || linked.roster.is_active === false)) continue;
+    const key = linked?.roster?.id ? `player:${linked.roster.id}` : eaPlayerId ? `ea-id:${eaPlayerId}` : `ea:${rawKey}`;
+    eligible.push({ key, name: linked?.display || handle, rating: Number(row.rating), eaPlayerId, nameKey: rawKey });
+  }
+  const best = Math.max(0, ...eligible.map((row) => row.rating));
+  return best > 0 ? eligible.filter((row) => row.rating === best) : [];
+}
+
+export function isStrixMotm(match, player = {}, options = {}) {
+  const id = String(player.eaPlayerId ?? player.ea_player_id ?? "").trim();
+  const nameKey = normalized(player.eaName || player.name);
+  return motmAwardRows(match, options).some((award) => (id && award.eaPlayerId === id) || (nameKey && award.nameKey === nameKey));
+}
+
 export function aggregatePlayerStatistics(matches = [], options = {}) {
   const playerMap = new Map();
   const hasCanonicalRoster = Array.isArray(options.players);
   const { index: aliases, indexByEaId } = aliasIndex(options.players, options.aliases);
   for (const match of uniqueMatches(matches)) {
+    const motmKeys = new Set(motmAwardRows(match, options).map((award) => award.key));
     for (const player of playerRows(match)) {
       const handle = String(player.eaName || player.name || player.id || "Jogador EA").trim();
       const rawKey = normalized(handle);
       const eaPlayerId = String(player.eaPlayerId ?? player.id ?? "").trim() || null;
       const linked = (eaPlayerId ? indexByEaId.get(eaPlayerId) : null) || aliases.get(rawKey);
-      // When current-roster context is supplied, current statistics are scoped
-      // to active club members. Unlinked/archived EA identities remain in match
-      // snapshots but must not leak into present-day rankings.
+      // Rankings and season totals stay on the active roster. Someone still
+      // outside the squad is added from the match review before import.
       if (hasCanonicalRoster && (!linked?.roster || linked.roster.is_active === false)) continue;
       const key = linked?.roster?.id ? `player:${linked.roster.id}` : eaPlayerId ? `ea-id:${eaPlayerId}` : `ea:${rawKey}`;
       const current = playerMap.get(key) || {
@@ -373,7 +422,7 @@ export function aggregatePlayerStatistics(matches = [], options = {}) {
       if (eaPlayerId && !current.eaPlayerIds.includes(eaPlayerId)) current.eaPlayerIds.push(eaPlayerId);
       const eaPosition = player.pos || player.position;
       if (eaPosition && !current.eaPositions.includes(String(eaPosition))) current.eaPositions.push(String(eaPosition));
-      const metricFields = ["goals", "assists", "passesMade", "passesAttempts", "shots", "tackles", "tackleAttempts", "saves", "goodDirectionSaves", "reflexSaves", "crossSaves", "ballDiveSaves", "parrySaves", "punchSaves", "mom", "redcards", "cleansheetsdef", "cleansheetsgk"];
+      const metricFields = ["goals", "assists", "passesMade", "passesAttempts", "shots", "tackles", "tackleAttempts", "saves", "goodDirectionSaves", "reflexSaves", "crossSaves", "ballDiveSaves", "parrySaves", "punchSaves", "redcards", "cleansheetsdef", "cleansheetsgk"];
       if (quality === "DID_NOT_PLAY" || quality === "NO_STATS" || quality === "UNKNOWN") {
         current.goalkeeper ||= isGoalkeeper(player, linked?.roster);
         playerMap.set(key, current);
@@ -400,7 +449,10 @@ export function aggregatePlayerStatistics(matches = [], options = {}) {
       current.ballDiveSaves += number(player.ballDiveSaves);
       current.parrySaves += number(player.parrySaves);
       current.punchSaves += number(player.punchSaves);
-      current.mom += Number(player.mom) === 1 ? 1 : 0;
+      if (motmKeys.has(key)) {
+        current.mom += 1;
+        current.metricSamples.mom = (current.metricSamples.mom || 0) + 1;
+      }
       current.redcards += number(player.redcards);
       current.cleanSheetsDef += number(player.cleansheetsdef);
       current.cleanSheetsGk += number(player.cleansheetsgk);
@@ -544,15 +596,20 @@ export const rankingCriteria = {
   shots: (player) => player.rankingEligible && player.metricSamples?.shots > 0,
   tackles: (player) => player.rankingEligible && player.metricSamples?.tackles > 0,
   goalAssists: (player) => player.rankingEligible && player.metricSamples?.goals > 0 && player.metricSamples?.assists > 0,
-  mom: (player) => player.rankingEligible && player.metricSamples?.mom > 0,
+  mom: (player) => player.rankingEligible && player.mom > 0,
   cleanSheets: (player) => player.rankingEligible && ((player.metricSamples?.cleansheetsdef || 0) + (player.metricSamples?.cleansheetsgk || 0)) > 0,
   saves: (player) => player.rankingEligible && player.goalkeeper && player.metricSamples?.saves > 0 && player.goalkeeperGames > 0,
 };
 
 export function buildRanking(players = [], metric, limit) {
   const criterion = rankingCriteria[metric] || ((player) => player.rankingEligible);
-  const goalkeeperMetric = ["saves"].includes(metric);
-  const ranked = rows(players).filter((player) => player.active !== false && (metric === "cleanSheets" || (goalkeeperMetric ? player.goalkeeper : !player.goalkeeper)) && criterion(player)).sort((left, right) => number(right[metric]) - number(left[metric]) || right.games - left.games || left.name.localeCompare(right.name, "pt-BR"));
+  const goalkeeperMetric = metric === "saves";
+  const ranked = rows(players).filter((player) => {
+    if (player.active === false) return false;
+    if (goalkeeperMetric && !player.goalkeeper) return false;
+    if (!goalkeeperMetric && metric !== "mom" && metric !== "cleanSheets" && player.goalkeeper) return false;
+    return criterion(player);
+  }).sort((left, right) => number(right[metric]) - number(left[metric]) || right.games - left.games || left.name.localeCompare(right.name, "pt-BR"));
   return Number.isFinite(limit) ? ranked.slice(0, limit) : ranked;
 }
 

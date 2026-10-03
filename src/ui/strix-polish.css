@@ -3,17 +3,7 @@
    black, graphite, off-white, hairlines. The analytical blue is reserved for
    data values (statistics.css) and never paints structure here. */
 
-:root{
-  --sp-surface:#0b0d10;
-  --sp-raised:#101318;
-  --sp-hover:#15181d;
-  --sp-line:rgba(255,255,255,.08);
-  --sp-line-strong:rgba(255,255,255,.14);
-  --sp-text:#f5f5f5;
-  --sp-soft:#d8dce0;
-  --sp-muted:#8e969f;
-  --sp-kicker:#aeb4bb;
-  }
+/* --sp-* tokens resolve in src/design/tokens.css. */
 
 /* ---------- Menus: one editorial surface, no per-item boxes ---------- */
 .agenda-game .agenda-actions,
@@ -214,68 +204,18 @@
 @keyframes sp-breathe{50%{opacity:.85}}
 
 /* ---------- Texto descritivo: neutro, nunca azul-acinzentado ---------- */
-.data-page-header{border-bottom-color:var(--sp-line)!important}
-.data-page-header p,
-.competitions-header-copy>p,
+
 .statistics-stat-card>p,
 .statistics-no-data,
 .statistics-section-heading>p,
 .statistics-criterion,
 .statistics-v3 .statistics-goalkeeper-card>header p,
 .statistics-v3 .statistics-goalkeeper-card>header small{color:var(--sp-muted)!important}
-.agenda-match small{color:var(--sp-muted)}
-.game-competition{color:var(--sp-kicker)}
-.agenda-game>button{color:var(--sp-muted)}
-.agenda-game>button:hover{color:#fff}
+
 .analysis-player-picker>i{background:#4b5159}
 
 /* ---------- Central sem jogos: logo + background vivo, nada mais ---------- */
-.page-home .match-hero.is-free-night{
-  position:relative;
-  display:grid!important;
-  place-items:center;
-  min-height:clamp(340px,50vh,500px);
-  padding:0!important;
-  overflow:hidden;
-  isolation:isolate;
-}
-.match-hero.is-free-night:before,
-.match-hero.is-free-night:after{display:none!important}
-.free-night-field{position:absolute;inset:0;z-index:0;overflow:hidden;pointer-events:none}
-.free-night-field:before{
-  content:"";
-  position:absolute;
-  inset:0;
-  opacity:.5;
-  background:
-    repeating-linear-gradient(90deg,transparent 0 79px,rgba(255,255,255,.035) 79px 80px),
-    radial-gradient(ellipse 60% 70% at 50% 50%,rgba(255,255,255,.05),transparent 70%);
-}
-.free-night-beam{
-  position:absolute;
-  top:-20%;
-  height:140%;
-  width:22%;
-  left:-30%;
-  opacity:0;
-  transform:skewX(-18deg);
-  background:linear-gradient(90deg,transparent,rgba(255,255,255,.08) 50%,transparent);
-  animation:sp-beam 13s linear infinite;
-}
-.free-night-beam.is-b{width:12%;animation-duration:17s;animation-delay:-6s}
-.free-night-beam.is-c{width:30%;animation-duration:21s;animation-delay:-13s;background:linear-gradient(90deg,transparent,rgba(255,255,255,.045) 50%,transparent)}
-.free-night-ring{
-  position:absolute;
-  left:50%;top:50%;
-  width:min(62vw,420px);aspect-ratio:1;
-  border:1px solid rgba(255,255,255,.07);
-  border-radius:50%;
-  translate:-50% -50%;
-  animation:sp-ring 9s ease-in-out infinite;
-}
-.free-night-ring.is-b{width:min(92vw,640px);border-color:rgba(255,255,255,.04);animation-delay:-4.5s}
-.free-night-logo{position:relative;z-index:1;display:grid;place-items:center;animation:sp-float 8s ease-in-out infinite}
-.free-night-logo .crest{width:clamp(124px,17vw,196px);height:auto;filter:drop-shadow(0 0 26px rgba(255,255,255,.12))!important}
+
 @keyframes sp-beam{
   0%{left:-35%;opacity:0}
   15%,85%{opacity:1}
@@ -287,95 +227,97 @@
 }
 @keyframes sp-float{50%{translate:0 -5px}}
 
-.sidebar-user{
+.agenda-view-clubs :is(.crest,.avatar,.club-logo),
+.match-detail-score :is(.crest,.avatar,.club-logo,.match-display-mark){
+  overflow:hidden!important;
+  contain:none!important;
   display:grid!important;
-  grid-template-columns:auto minmax(0,1fr) 44px;
-  align-items:center;
-  width:100%!important;
-  max-width:100%;
+  place-items:center;
   box-sizing:border-box;
-  overflow:hidden;
+  padding:6px!important;
+  align-self:center!important;
 }
-.sidebar-user>span{min-width:0}
-.sidebar-user .sidebar-signout{grid-column:3;margin:0}
 
-.page-home .match-hero{min-height:460px}
-.page-home .hero-teams{
-  max-width:1040px!important;
-  grid-template-columns:minmax(0,1fr) minmax(160px,.72fr) minmax(0,1fr)!important;
-  gap:36px!important;
-  margin:52px auto 40px!important;
-  align-items:center!important;
-}
-.page-home .hero-teams>div:not(.versus){
-  display:grid;
-  grid-template-rows:156px auto!important;
-  justify-items:center;
-  align-items:center;
-  gap:16px!important;
-}
-.page-home .hero-teams :is(.crest,.avatar,.club-logo){
-  width:140px!important;
-  height:140px!important;
+.agenda-view-clubs :is(.crest,.avatar,.club-logo) img,
+.match-detail-score :is(.crest,.avatar,.club-logo,.match-display-mark) img{
+  width:100%!important;
+  height:100%!important;
+  max-width:100%!important;
+  max-height:100%!important;
   margin:0!important;
-  padding:0!important;
-  align-self:center;
+  object-fit:contain!important;
+  object-position:center center!important;
+  transform:none!important;
 }
-.page-home .hero-teams .versus{min-height:156px!important;gap:8px}
-.page-home .hero-teams .versus small{font-size:13px!important;font-weight:900;letter-spacing:.18em}
-.page-home .hero-teams .versus b{font-size:84px!important;line-height:.9;letter-spacing:.04em}
-.page-home .hero-teams .versus i{font-size:16px!important;font-weight:800}
-.page-home .hero-teams strong{font-size:16px!important;font-weight:850;letter-spacing:.08em;min-height:0!important}
 
-.central-night-list .upcoming-game-card{min-height:92px;padding:18px 22px!important;gap:22px!important}
-.central-night-list .upcoming-game-versus{align-items:center!important;gap:18px!important}
-.central-night-list .upcoming-game-versus>div{
-  display:grid!important;
-  grid-template-columns:minmax(0,1fr) 64px;
-  align-items:center!important;
-  gap:14px!important;
-}
-.central-night-list .upcoming-game-versus>div:last-child{grid-template-columns:64px minmax(0,1fr)!important}
-.central-night-list .upcoming-game-versus :is(.crest,.avatar,.club-logo){
-  width:64px!important;height:64px!important;margin:0!important;padding:0!important;align-self:center;
-}
-.central-night-list .upcoming-game-versus b{font-size:15px!important;line-height:1.15}
-.central-night-list .upcoming-game-card>header span,
-.central-night-list .upcoming-game-card>header time{font-size:12px!important}
+.agenda-view-clubs{align-items:center!important}
 
-.agenda-list .agenda-match,.agenda-view-clubs{align-items:center!important}
-.agenda-match :is(.crest,.avatar,.club-logo),
+.agenda-view-clubs>div{gap:8px!important;align-items:center}
 .agenda-view-clubs :is(.crest,.avatar,.club-logo){
-  margin-top:0!important;
-  align-self:center;
-  padding:0!important;
+  width:72px!important;
+  height:72px!important;
+  min-width:72px!important;
+  min-height:72px!important;
+  max-width:72px!important;
+  max-height:72px!important;
+  margin:0!important;
 }
-.agenda-view-clubs :is(.crest,.avatar,.club-logo){width:88px!important;height:88px!important}
+.agenda-view-clubs b{margin:0}
 
-@media(max-width:700px){
-  .page-home .hero-teams{grid-template-columns:minmax(0,1fr) 72px minmax(0,1fr)!important;gap:12px!important;margin:28px auto 22px!important}
-  .page-home .hero-teams>div:not(.versus){grid-template-rows:84px auto!important}
-  .page-home .hero-teams :is(.crest,.avatar,.club-logo){width:76px!important;height:76px!important}
-  .page-home .hero-teams .versus{min-height:84px!important}
-  .page-home .hero-teams .versus b{font-size:40px!important}
-  .page-home .hero-teams .versus small{font-size:9px!important}
-  .page-home .hero-teams strong{font-size:11px!important}
-  .central-night-list .upcoming-game-versus :is(.crest,.avatar,.club-logo){width:52px!important;height:52px!important}
-  .central-night-list .upcoming-game-versus>div{grid-template-columns:minmax(0,1fr) 52px!important}
-  .central-night-list .upcoming-game-versus>div:last-child{grid-template-columns:52px minmax(0,1fr)!important}
-}
+.match-detail-score .match-display-team{align-items:center;gap:14px}
 
-@media(max-width:580px){
-  .page-home .match-hero.is-free-night{min-height:clamp(280px,42vh,380px)}
-  .free-night-ring.is-b{display:none}
+/* Resultado da partida: branco, carvão e cinza. O azul antigo sai do placar, da agenda e da competição. */
+.match-detail-header>em.vitória,
+.match-result-badge.vitória,
+.match-mobile-card>footer em.vitória,
+.match-mobile-card>header p em.vitória,
+.matches-list em.vitoria,
+.matches-list em.vitória,
+.resolve-list>article>header>em.vitória{
+  color:#090b0d!important;
+  border-color:#f5f5f5!important;
+  background:#f5f5f5!important;
 }
+.match-detail-header>em.derrota,
+.match-result-badge.derrota,
+.match-mobile-card>footer em.derrota,
+.match-mobile-card>header p em.derrota,
+.matches-list em.derrota,
+.resolve-list>article>header>em.derrota,
+.match-detail-header>em.empate,
+.match-result-badge.empate,
+.match-mobile-card>footer em.empate,
+.match-mobile-card>header p em.empate,
+.matches-list em.empate,
+.resolve-list>article>header>em.empate{
+  color:#7c848c!important;
+  border-color:#2a2e33!important;
+  background:transparent!important;
+}
+.match-result-badge{background:#12151a!important}
+.match-scoreline>div>strong,
+.match-teams strong{color:#f5f5f5!important}
+.match-detail-score,
+.match-detail-score-shell{border-color:rgba(255,255,255,.12)!important;background:#101318!important}
+
+.agenda-modal header span,
+.import-stage>header>b,
+.agenda-suggestion-note{color:#c8cdd2!important}
+
+.match-selection-toolbar button{border-color:rgba(255,255,255,.16)!important;background:#111419!important;color:#d8dce0!important}
+.resolve-list>article>header>em{padding:6px 10px;border:1px solid currentColor;border-radius:999px;font-size:10px;font-style:normal;font-weight:950;letter-spacing:.08em}
+.alias-player-identity{display:flex;align-items:center;gap:8px;min-width:0}
+.alias-player-identity>b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.alias-add-player{display:grid;place-items:center;flex:0 0 22px;width:22px;height:22px;padding:0;border:1px solid rgba(255,255,255,.16);border-radius:7px;background:#15181d;color:#f5f5f5;cursor:pointer}
+.alias-add-player svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round}
+.statistics-player-card-photo.club-logo.is-photo{border-radius:12px}
+
 @media(prefers-reduced-motion:reduce){
   .agenda-game .agenda-actions,
   .action-menu-popover,
   .agenda-confirm-dialog,
   .competition-delete-dialog,
   .competition-import-preview,
-  .free-night-beam,.free-night-ring,.free-night-logo,
   .competition-url-row .primary:disabled{animation:none!important}
-  .free-night-beam{display:none}
+  
 }

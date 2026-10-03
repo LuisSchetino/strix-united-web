@@ -1,4 +1,5 @@
-const SPORTS_SUFFIXES = new Set(["fc", "ec", "sc", "esports", "esport", "club", "clube"]);
+const SPORTS_SUFFIXES = new Set(["fc", "ec", "sc", "es", "saf", "esports", "esport", "club", "clube"]);
+const platformToken = (token) => SPORTS_SUFFIXES.has(token) || /^\d+$/.test(token) || /^fc\d+$/.test(token);
 
 export function normalizeTeamIdentityName(value) {
   const words = String(value || "")
@@ -9,7 +10,7 @@ export function normalizeTeamIdentityName(value) {
     .trim()
     .split(/\s+/)
     .filter(Boolean);
-  while (words.length > 1 && SPORTS_SUFFIXES.has(words.at(-1))) words.pop();
+  while (words.length > 1 && platformToken(words.at(-1))) words.pop();
   return words.join(" ");
 }
 
@@ -29,6 +30,7 @@ export function resolveTeamIdentity({
   editionId,
   name,
   directLogo = "",
+  eaClubLogo = "",
   teams = [],
   logos = [],
   history = [],
@@ -61,6 +63,7 @@ export function resolveTeamIdentity({
     : [];
   const historicalLogo = uniqueLogo(historical, (item) => item.logo || item.resolved_opponent_logo_url || item.public_url);
   const logo = directLogo
+    || eaClubLogo
     || byId?.logo_url
     || scopedTeam?.logo_url
     || sharedGlobalLogo
@@ -69,17 +72,19 @@ export function resolveTeamIdentity({
     || "";
   const source = directLogo
     ? "direct"
-    : byId
-      ? "team_id"
-      : scopedTeam
-        ? (exact.length === 1 ? "edition_name" : "alias")
-        : sharedGlobalLogo
-          ? "global_name"
-          : historicalLogo
-            ? "history"
-            : catalog.length === 1
-              ? "logo_catalog"
-              : "fallback";
+    : eaClubLogo
+      ? "ea_club"
+      : byId
+        ? "team_id"
+        : scopedTeam
+          ? (exact.length === 1 ? "edition_name" : "alias")
+          : sharedGlobalLogo
+            ? "global_name"
+            : historicalLogo
+              ? "history"
+              : catalog.length === 1
+                ? "logo_catalog"
+                : "fallback";
   return {
     id: team?.id || teamId || null,
     name: team?.name || name || "Adversário",

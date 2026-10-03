@@ -1,30 +1,15 @@
 /* Shared finish: surfaces stay quiet; data and primary actions own the emphasis. */
-:root{--ui-space-1:8px;--ui-space-2:16px;--ui-space-3:24px;--ui-space-4:32px;--motion-fast:160ms;--motion-normal:200ms}
-.workspace{min-width:0}
+
 .workspace :is(h1,h2,h3){text-wrap:balance}
-.workspace :is(.data-page-header,.agenda-hero){gap:var(--ui-space-3)}
-.workspace :is(.data-page-header,.agenda-hero) h1{font-size:clamp(30px,3.5vw,48px);letter-spacing:-.045em;line-height:1.12}
-.workspace :is(.data-page-header,.agenda-hero) p{font-size:14px;line-height:1.6;color:#a5adb6}
-.workspace :is(.matches-empty,.agenda-empty,.competition-empty,.statistics-no-data){font-size:14px;line-height:1.65;color:#a5adb6;padding:24px}
+
 button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid #efeee9;outline-offset:3px}
-.sidebar .brand .club-logo{filter:none}
-.sidebar .menu-group button{min-height:44px}
-.sidebar .collapse,.sidebar .mobile-close,.sidebar .sidebar-user button{min-width:44px;min-height:44px}
-.sidebar .brand>.close-button.mobile-close{display:none;background:#15171b;color:#e8eaec;border-color:#ffffff24}
-@media(max-width:900px){.sidebar .brand>.close-button.mobile-close{display:grid;width:44px;height:44px;min-width:44px;min-height:44px}}
-.page-home .match-hero:after{background:linear-gradient(0deg,#ffffff04,transparent)!important}
-.page-home .match-hero:before{background:radial-gradient(ellipse at 50% 0,#ffffff09,transparent 65%),repeating-linear-gradient(90deg,transparent 0 20%,#ffffff03 20% 20.5%,transparent 20.5% 40%)!important}
-.page-home .match-hero .smoke{display:none}
-.page-home .match-hero .stadium-light{background:radial-gradient(ellipse at 50% 0,#ffffff12,transparent 66%);animation:none;filter:none}
-.page-home .hero-teams .club-logo{filter:none!important}
-.page-home .hero-teams strong{overflow-wrap:anywhere;line-height:1.4}
+
 .workspace .statistics-overview-grid{gap:0;border-block:1px solid var(--strix-border);padding:8px 0}
 .workspace .statistics-stat-card{border:0;border-radius:0;background:none!important;box-shadow:none;padding:20px 18px}
 .workspace .statistics-stat-card p{font-size:12px;line-height:1.5;color:#a5adb6}
 .workspace .statistics-ranking-card li{min-height:58px}
 .workspace .statistics-ranking-card li small{font-size:11px;color:#a5adb6}
-.workspace .squad-card-identity>span{font-size:11px;color:#a5adb6}
-.workspace .squad-player-card .squad-more{width:44px;height:44px;background:#111318;color:#d8dde2}
+
 .workspace .squad-context-menu{background:#101216;border-color:var(--strix-border-strong);box-shadow:0 12px 32px #0006}
 .workspace .squad-context-menu button{min-height:44px;font-size:13px;color:#e2e5e9}
 .workspace .night-related{margin-bottom:20px;border-radius:12px}
@@ -76,11 +61,11 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
   .matches-list.progressive-history .match-row-actions button{width:32px;min-width:32px;height:36px;padding:0}
 }
 @media(max-width:700px){
-  .workspace :is(.data-page-header,.agenda-hero){padding-inline:0}
+  
   .workspace .statistics-stat-card{padding:16px 10px}
-  .workspace :is(.primary,.secondary,.icon-button,.agenda-more,.squad-more){min-height:44px;min-width:44px}
-  .workspace .hero-actions button{width:100%;justify-content:center}
-  .sidebar{height:100dvh;overflow-y:auto;padding-bottom:110px}
+  
+  
+  
   .workspace .squad-context-menu{min-width:180px}
 }
 @media(prefers-reduced-motion:reduce){

@@ -33,7 +33,6 @@ import {
   ArchiveList,
   FormatGroup,
   MediaNotice,
-  MediaProgress,
   MediaToolbar,
   MediaWorkspace,
   PieceActions,
@@ -43,6 +42,8 @@ import {
   StageEmpty,
   StageError,
   StageLoading,
+  StageResult,
+  jobPercent,
   recordToArchiveItem,
 } from "./MediaShell.jsx";
 
@@ -87,10 +88,18 @@ function useAssets(enabled, key, loader, errorText) {
 function PieceView({
   title, meta, formats, format, onFormat, toolbarExtra, pieceKey, ratio, caption, timeline, assets, assetError, onRetry,
   dayLabel, frameTime, renderFrame, previewLabel, empty, record, running, job, onGenerate, onView, canGenerate, generateLabel,
-  downloadLabel, error, rail, jobMatches,
+  downloadLabel, error, rail, jobMatches, blockedHint,
 }) {
   const busy = running && jobMatches;
   const state = empty ? "empty" : assetError ? "error" : assets ? "ready" : "loading";
+  // The finished file replaces the preview in place; changing the piece returns to the live preview.
+  const [result, setResult] = useState(null);
+  useEffect(() => { setResult(null); }, [pieceKey]);
+  const run = async (force) => {
+    const started = await onGenerate(force);
+    if (started?.status === "ready" && started.result) setResult(started.result);
+  };
+  const hint = !canGenerate ? (empty ? blockedHint : assetError ? "A prévia precisa carregar antes de gerar." : "Preparando a prévia…") : "";
   return (
     <>
       <MediaToolbar title={title} meta={meta}>
@@ -99,23 +108,34 @@ function PieceView({
       </MediaToolbar>
       <MediaWorkspace
         stage={
-          <PreviewStage pieceKey={pieceKey} ratio={ratio} caption={caption} state={state} label={previewLabel}>
-            {empty ? <StageEmpty {...empty} /> : assetError ? <StageError onRetry={onRetry}>{assetError}</StageError> : assets
-              ? <PreviewCanvas timeline={timeline} assets={assets} dayLabel={dayLabel} format={format} frameTime={frameTime} renderFrame={renderFrame} label={previewLabel} />
-              : <StageLoading />}
+          <PreviewStage pieceKey={pieceKey} ratio={ratio} caption={caption} state={state} label={previewLabel} job={busy ? job : null} showingResult={Boolean(result)}>
+            {result ? <StageResult record={result} />
+              : empty ? <StageEmpty {...empty} /> : assetError ? <StageError onRetry={onRetry}>{assetError}</StageError> : assets
+                ? <PreviewCanvas timeline={timeline} assets={assets} dayLabel={dayLabel} format={format} frameTime={frameTime} renderFrame={renderFrame} label={previewLabel} />
+                : <StageLoading />}
           </PreviewStage>
         }
         actions={
           <>
-            <PieceActions
-              primary={<button type="button" className="primary" disabled={!canGenerate || running} onClick={() => onGenerate(false)}><RollingLabel>{busy ? "GERANDO…" : generateLabel}</RollingLabel></button>}
-              secondary={record && <>
-                <button type="button" className="secondary" onClick={() => onView(record)}>VISUALIZAR</button>
-                <button type="button" className="secondary" onClick={() => downloadBlob(record.blob, record.fileName)}>{downloadLabel}</button>
-              </>}
-              tertiary={record && canGenerate && <button type="button" className="media-link" disabled={running} onClick={() => onGenerate(true)}>Gerar novamente</button>}
-            />
-            <MediaProgress job={job} />
+            {result ? (
+              <PieceActions
+                primary={<button type="button" className="primary" onClick={() => downloadBlob(result.blob, result.fileName)}>{downloadLabel}</button>}
+                secondary={<>
+                  <button type="button" className="secondary" onClick={() => onView(result)}>TELA CHEIA</button>
+                  <button type="button" className="secondary" disabled={running || !canGenerate} onClick={() => void run(true)}>GERAR DE NOVO</button>
+                </>}
+                tertiary={<button type="button" className="media-link" onClick={() => setResult(null)}>Voltar à prévia</button>}
+              />
+            ) : (
+              <PieceActions
+                primary={<button type="button" className="primary" disabled={!canGenerate || running} onClick={() => void run(false)}><RollingLabel>{busy ? (jobPercent(job) !== null ? `GERANDO… ${jobPercent(job)}%` : "GERANDO…") : generateLabel}</RollingLabel></button>}
+                secondary={record && <>
+                  <button type="button" className="secondary" onClick={() => setResult(record)}>VER ÚLTIMA</button>
+                  <button type="button" className="secondary" onClick={() => downloadBlob(record.blob, record.fileName)}>{downloadLabel}</button>
+                </>}
+                tertiary={hint && <p className="media-hint">{hint}</p>}
+              />
+            )}
             {job?.status === "error" && jobMatches && <MediaNotice tone="error" title="A geração não terminou.">{job.error}</MediaNotice>}
             {error}
           </>
@@ -148,15 +168,14 @@ export function AgendaSection({ workspace, look, job, running, openViewer }) {
 
   const latest = (id) => cache.find((row) => row.format === id) || null;
   const generate = async (force) => {
-    if (!matches.length || running) return;
+    if (!matches.length || running) return null;
     const started = await startAgendaRender({
       matches, format, day: day.iso, dayLabel: day.label,
       timeline: withMediaLook(buildAgendaTimeline(matches, { format }), look), force,
     });
-    if (started.status === "ready") {
-      notify(started.stage === "cached" ? "Render reutilizado do cache." : "Vídeo gerado.");
-      openViewer(started.result);
-    } else if (started.status === "error") notify(started.error, "error");
+    if (started.status === "ready") notify(started.stage === "cached" ? "Esta versão já estava pronta." : "Vídeo pronto.");
+    else if (started.status === "error") notify(started.error, "error");
+    return started;
   };
 
   const archive = ["story", "feed"].map((id) => latest(id) && recordToArchiveItem(latest(id), {
@@ -174,7 +193,7 @@ export function AgendaSection({ workspace, look, job, running, openViewer }) {
       empty={matches.length ? null : { title: "Nenhuma partida hoje.", hint: "A peça nasce quando houver jogo marcado para esta data." }}
       record={latest(format)} running={running} job={job} jobMatches={job?.template === AGENDA_TEMPLATE_ID && job?.format === format}
       onGenerate={generate} onView={openViewer} canGenerate={Boolean(assets)}
-      generateLabel={mediaGenerateLabel(resolveMediaOutput({ sectionId: "agenda", format }))} downloadLabel="BAIXAR MP4"
+      generateLabel={mediaGenerateLabel(resolveMediaOutput({ sectionId: "agenda", format }))} downloadLabel="BAIXAR MP4" blockedHint="A Agenda do dia nasce quando houver jogo marcado para hoje."
       rail={
         <>
           <RailBlock kicker="JOGOS DE HOJE" aside={matches.length ? pad(matches.length) : ""}>
@@ -213,12 +232,11 @@ export function RelatedSection({ workspace, profile, look, job, running, openVie
 
   const record = cache.find((row) => row.format === "story") || null;
   const generate = async (force) => {
-    if (!ready || running) return;
+    if (!ready || running) return null;
     const started = await startRelatedNightRender({ players: related, format: "story", day: day.iso, dayLabel: day.label, timeline, force });
-    if (started.status === "ready") {
-      notify(started.stage === "cached" ? "Render reutilizado do cache." : "Vídeo gerado.");
-      openViewer(started.result);
-    } else if (started.status === "error") notify(started.error, "error");
+    if (started.status === "ready") notify(started.stage === "cached" ? "Esta versão já estava pronta." : "Vídeo pronto.");
+    else if (started.status === "error") notify(started.error, "error");
+    return started;
   };
 
   return (
@@ -232,7 +250,7 @@ export function RelatedSection({ workspace, profile, look, job, running, openVie
       empty={ready ? null : { title: "Falta salvar a lista.", hint: "Escolha os relacionados ao lado e salve para gerar o vídeo." }}
       record={record} running={running} job={job} jobMatches={job?.template === RELATED_NIGHT_TEMPLATE_ID}
       onGenerate={generate} onView={openViewer} canGenerate={Boolean(assets)}
-      generateLabel={mediaGenerateLabel(resolveMediaOutput({ sectionId: "related" }))} downloadLabel="BAIXAR MP4"
+      generateLabel={mediaGenerateLabel(resolveMediaOutput({ sectionId: "related" }))} downloadLabel="BAIXAR MP4" blockedHint="Salve a lista de relacionados ao lado para liberar o vídeo."
       rail={
         <>
           <RailBlock kicker="LISTA DA NOITE" className="media-block-editor"><NightRelatedEditor workspace={workspace} profile={profile} compact /></RailBlock>
@@ -262,12 +280,11 @@ export function SummarySection({ mode, workspace, look, job, running, openViewer
 
   const record = cache.find((row) => row.format === "story" && (row.fileName || "").includes(mode === "week" ? "semana" : "dia")) || null;
   const generate = async (force) => {
-    if (!has || running) return;
+    if (!has || running) return null;
     const started = await startSummaryRender({ period: summary, format: "story", day: day.iso, dayLabel: summary.rangeLabel, timeline, force });
-    if (started.status === "ready") {
-      notify(started.stage === "cached" ? "Render reutilizado do cache." : "Vídeo gerado.");
-      openViewer(started.result);
-    } else if (started.status === "error") notify(started.error, "error");
+    if (started.status === "ready") notify(started.stage === "cached" ? "Esta versão já estava pronta." : "Vídeo pronto.");
+    else if (started.status === "error") notify(started.error, "error");
+    return started;
   };
   const title = mode === "week" ? "Resumo da semana" : "Resumo do dia";
 
@@ -282,7 +299,7 @@ export function SummarySection({ mode, workspace, look, job, running, openViewer
       empty={has ? null : { title: mode === "week" ? "Nenhum jogo concluído nesta semana." : "Nenhum jogo concluído hoje.", hint: "O resumo usa só partidas do histórico com placar." }}
       record={record} running={running} job={job} jobMatches={job?.template === SUMMARY_TEMPLATE_ID}
       onGenerate={generate} onView={openViewer} canGenerate={Boolean(assets)}
-      generateLabel={mediaGenerateLabel(resolveMediaOutput({ sectionId: `summary-${mode}` }))} downloadLabel="BAIXAR MP4"
+      generateLabel={mediaGenerateLabel(resolveMediaOutput({ sectionId: `summary-${mode}` }))} downloadLabel="BAIXAR MP4" blockedHint="O resumo usa só partidas importadas com placar."
       rail={
         <>
           <RailBlock kicker={mode === "week" ? "RESULTADOS DA SEMANA" : "RESULTADOS DO DIA"} aside={has ? `${summary.stats.wins}V · ${summary.stats.draws}E · ${summary.stats.losses}D` : ""}>

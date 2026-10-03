@@ -51,6 +51,8 @@ export async function loadAgendaAssets(matches = [], { onProgress } = {}) {
   await document.fonts?.ready;
   await Promise.allSettled([
     document.fonts?.load("800 36px Inter"),
+    document.fonts?.load("700 30px Inter"),
+    document.fonts?.load("600 30px Inter"),
     document.fonts?.load("700 132px Rajdhani"),
   ]);
   const results = await Promise.all(unique.map((item) => loadLogoAsset(item.url, item.name, report)));
@@ -85,6 +87,8 @@ export async function loadRelatedNightAssets(players = [], { onProgress } = {}) 
   await document.fonts?.ready;
   await Promise.allSettled([
     document.fonts?.load("800 36px Inter"),
+    document.fonts?.load("700 30px Inter"),
+    document.fonts?.load("600 30px Inter"),
     document.fonts?.load("800 28px Inter"),
     document.fonts?.load("700 118px Rajdhani"),
     document.fonts?.load("700 64px Rajdhani"),

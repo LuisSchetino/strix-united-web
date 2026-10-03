@@ -30,56 +30,61 @@ const matches = [
 ];
 const player = { id: "p1", name: "Nunes", photo: "", position: "MC", group: "MEI", number: 8, extraBadge: "JOGADOR" };
 
-test("painter nightshift compõe abertura, wipe e páginas legíveis de Agenda", () => {
+test("agenda: abertura, grade de horários e encerramento com dados reais, revelados pela linha do agora", () => {
   const timeline = buildAgendaTimeline(matches, { format: "story" });
-  const early = canvas(); const settled = canvas();
-  paintEditorialAgenda(early, { timeline, time: timeline.introEnd + 0.02, assets: { strix: { initials: "SU" }, opponents: [{ initials: "PC" }] } });
-  paintEditorialAgenda(settled, { timeline, time: timeline.introEnd + 0.42, assets: { strix: { initials: "SU" }, opponents: [{ initials: "PC" }] } });
-
-  assert.ok(early.fills.some((fill) => typeof fill === "object"), "o palco aplica gradação carvão em vez de uma tela branca lisa");
-  assert.ok(settled.fills.includes("#12161a"));
-  assert.ok(settled.texts.includes("COPA YESHUA"));
+  const assets = { strix: { initials: "SU" }, opponents: [{ initials: "PC" }] };
+  const sweeping = canvas(); const settled = canvas();
+  paintEditorialAgenda(sweeping, { timeline, time: timeline.introEnd + 0.1, assets });
+  paintEditorialAgenda(settled, { timeline, time: timeline.introEnd + 1.2, assets });
+  assert.ok(sweeping.fills.some((fill) => typeof fill === "object"), "o palco é uma gradação de tinta, não uma tela lisa");
+  assert.ok(settled.texts.includes("HOJE"));
   assert.ok(settled.texts.includes("POA CITY"));
   assert.ok(settled.texts.includes("STRIX UNITED"));
-  assert.ok(settled.texts.some((text) => text.includes("22:10")));
-  assert.notDeepEqual(early.calls, settled.calls, "quadros diferentes refletem a animação temporal");
+  assert.ok(settled.texts.includes("22:10"));
+  assert.ok(settled.texts.some((text) => text.includes("COPA YESHUA")));
+  assert.notDeepEqual(sweeping.calls, settled.calls, "quadros diferentes refletem a animação temporal");
+  assert.ok(!settled.texts.some((text) => /FILM ROOM|MATCHDAY/.test(text)), "sem rótulos de interface genéricos no quadro");
 });
 
-test("resumo separa headline dos cards e mantém campos não disponíveis como traço", () => {
+test("resumo: recorte em livro-razão e placar com contraste, sem inventar valores", () => {
   const timeline = buildSummaryTimeline({
     mode: "day", rangeLabel: "01 OUT 2026", matches,
     stats: { games: 1, wins: 1, draws: 0, losses: 0, goalsFor: 3, goalsAgainst: 1, efficiency: 100 },
   });
   const ctx = canvas();
-  paintEditorialSummary(ctx, { timeline, time: timeline.introEnd + 0.4 });
+  const stats = timeline.scenes.find((scene) => scene.type === "stats");
+  paintEditorialSummary(ctx, { timeline, time: stats.start + 1.6 });
   const heading = ctx.placements.find((item) => item.text === "DA NOITE.");
   const firstLabel = ctx.placements.find((item) => item.text === "JOGOS");
-  assert.ok(heading && firstLabel && firstLabel.y > heading.y, "os painéis começam abaixo da chamada editorial");
+  assert.ok(heading && firstLabel && firstLabel.y > heading.y, "os números começam abaixo da chamada");
   assert.ok(ctx.texts.includes("100%"));
   assert.ok(ctx.texts.includes("3–1"));
   assert.ok(!ctx.texts.some((text) => text === "undefined" || text === "null"));
 
   const result = canvas();
   const resultScene = timeline.scenes.find((scene) => scene.type === "result");
-  paintEditorialSummary(result, { timeline, time: resultScene.start + 0.2 });
-  assert.equal(result.placements.find((item) => item.text === "3")?.color, "#fbfaf5", "placar branco fica legível no painel escuro");
+  paintEditorialSummary(result, { timeline, time: resultScene.start + 1.4 });
+  assert.equal(result.placements.find((item) => item.text === "3")?.color, "#fbfaf5", "placar legível no palco escuro");
   assert.equal(result.placements.find((item) => item.text === "1")?.color, "#fbfaf5", "placar visitante mantém contraste");
-  assert.equal(result.placements.find((item) => item.text === "PC")?.color, "#fbfaf5", "fallback de iniciais permanece visível sem logo");
+  assert.equal(result.placements.find((item) => item.text === "PC")?.color, "#fbfaf5", "iniciais aparecem quando não há escudo");
+  assert.ok(result.texts.includes("VITÓRIA"));
 });
 
-test("relacionados e anúncios preservam imagem, nome e contexto, sem depender de collage", () => {
+test("relacionados e anúncios preservam imagem, nome e contexto; sem foto o número vira a imagem", () => {
   const relatedTimeline = buildRelatedNightTimeline([player]);
   const related = canvas();
-  paintEditorialRelated(related, { timeline: relatedTimeline, time: relatedTimeline.introEnd + 0.2, assets: { players: [{ initials: "N" }], byId: { p1: { initials: "N" } } } });
+  paintEditorialRelated(related, { timeline: relatedTimeline, time: relatedTimeline.introEnd + 1.2, assets: { players: [{ initials: "N" }], byId: { p1: { initials: "N" } } } });
   assert.ok(related.texts.includes("Nunes"));
-  assert.ok(related.texts.some((text) => text.includes("MC")));
+  assert.ok(related.texts.includes("MC"));
+  assert.ok(related.texts.includes("08"), "jogador sem foto ganha o número como imagem tipográfica");
+  assert.ok(!related.fills.includes("#d9d7d0"), "sem quadrado claro no lugar da foto");
 
   const announceTimeline = buildAnnounceTimeline({ kind: "individual", people: [player], phrase: "A nova temporada." });
   const announce = canvas();
   paintEditorialAnnounce(announce, { timeline: announceTimeline, time: 3.2, assets: { players: [{ initials: "N" }], byId: { p1: { initials: "N" } } } });
   assert.ok(announce.fills.some((fill) => typeof fill === "object"));
-  assert.ok(announce.texts.includes("Nunes"));
-  assert.ok(announce.texts.some((text) => text.includes("MC")));
+  assert.ok(announce.texts.includes("NUNES"));
+  assert.ok(announce.texts.includes("MC"));
 });
 
 test("estado vazio dos painters é seguro sem assumir que há jogo ou jogador", () => {

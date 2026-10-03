@@ -39,7 +39,8 @@ export function withMediaLook(timeline, look) {
 
 export function lookAssetFingerprint(look, extra = {}) {
   const resolved = normalizeMediaLook(look);
-  if (resolved === "editorial") return "strix-matchday-motion-v2";
+  // Bumped with the now-line direction so every render made with the previous look is regenerated.
+  if (resolved === "editorial") return "strix-nowline-v1";
   if (resolved !== "collage") return "";
   const seed = extra.seed == null ? "" : String(extra.seed);
   const mode = extra.mode ? String(extra.mode) : "";

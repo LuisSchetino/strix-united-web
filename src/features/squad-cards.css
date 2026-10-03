@@ -1,5 +1,199 @@
-.squad-compact-list{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:10px!important}.squad-player-card{position:relative;display:grid!important;grid-template-columns:48px minmax(0,1fr) auto auto auto!important;align-items:center;gap:10px!important;min-height:72px!important;padding:11px 12px!important;border-radius:14px!important}.squad-player-card>.avatar{width:46px!important;height:46px!important}.squad-card-identity{min-width:0}.squad-card-identity>b,.squad-card-identity>small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.squad-card-identity>span{display:inline-block;margin-top:4px;color:#8e969f;font-size:9px;font-weight:800;text-transform:uppercase}
-.squad-contract-action{display:inline-flex;align-items:center;min-height:28px;margin-top:8px;padding:0 9px;border:1px solid rgba(255,255,255,.16);border-radius:999px;background:#15181c;color:#f2f3f4;font-size:8px;font-weight:900;letter-spacing:.1em;cursor:pointer}
-.squad-contract-action:hover,.squad-contract-action:focus-visible{border-color:#d8dce0;background:#1c2026;outline:none}.squad-shirt-number{color:#5caeff;font-size:15px;font-style:italic}.squad-player-card .member-tag{font-size:8px!important;padding:5px 7px!important;white-space:nowrap}.squad-context{position:relative}.squad-more{width:29px;height:29px;border:1px solid rgba(255,255,255,.08);border-radius:8px;background:#081d2e;color:#7396b2;font-size:11px;font-weight:950;letter-spacing:1px}.squad-more:hover,.squad-more:focus-visible{border-color:#328fe4;color:#fff}.squad-context-menu{position:absolute;z-index:30;top:34px;right:0;display:grid;min-width:126px;padding:5px;border:1px solid rgba(76,151,219,.25);border-radius:10px;background:#061522;box-shadow:0 16px 45px #000}.squad-context-menu button{display:flex;align-items:center;gap:8px;border:0;border-radius:7px;background:transparent;color:#cbe5fb;padding:8px 9px;text-align:left;font-size:11px}.squad-context-menu button:hover{background:#0c2a42}.squad-context-menu button.danger{color:#ff91a3}
-@media(max-width:620px){.squad-compact-list{grid-template-columns:1fr}.squad-player-card{grid-template-columns:44px minmax(0,1fr) auto!important}.squad-player-card .member-tag{grid-column:2}.squad-shirt-number{grid-column:3;grid-row:1}.squad-context{grid-column:3;grid-row:2}.squad-context-menu{top:auto;bottom:34px}}
-.squad-sector{position:relative;overflow:visible}.squad-sector.has-open-menu{z-index:60}.squad-compact-list{position:relative;overflow:visible!important}.squad-player-card{z-index:0;overflow:visible!important}.squad-player-card.has-open-menu{z-index:70}.squad-context{z-index:1}.squad-player-card.has-open-menu .squad-context{z-index:80}
+/* ==========================================================================
+   Elenco · roster by sector
+   Single owner of sectors and player rows. Rows sit on hairlines like the
+   Agenda; the whole row opens the player's ficha, the menu stays above it.
+   ========================================================================== */
+
+.squad-page-v3 {
+  max-width: var(--page-max);
+  margin: 0 auto;
+}
+
+.squad-sector {
+  position: relative;
+  margin-top: var(--space-8);
+}
+.squad-sector:first-of-type {
+  margin-top: 0;
+}
+.squad-sector.has-open-menu {
+  z-index: 60;
+}
+.squad-sector > header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-4);
+  min-height: var(--hit);
+  border-bottom: 1px solid var(--line-2);
+}
+.squad-sector > header > div {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+}
+.squad-sector > header span {
+  color: var(--text-2);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: var(--track-label);
+}
+.squad-sector > header small {
+  color: var(--text-4);
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+.squad-sector > header > b {
+  color: var(--text-3);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+.squad-sector-empty {
+  margin: 0;
+  padding: var(--space-5) 0;
+  color: var(--text-3);
+  font-size: var(--text-sm);
+}
+
+.squad-list.squad-compact-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr));
+  column-gap: var(--space-8);
+}
+
+.squad-player-card {
+  position: relative;
+  z-index: 0;
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr) auto auto 44px;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 76px;
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--line-1);
+}
+.squad-player-card.has-open-menu {
+  z-index: 70;
+}
+.squad-card-open {
+  position: absolute;
+  inset: 0 calc(var(--space-2) * -1);
+  z-index: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  transition: background var(--motion-micro);
+}
+.squad-card-open:hover {
+  background: var(--ink-2);
+}
+.squad-card-open:focus-visible {
+  outline: 2px solid var(--line-focus);
+  outline-offset: -2px;
+}
+.squad-player-card > :not(.squad-card-open) {
+  position: relative;
+  z-index: 1;
+  pointer-events: none;
+}
+.squad-player-card > .squad-context {
+  pointer-events: auto;
+}
+
+.squad-player-card > .avatar {
+  width: 46px;
+  height: 46px;
+}
+.squad-card-identity {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.squad-card-identity > b {
+  overflow: hidden;
+  color: var(--text-1);
+  font-size: var(--text-md);
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.squad-card-identity > small {
+  overflow: hidden;
+  color: var(--text-3);
+  font-size: var(--text-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.squad-card-identity > span {
+  color: var(--text-4);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+}
+.squad-shirt-number {
+  color: var(--text-2);
+  font-size: var(--text-lg);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--track-tight);
+}
+.member-tag {
+  padding: 4px 9px;
+  border-radius: var(--radius-pill);
+  box-shadow: inset 0 0 0 1px var(--line-2);
+  color: var(--text-3);
+  font-size: 10.5px;
+  font-style: normal;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+.member-tag.complete {
+  color: var(--text-1);
+  box-shadow: inset 0 0 0 1px var(--line-3);
+}
+.member-tag.teste {
+  background: var(--state-warning-soft);
+  box-shadow: none;
+  color: #f0cd8b;
+}
+.squad-context {
+  grid-column: 5;
+}
+.squad-more {
+  width: var(--hit);
+  height: var(--hit);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-3);
+}
+.squad-more:is(:hover, :focus-visible, [aria-expanded="true"]) {
+  background: var(--ink-3);
+  color: var(--text-1);
+}
+
+@media (max-width: 620px) {
+  .squad-player-card {
+    grid-template-columns: 44px minmax(0, 1fr) auto 44px;
+    row-gap: var(--space-1);
+  }
+  .squad-player-card > .avatar {
+    grid-row: 1 / 3;
+    width: 44px;
+    height: 44px;
+  }
+  .squad-player-card .member-tag {
+    grid-column: 2;
+    grid-row: 2;
+    justify-self: start;
+  }
+  .squad-shirt-number {
+    grid-column: 3;
+    grid-row: 1 / 3;
+  }
+  .squad-context {
+    grid-column: 4;
+    grid-row: 1 / 3;
+  }
+}

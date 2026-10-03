@@ -1,60 +1,15 @@
-:root{
-  --strix-bg:#050607;
-  --strix-surface:#0b0d10;
-  --strix-surface-1:#0b0d10;
-  --strix-surface-2:#101318;
-  --strix-surface-raised:#101318;
-  --strix-surface-soft:#13171c;
-  --strix-border:rgba(255,255,255,.08);
-  --strix-border-strong:rgba(255,255,255,.14);
-  --strix-text:#f5f5f5;
-  --strix-muted:#8e969f;
-  --strix-subtle:#606872;
-  --rastro-blue:#2F80FF;
-  --rastro-blue-soft:rgba(47,128,255,.16);
-  --rastro-blue-subtle:rgba(47,128,255,.08);
-  --strix-blue:#f5f5f5;
-  --strix-deep:#15181c;
-  --strix-glow:#ffffff1f;
-  --fc27-blue:#f5f5f5;
-  --fc27-blue-deep:#101318;
-  --fc27-label:#aeb4bb;
-  --fc27-line:#343a41;
-  --fc27-surface:#0b0d10;
-  --fc27-surface-raised:#101318;
-  color-scheme:dark;
-}
+/* Tokens moved to src/design/tokens.css. */
 
 html,body,#root{background:var(--strix-bg);color:var(--strix-text)}
 body{background:var(--strix-bg)}
-.app-shell{background:radial-gradient(ellipse 70% 45% at 58% -18%,#292d33 0,#101216 32%,var(--strix-bg) 72%)}
-.workspace{background:transparent}
-.sidebar{overflow-y:auto;padding-bottom:150px;border-color:var(--strix-border);background:rgba(7,8,10,.97);box-shadow:18px 0 55px #0008}
-.topbar{border-color:var(--strix-border)}
-.brand{color:#c9cdd2}
-.brand .crest{width:43px;filter:drop-shadow(0 0 12px #ffffff20)}
-.brand b,.crumb b{color:#fff}
-.collapse,.mobile-close{background:#15171b;color:#b6bdc5}
-.menu-group p{color:#5f6670}
-.menu-group button{color:#9ca3ab}
-.menu-group button:hover{color:#fff;background:#14171b}
-.menu-group button.active{color:#090a0b!important;background:linear-gradient(135deg,#f4f4f5 0%,#d4d4d8 100%)!important;box-shadow:0 8px 24px #0007!important}
-.menu-group button.active svg{color:#090a0b!important}
-.menu-group button.active:after{display:none!important;content:none!important}
-.sidebar-user{border-color:var(--strix-border);background:#111419;box-shadow:0 10px 28px #0009}
-.sidebar-user small,.crumb{color:#777f88}
-.search-button{border-color:var(--strix-border-strong);background:#111419;color:#868e97;box-shadow:none}
-.search-button:hover{background:#171b20}
-.search-button kbd{border-color:var(--strix-border-strong);color:#aab0b7}
-.top-actions>button{color:#aab0b7}
-.top-actions .add-button,.primary{border-color:#fff;background:#f3f3f3;color:#08090a;box-shadow:0 9px 28px #0008}
-.top-actions .add-button:hover,.primary:hover{background:#fff;color:#000}
+
+.primary{border-color:#fff;background:#f3f3f3;color:#08090a;box-shadow:0 9px 28px #0008}
+.primary:hover{background:#fff;color:#000}
 .secondary{color:#d6d9dd}
 .crest{background:transparent!important;border:0!important;box-shadow:none!important;filter:drop-shadow(0 0 17px #ffffff22)}
 .crest-small{filter:drop-shadow(0 0 6px #ffffff18)}
 .avatar:not(.has-image),.club-logo.is-fallback{border-color:#4a5057;background:linear-gradient(145deg,#252a30,#0d0f12 70%);color:#e5e7ea}
-.now-playing{border-color:var(--strix-border-strong);background:#0b0d10f2;box-shadow:0 18px 50px #000c}
-.now-playing small,.now-playing strong{color:#d9dde1}
+
 .match-display-team>strong,.match-teams strong,.match-scoreline>div>strong{color:#f5f5f5!important}
 
 .login-screen{
@@ -83,31 +38,22 @@ body{background:var(--strix-bg)}
 .discord-login-icon{filter:grayscale(1) contrast(1.25)}
 .login-note{color:#747b84}
 
-.match-hero,.panel,.agenda-list,.competition-section,.matches-list,.import-workbench,
+.panel,.competition-section,.matches-list,.import-workbench,
 .statistics-stat-card,.statistics-ranking-card,.statistics-goalkeeper-card,.statistics-team-identity,
 .analysis-group,.analysis-context,.analysis-xray,.library-card,.data-card{
   border-color:var(--strix-border)!important;
   background-color:var(--strix-surface)!important;
   box-shadow:inset 0 1px #ffffff05,0 18px 48px #0004;
 }
-.match-hero{background:radial-gradient(circle at 50% -20%,#2b3036 0,transparent 48%),linear-gradient(120deg,#111419,#08090b)!important}
-.match-hero:after{opacity:.35}
-.hero-meta,.panel-heading span,.page-title>span,.profile-data>span,.data-page-header span,
-.agenda-hero span,.agenda-modal header span,.statistics-section-heading span,.analysis-group header span{
+
+.page-title>span,.agenda-modal header span,.statistics-section-heading span,.analysis-group header span{
   color:#c7ccd1!important;
 }
-.panel-heading button,.competition-back{color:#d9dde1}
-.match-row{border-color:var(--strix-border)}
-.match-row time,.agenda-game time{color:#f0f1f2}
-.match-row em,.agenda-game em{border-color:#3f454c;color:#aeb4bb;background:#12151a}
-.agenda-list{background:#080a0dcc}
-.agenda-game{border-color:var(--strix-border)}
-.agenda-game:hover{background:#14171b}
-.agenda-tabs button{color:#818991}
-.agenda-tabs button.selected{color:#fff;background:#22272d}
+.competition-back{color:#d9dde1}
+
 .agenda-actions{border-color:var(--strix-border-strong);background:#111419;box-shadow:0 18px 42px #000c}
 .agenda-actions button:hover{background:#20252b!important}
-.agenda-modal,.match-manual-modal,.match-details-modal,.profile-modal,.command{
+.agenda-modal,.match-manual-modal,.match-details-modal,.command{
   border-color:var(--strix-border-strong)!important;
   background:#0b0d10!important;
   box-shadow:0 35px 110px #000!important;
@@ -119,12 +65,11 @@ body{background:var(--strix-bg)}
   border-color:#dfe2e5;box-shadow:0 0 0 3px #ffffff12;
 }
 .match-preview{background:radial-gradient(circle at 50% 42%,#ffffff10,transparent 55%)}
-.agenda-hero span,.agenda-modal header span,.agenda-tabs b,.match-preview>span,.match-preview>div>b{color:#c7ccd1}
-.agenda-tabs button.selected{background:#22272d;color:#fff}
-.agenda-match .avatar:not(.has-logo){border-color:#454b52;background:#171b20}
-.agenda-game em.soon,.match-preview em{border-color:#454b52;background:#161a1f;color:#c9ced3}
+.agenda-modal header span,.match-preview>span,.match-preview>div>b{color:#c7ccd1}
+
+.match-preview em{border-color:#454b52;background:#161a1f;color:#c9ced3}
 .logo-drop{border-color:#454b52!important;background:#111419}
-.pitch,.formation-picker-field:before{
+.formation-picker-field:before{
   background:repeating-linear-gradient(0deg,#181c21 0 9%,#101318 9% 18%,#15191e 18% 27%,#0d1014 27% 36%)!important;
   box-shadow:inset 0 0 82px #000,0 22px 46px #0008!important;
 }
@@ -134,10 +79,6 @@ body{background:var(--strix-bg)}
 .standings-table>article,.competition-results article{border-color:var(--strix-border)}
 .bracket-grid article{background:#101318;border-color:var(--strix-border-strong)}
 .statistics-v3,.analysis-v2{position:relative;isolation:isolate}
-.statistics-v3:after,.analysis-v2:after{
-  content:"";position:absolute;z-index:-1;right:clamp(12px,4vw,54px);top:110px;width:clamp(170px,22vw,320px);aspect-ratio:1;
-  background:url('/brand/rastro/rastro-mark.png') center/contain no-repeat;opacity:.035;pointer-events:none;
-}
 .statistics-stat-card>span,.statistics-ranking-card>header>span,.statistics-goalkeeper-card>header>span{
   border-color:var(--strix-border-strong)!important;background:#171b20!important;color:#f2f3f4!important;
 }
@@ -159,10 +100,10 @@ html .gameday-editor-page .gd-editor-panel>nav button:hover{background:#15191e}h
 html .gameday-editor-page .gd-editor-scroll{scrollbar-color:#4b525a #0b0d10}
 html .gameday-editor-page .gd-field input,html .gameday-editor-page .gd-field textarea,html .gameday-editor-page .gd-field select,html .gameday-editor-page .gd-team-row>input{border-color:#343a41;background:#0d1014}
 html .gameday-editor-page .gd-field input:focus,html .gameday-editor-page .gd-field textarea:focus,html .gameday-editor-page .gd-field select:focus,html .gameday-editor-page .gd-team-row>input:focus{border-color:#f5f5f5;box-shadow:0 0 0 3px #ffffff12}
-html .gameday-editor-page .gd-upload,html .gameday-editor-page .gd-primary,html .gameday-editor-page .gd-secondary,html .gameday-editor-page .gd-text-button,html .gameday-editor-page .gd-project-row button,html .gameday-editor-page .gd-inline-actions button,html .gameday-editor-page .gd-library-card button{border-color:#3b4249;background:#111419;color:#e8eaec}
+html .gameday-editor-page .gd-upload,html .gameday-editor-page .gd-primary,html .gameday-editor-page .gd-secondary,html .gameday-editor-page .gd-text-button,html .gameday-editor-page .gd-project-row button,html .gameday-editor-page .gd-inline-actions button,html .gameday-editor-page .gd-library-card button{border-color:#3f4145;background:#111419;color:#e8eaec}
 html .gameday-editor-page .gd-primary{border-color:#f5f5f5;background:#f5f5f5;color:#08090a;box-shadow:0 10px 28px #0008}
 html .gameday-editor-page .gd-primary:hover{background:#fff}html .gameday-editor-page .gd-secondary:hover,html .gameday-editor-page .gd-project-row button:hover,html .gameday-editor-page .gd-inline-actions button:hover{background:#1a1f24}
-html .gameday-editor-page .gd-toggle input:checked+i{background:#737b84}html .gameday-editor-page .gd-player-editor,html .gameday-editor-page .gd-recommendation{border-color:#3b4249;background:#101318}
+html .gameday-editor-page .gd-toggle input:checked+i{background:#737b84}html .gameday-editor-page .gd-player-editor,html .gameday-editor-page .gd-recommendation{border-color:#3f4145;background:#101318}
 html .gameday-editor-page .gd-dashed{border-color:#454c54;color:#d6d9dc}html .gameday-editor-page .gd-layer-controls input{accent-color:#d6d9dc}
 
 .rastro-signature{
@@ -179,34 +120,26 @@ html .gameday-editor-page .gd-dashed{border-color:#454c54;color:#d6d9dc}html .ga
 .rastro-data-signature img{width:22px;height:22px;object-fit:contain}.rastro-data-signature b{color:var(--rastro-blue)}
 
 /* Institutional surfaces are monochrome; semantic success/error/warning colors remain untouched. */
-.squad-player-card,.squad-context-menu,.squad-modal-v2,.squad-preview,.member-picker button,.position-picker button,
-.matches-list,.matches-list article,.match-manual-modal,.matches-source-empty,.import-stage,.match-review-list article,
-.agenda-list,.agenda-game,.agenda-actions,.agenda-modal,.competition-section,.competition-inline-hero,
+.squad-context-menu,.squad-modal-v2,.squad-preview,.member-picker button,.position-picker button,
+.matches-list,.matches-list article,.match-manual-modal,.matches-source-empty,.import-stage,.match-review-list article,.agenda-actions,.agenda-modal,.competition-section,.competition-inline-hero,
 .library-card,.library-player-shell,.library-tracking,.formation-picker,.preset-panel{
   border-color:var(--strix-border)!important;background-color:var(--strix-surface-1)!important;color:var(--strix-text);
 }
-.squad-card-identity>span,.squad-shirt-number,.member-tag,.squad-more,.squad-context-menu button,
-.matches-hero>div>span,.matches-list>header,.matches-list article>small,.match-teams strong,
-.agenda-hero span,.agenda-game time,.competition-header>span,.library-card small{
+.squad-context-menu button,.matches-list>header,.matches-list article>small,.match-teams strong,.competition-header>span,.library-card small{
   color:#b7bdc4!important;
 }
-.squad-more,.icon-button,.matches-actions .secondary,.match-row-actions button,.agenda-actions button,
+.icon-button,.match-row-actions button,.agenda-actions button,
 .member-picker button,.position-picker button,.library-card button{
   border-color:var(--strix-border-strong)!important;background:#111419!important;color:#d8dce0!important;
 }
-.member-picker button.selected,.position-picker button.selected,.filter-row button.selected{
+.member-picker button.selected,.position-picker button.selected{
   border-color:#f2f2f2!important;background:#f2f2f2!important;color:#090a0b!important;box-shadow:none!important;
 }
 .squad-context-menu button:hover,.agenda-actions button:hover,.match-row-actions button:hover{background:#20252b!important}
-.match-hero .hero-meta,.match-hero .stadium-caption i,.match-hero .versus i,.panel-heading span,.panel-heading button{color:#d0d4d8!important}
-.match-hero .stadium-light{background:radial-gradient(ellipse at 50% 0,#ffffff2e,transparent 66%)!important}
-.match-hero .smoke{background:radial-gradient(ellipse,#ffffff14 0%,#ffffff08 40%,transparent 70%)!important}
-.match-hero .avatar{border-color:#555c64!important;background:#14171b!important;box-shadow:0 0 24px #ffffff12!important}
-.pitch,.player-dot{border-color:#555c64!important}.player-dot{background:#101318f0!important}.player-dot>b{color:#f5f5f5!important}
+
 .avatar,.avatar.has-image{border-color:#4a5057!important;background:#111419!important;color:#e5e7ea!important}
-.sidebar-signout,.secondary,.preset-trigger{border-color:var(--strix-border-strong)!important;background:#111419!important;color:#d6d9dd!important}
-.agenda-list-heading,.agenda-empty,.squad-sector>header small{color:#8e969f!important;border-color:var(--strix-border)!important}
-.squad-sector>header>b,.member-tag,.member-tag.complete,.member-tag.elenco{border-color:var(--strix-border-strong)!important;color:#b7bdc4!important;background:#111419!important}
+.secondary,.preset-trigger{border-color:var(--strix-border-strong)!important;background:#111419!important;color:#d6d9dd!important}
+
 .squad-preview{border-color:var(--strix-border)!important;background:#0b0d10!important;box-shadow:inset 1px 0 var(--strix-border)}
 .squad-preview>span,.squad-preview small{color:#b7bdc4!important}.squad-preview .avatar{box-shadow:0 14px 36px #0008}
 .match-row-actions button{border-color:var(--strix-border-strong)!important;background:#111419!important;color:#d8dce0!important}
@@ -214,23 +147,17 @@ html .gameday-editor-page .gd-dashed{border-color:#454c54;color:#d6d9dc}html .ga
 
 @media(max-width:900px){
   .rastro-signature{bottom:88px}
-  .sidebar.mobile-open .rastro-signature{display:flex}
+  
 }
 @media(max-width:580px){
   .statistics-v3:after,.analysis-v2:after{right:8px;top:100px;width:170px;opacity:.025}
   .rastro-watermark{right:8px;top:90px;opacity:.025}.rastro-watermark img{width:150px;height:150px}
 }
 
-/* Final institutional interaction pass: no legacy Strix cyan in operational UI. */
-::selection{background:#d9dde1;color:#08090a}
-:where(input,textarea,select){caret-color:#f5f5f5}
-:where(button,a,input,textarea,select,[tabindex]):focus-visible{
-  outline:2px solid #dfe2e5!important;
-  outline-offset:2px;
-}
+/* Selection, caret and focus rings live in src/design/tokens.css. */
 .rastro-signature:not(.is-compact){justify-content:center;text-align:center}
 .motion-tooltip:after,.motion-tooltip:before{border-color:var(--strix-border-strong)!important;background:#111419!important;color:#eef0f2!important}
-.agenda-game[role="button"]:focus-visible{box-shadow:inset 0 0 0 2px #dfe2e5!important;background:#14171b!important}
+
 .agenda-modal input,.agenda-modal select,.formation-picker-field select,.preset-panel select{
   accent-color:#f5f5f5;
   border-color:var(--strix-border-strong)!important;

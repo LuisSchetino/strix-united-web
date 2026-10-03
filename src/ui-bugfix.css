@@ -1,33 +1,5 @@
 /* Focused September bugfix pass: no changes to the product's data layout. */
-.sidebar [data-tooltip]{position:relative}
-.sidebar [data-tooltip]::after{
-  content:attr(data-tooltip);position:absolute;left:calc(100% + 12px);top:50%;
-  transform:translateY(-50%);padding:8px 11px;border:1px solid #ffffff24;
-  border-radius:6px;background:#1a1d21;color:#f1f2f3;font-size:12px;
-  white-space:nowrap;pointer-events:none;opacity:0;z-index:100;
-  transition:opacity 160ms ease;
-}
-.sidebar [data-tooltip]:is(:hover,:focus-visible)::after{opacity:1}
-.sidebar-compact-account{display:grid;place-items:center;padding:0;min-height:44px}
-.sidebar-compact-account .sidebar-signout{display:grid;place-items:center;width:44px;height:44px;margin:0;padding:0;border:0;background:transparent;border-radius:8px;color:#adb3bc}
-.sidebar-compact-account .sidebar-signout:is(:hover,:focus-visible){background:#ffffff0a;color:#f1f2f3}
-@media(min-width:901px){
-  .sidebar.is-compact{display:flex;flex-direction:column;width:72px;flex-basis:72px;overflow:visible;padding-inline:10px}
-  .sidebar.is-compact .brand{display:grid;place-items:center;padding:0;gap:0;width:100%;height:54px}
-  .sidebar.is-compact .brand>.crest,.sidebar.is-compact .brand>.club-logo,.sidebar.is-compact .brand>span{display:none}
-  .sidebar.is-compact .collapse{position:static;display:grid;place-items:center;margin:0;width:44px;height:44px;line-height:1;padding:0;transform:rotate(180deg)}
-  .sidebar.is-compact .menu-group button{width:100%;padding:0;min-height:44px;gap:0}
-  .sidebar.is-compact .menu-group button span{display:none}
-  .sidebar.is-compact .rastro-signature{position:static;display:grid;place-items:center;width:100%;padding:0;margin:0;min-height:44px}
-  .sidebar.is-compact .rastro-signature img{width:24px;height:24px;margin:0;object-fit:contain}
-  .sidebar.is-compact .sidebar-compact-account{margin-top:0}
-}
-.topbar .mobile-menu{width:44px;height:44px;background:#171a1e;color:#e6e8eb;border:1px solid #ffffff16}
-.page-home .hero-teams{display:grid;grid-template-columns:minmax(0,1fr) minmax(64px,.6fr) minmax(0,1fr);max-width:720px;margin:36px auto 28px;gap:24px;align-items:start}
-.page-home .hero-teams>div:not(.versus){min-width:0;width:100%;grid-template-rows:92px auto;align-items:center;gap:12px}
-.page-home .hero-teams strong{width:100%;min-width:0;text-align:center;line-height:1.4;overflow-wrap:anywhere}
-.page-home .hero-teams .versus{min-width:0;display:grid;align-content:center;justify-items:center;min-height:92px}
-.page-home .hero-teams .versus small{max-width:100%;overflow-wrap:anywhere}
+
 /* Central sem jogos: ver .free-night-* em ui/strix-polish.css (logo + background, sem texto). */
 .squad-dialog-layer{padding:24px!important;overflow:hidden!important;align-items:center!important}
 .squad-dialog-layer .squad-modal-v2{display:flex!important;flex-direction:column;width:min(960px,100%);max-height:calc(100dvh - 48px)!important;min-height:0!important;margin:0!important;overflow:hidden!important;transform:none!important}
@@ -40,17 +12,17 @@
 .squad-save-error{margin:0;color:#f29aa7;font-size:13px;line-height:1.4}
 .squad-dialog-layer .member-picker button.selected small{color:#41464e}
 @media(max-width:700px){
-  .page-home .match-hero{min-height:0!important;padding:20px 18px!important}
-  .page-home .hero-meta{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
-  .page-home .hero-meta>b{text-align:right}
-  .page-home .hero-teams{grid-template-columns:minmax(0,1fr) 64px minmax(0,1fr);gap:12px;margin:30px auto 24px}
-  .page-home .hero-teams>div:not(.versus){grid-template-rows:68px auto;gap:12px}
-  .page-home .hero-teams :is(.crest,.avatar,.club-logo){width:64px!important;height:64px!important}
-  .page-home .hero-teams .versus{min-height:68px}
-  .page-home .hero-teams .versus b{font-size:40px}
-  .page-home .hero-teams strong{font-size:11px;min-height:32px}
-  .page-home .hero-actions{gap:10px;margin:0}
-  .page-home .stadium-caption{position:relative;inset:auto;margin-top:28px;padding:0;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
   .squad-dialog-layer{padding:12px!important}
   .squad-dialog-layer .squad-modal-v2{max-height:calc(100dvh - 24px)!important}
   .squad-dialog-layer .squad-editor{display:block!important}
@@ -61,64 +33,15 @@
   .squad-dialog-layer footer>div{display:grid;grid-template-columns:auto minmax(0,1fr)}
   .squad-dialog-layer footer button{padding-inline:10px;font-size:11px}
 }
-@media(prefers-reduced-motion:reduce){.sidebar [data-tooltip]::after{transition:none}}
 
 /* Agenda crests: fixed box, contain, room for stars/ornaments. */
-.agenda-match{grid-template-columns:56px minmax(0,1fr)!important;align-items:center}
-.agenda-match .avatar,
-.agenda-match .crest,
-.agenda-match .club-logo{
-  --avatar-size:56px;
-  width:56px!important;
-  height:56px!important;
-  min-width:56px!important;
-  min-height:56px!important;
-  max-width:56px!important;
-  max-height:56px!important;
-  flex:0 0 56px;
-  padding:5px;
-  box-sizing:border-box;
-  overflow:hidden;
-  contain:none;
-  aspect-ratio:1/1;
-  border-radius:0!important;
-  background:transparent!important;
-}
-.agenda-match .club-logo img,
-.agenda-match .avatar img,
-.agenda-match .crest img{
-  display:block;
-  width:100%!important;
-  height:100%!important;
-  object-fit:contain!important;
-  object-position:center!important;
-}
-@media(max-width:760px){
-  .agenda-match{grid-template-columns:48px minmax(0,1fr)!important}
-  .agenda-match .avatar,
-  .agenda-match .crest,
-  .agenda-match .club-logo{
-    --avatar-size:48px;
-    width:48px!important;
-    height:48px!important;
-    min-width:48px!important;
-    min-height:48px!important;
-    max-width:48px!important;
-    max-height:48px!important;
-    flex:0 0 48px;
-  }
-}
 
-.upcoming-game-versus .crest,
-.upcoming-game-versus .avatar,
-.upcoming-game-versus .club-logo,
 .match-preview-mark .crest,
 .match-preview-mark .club-logo,
 .match-preview-mark .avatar,
 .match-preview .crest,
 .match-preview .club-logo,
 .match-preview .avatar,
-.page-home .hero-teams :is(.crest,.avatar,.club-logo),
 .agenda-view-clubs .crest,
 .agenda-view-clubs .avatar,
 .agenda-view-clubs .club-logo{
@@ -128,23 +51,13 @@
   contain:none;
   background:transparent!important;
 }
-.upcoming-game-versus :is(.crest,.avatar,.club-logo) img,
+
 .match-preview-mark :is(.crest,.club-logo,.avatar) img,
 .match-preview :is(.crest,.club-logo,.avatar) img,
-.page-home .hero-teams :is(.crest,.avatar,.club-logo) img,
 .agenda-view-clubs :is(.crest,.avatar,.club-logo) img{
   object-fit:contain!important;
   object-position:center!important;
 }
 
 /* Empty agenda utility remains a real, accessible navigation target with only the club mark visible. */
-button.now-playing.is-agenda-free{
-  left:50%;right:auto;bottom:calc(18px + env(safe-area-inset-bottom));width:56px;height:56px;min-width:56px;
-  justify-content:center;gap:0;padding:0;transform:translateX(-50%);border:1px solid var(--strix-border-strong);
-  border-radius:50%;background:#101318;color:#f2f3f4;box-shadow:0 8px 28px #0008;transition:background 160ms ease,border-color 160ms ease,transform 160ms ease;
-}
-button.now-playing.is-agenda-free:hover,button.now-playing.is-agenda-free:focus-visible{border-color:#7b828a;background:#171b20;outline:2px solid #d8dce0;outline-offset:3px}
-button.now-playing.is-agenda-free .crest{width:38px;height:38px;border:0;border-radius:0;background:transparent;color:inherit;box-shadow:none;filter:none}
-button.now-playing.is-agenda-free .crest img{width:100%;height:100%;object-fit:contain}
-@media(max-width:900px){button.now-playing.is-agenda-free{left:50%;right:auto;width:56px;height:56px;padding:0}}
-@media(prefers-reduced-motion:reduce){button.now-playing.is-agenda-free{transition:none}}
+

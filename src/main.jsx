@@ -2,6 +2,7 @@ import React, { StrictMode, Suspense, lazy, useEffect, useLayoutEffect, useMemo,
 import { createClient } from "@supabase/supabase-js";
 import { createRoot } from "react-dom/client";
 import { createPortal } from "react-dom";
+import "./design/tokens.css";
 import "./styles.css";
 import "./fc27-polish.css";
 import "./interaction-polish.css";
@@ -19,6 +20,7 @@ import { availableLineupPlayers, duplicateLineupPlayers, validateLineupUnique } 
 import { activeAgendaMatches, agendaHeroSelection, nextAgendaMatches, todayAgendaMatches } from "./features/agenda/agenda-time.js";
 import { agendaStandingComparison } from "./features/agenda/agenda-standings.js";
 import { resolveAgendaTeamIdentity, resolveTeamIdentity } from "./features/teams/team-identity.js";
+import { buildEaClubLogoIndex, eaClubLogoFor, readOpponentClubId } from "./features/teams/ea-club-logo.js";
 import { notify, RollingLabel, ToastViewport } from "./ui/motion/motion.jsx";
 import { ClubLogo } from "./ui/ClubLogo.jsx";
 import { ActionMenu } from "./ui/ActionMenu.jsx";
@@ -26,6 +28,10 @@ import { LaunchGate } from "./features/launch/LaunchGate.jsx";
 import { ContractGate, ContractValidating } from "./features/onboarding/ContractGate.jsx";
 import { hasSignedContract, readContract, resolveContractIdentity } from "./features/onboarding/contract-core.js";
 import { SignedContractArchive } from "./features/onboarding/SignedContractArchive.jsx";
+import { HomePage } from "./features/home/HomePage.jsx";
+import { PageHeader } from "./ui/PageHeader.jsx";
+import { useMinuteClock } from "./ui/useMinuteClock.js";
+import { agendaStatus, lineupState } from "./features/agenda/agenda-status.js";
 import { LAUNCH_CONFIG, clearLaunchAccessVerification, consumeLaunchReturn, isLaunchUnlocked, launchGateDecision, readLaunchAccessVerification, rememberLaunchAccess } from "./launch.js";
 import { preloadClubLogos } from "./ui/provider-assets.js";
 import { STRIX_BRAND } from "./brand.js";
@@ -38,6 +44,9 @@ import "./quality-polish.css";
 import "./ui-bugfix.css";
 import "./mobile-safe.css";
 import "./ui/strix-polish.css";
+import "./design/page.css";
+import "./features/agenda/agenda-list.css";
+import "./design/shell.css";
 import { saveRosterPlayer } from "./features/squad/player-save.js";
 import { FC27_CLUB_ID as EA_CLUB_ID, isStrixClubId, readStrixKeyed } from "../shared/fc27-club.js";
 import { useDialog } from "./ui/useDialog.js";
@@ -67,6 +76,7 @@ import {
   visibleNavItems,
 } from "./access.js";
 import { commandItems, filterCommandItems } from "./command-palette.js";
+import { mobileTabsFor, navGroupsFor } from "./navigation.js";
 import { readApiJson, parseApiJson } from "./lib/read-api-json.js";
 
 const routeLoaders = {
@@ -78,6 +88,7 @@ const routeLoaders = {
   desenvolvedor: () => import("./features/developer/DeveloperPage.jsx").then((module) => ({ default: module.DeveloperPage })),
   midia: () => import("./features/media/MediaPage.jsx").then((module) => ({ default: module.MediaPage })),
   elencoTools: () => import("./features/squad/RosterTools.jsx").then((module) => ({ default: module.RosterTools })),
+  playerSheet: () => import("./features/players/PlayerSheet.jsx"),
 };
 const preloadRoute = (id) => routeLoaders[id]?.();
 const MediaPage = lazy(routeLoaders.midia);
@@ -88,6 +99,7 @@ const DeveloperPage = lazy(routeLoaders.desenvolvedor);
 const StatisticsPage = lazy(routeLoaders.estatisticas);
 const AnalysisPage = lazy(routeLoaders.analise);
 const RosterTools = lazy(routeLoaders.elencoTools);
+const PlayerSheet = lazy(routeLoaders.playerSheet);
 
 const icons = {
   menu: "M4 7h16M4 12h16M4 17h16",
@@ -118,6 +130,9 @@ const icons = {
   assist: "M4 12h4l3-5 3 10 3-5h3",
   pass: "M4 18 20 6M15 6h5v5",
   shield: "M12 3 5 6v5c0 4.7 2.9 8.8 7 10 4.1-1.2 7-5.3 7-10V6z",
+  chevronLeft: "m15 18-6-6 6-6",
+  more: "M5.5 12h.01M12 12h.01M18.5 12h.01",
+  grid: "M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z",
 };
 function Icon({ name, size = 20 }) {
   const path =
@@ -131,7 +146,7 @@ function Icon({ name, size = 20 }) {
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.75"
+      strokeWidth={name === "more" ? 3 : 1.75}
       strokeLinecap="round"
       strokeLinejoin="round"
     >
@@ -663,16 +678,26 @@ function useFc27Workspace(client, profile) {
       name: match.opponent_name,
       logo: match.opponent_logos?.storage_path ? assetUrl(match.opponent_logos.storage_path) : "",
     }));
+    const eaClubLogos = buildEaClubLogoIndex({
+      matches: matchesResult.data || [],
+      teams: teamsResult.data || [],
+      editions: editionsResult.data || [],
+      competitions: competitionsResult.data || [],
+    });
     const resolvedMatches = (matchesResult.data || []).map((match) => {
+      const opponentClubId = readOpponentClubId(match.raw_ea);
       const identity = resolveTeamIdentity({
         name: match.opponent_name,
+        editionId: match.competition_edition_id,
         directLogo: match.opponent_logos?.storage_path ? assetUrl(match.opponent_logos.storage_path) : "",
+        eaClubLogo: eaClubLogoFor(eaClubLogos, { clubId: opponentClubId, name: match.opponent_name }),
         teams: teamsResult.data || [],
         logos: publicLogos,
         history: historyIdentities,
       });
       return {
         ...match,
+        opponent_ea_club_id: opponentClubId,
         resolved_opponent_logo_url: identity.logo,
         identity_source: identity.source,
       };
@@ -686,13 +711,14 @@ function useFc27Workspace(client, profile) {
           logos: publicLogos,
           history: historyIdentities,
         });
+        const eaClubLogo = eaClubLogoFor(eaClubLogos, { name: match.opponent_name });
         return {
           ...match,
           opponent_team_id: identity.id || match.opponent_team_id || null,
           opponent_name: identity.name || match.opponent_name,
           opponent_abbreviation: identity.abbreviation,
-          resolved_opponent_logo_url: identity.logo,
-          identity_source: identity.source,
+          resolved_opponent_logo_url: identity.logo || eaClubLogo,
+          identity_source: identity.logo ? identity.source : eaClubLogo ? "ea_club" : identity.source,
         };
       }),
       logos: logosResult.data || [],
@@ -1091,57 +1117,46 @@ function Sidebar({
       inert={mobile && !mobileOpen ? true : undefined}
     >
       <div className="brand">
-        <Crest small />
-        <span>
-          STRIX
-          <br />
-          <b>FC 27</b>
-        </span>
+        <button type="button" className="brand-home" onClick={() => navigate("central")} aria-label="Strix United FC 27 — ir para a Central">
+          <Crest small />
+          <span>STRIX<b>FC 27</b></span>
+        </button>
         <button
+          type="button"
           className="collapse"
           onClick={() => setCompact(!compact)}
           aria-label={collapsed ? "Expandir menu" : "Recolher menu"}
           title={collapsed ? "Expandir menu" : "Recolher menu"}
           aria-expanded={!collapsed}
         >
-          ‹
+          <Icon name="chevronLeft" size={18} />
         </button>
         <CloseButton className="mobile-close" onClick={() => setMobileOpen(false)} label="Fechar menu" />
       </div>
-      <div className="sidebar-scroll">
-      <div className="menu-group">
-        <p>Central</p>
-        <button
-          className={active === "central" ? "active" : ""}
-          aria-current={active === "central" ? "page" : undefined}
-          aria-label="Central do time"
-          data-tooltip={collapsed ? "Central do time" : undefined}
-          onClick={() => navigate("central")}
-        >
-          <Icon name="live" />
-          <span>Central do time</span>
-        </button>
-      </div>
-      <div className="menu-group">
-        <p>Time</p>
-        {visibleNavItems(profile).map(([id, label, icon]) => (
-          <button
-            key={id}
-            className={active === id ? "active" : ""}
-            aria-current={active === id ? "page" : undefined}
-            aria-label={label}
-            data-tooltip={collapsed ? label : undefined}
-            onClick={() => navigate(id)}
-            onPointerEnter={warmRoute(id)}
-            onFocus={warmRoute(id)}
-            onTouchStart={warmRoute(id)}
-          >
-            <Icon name={icon} />
-            <span>{label}</span>
-          </button>
-        ))}
-      </div>
-      </div>
+      <nav className="sidebar-scroll" aria-label="Navegação principal">
+      {navGroupsFor(profile).map((group) => (
+        <div className="menu-group" key={group.id} role="group" aria-label={group.label}>
+          <p aria-hidden="true">{group.label}</p>
+          {group.items.map(([id, label, icon]) => (
+            <button
+              type="button"
+              key={id}
+              className={active === id ? "active" : ""}
+              aria-current={active === id ? "page" : undefined}
+              aria-label={label}
+              data-tooltip={collapsed ? label : undefined}
+              onClick={() => navigate(id)}
+              onPointerEnter={warmRoute(id)}
+              onFocus={warmRoute(id)}
+              onTouchStart={warmRoute(id)}
+            >
+              <Icon name={icon} />
+              <span>{label}</span>
+            </button>
+          ))}
+        </div>
+      ))}
+      </nav>
       <div className="sidebar-dock">
       <RastroSignature compact={collapsed} />
       {collapsed ? <div className="sidebar-compact-account"><button type="button" className="sidebar-signout" onClick={signOut} aria-label="Sair da conta" data-tooltip="Sair da conta"><Icon name="logout" size={19}/></button></div> : <div className="sidebar-user">
@@ -1158,180 +1173,10 @@ function Sidebar({
     </aside>
   );
 }
-function GameRow({ game, index }) {
-  let saved = [];
-  try {
-    saved = JSON.parse(localStorage.getItem("strix-fc27-agenda") || "[]");
-  } catch {}
-  const item = saved
-    .filter((value) => value.group === "today")
-    .sort((left, right) => left.time.localeCompare(right.time))[index];
-  const current = item
-    ? [item.time, item.opponent, item.competition, item.initials]
-    : game;
-  return (
-    <article className={`match-row ${item?.cancelled ? "is-cancelled" : ""}`}>
-      <time>{current[0]}</time>
-      <Avatar name={current[3]} logo={item?.logo} />
-      <div>
-        <span>{item?.cancelled ? "PARTIDA CANCELADA" : "STRIX UNITED VS"}</span>
-        <b>{current[1]}</b>
-        <small>{current[2]}</small>
-      </div>
-      <em>
-        {item?.cancelled ? "CANCELADO" : index === 0 ? "PRÓXIMO" : "HOJE"}
-      </em>
-    </article>
-  );
-}
-function Profile({ player, close }) {
-  if (!player) return null;
-  return (
-    <ViewportDialog className="modal-backdrop" onMouseDown={close}>
-      <article
-        className="profile-modal"
-        onMouseDown={(event) => event.stopPropagation()}
-      >
-        <CloseButton className="modal-close" onClick={close} />
-        <div className="profile-show">
-          <Avatar name={player[0]} />
-          <span>STRIX UNITED · FC 27</span>
-          <h2>{player[0]}</h2>
-          <p>{player[1]}</p>
-          <strong>{player[2]}</strong>
-        </div>
-        <div className="profile-data">
-          <span>PERFIL DO JOGADOR</span>
-          <h1>{player[0]}</h1>
-          <p>Visão rápida da temporada, função tática e evolução no elenco.</p>
-          <div className="stat-grid">
-            <b>
-              <small>POSIÇÃO</small>
-              {player[1]}
-            </b>
-            <b>
-              <small>OVER</small>
-              {player[2]}
-            </b>
-            <b>
-              <small>PARTIDAS</small>34
-            </b>
-            <b>
-              <small>NOTA</small>7.8
-            </b>
-          </div>
-          <button className="primary">ABRIR PERFIL COMPLETO</button>
-        </div>
-      </article>
-    </ViewportDialog>
-  );
-}
-function Central({ openPlayer }) {
-  return (
-    <section className="page-home page-enter">
-      <section className="match-hero">
-        <div className="stadium-light stadium-left" />
-        <div className="stadium-light stadium-right" />
-        <div className="smoke smoke-a" />
-        <div className="smoke smoke-b" />
-        <div className="hero-meta">
-          <span>TRANSMISSÃO · NOITE DE JOGO</span>
-          <b>30 JUL · 21:10</b>
-        </div>
-        <div className="hero-teams">
-          <div>
-            <Crest />
-            <strong>STRIX UNITED</strong>
-          </div>
-          <div className="versus">
-            <small>AMISTOSO</small>
-            <b>VS</b>
-            <i>21:10</i>
-          </div>
-          <div>
-            <Avatar name="Sinceridade FC" />
-            <strong>SINCERIDADE FC</strong>
-          </div>
-        </div>
-        <div className="hero-actions">
-          <button className="primary">
-            <Icon name="squad" size={17} />
-            ABRIR ESCALAÇÃO
-          </button>
-          <button className="secondary">
-            DETALHES DA PARTIDA <Icon name="arrow" size={16} />
-          </button>
-        </div>
-        <div className="stadium-caption">
-          <span>ARENA STRIX · SÃO PAULO</span>
-          <i>AO VIVO EM BREVE</i>
-        </div>
-      </section>
-      <div className="content-grid central-agenda-grid">
-        <section className="panel schedule">
-          <header className="panel-heading">
-            <div>
-              <span>AGENDA DA NOITE</span>
-              <h2>Jogos de hoje</h2>
-            </div>
-            <button>
-              Ver agenda <Icon name="arrow" size={15} />
-            </button>
-          </header>
-          {games.map((game, index) => (
-            <GameRow key={game[1]} game={game} index={index} />
-          ))}
-        </section>
-      </div>
-    </section>
-  );
-}
 const agendaDraftKey = "strix-fc27-agenda-draft";
-function CentralLive({ workspace, navigate }) {
-  const tonight = useMemo(() => todayAgendaMatches(workspace.agenda), [workspace.agenda]);
-  const hero = useMemo(() => agendaHeroSelection(workspace.agenda), [workspace.agenda]);
-  const heroMatch = hero.match;
-  const nextLogo = heroMatch?.resolved_opponent_logo_url || (heroMatch?.opponent_logos?.storage_path ? workspace.assetUrl(heroMatch.opponent_logos.storage_path) : "");
-  return (
-    <section className="page-home page-enter">
-      {heroMatch ? (
-      <section className="match-hero">
-        <div className="stadium-light stadium-left" /><div className="stadium-light stadium-right" /><div className="smoke smoke-a" /><div className="smoke smoke-b" />
-        <div className="hero-meta"><span>{hero.isToday ? "TRANSMISSÃO · NOITE DE JOGO" : "PRÓXIMA PARTIDA"}</span><b>{`${datePart(heroMatch.scheduled_at)} · ${timePart(heroMatch.scheduled_at)}`}</b></div>
-        <div className="hero-teams">
-          <div><Crest /><strong>STRIX UNITED</strong></div>
-          <div className="versus"><small>{heroMatch.competition_name || "PARTIDA"}</small><b>VS</b><i>{timePart(heroMatch.scheduled_at)}</i></div>
-          <div><Avatar name={heroMatch.opponent_name} logo={nextLogo} priority /><strong>{heroMatch.opponent_name}</strong></div>
-        </div>
-        <div className="hero-actions"><button className="primary" onClick={() => navigate("agenda")}><Icon name="squad" size={17} />ABRIR ESCALAÇÃO</button><button className="secondary" onClick={() => navigate("agenda")}>DETALHES DA PARTIDA <Icon name="arrow" size={16} /></button></div>
-        <div className="stadium-caption"><span>ARENA STRIX · SÃO PAULO</span><i>{heroMatch.status === "live" && hero.isToday ? "AO VIVO" : hero.isToday ? "HOJE" : "PRÓXIMO COMPROMISSO"}</i></div>
-      </section>
-      ) : (
-      <section className="match-hero is-free-night" aria-label="Strix United">
-        <div className="free-night-field" aria-hidden="true">
-          <i className="free-night-beam is-a" /><i className="free-night-beam is-b" /><i className="free-night-beam is-c" />
-          <i className="free-night-ring is-a" /><i className="free-night-ring is-b" />
-        </div>
-        <div className="free-night-logo"><Crest priority /></div>
-      </section>
-      )}
-      <div className="content-grid central-agenda-grid">
-        <section className="panel schedule">
-          <header className="panel-heading"><div><span>AGENDA DA NOITE</span><h2>Jogos de hoje</h2></div><button onClick={() => navigate("agenda")}>Ver agenda <Icon name="arrow" size={15} /></button></header>
-          {tonight.length ? <div className="upcoming-games-track central-night-list">{tonight.map((game, index) => <GameRowLive key={game.id} game={game} index={index} workspace={workspace} />)}</div> : <div className="agenda-empty">Nenhuma partida programada para hoje.</div>}
-        </section>
-      </div>
-    </section>
-  );
-}
-function GameRowLive({ game, index, workspace }) {
-  const logo = game.resolved_opponent_logo_url || (game.opponent_logos?.storage_path ? workspace.assetUrl(game.opponent_logos.storage_path) : "");
-  const status = game.temporal_status === "overdue" ? "ATRASADO" : game.temporal_status === "today" ? "HOJE" : index === 0 ? "PRÓXIMO" : "AGENDADO";
-  return <article className="upcoming-game-card">
-    <header><span>{game.round_label || game.competition_name || "PARTIDA"}</span><time>{datePart(game.scheduled_at)} · {timePart(game.scheduled_at)}</time></header>
-    <div className="upcoming-game-versus"><div><b>STRIX UNITED</b><Crest /></div><i>×</i><div><Avatar name={game.opponent_name} logo={logo} /><b>{game.opponent_name}</b></div></div>
-    <footer><em>{status}</em></footer>
-  </article>;
+// Home "Agora": the club's present moment. See src/features/home.
+function CentralLive({ workspace, navigate, profile }) {
+  return <HomePage workspace={workspace} profile={profile} navigate={navigate} />;
 }
 const defaultAgendaForm = {
   opponent: "",
@@ -1727,7 +1572,7 @@ function AgendaModal({ entry, mode = "new", presets, roster = [], assetUrl, stan
                   3-1-4-2 <small>{lineup.filter(Boolean).length}/11</small>
                 </h3>
               </div>
-              <p>{readOnly ? "Escalação definida para este jogo." : "Toque em uma posição e escolha o jogador."}</p>
+              <p>{readOnly ? lineupState({ lineup }).label + "." : "Toque em uma posição e escolha o jogador."}</p>
             </header>
             <FormationPicker lineup={lineup} onChange={setLineup} readOnly={readOnly} roster={roster} assetUrl={assetUrl} />
           </section>
@@ -2149,6 +1994,10 @@ function AgendaLive({ navigate, workspace, profile }) {
     ? todayIds.has(item.id)
     : item.db.temporal_status === "upcoming"
   ).sort((left, right) => new Date(left.db.scheduled_at) - new Date(right.db.scheduled_at));
+  const now = useMinuteClock();
+  const firstUpcoming = visible.findIndex((item) => !item.cancelled && new Date(item.db.scheduled_at).getTime() > now.getTime());
+  const nowLineIndex = firstUpcoming === -1 ? visible.length : firstUpcoming;
+  const nextTodayId = tab === "today" && firstUpcoming !== -1 ? visible[firstUpcoming].id : "";
   const defaultNewDate = datePart(new Date());
   const suggestTimeForDate = (date, queued = []) => nextAgendaSlot(
     [...workspace.agenda, ...queued],
@@ -2161,13 +2010,14 @@ function AgendaLive({ navigate, workspace, profile }) {
   };
   return (
     <section className="agenda-page page-enter">
-      <header className="agenda-hero">
-        <div><span>AGENDA DO TIME</span><h1>A noite começa aqui.</h1><p>Organize os jogos e deixe a escalação pronta antes da bola rolar.</p></div>
-        <div className="agenda-hero-actions">
-          {canManageAgenda(profile) && <button className="secondary preset-trigger" onClick={() => setShowPresets(true)}>PREDEFINIÇÕES</button>}
-          {canManageAgenda(profile) && <button className="primary" onClick={() => setModal({ mode: "new" })}><Icon name="plus" size={17} />NOVO JOGO</button>}
-        </div>
-      </header>
+      <PageHeader
+        title="A noite começa aqui."
+        description="Organize os jogos e deixe a escalação pronta antes da bola rolar."
+        actions={canManageAgenda(profile) && <>
+          <button className="secondary preset-trigger" onClick={() => setShowPresets(true)}>PREDEFINIÇÕES</button>
+          <button className="primary" onClick={() => setModal({ mode: "new" })}><Icon name="plus" size={17} />NOVO JOGO</button>
+        </>}
+      />
       <nav className="agenda-tabs">
         <button className={tab === "today" ? "selected" : ""} onClick={() => setTab("today")}>Hoje <b>{todayIds.size}</b></button>
         <button className={tab === "next" ? "selected" : ""} onClick={() => setTab("next")}>Próximos</button>
@@ -2176,21 +2026,26 @@ function AgendaLive({ navigate, workspace, profile }) {
       {(workspace.error || feedback) && <p className="matches-error">{feedback || workspace.error}</p>}
       <section className="agenda-list" aria-busy={workspace.loading}>
         <div className="agenda-list-heading"><span>{tab === "next" ? "DATA · HORÁRIO" : "HORÁRIO"}</span><span>PARTIDA</span><span>CAMPEONATO</span><span>STATUS</span><span aria-hidden="true" /></div>
-        {visible.length ? visible.map((item) => (
+        {visible.length ? visible.map((item, index) => {
+          const status = agendaStatus(item.db, now);
+          const lineup = lineupState(item.db);
+          const showNowLine = tab === "today" && index === nowLineIndex;
+          return (
+          <React.Fragment key={item.id}>
+          {showNowLine && <div className="agenda-now-line" role="separator" aria-label={`Agora, ${timePart(now)}`}><time>{timePart(now)}</time><i /></div>}
           <article
-            key={item.id}
-            className={`agenda-game ${item.cancelled ? "is-cancelled" : ""}`}
+            className={`agenda-game ${item.cancelled ? "is-cancelled" : ""} is-${status.tone}${item.id === nextTodayId ? " is-next" : ""}`}
           >
             <button className="agenda-game-open" type="button" aria-label={`Abrir escalação de ${item.opponent}`} onClick={() => { setActions(null); setModal({ entry: item, mode: "view" }); }}>
               <time className={tab === "next" ? "future-kickoff" : ""}>{tab === "next" && <span>{item.date}</span>}<b>{item.time}</b></time>
               <div className="agenda-match">
                 <Avatar name={item.opponent} logo={item.logo} />
-                <div>{item.previousOpponent && <small className="replaced-opponent"><s>{item.previousOpponent}</s> → TROCADO</small>}<small>STRIX UNITED VS</small><b>{item.opponent}</b></div>
+                <div>{item.previousOpponent && <small className="replaced-opponent"><s>{item.previousOpponent}</s> → trocado</small>}<b>{item.opponent}</b><small className={`agenda-lineup is-${lineup.kind}`}>{item.cancelled ? item.competition : lineup.short}</small></div>
               </div>
               <span className="game-competition">{item.competition}</span>
-              <em className={item.status === "EM BREVE" ? "soon" : ""}>{item.status}</em>
+              <em className={`agenda-status is-${status.tone}`}>{status.label}</em>
             </button>
-            {canManageAgenda(profile) && <button data-agenda-menu-trigger aria-haspopup="menu" aria-expanded={actions === item.id} aria-label={`Ações para ${item.opponent}`} onClick={(event) => { event.stopPropagation(); setActions(actions === item.id ? null : item.id); }}>•••</button>}
+            {canManageAgenda(profile) && <button className="agenda-more" data-agenda-menu-trigger aria-haspopup="menu" aria-expanded={actions === item.id} aria-label={`Ações para ${item.opponent}`} onClick={(event) => { event.stopPropagation(); setActions(actions === item.id ? null : item.id); }}><Icon name="more" size={20} /></button>}
             {canManageAgenda(profile) && actions === item.id && <div className="agenda-actions" role="menu" onClick={(event) => event.stopPropagation()} onKeyDown={(event) => {
               if (!["ArrowDown", "ArrowUp"].includes(event.key)) return;
               event.preventDefault();
@@ -2204,7 +2059,10 @@ function AgendaLive({ navigate, workspace, profile }) {
               <button className="danger delete" onClick={() => { setActions(null); setPendingAction({ type:"delete", item }); }}><Icon name="trash" size={15} />Excluir partida</button>
             </div>}
           </article>
-        )) : <div className="agenda-empty">{workspace.loading ? "Sincronizando agenda..." : "Nenhuma partida programada."}</div>}
+          {tab === "today" && index === visible.length - 1 && nowLineIndex === visible.length && <div className="agenda-now-line is-end" role="separator" aria-label={`Agora, ${timePart(now)}`}><time>{timePart(now)}</time><i /></div>}
+          </React.Fragment>
+          );
+        }) : <div className="agenda-empty">{workspace.loading ? "Sincronizando a Agenda…" : tab === "today" ? "Nenhum jogo marcado para hoje. Os próximos ficam na aba Próximos." : "Nenhum jogo marcado depois de hoje."}</div>}
       </section>
       {showPresets && <PresetPanel presets={presets} setPresets={setPresets} roster={workspace.players} assetUrl={workspace.assetUrl} onClose={() => setShowPresets(false)} />}
       {modal && <AgendaModal entry={modal.entry} mode={modal.mode} presets={presets} roster={workspace.players} assetUrl={workspace.assetUrl} standings={agendaStandingComparison(modal.entry?.db, workspace.competitionSources, workspace.competitionTeams)} defaultDate={defaultNewDate} suggestTimeForDate={suggestTimeForDate} onClose={() => setModal(null)} onEdit={modal.entry && canEditLineup(profile) ? () => setModal({ entry: modal.entry, mode: "edit" }) : undefined} logoForOpponent={(name) => { const logo = matchingLogo(workspace.logos, name); return logo?.storage_path ? workspace.assetUrl(logo.storage_path) : catalogLogo(name); }} onSave={(payload, mode) => void run(async () => { await workspace.saveAgenda(payload, mode, modal.entry?.db); setModal(null); })} />}
@@ -2265,9 +2123,12 @@ function SquadPageV2({ workspace, profile }) {
   return <section className="data-page page-enter"><header className="data-page-header"><div><span>ELENCO DO CLUBE</span><h1>Squad FC 27.</h1><p>Perfis reais, posições múltiplas e status do vínculo visíveis antes de salvar.</p></div>{canManage && <button className="primary" onClick={() => setModal(true)}><Icon name="plus" size={16}/>ADICIONAR JOGADOR</button>}</header>{(workspace.error || error) && <p className="matches-error">{error || workspace.error}</p>}<section className="squad-list">{workspace.players.filter((player) => player.is_active).length ? workspace.players.filter((player) => player.is_active).map((player) => <article key={player.id}><Avatar name={player.display_name} logo={player.avatar_path ? workspace.assetUrl(player.avatar_path) : ""}/><div><b>{player.display_name}</b><small>{player.positions?.join(" · ") || "Posição não definida"}</small></div>{player.member_type === "teste" && <em className="test-tag">TESTE{player.trial_expires_at ? ` · até ${datePart(player.trial_expires_at)}` : ""}</em>}{canManage && <button className="icon-button" aria-label={`Remover ${player.display_name}`} onClick={() => void workspace.removePlayer(player.id).catch((removeError) => setError(removeError.message))}><Icon name="trash" size={16}/></button>}</article>) : <div className="matches-empty">O elenco FC 27 começa vazio. Adicione os jogadores oficiais quando estiver pronto.</div>}</section>{modal && <div className="match-manual-backdrop"><form className="match-manual-modal squad-modal-v2" onSubmit={submit}><header><div><span>ELENCO · NOVO PERFIL</span><h2>Adicionar jogador</h2><p>O preview acompanha a ficha antes de entrar no elenco.</p></div><button type="button" className="icon-button" onClick={close} aria-label="Fechar"><Icon name="close"/></button></header><div className="squad-editor"><section className="manual-form-grid"><label className="manual-full">NOME DE EXIBIÇÃO<input autoFocus value={draft.display_name} onChange={(event) => setDraft((current) => ({ ...current, display_name:event.target.value }))} placeholder="Como aparece no time"/></label><label className="manual-full logo-drop">FOTO DO JOGADOR<input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => setPhoto(event.target.files?.[0] || null)}/><span><Icon name="upload" size={17}/>{photo ? photo.name : "Enviar foto do computador"}</span></label><fieldset className="position-picker manual-full"><legend>POSIÇÕES EM QUE JOGA</legend>{positions.map((position) => <button type="button" className={draft.positions.includes(position) ? "selected" : ""} key={position} onClick={() => setDraft((current) => ({ ...current, positions:current.positions.includes(position) ? current.positions.filter((item) => item !== position) : [...current.positions, position] }))}>{position}</button>)}</fieldset><fieldset className="member-picker manual-full"><legend>VÍNCULO COM O TIME</legend><button type="button" className={draft.member_type === "complete" ? "selected" : ""} onClick={() => setDraft((current) => ({ ...current, member_type:"complete", trial_expires_at:"" }))}><b>COMPLETE</b><small>Fixo no elenco</small></button><button type="button" className={draft.member_type === "teste" ? "selected" : ""} onClick={() => setDraft((current) => ({ ...current, member_type:"teste" }))}><b>TESTE</b><small>Identificado em toda a escalação</small></button></fieldset>{draft.member_type === "teste" && <label className="manual-full">TESTE ATÉ<input type="date" value={draft.trial_expires_at} onChange={(event) => setDraft((current) => ({ ...current, trial_expires_at:event.target.value }))}/></label>}</section><aside className="squad-preview"><span>PREVIEW DO ELENCO</span><Avatar name={draft.display_name || "?"} logo={previewUrl}/><small>{draft.positions[0] || "POSIÇÃO"}</small><h3>{draft.display_name || "NOME DO JOGADOR"}</h3><p>{draft.member_type === "teste" ? "Jogador em teste" : "Jogador completo"}</p></aside></div><footer><button type="button" className="secondary" onClick={close}>CANCELAR</button><button className="primary"><Icon name="upload" size={16}/>SALVAR JOGADOR</button></footer></form></div>}</section>;
 }
 
-function SquadPageV3({ workspace, profile, contract = null, identity = null }) {
+function SquadPageV3({ workspace, profile, contract = null, identity = null, client = null }) {
   const [saving, setSaving] = useState(false);
   const [contractOpen, setContractOpen] = useState(false);
+  const [viewedContract, setViewedContract] = useState(null);
+  const [viewedIdentity, setViewedIdentity] = useState(null);
+  const [sheetPlayer, setSheetPlayer] = useState(null);
   const savingRef = useRef(false);
   const returnFocusRef = useRef(null);
   const canCreate = canCreatePlayer(profile);
@@ -2352,6 +2213,35 @@ function SquadPageV3({ workspace, profile, contract = null, identity = null }) {
   const personKey = (value) => String(value ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLocaleLowerCase("pt-BR");
   const ownNames = new Set([identity?.name, profile?.display_name].map(personKey).filter(Boolean));
   const ownsContract = (player) => Boolean(contract?.signature?.d) && ownNames.has(personKey(player.display_name));
+  const canReadContracts = canManagePlayers(profile);
+  const openPlayerContract = async (player) => {
+    if (ownsContract(player)) {
+      setViewedContract(contract);
+      setViewedIdentity(identity);
+      setContractOpen(true);
+      return;
+    }
+    if (!canReadContracts || !client) {
+      setViewedContract(null);
+      setViewedIdentity({ name: player.display_name });
+      setContractOpen(true);
+      return;
+    }
+    try {
+      const { data } = await client.auth.getSession();
+      const token = data.session?.access_token;
+      const response = await fetch("/api/internal/contracts", { headers: token ? { authorization: `Bearer ${token}` } : {}, cache: "no-store" });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || "contracts_unavailable");
+      const key = personKey(player.display_name);
+      const found = (payload.contracts || []).find((item) => (item.identity?.names || []).some((name) => personKey(name) === key));
+      setViewedContract(found?.contract || null);
+      setViewedIdentity(found?.identity || { name: player.display_name });
+      setContractOpen(true);
+    } catch (cause) {
+      setError(cause.message === "insufficient_permission" ? "Só a diretoria abre o contrato dos outros." : "Não foi possível abrir os contratos do clube.");
+    }
+  };
   const gamesForPlayer = (player) => {
     const names = new Set([
       normalizeTeamName(player.display_name),
@@ -2362,10 +2252,11 @@ function SquadPageV3({ workspace, profile, contract = null, identity = null }) {
 
   return (
     <section className="data-page page-enter squad-page-v3">
-      <header className="data-page-header">
-        <div><span>ELENCO DO CLUBE</span><h1>Squad FC 27.</h1><p>Posições e vínculos organizados para escalar sem procurar jogador.</p></div>
-        {canCreate && <div className="squad-header-actions"><Suspense fallback={<span className="roster-tools-loading">CARREGANDO FERRAMENTAS…</span>}><RosterTools workspace={workspace} /></Suspense><button className="primary" onClick={openCreate}><Icon name="plus" size={16} />ADICIONAR JOGADOR</button></div>}
-      </header>
+      <PageHeader
+        title="Squad FC 27."
+        description="Posições e vínculos organizados para escalar sem procurar jogador."
+        actions={canCreate && <><Suspense fallback={<span className="roster-tools-loading">CARREGANDO FERRAMENTAS…</span>}><RosterTools workspace={workspace} /></Suspense><button className="primary" onClick={openCreate}><Icon name="plus" size={16} />ADICIONAR JOGADOR</button></>}
+      />
       {(workspace.error || error) && <p className="matches-error">{error || workspace.error}</p>}
       {activePlayers.length ? groups.map(([id, title, description]) => {
         const players = activePlayers.filter((player) => classify(player) === id);
@@ -2373,16 +2264,18 @@ function SquadPageV3({ workspace, profile, contract = null, identity = null }) {
           <section className="squad-sector" key={id}>
             <header><div><span>{title}</span><small>{description}</small></div><b>{players.length}</b></header>
             {players.length ? <div className="squad-list squad-compact-list">{players.map((player) => <article className="squad-player-card" key={player.id}>
+              <button type="button" className="squad-card-open" aria-label={`Abrir ficha de ${player.display_name}`} onClick={() => setSheetPlayer(player)} onPointerEnter={() => { void preloadRoute("playerSheet"); }} />
               <Avatar name={player.display_name} logo={player.avatar_path ? workspace.assetUrl(player.avatar_path) : player.external_avatar_url || ""} kind="photo" size="md" />
-              <div className="squad-card-identity"><b>{player.display_name}</b><small>{player.positions?.join(" · ") || "Posição não definida"}</small><span>{gamesForPlayer(player)} jogo(s)</span>{ownsContract(player) && <button type="button" className="squad-contract-action" onClick={() => setContractOpen(true)}>MEU CONTRATO</button>}</div>
+              <div className="squad-card-identity"><b>{player.display_name}</b><small>{player.positions?.join(" · ") || "Posição não definida"}</small><span>{gamesForPlayer(player)} jogo(s)</span></div>
               <strong className="squad-shirt-number">{player.shirt_number === null || player.shirt_number === undefined ? "—" : `#${String(player.shirt_number).padStart(2, "0")}`}</strong>
               <em className={`member-tag ${player.member_type || "elenco"}`}>{player.member_type === "teste" ? `TESTE${player.trial_expires_at ? ` · até ${datePart(player.trial_expires_at)}` : ""}` : player.member_type === "complete" ? "COMPLETE" : "ELENCO"}</em>
-              {(canEdit || canArchive) && <div className="squad-context"><ActionMenu className="squad-more" label={`Ações de ${player.display_name}`} items={[canEdit && { id: "edit", icon: "edit", label: "Editar", onSelect: () => openEdit(player) }, canArchive && { id: "archive", icon: "trash", label: "Arquivar", tone: "danger", onSelect: () => { void workspace.removePlayer(player.id).catch((removeError) => setError(removeError.message)); } }].filter(Boolean)} /></div>}
+              {(canEdit || canArchive || ownsContract(player)) && <div className="squad-context"><ActionMenu className="squad-more" label={`Ações de ${player.display_name}`} items={[(canReadContracts || ownsContract(player)) && { id: "contract", icon: "file", label: "Contrato", onSelect: () => void openPlayerContract(player) }, canEdit && { id: "edit", icon: "edit", label: "Editar", onSelect: () => openEdit(player) }, canArchive && { id: "archive", icon: "trash", label: "Arquivar", tone: "danger", onSelect: () => { void workspace.removePlayer(player.id).catch((removeError) => setError(removeError.message)); } }].filter(Boolean)} /></div>}
             </article>)}</div> : <p className="squad-sector-empty">Nenhum jogador nesta faixa.</p>}
           </section>
         );
       }) : <div className="matches-empty">O elenco FC 27 começa vazio. Adicione os jogadores oficiais quando estiver pronto.</div>}
-      {contractOpen && contract && <SignedContractArchive contract={contract} identity={identity} onClose={() => setContractOpen(false)} />}
+      {sheetPlayer && <Suspense fallback={null}><PlayerSheet rosterPlayer={sheetPlayer} workspace={workspace} onClose={() => setSheetPlayer(null)} actions={(canReadContracts || ownsContract(sheetPlayer)) && <button type="button" className="secondary" onClick={() => void openPlayerContract(sheetPlayer)}>VER CONTRATO</button>} /></Suspense>}
+      {contractOpen && <SignedContractArchive contract={viewedContract} identity={viewedIdentity} onClose={() => setContractOpen(false)} />}
       {editing !== null && <ViewportDialog className="match-manual-backdrop squad-dialog-layer" onClose={() => { if (!savingRef.current) close(); }}><form className="match-manual-modal squad-modal-v2" role="dialog" aria-modal="true" aria-labelledby="squad-editor-title" aria-busy={saving} onSubmit={save}>
         <header><div><span>ELENCO · {editing?.id ? "EDITAR PERFIL" : "NOVO PERFIL"}</span><h2 id="squad-editor-title">{editing?.id ? "Editar jogador" : "Adicionar jogador"}</h2><p>O preview acompanha a ficha antes de entrar no elenco.</p></div><CloseButton onClick={close} disabled={saving} /></header>
         <div className="squad-editor"><section className="manual-form-grid">
@@ -2987,7 +2880,6 @@ function App() {
     [mobileOpen, setMobileOpen] = useState(false),
     [command, setCommand] = useState(false),
     [createOpen, setCreateOpen] = useState(false),
-    [player, setPlayer] = useState(null),
     [contractSignedFor, setContractSignedFor] = useState(""),
     [contractShownFor, setContractShownFor] = useState("");
   const syncRoute = () => {
@@ -3162,27 +3054,20 @@ function App() {
       />
       <main className="workspace">
         <header className="topbar">
-          <button
-            className="mobile-menu"
-            onClick={() => setMobileOpen(true)}
-            aria-label="Abrir menu"
-          >
-            <Icon name="menu" />
+          <button type="button" className="topbar-home" onClick={() => navigate("central")} aria-label="Ir para a Central">
+            <Crest small />
           </button>
-          <button className="crumb" onClick={() => navigate("central")}>
-            STRIX / <b>{title}</b>
+          <button type="button" className="crumb" onClick={() => navigate("central")} aria-label={`STRIX / ${title}`}>
+            <span aria-hidden="true">STRIX /</span><b>{title}</b>
           </button>
           <button className="search-button" aria-label="Buscar no Strix" onClick={() => setCommand(true)}>
             <Icon name="search" />
-            <span>Buscar no Strix...</span>
+            <span>Buscar páginas, partidas, jogadores…</span>
             <kbd>Ctrl K</kbd>
           </button>
           <div className="top-actions">
-            <button aria-label="Notificações">
-              <Icon name="bell" />
-            </button>
             {(canManageAgenda(auth.profile) || canCreatePlayer(auth.profile) || canViewMedia(auth.profile) || canManageCompetitions(auth.profile)) && (
-            <button className={`add-button create-trigger${createOpen ? " is-open" : ""}`} onClick={() => setCreateOpen((value) => !value)} aria-expanded={createOpen} aria-haspopup="menu">
+            <button className={`add-button create-trigger${createOpen ? " is-open" : ""}`} onClick={() => setCreateOpen((value) => !value)} aria-expanded={createOpen} aria-haspopup="menu" aria-label="Novo">
               <Icon name="plus" size={16} />
               <RollingLabel>NOVO</RollingLabel>
             </button>
@@ -3202,24 +3087,36 @@ function App() {
         ) : locationState.kind === "restricted" ? (
           <SpecialState kind="restricted" embedded onHome={() => navigate("central")} />
         ) : active === "central" ? (
-          <CentralLive workspace={workspace} navigate={navigate} />
+          <CentralLive workspace={workspace} navigate={navigate} profile={auth.profile} />
         ) : active === "agenda" ? (
           <AgendaLive navigate={navigate} workspace={workspace} profile={auth.profile} />
         ) : active === "partidas" ? (
           <FeatureBoundary type="table"><MatchesPage profile={auth.profile} workspace={workspace} client={auth.client} /></FeatureBoundary>
         ) : active === "elenco" ? (
-          <SquadPageV3 workspace={workspace} profile={auth.profile} contract={signedContract} identity={contractIdentity} />
+          <SquadPageV3 workspace={workspace} profile={auth.profile} contract={signedContract} identity={contractIdentity} client={auth.client} />
         ) : active === "campeonatos" ? (
           <FeatureBoundary type="competitions"><CompetitionsPage profile={auth.profile} workspace={workspace} client={auth.client} /></FeatureBoundary>
         ) : (
           <DataPage id={active} workspace={workspace} profile={auth.profile} client={auth.client} />
         )}
       </main>
-      <CurrentGameLive navigate={navigate} workspace={workspace} />
+      {/* The Home already leads with the next match, and the media studio needs its stage clear. */}
+      {!["central", "midia"].includes(active) && locationState.kind === "page" && <CurrentGameLive navigate={navigate} workspace={workspace} />}
+      <nav className="tabbar" aria-label="Navegação rápida">
+        {mobileTabsFor(auth.profile).map(([id, label, icon]) => (
+          <button type="button" key={id} className={active === id ? "active" : ""} aria-current={active === id ? "page" : undefined} onClick={() => navigate(id)} onTouchStart={() => { void preloadRoute(id); }}>
+            <Icon name={icon} size={22} />
+            <span>{label}</span>
+          </button>
+        ))}
+        <button type="button" className={mobileOpen || !mobileTabsFor(auth.profile).some(([id]) => id === active) ? "active" : ""} aria-haspopup="dialog" aria-expanded={mobileOpen} onClick={() => setMobileOpen(true)}>
+          <Icon name="grid" size={22} />
+          <span>Mais</span>
+        </button>
+      </nav>
       {command && (
         <Command close={() => setCommand(false)} navigate={navigate} workspace={workspace} profile={auth.profile} />
       )}
-      <Profile player={player} close={() => setPlayer(null)} />
       <ToastViewport />
     </div>
   );

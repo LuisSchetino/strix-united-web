@@ -31,7 +31,6 @@ import {
   ArchiveList,
   FormatGroup,
   MediaNotice,
-  MediaProgress,
   MediaToolbar,
   MediaWorkspace,
   Options,
@@ -41,7 +40,9 @@ import {
   RailBlock,
   StageEmpty,
   StageLoading,
+  StageResult,
   ToolbarFact,
+  jobPercent,
   ToolbarGroup,
   isImageRecord,
   recordToArchiveItem,
@@ -89,6 +90,7 @@ export function AnnounceStudio({ workspace, look, job, running, openViewer }) {
   const [usedPhraseIds, setUsedPhraseIds] = useState(Array.isArray(draft.usedPhraseIds) ? draft.usedPhraseIds : []);
   const [assets, setAssets] = useState(null);
   const [cache, setCache] = useState([]);
+  const [result, setResult] = useState(null);
   const dragIndex = useRef(null);
   const migrated = useRef(false);
   const isSeletiva = kind === "seletiva";
@@ -126,6 +128,8 @@ export function AnnounceStudio({ workspace, look, job, running, openViewer }) {
   }), look), [pieceKind, format, selected, phrase.text, title, announceType, look]);
 
   const fingerprintKey = selected.map((person) => person.id).join(",");
+  const pieceKey = `announce:${pieceKind}:${format}:${look}:${fingerprintKey}:${phrase.id}`;
+  useEffect(() => { setResult(null); }, [pieceKey]);
 
   useEffect(() => {
     if (isSeletiva) return undefined;
@@ -191,8 +195,8 @@ export function AnnounceStudio({ workspace, look, job, running, openViewer }) {
     if (next.status === "error") notify(next.error || "Não foi possível gerar o anúncio.", "error");
     else if (next.status === "ready") {
       if (phrase.id && phrase.id !== "custom") setUsedPhraseIds((current) => [...current.filter((id) => id !== phrase.id), phrase.id].slice(-8));
-      notify(format === "feed" ? "Post gerado." : "Reels gerado.");
-      if (next.result) openViewer(next.result);
+      notify(format === "feed" ? "Post pronto." : "Reels pronto.");
+      if (next.result) setResult(next.result);
     }
   };
 
@@ -228,10 +232,12 @@ export function AnnounceStudio({ workspace, look, job, running, openViewer }) {
       <MediaWorkspace
         stage={
           <PreviewStage
-            pieceKey={`announce:${pieceKind}:${format}:${look}:${fingerprintKey}:${phrase.id}`}
+            pieceKey={pieceKey}
             ratio={format} caption={MEDIA_FORMAT_LABELS[format]} state={!selected.length ? "empty" : assets ? "ready" : "loading"} label="Preview do anúncio FC27"
+            job={running && mine ? job : null} showingResult={Boolean(result)}
           >
-            {!selected.length ? <StageEmpty title="Escolha quem entra na peça." hint="Selecione ao menos uma pessoa do elenco ativo." />
+            {result ? <StageResult record={result} />
+              : !selected.length ? <StageEmpty title="Escolha quem entra na peça." hint="Selecione ao menos uma pessoa do elenco ativo." />
               : assets && timeline.totalFrames
                 ? <PreviewCanvas timeline={timeline} assets={assets} format={format} frameTime={announceFrameTime} renderFrame={renderAnnounceFrame} label="Preview do anúncio FC27" />
                 : <StageLoading />}
@@ -239,15 +245,25 @@ export function AnnounceStudio({ workspace, look, job, running, openViewer }) {
         }
         actions={
           <>
-            <PieceActions
-              primary={<button type="button" className="primary announce-generate" disabled={!selected.length || running} onClick={() => generate(false)}><RollingLabel>{running && mine ? "GERANDO…" : mediaGenerateLabel(output)}</RollingLabel></button>}
-              secondary={record && <>
-                <button type="button" className="secondary" onClick={() => openViewer(record)}>VISUALIZAR</button>
-                <button type="button" className="secondary" onClick={() => downloadBlob(record.blob, record.fileName)}>{isImageRecord(record) ? "BAIXAR PNG" : "BAIXAR MP4"}</button>
-              </>}
-              tertiary={record && <button type="button" className="media-link announce-regenerate" disabled={!selected.length || running} onClick={() => generate(true)}>Gerar novamente</button>}
-            />
-            <MediaProgress job={job} />
+            {result ? (
+              <PieceActions
+                primary={<button type="button" className="primary" onClick={() => downloadBlob(result.blob, result.fileName)}>{isImageRecord(result) ? "BAIXAR PNG" : "BAIXAR MP4"}</button>}
+                secondary={<>
+                  <button type="button" className="secondary" onClick={() => openViewer(result)}>TELA CHEIA</button>
+                  <button type="button" className="secondary announce-regenerate" disabled={!selected.length || running} onClick={() => generate(true)}>GERAR DE NOVO</button>
+                </>}
+                tertiary={<button type="button" className="media-link" onClick={() => setResult(null)}>Voltar à prévia</button>}
+              />
+            ) : (
+              <PieceActions
+                primary={<button type="button" className="primary announce-generate" disabled={!selected.length || running} onClick={() => generate(false)}><RollingLabel>{running && mine ? (jobPercent(job) !== null ? `GERANDO… ${jobPercent(job)}%` : "GERANDO…") : mediaGenerateLabel(output)}</RollingLabel></button>}
+                secondary={record && <>
+                  <button type="button" className="secondary" onClick={() => setResult(record)}>VER ÚLTIMA</button>
+                  <button type="button" className="secondary" onClick={() => downloadBlob(record.blob, record.fileName)}>{isImageRecord(record) ? "BAIXAR PNG" : "BAIXAR MP4"}</button>
+                </>}
+                tertiary={!selected.length && <p className="media-hint">Selecione quem entra na peça para liberar.</p>}
+              />
+            )}
             {job?.status === "error" && mine && <MediaNotice tone="error" title="A geração não terminou.">{job.error}</MediaNotice>}
           </>
         }

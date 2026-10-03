@@ -32,13 +32,14 @@ test("MOTM, clean sheet e campos de goleiro distinguem ausente de zero real", ()
   const aliases = [{ ea_name: "GOLEIRO EA", player_id: "gk" }];
   const [missing] = aggregatePlayerStatistics([{ opponent_score: null, performance: { players: [{ eaName: "GOLEIRO EA", pos: "GK", rating: 8, saves: 2 }] } }], { players: roster, aliases });
   assert.equal(missing.metricSamples.mom, undefined);
+  assert.equal(missing.mom, 0);
   assert.equal(missing.motmPercentage, null);
   assert.equal(missing.cleanSheetsGk, 0);
   assert.equal(missing.goalsAgainstSamples, 0);
   assert.equal(missing.reflexSaves, 0);
   const [zero] = aggregatePlayerStatistics([{ opponent_score: 0, performance: { players: [{ eaName: "GOLEIRO EA", pos: "GK", rating: 8, saves: 0, mom: 0, cleansheetsgk: 0, reflexSaves: 0 }] } }], { players: roster, aliases });
   assert.equal(zero.metricSamples.saves, 1);
-  assert.equal(zero.metricSamples.mom, 1);
+  assert.equal(zero.metricSamples.mom, undefined);
   assert.equal(zero.metricSamples.cleansheetsgk, 1);
   assert.equal(zero.metricSamples.reflexSaves, 1);
   assert.equal(zero.saves, 0);
@@ -99,13 +100,54 @@ test("usa métricas EA diretas sem somar breakdowns ou tratar zero segundos como
   assert.equal(player.shotConversion, 50);
   assert.equal(player.passAccuracy, 80);
   assert.equal(player.tackleAccuracy, 50);
-  assert.equal(player.mom, 1);
+  assert.equal(player.mom, 0, "quem não entrou em campo não leva o MOTM, mesmo com o campo da EA");
   assert.equal(player.cleanSheetsDef, 2);
   assert.equal(player.cleanSheetsGk, 1);
   assert.equal(player.saves, 4, "breakdown de defesas não é somado ao total oficial");
   assert.equal(player.reflexSaves, 3);
   assert.equal(player.goalkeeperGames, 0, "secondsPlayed igual a zero não conta automaticamente como atuação");
   assert.equal(player.goalsAgainst, 0);
+});
+
+test("MOTM é a maior nota do elenco em vitória ou empate e não existe na derrota", () => {
+  const roster = [
+    { id: "gk", display_name: "GOLEIRO", positions: ["GOL"], is_active: true },
+    { id: "linha", display_name: "LINHA", positions: ["ATA"], is_active: true },
+    { id: "nunes", display_name: "NUNES", positions: ["ATA"], is_active: true },
+  ];
+  const aliases = [
+    { ea_name: "Goleiro EA", player_id: "gk" },
+    { ea_name: "Linha EA", player_id: "linha" },
+    { ea_name: "Nunes", player_id: "nunes" },
+  ];
+  const won = aggregatePlayerStatistics([{
+    strix_score: 2,
+    opponent_score: 1,
+    performance: { players: [
+      { eaName: "Goleiro EA", pos: "GK", rating: 8, saves: 4, secondsPlayed: 900 },
+      { eaName: "Nunes", rating: 10, secondsPlayed: 900 },
+      { eaName: "Fora do elenco", rating: 11, secondsPlayed: 900 },
+    ] },
+  }], { players: roster, aliases });
+  assert.equal(won.find((player) => player.name === "NUNES").mom, 1);
+  assert.equal(won.find((player) => player.name === "GOLEIRO").mom, 0);
+  assert.equal(won.some((player) => player.name === "Fora do elenco"), false);
+  const drawn = aggregatePlayerStatistics([{
+    strix_score: 1,
+    opponent_score: 1,
+    performance: { players: [
+      { eaName: "Linha EA", rating: 7.5, secondsPlayed: 900 },
+      { eaName: "Nunes", rating: 7, secondsPlayed: 900 },
+    ] },
+  }], { players: roster, aliases });
+  assert.deepEqual(buildRanking(drawn, "mom").map((player) => player.name), ["LINHA"]);
+  const lost = aggregatePlayerStatistics([{
+    strix_score: 0,
+    opponent_score: 2,
+    performance: { players: [{ eaName: "Goleiro EA", pos: "GK", rating: 8, saves: 4, mom: 1, secondsPlayed: 900 }] },
+  }], { players: roster, aliases });
+  assert.equal(lost.find((player) => player.name === "GOLEIRO").mom, 0);
+  assert.equal(buildRanking(lost, "mom").length, 0);
 });
 
 test("precisão exige amostra mínima de passes", () => {

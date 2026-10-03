@@ -67,12 +67,14 @@ test("competition mobile selector, sticky standings and round navigation stay bo
   assert.match(css, /\.bracket-connectors path/);
 });
 
-test("global mobile shell reserves safe area and prevents global horizontal overflow", async () => {
-  const css = await read("src/ui/motion/motion.css");
-  assert.match(css, /overflow-x:\s*clip/);
-  assert.match(css, /padding-bottom:\s*calc\(118px \+ env\(safe-area-inset-bottom\)\)/);
-  assert.match(css, /bottom:\s*calc\(10px \+ env\(safe-area-inset-bottom\)\)/);
-  assert.match(css, /100dvh/);
+test("global mobile shell reserves safe area without masking horizontal overflow", async () => {
+  const [shell, motion] = await Promise.all([read("src/design/shell.css"), read("src/ui/motion/motion.css")]);
+  // Overflow is fixed at its cause, never hidden on html/body.
+  assert.doesNotMatch(motion, /html,\s*body,\s*#root\s*\{[^}]*overflow-x/);
+  assert.match(shell, /padding-bottom:\s*calc\(var\(--tabbar-h\) \+ 118px \+ env\(safe-area-inset-bottom\)\)/);
+  assert.match(shell, /bottom:\s*calc\(var\(--tabbar-h\) \+ env\(safe-area-inset-bottom\) \+ var\(--space-2\)\)/);
+  assert.match(shell, /height:\s*calc\(var\(--tabbar-h\) \+ env\(safe-area-inset-bottom\)\)/);
+  assert.match(shell, /100dvh/);
 });
 
 test("command, toast, menu and sheet keep their accessible interaction contracts", async () => {

@@ -7,8 +7,11 @@ import { RastroDataSignature } from "../../ui/RastroBrand.jsx";
 import { SelectControl } from "../../ui/SelectControl.jsx";
 import { analysisInsightKind, buildAnalysis, buildPlayerComparison, comparePeriods, playerComparisonState, selectAnalysisPeriod } from "./analysis-core.js";
 import "./analysis.css";
+import { PageHeader } from "../../ui/PageHeader.jsx";
 
-const radarColors = ["#2F80FF", "#78ADFF", "#c8ccd0", "#245FAF"];
+// Players are told apart by luminance and line pattern, never by hue alone.
+const radarColors = ["#f5f5f5", "#a9b0b8", "#757d86", "#d7dade"];
+const radarDashes = ["0", "7 4", "2 4", "12 4 2 4"];
 const metricIcons = {
   "GOLS / JOGO": IconBallFootball, "CHUTES / JOGO": IconShoe, "CONVERSÃO": IconTargetArrow,
   PRECISÃO: IconTargetArrow, "PASSES CERTOS / JOGO": IconArrowsExchange, "VOLUME / JOGO": IconChartBar,
@@ -18,7 +21,7 @@ const metricIcons = {
 const Trend = ({ value }) => value === "up" ? <span className="is-up"><IconArrowUpRight/>MELHORA</span> : value === "down" ? <span className="is-down"><IconArrowDownRight/>QUEDA</span> : <span><IconMinus/>ESTÁVEL</span>;
 
 function Metric({ icon: Icon, label, value, suffix = "", note, tooltip, trend }) {
-  return <article className="analysis-metric" title={tooltip || undefined}><header><Icon size={20}/><small>{label}</small>{trend && <Trend value={trend}/>}</header><strong>{typeof value === "number" ? <AnimatedNumber id={`analysis-${label}-${value}`} value={value} suffix={suffix}/> : value ?? "—"}</strong><p>{note}</p></article>;
+  return <article className="analysis-metric" title={tooltip || undefined}><header><small>{label}</small>{trend && <Trend value={trend}/>}</header><strong>{typeof value === "number" ? <AnimatedNumber id={`analysis-${label}-${value}`} value={value} suffix={suffix}/> : value ?? "—"}</strong><p>{note}</p></article>;
 }
 
 function InsightLine({ children }) {
@@ -43,7 +46,7 @@ function RadarChart({ comparison }) {
   return <div className="analysis-radar-shell"><svg className="analysis-radar" viewBox="0 0 290 290" role="img" aria-label={`Comparação de ${comparison.players.map((player) => player.name).join(", ")}`}>
     {[25, 50, 75, 100].map((level) => <polygon key={level} points={polygonPoints(Array(count).fill(level))} className="radar-grid"/>)}
     {axisPoints.map((point, index) => <g key={comparison.axes[index]}><line x1="145" y1="145" x2={point.x} y2={point.y} className="radar-axis"/><text x={point.labelX} y={point.labelY} textAnchor={point.labelX < 125 ? "end" : point.labelX > 165 ? "start" : "middle"}>{comparison.axes[index]}</text></g>)}
-    {comparison.players.map((player, index) => <polygon key={player.playerId || player.handle} points={polygonPoints(player.values)} style={{ "--radar-color": radarColors[index] }} className="radar-player"/>)}
+    {comparison.players.map((player, index) => <polygon key={player.playerId || player.handle} points={polygonPoints(player.values)} style={{ "--radar-color": radarColors[index], "--radar-dash": radarDashes[index] }} className="radar-player"/>)}
   </svg><div className="analysis-radar-legend">{comparison.players.map((player, index) => <article key={player.playerId || player.handle} style={{ "--radar-color": radarColors[index] }}><header><i/><div><b>{player.name}</b><span>{player.games} jogo(s)</span></div></header><dl>{comparison.axes.map((axis, axisIndex) => <div key={axis}><dt>{axis}</dt><dd>{player.rawValues[axisIndex]}</dd></div>)}</dl></article>)}</div></div>;
 }
 
@@ -88,7 +91,7 @@ export function AnalysisPage({ workspace, profile, matches = workspace.matches |
   ];
   const periodLabel = ({ last5: "Últimos 5 jogos", last10: "Últimos 10 jogos", season: "Temporada" })[period] || period.replace("competition:", "");
   return <section className="data-page page-enter analysis-v2">
-    <header className="data-page-header"><div><span>ANÁLISE · CONSELHO</span><h1>O que o jogo está dizendo.</h1><p>Leituras determinísticas para apoiar decisões, sem completar lacunas com suposições.</p></div><RastroDataSignature label="Data by" /></header>
+    <PageHeader title="O que o jogo está dizendo." description="Leituras determinísticas para apoiar decisões, sem completar lacunas com suposições." aside={<RastroDataSignature label="Data by" />} />
     <div className="analysis-filters">
       <SegmentedControl
         className="statistics-tabs-v3"
@@ -101,7 +104,7 @@ export function AnalysisPage({ workspace, profile, matches = workspace.matches |
     </div>
     <section className="analysis-context"><IconArrowsExchange/><div role="status" aria-live="polite"><span>{periodLabel}</span><strong>{team.games} partida(s)</strong></div><p>{trends ? "Comparação com o período imediatamente anterior." : "Sem amostra anterior suficiente para tendência."}</p></section>
     <div id="analysis-results" className="analysis-results" key={period}>
-      {team.games ? <><section className="analysis-groups">{groups.map(([title, Icon, metrics]) => <article className="analysis-group" key={title}><header><Icon/><div><span>LEITURA</span><h2>{title}</h2></div></header><div>{metrics.map(([label, value, suffix, note, tooltip, trend]) => <Metric key={label} icon={metricIcons[label] || Icon} label={label} value={value} suffix={suffix} note={value == null ? "Sem dados registrados" : note} tooltip={tooltip} trend={value == null ? null : trend}/>)}</div></article>)}</section><section className="analysis-insights"><header><span>INSIGHTS DO PERÍODO</span><h2>Leitura objetiva.</h2><RastroDataSignature label="Analytics by" /></header>{insights.map((insight) => <InsightLine key={insight}>{insight}</InsightLine>)}</section></> : <div className="analysis-empty">Não há partidas suficientes neste recorte. Escolha outro período ou competição.</div>}
+      {team.games ? <><section className="analysis-groups">{groups.map(([title, Icon, metrics]) => <article className="analysis-group" key={title}><header><div><h2>{title}</h2></div></header><div>{metrics.map(([label, value, suffix, note, tooltip, trend]) => <Metric key={label} icon={metricIcons[label] || Icon} label={label} value={value} suffix={suffix} note={value == null ? "Sem dados registrados" : note} tooltip={tooltip} trend={value == null ? null : trend}/>)}</div></article>)}</section><section className="analysis-insights"><header><span>INSIGHTS DO PERÍODO</span><h2>Leitura objetiva.</h2><RastroDataSignature label="Analytics by" /></header>{insights.map((insight) => <InsightLine key={insight}>{insight}</InsightLine>)}</section></> : <div className="analysis-empty">Não há partidas suficientes neste recorte. Escolha outro período ou competição.</div>}
     </div>
     <PlayerComparison matches={matches} workspace={{ ...workspace, players: activePlayers, aliases }} competitions={competitions}/>
   </section>;

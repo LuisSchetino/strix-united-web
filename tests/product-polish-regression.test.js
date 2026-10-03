@@ -12,11 +12,12 @@ test("team statistics use canonical FC27 identity and scoped Rastro data accents
   assert.match(page, /import \{ FC27_CLUB \} from "\.\.\/\.\.\/\.\.\/shared\/fc27-club\.js"/);
   assert.match(page, /Club ID · \{FC27_CLUB\.clubId\}/);
   assert.doesNotMatch(page, /625257/);
-  assert.match(css, /\.statistics-v3 \.statistics-stat-card>strong\{color:var\(--rastro-blue\)!important\}/);
-  assert.match(css, /\.statistics-ranking-modal \.statistics-ranking-list article\.is-top-1>strong\{background:rgba\(47,128,255/);
-  assert.match(css, /\.statistics-ranking-modal \.statistics-ranking-list article\.is-top-2>strong\{background:rgba\(120,173,255/);
-  assert.match(css, /\.statistics-ranking-modal \.statistics-ranking-list article\.is-top-3>strong\{background:rgba\(36,95,175/);
-  assert.match(css, /\.statistics-v3 \.statistics-ranking-card>ol>li>em\{color:#2F80FF!important\}/);
+  // STRIX UI ≠ RASTRO UI: data values read in Strix off-white; Rastro Blue
+  // only appears inside Rastro-scoped selectors (the signature).
+  assert.match(css, /\.statistics-v3 \.statistics-stat-card>strong\{color:var\(--text-1\)!important\}/);
+  const rules = [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)];
+  const leaks = rules.filter(([, selector, body]) => /rastro-blue|#2f80ff|47,\s*128,\s*255/i.test(body) && !/rastro/i.test(selector.split("*/").pop()));
+  assert.deepEqual(leaks.map(([, selector]) => selector.trim()), []);
   assert.doesNotMatch(css, /\.select-control[^}]*rastro-blue/);
 });
 
@@ -53,7 +54,8 @@ test("announcement studio keeps filtering, selection, ordering and export action
   for (const feature of ["announce-filters", "SÓ JOGADORES", "SÓ ESTRUTURA", "announce-person-index", "Subir ${person.name}", "Descer ${person.name}", "announce-generate", "ArchiveList", "<Options>"]) {
     assert.ok(page.includes(feature) || css.includes(feature), `missing media UI feature: ${feature}`);
   }
-  assert.match(page, /VISUALIZAR/);
+  assert.match(page, /TELA CHEIA/);
+  assert.match(page, /VER ÚLTIMA/);
   assert.match(page, /BAIXAR/);
   assert.match(css, /\.announce-people\{[^}]*overflow:auto/);
 });
@@ -61,11 +63,11 @@ test("announcement studio keeps filtering, selection, ordering and export action
 test("empty agenda widget exposes only the centered crest with an accessible action label", async () => {
   const [main, css] = await Promise.all([
     read("../src/main.jsx"),
-    read("../src/ui-bugfix.css"),
+    read("../src/design/shell.css"),
   ]);
   const widget = main.slice(main.indexOf("function CurrentGameLive"), main.indexOf("function WorkspaceSkeleton"));
   assert.match(widget, /aria-label=\{item \? `Próxima partida:/);
   assert.match(widget, /Agenda: nenhuma partida programada/);
   assert.match(widget, /item \? <><Crest small\/>/);
-  assert.match(css, /button\.now-playing\.is-agenda-free\{[^}]*width:56px[^}]*height:56px/s);
+  assert.match(css, /button\.now-playing\.is-agenda-free \{[^}]*width: 56px[^}]*height: 56px/s);
 });

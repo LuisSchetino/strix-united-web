@@ -85,10 +85,10 @@
 .contract-signature>header button:hover:not(:disabled){background:#15181d;color:#fff}
 .contract-signature>header button:disabled{opacity:.4;cursor:default}
 
-.signature-pad{position:relative;height:clamp(150px,26vh,200px);border:1px solid rgba(255,255,255,.14);border-radius:6px;background:#07090b;transition:border-color var(--motion-control) ease}
+.signature-pad{position:relative;height:clamp(150px,26vh,200px);border:1px solid rgba(255,255,255,.2);border-radius:0;background:#101318;transition:border-color var(--motion-control) ease}
 .signature-pad:hover,.signature-pad.is-drawing{border-color:rgba(255,255,255,.34)}
 .signature-pad canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:crosshair;-webkit-user-select:none;user-select:none}
-.signature-pad-line{position:absolute;left:5%;right:5%;bottom:28%;height:1px;background:rgba(255,255,255,.18);pointer-events:none}
+.signature-pad-line{position:absolute;left:5%;right:5%;bottom:28%;height:1px;background:rgba(255,255,255,.35);pointer-events:none}
 .signature-pad-hint{position:absolute;left:5%;bottom:10%;color:#5f6670;font-size:9px;font-weight:900;letter-spacing:.2em;pointer-events:none;transition:opacity var(--motion-control) ease}
 .signature-pad.has-ink .signature-pad-hint{opacity:0}
 .signature-pad.is-disabled{opacity:.6}
@@ -103,6 +103,29 @@
 
 .contract-error{margin:14px 0 0;color:#d8dce0;font-size:12px}
 .contract-error:before{content:"— "}
+.contract-instrument{display:grid;gap:16px;margin:0;padding:28px 32px 24px;border:1px solid rgba(255,255,255,.72);background:#090b0d;color:#f2f3f4;box-shadow:inset 0 0 0 5px #090b0d,inset 0 0 0 6px rgba(255,255,255,.45)}
+.contract-instrument-brand{display:grid;grid-template-columns:64px minmax(0,1fr) auto;gap:14px;align-items:center;padding-bottom:16px;border-bottom:1px solid rgba(255,255,255,.7)}
+.contract-instrument-crest{width:64px;height:64px}
+.contract-instrument-brand b{display:block;font:900 22px/1 Rajdhani,Inter,sans-serif;letter-spacing:.06em}
+.contract-instrument-brand span{display:block;margin-top:4px;color:#c8ccd0;font-size:11px;font-weight:800;letter-spacing:.14em}
+.contract-instrument-brand em{color:#f5f5f5;font-size:12px;font-style:normal;font-weight:800;letter-spacing:.04em}
+.contract-instrument h3{margin:4px 0 0;font:900 26px/1.05 Rajdhani,Inter,sans-serif;letter-spacing:.02em;text-transform:uppercase}
+.contract-instrument h4{margin:0 0 8px;font-size:12px;font-weight:900;letter-spacing:.14em;text-transform:uppercase}
+.contract-instrument section{display:grid;gap:8px}
+.contract-instrument p{min-width:0;margin:0;color:#e6e8ea;font-size:14px;line-height:1.7}
+.contract-instrument p b{color:#fff}
+.contract-instrument-sign{display:grid;gap:6px;margin-top:6px;padding:16px 18px 14px;border:1px solid rgba(255,255,255,.28);background:#101318}
+.contract-instrument-sign>span{color:#c8ccd0;font-size:10px;font-weight:900;letter-spacing:.16em}
+.contract-instrument-sign svg,.contract-instrument-sign .signature-pad{width:100%;min-width:0}
+.contract-instrument-sign svg{display:block;height:120px}
+.contract-instrument-sign path{fill:none;stroke:#f5f5f5;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1;stroke-dashoffset:1;animation:contract-draw 1.6s cubic-bezier(.4,0,.2,1) forwards}
+.contract-instrument-sign>i{height:1px;margin-top:2px;background:rgba(255,255,255,.7)}
+.contract-instrument-sign em{color:#fff;font-style:normal;font-size:14px;font-weight:800;letter-spacing:.04em}
+.contract-instrument-sign small{color:#c8ccd0;font-size:11px}
+.contract-pad-tools{display:flex;justify-content:flex-end;gap:8px}
+.contract-pad-tools button{min-height:32px;padding:0 10px;border:1px solid rgba(255,255,255,.14);border-radius:7px;background:transparent;color:#d8dce0;font-size:9px;font-weight:850;letter-spacing:.12em;cursor:pointer}
+.contract-downloads{grid-template-columns:1fr 1fr 1fr}
+.visually-hidden{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 .contract-actions{display:grid;gap:12px;margin-top:22px}
 .contract-actions .primary{min-height:50px;width:100%;font-size:11px;font-weight:900;letter-spacing:.14em}
 .contract-actions .primary:disabled{opacity:.38;cursor:not-allowed;box-shadow:none}

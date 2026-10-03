@@ -129,7 +129,7 @@ test("pintores legados permanecem isolados e os quatro MP4s ativos chamam o novo
   assert.doesNotMatch(collage, /width \* 0\.92|source-atop/);
   assert.doesNotMatch(collage, /paintCollagePitch/);
   assert.match(announceFrame, /paintEditorialAnnounce/);
-  assert.match(announceFrame, /timeline\?\.still\) paintAnnounceFrame/);
+  assert.doesNotMatch(announceFrame, /paintAnnounceFrame/);
   assert.match(agendaFrame, /paintEditorialAgenda/);
   assert.match(relatedFrame, /paintEditorialRelated/);
   assert.match(summaryFrame, /paintEditorialSummary/);

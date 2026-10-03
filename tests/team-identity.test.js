@@ -28,6 +28,16 @@ test("agenda resolves old automatic entries dynamically through source fixture",
 test("normalization removes only known sports suffixes", () => {
   assert.equal(normalizeTeamIdentityName("  POA City FC  "), "poa city");
   assert.equal(normalizeTeamIdentityName("Sport Club Recife"), "sport club recife");
+  assert.equal(normalizeTeamIdentityName("GLASGOW FC17"), "glasgow");
+  assert.equal(normalizeTeamIdentityName("BODO ES"), "bodo");
+  assert.equal(normalizeTeamIdentityName("Nexus SAF"), "nexus");
+  assert.equal(normalizeTeamIdentityName("SMG"), "smg");
+});
+
+test("in-game suffix still finds the provider crest", () => {
+  const teams = [{ id: "glasgow", edition_id: "ccb", name: "Glasgow FC", logo_url: "https://ccb.test/glasgow.png" }];
+  const identity = resolveTeamIdentity({ name: "GLASGOW FC17", teams });
+  assert.equal(identity.logo, "https://ccb.test/glasgow.png");
 });
 
 test("safe global CCB identity reuses a logo shared across editions", () => {

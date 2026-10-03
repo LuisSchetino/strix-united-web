@@ -15,12 +15,14 @@ test("known provider logos use the same-origin cache while local assets stay dir
 test("agenda mobile exposes sibling controls and a direct edit path", async () => {
   const source = await read("src/main.jsx");
   const css = await read("src/performance-polish.css");
+  const agenda = await read("src/features/agenda/agenda-list.css");
   assert.match(source, /className="agenda-game-open"/);
   assert.doesNotMatch(source, /className={`agenda-game[\s\S]{0,180}role="button"/);
   assert.match(source, /EDITAR ESCALAÇÃO/);
   assert.match(source, /onEdit=\{modal\.entry/);
-  assert.match(css, /\.agenda-game-open\{grid-column:1\/5/);
-  assert.match(css, /\.agenda-game\{grid-template-columns:64px minmax\(0,1fr\) 48px!important\}/);
+  assert.match(agenda, /\.agenda-game-open \{[^}]*grid-column: 1 \/ 5/);
+  assert.match(agenda, /--agenda-grid: 64px minmax\(0, 1fr\) 48px/);
+  assert.match(agenda, /\.agenda-more \{[^}]*width: var\(--hit\)/);
   assert.match(css, /min-height:46px/);
   assert.match(css, /100dvh/);
   assert.match(css, /env\(safe-area-inset-bottom\)/);

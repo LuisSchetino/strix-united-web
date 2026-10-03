@@ -1,72 +1,6 @@
 /* Last-layer mobile Safari shell: docked sidebar, sheet header/body/footer, safe area. */
 :root{--fc27-label:#aeb4bb}
 
-.sidebar{
-  display:flex;
-  flex-direction:column;
-  height:100vh;
-  height:100dvh;
-  overflow:hidden;
-  padding-bottom:0;
-}
-.sidebar-scroll{
-  flex:1 1 auto;
-  min-height:0;
-  overflow-x:hidden;
-  overflow-y:auto;
-  overscroll-behavior:contain;
-  -webkit-overflow-scrolling:touch;
-}
-.sidebar-dock{
-  flex:0 0 auto;
-  display:grid;
-  gap:10px;
-  width:100%;
-  min-height:136px;
-  align-content:end;
-  margin-top:auto;
-  padding:12px 10px max(16px,env(safe-area-inset-bottom));
-  border-top:1px solid var(--strix-border,rgba(255,255,255,.08));
-  background:inherit;
-}
-.sidebar .rastro-signature,
-.sidebar .rastro-signature.is-compact{
-  position:static!important;
-  inset:auto!important;
-  left:auto!important;
-  right:auto!important;
-  bottom:auto!important;
-  width:100%;
-  margin:0!important;
-  min-height:34px;
-}
-.sidebar-user,
-.sidebar-compact-account{
-  position:static!important;
-  left:auto!important;
-  right:auto!important;
-  bottom:auto!important;
-  width:100%!important;
-  margin:0;
-}
-.sidebar.is-compact{
-  display:flex;
-  flex-direction:column;
-}
-.sidebar.is-compact .sidebar-dock{
-  justify-items:center;
-  padding-inline:6px;
-  min-height:136px;
-  padding-top:12px;
-  padding-bottom:max(16px,env(safe-area-inset-bottom));
-}
-.sidebar.is-compact .sidebar-user,
-.sidebar.is-compact .sidebar-compact-account{
-  display:grid;
-  place-items:center;
-  width:100%!important;
-}
-
 .modal-backdrop,
 .match-manual-backdrop,
 .squad-dialog-layer{
@@ -209,18 +143,6 @@
   bottom:4%;
 }
 
-@media(max-width:900px){
-  .sidebar,
-  .sidebar.is-compact{
-    height:100dvh;
-    height:100svh;
-    padding-bottom:0!important;
-  }
-  .sidebar-dock{
-    padding-bottom:max(18px,env(safe-area-inset-bottom));
-  }
-}
-
 @media(max-width:760px){
   .modal-backdrop,
   .match-manual-backdrop,
@@ -351,6 +273,3 @@
   }
 }
 
-@media(prefers-reduced-motion:reduce){
-  .sidebar{transition:none}
-}

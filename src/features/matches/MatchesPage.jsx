@@ -20,14 +20,16 @@ import {
   suggestAgendaMatches,
   validateImport,
 } from "./import-core.js";
-import { canonicalPlayerName } from "../statistics/statistics-core.js";
+import { canonicalPlayerName, isStrixMotm } from "../statistics/statistics-core.js";
 import { describeEaArchetype } from "../statistics/ea-archetypes.js";
 import "./match-import.css";
 import "./match-fixes.css";
 import "../../partidas.css";
 
-import { canAddManualMatch, canSearchEa } from "../../access.js";
+import { canAddManualMatch, canCreatePlayer, canSearchEa } from "../../access.js";
+import { ClubLogo } from "../../ui/ClubLogo.jsx";
 import { readApiJson } from "../../lib/read-api-json.js";
+import { PageHeader } from "../../ui/PageHeader.jsx";
 const safeRows = (value) => Array.isArray(value) ? value : [];
 const matchTypeLabel = (value) => ({ friendlyMatch: "AMISTOSO EA", leagueMatch: "LIGA EA", playoffMatch: "PLAYOFF EA" })[value] || String(value || "PARTIDA EA").toUpperCase();
 const formatDate = (value) =>
@@ -319,6 +321,59 @@ function ReviewStep({
   );
 }
 
+function RosterQuickAdd({ eaName, onClose, onSaved, workspace }) {
+  const positions = ["GOL", "ZAG", "ALA", "VOL", "MC", "MEI", "ATA"];
+  const [draft, setDraft] = useState({ display_name: eaName || "", positions: [], member_type: "elenco", shirt_number: "", trial_expires_at: "" });
+  const [photo, setPhoto] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const previewUrl = useMemo(() => (photo ? URL.createObjectURL(photo) : ""), [photo]);
+  useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
+  useEffect(() => {
+    const onKey = (event) => { if (event.key === "Escape" && !saving) onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose, saving]);
+  const togglePosition = (position) => setDraft((current) => ({
+    ...current,
+    positions: current.positions.includes(position) ? current.positions.filter((item) => item !== position) : [...current.positions, position],
+  }));
+  const save = async (event) => {
+    event.preventDefault();
+    if (saving) return;
+    setSaving(true);
+    setError("");
+    try {
+      if (!draft.display_name.trim()) throw new Error("Informe o nome do jogador.");
+      if (!draft.positions.length) throw new Error("Escolha ao menos uma posição.");
+      const result = await workspace.savePlayer({ ...draft, trial_expires_at: draft.member_type === "teste" ? draft.trial_expires_at || null : null }, photo);
+      notify(result?.reactivated ? "Jogador reativado. Perfil e histórico preservados." : "Jogador salvo. Elenco atualizado.");
+      onSaved(result?.player?.id || "");
+    } catch (saveError) {
+      setError(saveError.message || "Não foi possível salvar o jogador.");
+      setSaving(false);
+    }
+  };
+  return createPortal(<div className="match-manual-backdrop squad-dialog-layer" onMouseDown={(event) => event.target === event.currentTarget && !saving && onClose()}>
+    <form className="match-manual-modal squad-modal-v2" role="dialog" aria-modal="true" aria-labelledby="alias-player-title" aria-busy={saving} onSubmit={save}>
+      <header><div><span>ELENCO · NOVO PERFIL</span><h2 id="alias-player-title">Adicionar jogador</h2><p>Entra no elenco e já fica vinculado a {eaName}.</p></div><CloseButton onClick={onClose} disabled={saving} /></header>
+      <div className="squad-editor"><section className="manual-form-grid">
+        <label className="manual-full">NOME DE EXIBIÇÃO<input autoFocus value={draft.display_name} onChange={(event) => setDraft((current) => ({ ...current, display_name: event.target.value }))} placeholder="Como aparece no time" /></label>
+        <label>NÚMERO<input type="number" min="0" max="99" value={draft.shirt_number} onChange={(event) => setDraft((current) => ({ ...current, shirt_number: event.target.value }))} placeholder="10" /></label>
+        <label className="manual-full logo-drop"><input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => setPhoto(event.target.files?.[0] || null)} /><span>{photo ? photo.name : "Enviar foto do computador"}</span></label>
+        <fieldset className="position-picker manual-full"><legend>POSIÇÕES EM QUE JOGA</legend>{positions.map((position) => <button type="button" className={draft.positions.includes(position) ? "selected" : ""} key={position} onClick={() => togglePosition(position)}>{position}</button>)}</fieldset>
+        <fieldset className="member-picker member-picker-three manual-full"><legend>VÍNCULO COM O TIME</legend>
+          <button type="button" className={draft.member_type === "elenco" ? "selected" : ""} onClick={() => setDraft((current) => ({ ...current, member_type: "elenco", trial_expires_at: "" }))}><b>ELENCO</b><small>Jogador do elenco</small></button>
+          <button type="button" className={draft.member_type === "teste" ? "selected" : ""} onClick={() => setDraft((current) => ({ ...current, member_type: "teste" }))}><b>TESTE</b><small>Em avaliação</small></button>
+          <button type="button" className={draft.member_type === "complete" ? "selected" : ""} onClick={() => setDraft((current) => ({ ...current, member_type: "complete", trial_expires_at: "" }))}><b>COMPLETE</b><small>Fixo no time</small></button>
+        </fieldset>
+        {draft.member_type === "teste" && <label className="manual-full">TESTE ATÉ<input type="date" value={draft.trial_expires_at} onChange={(event) => setDraft((current) => ({ ...current, trial_expires_at: event.target.value }))} /></label>}
+      </section><aside className="squad-preview"><span>PREVIEW DO ELENCO</span><ClubLogo name={draft.display_name || "?"} url={previewUrl} kind="photo" size={116} /><small>{draft.positions[0] || "POSIÇÃO"}</small><h3>{draft.display_name || "NOME DO JOGADOR"}</h3><p>{draft.member_type === "teste" ? "Jogador em teste" : draft.member_type === "complete" ? "Jogador completo" : "Jogador do elenco"}</p></aside></div>
+      <footer>{error && <p className="squad-save-error" role="alert">{error}</p>}<div><button type="button" className="secondary" onClick={onClose} disabled={saving}>CANCELAR</button><button className="primary" disabled={saving}>{saving ? "SALVANDO…" : "SALVAR JOGADOR"}</button></div></footer>
+    </form>
+  </div>, document.body);
+}
+
 export function ResolveStep({
   matches,
   agenda,
@@ -329,6 +384,8 @@ export function ResolveStep({
   patchAlias,
   back,
   next,
+  canAdd = false,
+  onAddPlayer,
 }) {
   return (
     <section className="import-stage motion-stack-stage">
@@ -353,7 +410,7 @@ export function ResolveStep({
                   {formatDate(match.date)} · {formatTime(match.date)}
                 </span>
               </div>
-              <em>{resultLabel(match)}</em>
+              <em className={resultLabel(match).toLowerCase()}>{resultLabel(match)}</em>
             </header>
             <div className="resolve-fields">
               <label>
@@ -431,7 +488,7 @@ export function ResolveStep({
                 const key = normalizeName(player.eaName);
                 return (
                   <div className="alias-player-row" key={`${match.id}-${key}`}>
-                    <b>{player.eaName}</b>
+                    <div className="alias-player-identity"><b>{player.eaName}</b>{canAdd && <button type="button" className="alias-add-player" aria-label={`Adicionar ${player.eaName} ao elenco`} onClick={() => onAddPlayer?.(player)}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>}</div>
                     <span className="alias-player-arrow" aria-hidden="true">→</span>
                     <label className="alias-player-select"><select aria-label={`Jogador do elenco para ${player.eaName}`} value={aliases[key] ?? ""} onChange={(event) => patchAlias(key, event.target.value)}>
                         <option value="">Fora do elenco</option>
@@ -555,6 +612,14 @@ function SummaryStep({
   );
 }
 
+function portuguesePosition(value) {
+  const labels = { goalkeeper: "Goleiro", gk: "Goleiro", defender: "Defensor", midfielder: "Meio-campo", winger: "Ponta", forward: "Atacante", striker: "Atacante", attacker: "Atacante" };
+  return String(value || "—").split(/[·,/]/).map((part) => {
+    const clean = part.trim();
+    return labels[clean.toLocaleLowerCase("pt-BR")] || clean;
+  }).filter(Boolean).join(" · ");
+}
+
 function StatIcon({ name }) {
   const paths = {
     possession: <><circle cx="12" cy="12" r="8"/><path d="M12 4v16M4 12h16"/></>,
@@ -570,6 +635,12 @@ function StatIcon({ name }) {
     mom: <path d="m12 3 2.2 4.6 5 .7-3.6 3.5.9 5.1L12 14.8 7.5 16.9l.9-5.1L4.8 8.3l5-.7L12 3Z"/>,
     cards: <path d="M8 3.5h8.5l2 2.2V20.5H8zM9.5 8h6M9.5 12h6M9.5 16h4"/>,
     clean: <><path d="M12 3.5 5 6.2v5.2c0 4.2 2.8 6.8 7 8.1 4.2-1.3 7-3.9 7-8.1V6.2L12 3.5Z"/><path d="m8.8 12 2.1 2.1 4.3-4.4"/></>,
+    direction: <><path d="M4 16.5 12 8l8 8.5"/><path d="M12 8v9"/><path d="M8 12h8"/></>,
+    reflex: <><path d="M13 3 6 13h5l-1 8 8-12h-5l0-6Z"/></>,
+    cross: <><circle cx="7" cy="16" r="2.2"/><path d="M9 15c3-6 6-8 11-9"/><path d="m16 4 4 2-1 4"/></>,
+    dive: <><path d="M3 15h10"/><path d="m10 12 3 3-3 3"/><circle cx="18.5" cy="9" r="2.2"/></>,
+    parry: <><path d="M12 4 6 7v5c0 3.2 2.2 5.2 6 6.4 3.8-1.2 6-3.2 6-6.4V7L12 4Z"/><path d="M9 11.5 15 9"/></>,
+    punch: <><path d="M8 14V8.5a1.5 1.5 0 0 1 3 0V13"/><path d="M11 13V7.2a1.4 1.4 0 0 1 2.8 0V13"/><path d="M13.8 12.2V8.4a1.3 1.3 0 0 1 2.6 0v5.2c0 3-2 5.2-5.2 5.4H9.2C7 19 5.5 17.2 5.5 15.2V12"/></>,
   };
   return <svg className="match-stat-icon" viewBox="0 0 24 24" aria-hidden="true">{paths[name] || paths.rating}</svg>;
 }
@@ -587,7 +658,7 @@ function PlayerMatchSheet({ player, match, workspace, close }) {
   const linkedPlayer = safeRows(workspace.players).find((item) => eaId && String(item.ea_player_id || "") === eaId)
     || (linkedAlias ? safeRows(workspace.players).find((item) => String(item.id) === String(linkedAlias.player_id)) : null);
   const name = linkedPlayer?.display_name || canonicalPlayerName(player.name || player.eaName, workspace.players, workspace.aliases);
-  const position = player.pos || player.position || linkedPlayer?.positions?.join(" · ") || "—";
+  const position = portuguesePosition(player.pos || player.position || linkedPlayer?.positions?.join(" · ") || "—");
   const archetype = player.archetypeId ? describeEaArchetype(player.archetypeId) : null;
   const archetypeName = archetype?.verified ? archetype.name : "";
   const goalkeeper = /^(GK|GOL|GL|GOLEIRO)$/i.test(String(position)) || Number(player.saves) > 0;
@@ -603,20 +674,26 @@ function PlayerMatchSheet({ player, match, workspace, close }) {
     ["DESARMES", tacklesMade, "tackles"],
     ["DESARMES TENTADOS", Number.isFinite(tackleAttempts) ? tackleAttempts : null, "tackles"],
     ["EFICIÊNCIA", tacklesMade !== null && Number.isFinite(tackleAttempts) && tackleAttempts > 0 ? `${((tacklesMade / tackleAttempts) * 100).toFixed(1)}%` : null, "efficiency"],
-    ["MOTM", player.mom === 1 || player.mom === true ? "SIM" : hasOwnValue(player.mom) ? "NÃO" : null, "mom"],
+    ["MOTM", isStrixMotm(match, player, { players: workspace.players, aliases: workspace.aliases }) ? "SIM" : null, "mom"],
     ["VERMELHO", player.redcards, "cards"], ["CLEAN SHEET DEF", player.cleansheetsdef, "clean"],
   ];
   const goalkeeperMetrics = [
-    ["DEFESAS · TOTAL EA", player.saves, "saves"], ["GOOD DIRECTION", player.goodDirectionSaves, "saves"], ["REFLEX", player.reflexSaves, "saves"],
-    ["CROSS", player.crossSaves, "saves"], ["BALL DIVE", player.ballDiveSaves, "saves"], ["PARRY", player.parrySaves, "saves"],
-    ["PUNCH", player.punchSaves, "saves"], ["CLEAN SHEET", player.cleansheetsgk, "clean"],
+    ["DEFESAS", player.saves, "saves"],
+    ["DIREÇÃO BOA", player.goodDirectionSaves, "direction"],
+    ["REFLEXO", player.reflexSaves, "reflex"],
+    ["CRUZAMENTO", player.crossSaves, "cross"],
+    ["MERGULHO", player.ballDiveSaves, "dive"],
+    ["ESPALMO", player.parrySaves, "parry"],
+    ["SOCO", player.punchSaves, "punch"],
+    ["SEM SOFRER GOL", player.cleansheetsgk, "clean"],
+    ["MOTM", isStrixMotm(match, player, { players: workspace.players, aliases: workspace.aliases }) ? "SIM" : null, "mom"],
   ];
   const dateLabel = match.played_at ? formatDate(match.played_at) : "Data indisponível";
   return createPortal(<div className="player-match-sheet-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && close()}>
     <section ref={dialogRef} tabIndex={-1} className="player-match-sheet" role="dialog" aria-modal="true" aria-label={`Ficha pós-jogo de ${name}`}>
       <header><div><span>FICHA PÓS-JOGO · {dateLabel}</span><h2>{name}</h2><p>{[position, archetypeName, `Strix ${match.strix_score} × ${match.opponent_score} ${match.opponent_name}`].filter(Boolean).join(" · ")}</p></div><CloseButton onClick={close}/></header>
       <div className="player-match-sheet-rating"><small><StatIcon name="rating"/> NOTA EA</small><strong>{hasOwnValue(player.rating) ? player.rating : "—"}</strong></div>
-      <div className="player-match-sheet-grid">{[...normalMetrics, ...(goalkeeper ? goalkeeperMetrics : [])].filter(([, value]) => value !== null && value !== undefined && value !== "").map(([label, value, icon]) => <article key={label}><StatIcon name={icon}/><small>{label}</small><b>{value}</b></article>)}</div>
+      <div className="player-match-sheet-grid">{(goalkeeper ? goalkeeperMetrics : normalMetrics).filter(([, value]) => value !== null && value !== undefined && value !== "").map(([label, value, icon]) => <article key={label}><StatIcon name={icon}/><small>{label}</small><b>{value}</b></article>)}</div>
       {!goalkeeper && <p className="player-match-sheet-note">Métricas defensivas e disciplina conforme os campos fornecidos pela EA.</p>}
       <footer><button type="button" className="secondary" onClick={close}>FECHAR</button></footer>
     </section>
@@ -715,7 +792,7 @@ function MatchDetails({ match, workspace, close }) {
                 <header role="row"><span>JOGADOR</span><span>NOTA</span><span>G</span><span>A</span><span>PASSES</span><span>CHUTES</span><span>DESARMES</span><span>DEFESAS</span></header>
                 {players.map((player, index) => (
                   <article role="row" className={`${Number(player.rating) === bestRating && bestRating > 0 ? "is-best " : ""}${disconnected(player) ? "is-disconnected" : ""}`} key={player.id || player.eaName || index}>
-                    <div><b><button type="button" className="match-player-profile-trigger" onClick={() => setSelectedPlayer(player)} aria-label={`Abrir ficha de ${canonicalPlayerName(player.name || player.eaName, workspace.players, workspace.aliases)} nesta partida`}>{canonicalPlayerName(player.name || player.eaName, workspace.players, workspace.aliases)}</button></b><small>{disconnected(player) && <em className="disconnect-badge">CAIU DA PARTIDA</em>}{!disconnected(player) && Number(player.rating) === bestRating && bestRating > 0 && <em className="match-player-tag"><StatIcon name="rating"/> MELHOR NOTA</em>}{Number(player.goals) === maxGoals && maxGoals > 0 && <em className="match-player-tag"><StatIcon name="goals"/> ARTILHEIRO</em>}{Number(player.assists) === maxAssists && maxAssists > 0 && <em className="match-player-tag"><StatIcon name="assists"/> ASSISTÊNCIA</em>}{Number(player.passesMade) === maxPasses && maxPasses > 0 && <em className="match-player-tag"><StatIcon name="passes"/> MAIS PASSES</em>}</small></div>
+                    <div><b><button type="button" className="match-player-profile-trigger" onClick={() => setSelectedPlayer(player)} aria-label={`Abrir ficha de ${canonicalPlayerName(player.name || player.eaName, workspace.players, workspace.aliases)} nesta partida`}>{canonicalPlayerName(player.name || player.eaName, workspace.players, workspace.aliases)}</button></b><small>{disconnected(player) && <em className="disconnect-badge">CAIU DA PARTIDA</em>}{!disconnected(player) && Number(player.rating) === bestRating && bestRating > 0 && <em className="match-player-tag"><StatIcon name="rating"/> MELHOR NOTA</em>}{isStrixMotm(match, player, { players: workspace.players, aliases: workspace.aliases }) && <em className="match-player-tag"><StatIcon name="mom"/> MOTM</em>}{Number(player.goals) === maxGoals && maxGoals > 0 && <em className="match-player-tag"><StatIcon name="goals"/> ARTILHEIRO</em>}{Number(player.assists) === maxAssists && maxAssists > 0 && <em className="match-player-tag"><StatIcon name="assists"/> ASSISTÊNCIA</em>}{Number(player.passesMade) === maxPasses && maxPasses > 0 && <em className="match-player-tag"><StatIcon name="passes"/> MAIS PASSES</em>}</small></div>
                     <strong>{player.rating ?? "—"}</strong><span>{player.goals ?? "—"}</span><span>{player.assists ?? "—"}</span><span>{player.passes ?? "—"}</span><span>{player.shots ?? "—"}</span><span>{player.tackles ?? "—"}</span><span>{player.saves ?? "—"}</span>
                   </article>
                 ))}
@@ -861,6 +938,7 @@ export function MatchesPage({ profile, workspace, client }) {
   const [success, setSuccess] = useState("");
   const [metrics, setMetrics] = useState(null);
   const [emptySource, setEmptySource] = useState("");
+  const [creatingPlayer, setCreatingPlayer] = useState(null);
   const chosen = safeRows(found).filter((match) => selected.has(match.id));
   const competitionOptions = useMemo(
     () =>
@@ -1046,14 +1124,11 @@ export function MatchesPage({ profile, workspace, client }) {
 
   return (
     <section className="matches-page page-enter progressive-matches">
-      <header className="matches-hero">
-        <div>
-          <span>PARTIDAS DO CLUBE</span>
-          <h1>Histórico de jogo.</h1>
-          <p>Encontre, revise e conecte cada partida ao ecossistema FC27.</p>
-        </div>
-        {(canImportEa || canManage) && (
-          <div className="matches-actions">
+      <PageHeader
+        title="Histórico de jogo."
+        description="Encontre, revise e conecte cada partida ao ecossistema FC27."
+        actions={(canImportEa || canManage) && (
+          <>
             {canImportEa && (
             <button
               className="secondary"
@@ -1068,9 +1143,9 @@ export function MatchesPage({ profile, workspace, client }) {
               ADICIONAR MANUAL
             </button>
             )}
-          </div>
+          </>
         )}
-      </header>
+      />
       {metrics && (
         <div className="performance-note" aria-live="polite">
           <span className={metrics.status === "error" ? "is-error" : metrics.status === "loading" ? "is-pending" : "is-ok"}>
@@ -1132,8 +1207,21 @@ export function MatchesPage({ profile, workspace, client }) {
           patchAlias={(key, value) =>
             setAliases((current) => ({ ...current, [key]: value }))
           }
+          canAdd={canCreatePlayer(profile)}
+          onAddPlayer={setCreatingPlayer}
           back={() => setStep("review")}
           next={() => setStep("summary")}
+        />
+      )}
+      {creatingPlayer && (
+        <RosterQuickAdd
+          eaName={creatingPlayer.eaName}
+          workspace={workspace}
+          onClose={() => setCreatingPlayer(null)}
+          onSaved={(playerId) => {
+            if (playerId) setAliases((current) => ({ ...current, [normalizeName(creatingPlayer.eaName)]: playerId }));
+            setCreatingPlayer(null);
+          }}
         />
       )}
       {found.length > 0 && step === "summary" && (
