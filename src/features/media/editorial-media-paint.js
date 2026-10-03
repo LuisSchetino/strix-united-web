@@ -103,6 +103,8 @@ function drawRise(ctx, value, x, y, size, progress, options = {}) {
   ctx.clip();
   ctx.globalAlpha *= Math.min(1, p * 1.4);
   ctx.translate(0, (1 - p) * size * 0.95);
+  const blur = (1 - p) * size * 0.06;
+  if (blur > 0.4 && typeof ctx.filter === "string") ctx.filter = `blur(${blur.toFixed(1)}px)`;
   drawText(ctx, value, x, y, size, options);
   ctx.restore();
 }
@@ -158,6 +160,25 @@ function drawBase(ctx, timeline, { section = "", date = "", counter = "", time =
     ctx.fillRect(0, 0, width, height);
   }
 
+  // A single beam of light, very slow, at a fixed angle: depth without texture.
+  const beamX = ((time * 0.045) % 1.6 - 0.3) * width;
+  const beam = ctx.createLinearGradient?.(beamX - width * 0.35, 0, beamX + width * 0.35, height * 0.6);
+  if (beam) {
+    beam.addColorStop(0, "rgba(245,245,245,0)");
+    beam.addColorStop(0.5, "rgba(245,245,245,0.028)");
+    beam.addColorStop(1, "rgba(245,245,245,0)");
+    ctx.fillStyle = beam;
+    ctx.fillRect(0, 0, width, height);
+  }
+  // Vignette: the edges fall away so the centre reads first.
+  const vignette = ctx.createRadialGradient?.(width / 2, height * 0.46, Math.min(width, height) * 0.32, width / 2, height * 0.46, Math.max(width, height) * 0.78);
+  if (vignette) {
+    vignette.addColorStop(0, "rgba(0,0,0,0)");
+    vignette.addColorStop(1, "rgba(0,0,0,0.42)");
+    ctx.fillStyle = vignette;
+    ctx.fillRect(0, 0, width, height);
+  }
+
   // Header: crest, club, piece.
   const headY = 104 * s;
   const crest = assets?.strix;
@@ -201,8 +222,28 @@ function withNowLine(ctx, timeline, progress, paint) {
   paint();
   ctx.restore();
   const s = scaleOf(timeline);
+  const trail = ctx.createLinearGradient?.(0, y - 64 * s, 0, y);
+  if (trail) {
+    trail.addColorStop(0, "rgba(245,245,245,0)");
+    trail.addColorStop(1, "rgba(245,245,245,0.07)");
+    ctx.save();
+    ctx.fillStyle = trail;
+    ctx.fillRect(M * s, y - 64 * s, timeline.width - 2 * M * s, 64 * s);
+    ctx.restore();
+  }
   drawRule(ctx, M * s, y, timeline.width - M * s, WHITE, Math.max(1, 1.5 * s));
   ctx.save();
+  // Micro-flash: the dot blooms for the first instant of the sweep, then settles.
+  const flash = Math.max(0, 1 - progress / 0.12);
+  if (flash > 0) {
+    const bloom = ctx.createRadialGradient?.(M * s, y, 0, M * s, y, 46 * s);
+    if (bloom) {
+      bloom.addColorStop(0, `rgba(245,245,245,${(0.5 * flash).toFixed(3)})`);
+      bloom.addColorStop(1, "rgba(245,245,245,0)");
+      ctx.fillStyle = bloom;
+      ctx.fillRect(M * s - 46 * s, y - 46 * s, 92 * s, 92 * s);
+    }
+  }
   ctx.fillStyle = WHITE;
   if (circle(ctx, M * s, y, 7 * s)) ctx.fill();
   else ctx.fillRect(M * s - 6 * s, y - 6 * s, 12 * s, 12 * s);

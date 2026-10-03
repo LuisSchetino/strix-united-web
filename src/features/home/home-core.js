@@ -1,7 +1,7 @@
 // Home "Agora": pure model of the club's present moment. Every value comes from
 // the workspace (agenda_matches, club_matches); nothing here is inferred or filled in.
 import { agendaHeroSelection, nextAgendaMatches, saoPauloDay, todayAgendaMatches } from "../agenda/agenda-time.js";
-import { aggregateTeamStatistics, uniqueMatches } from "../statistics/statistics-core.js";
+import { aggregateTeamStatistics, summarizeNight, uniqueMatches } from "../statistics/statistics-core.js";
 import { lineupState, untilLabel } from "../agenda/agenda-status.js";
 
 export { lineupState };
@@ -11,6 +11,8 @@ const MINUTE = 60_000;
 // After kickoff the agenda only knows the time has passed. Within this window the
 // Home says "começou às"; after it, the match is waiting for its imported result.
 export const STARTED_WINDOW_MIN = 40;
+// A result imported within this window is still "tonight's" story on the Home.
+export const RECENT_RESULT_HOURS = 12;
 
 const hourIn = (now) => Number(new Intl.DateTimeFormat("en-GB", { timeZone: ZONE, hour: "2-digit", hourCycle: "h23" }).format(now));
 
@@ -60,7 +62,21 @@ function nowState(match, now) {
   return { kind: "awaiting", label: "Aguardando resultado" };
 }
 
-export function buildHomeModel({ agenda = [], matches = [], now = new Date() } = {}) {
+/**
+ * What the club is living right now, in priority order:
+ *   next   — a match today that has not finished its window;
+ *   recent — a result imported in the last RECENT_RESULT_HOURS;
+ *   free   — nothing tonight; the next commitment (if any) is named.
+ */
+function homeMode(next, latest, now) {
+  if (next?.isToday && next.state.kind !== "awaiting") return "next";
+  const playedAt = latest ? new Date(latest.played_at).getTime() : NaN;
+  if (Number.isFinite(playedAt) && now.getTime() - playedAt >= 0 && now.getTime() - playedAt < RECENT_RESULT_HOURS * 3_600_000) return "recent";
+  if (next?.isToday) return "next";
+  return "free";
+}
+
+export function buildHomeModel({ agenda = [], matches = [], now = new Date(), players, aliases } = {}) {
   const hero = agendaHeroSelection(agenda, now);
   const tonight = todayAgendaMatches(agenda, now);
   const upcoming = nextAgendaMatches(agenda, now);
@@ -70,9 +86,27 @@ export function buildHomeModel({ agenda = [], matches = [], now = new Date() } =
   const latest = played.at(-1) || null;
   const team = aggregateTeamStatistics(played);
   const form = played.slice(-5).reverse().map((match) => ({ id: match.id, result: resultOf(match), opponent: match.opponent_name, date: match.played_at })).filter((item) => item.result);
+  const next = hero.match ? { match: hero.match, isToday: hero.isToday, state: nowState(hero.match, now), lineup: lineupState(hero.match) } : null;
+  const mode = homeMode(next, latest, now);
+  let recent = null;
+  if (mode === "recent") {
+    const day = saoPauloDay(latest.played_at);
+    const night = summarizeNight(played, day, { players, aliases });
+    const rating = aggregateTeamStatistics([latest]).averageRating;
+    recent = {
+      match: latest,
+      result: resultOf(latest),
+      teamRating: rating == null ? null : rating,
+      standout: night.leaders.rating || null,
+      night: night.games > 1 ? { games: night.games, wins: night.wins, draws: night.draws, losses: night.losses } : null,
+    };
+  }
   return {
     greeting: greetingFor(now),
-    next: hero.match ? { match: hero.match, isToday: hero.isToday, state: nowState(hero.match, now), lineup: lineupState(hero.match) } : null,
+    mode,
+    next,
+    recent,
+    upcoming: mode === "free" && hero.match ? hero.match : null,
     tonight,
     nextDays,
     last: latest ? { match: latest, result: resultOf(latest) } : null,

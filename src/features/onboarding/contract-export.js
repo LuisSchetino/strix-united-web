@@ -1,6 +1,4 @@
 import { encodeAgendaMp4 } from "../media/encode-mp4.js";
-import { CONTRACT_SEASON } from "./contract-core.js";
-import { pdfFromJpeg } from "./contract-pdf.js";
 
 const SCALE = 2;
 
@@ -26,7 +24,7 @@ function paintBox(ctx, element, origin) {
     ctx.strokeRect(x + width / 2, y + width / 2, Math.max(0, rect.width - width), Math.max(0, rect.height - width));
   }
   if (element.classList?.contains("contract-instrument")) {
-    ctx.strokeStyle = "rgba(255,255,255,.45)";
+    ctx.strokeStyle = "rgba(20,22,26,.28)";
     ctx.lineWidth = 1;
     ctx.strokeRect(x + 6.5, y + 6.5, Math.max(0, rect.width - 13), Math.max(0, rect.height - 13));
   }
@@ -132,7 +130,7 @@ function paintSignature(ctx, sheet, origin, progress) {
   ctx.clip();
   ctx.translate(rect.left - origin.left, rect.top - origin.top);
   ctx.scale(rect.width / unitWidth, rect.height / unitHeight);
-  ctx.strokeStyle = "#f5f5f5";
+  ctx.strokeStyle = getComputedStyle(path).stroke || "#15171b";
   ctx.lineWidth = 2.6;
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
@@ -197,36 +195,6 @@ function assertPainted(canvas) {
     if (data[index] + data[index + 1] + data[index + 2] > 90) light += 1;
   }
   if (light < 12) throw new Error("A captura do contrato saiu vazia. Deixa o contrato aberto na tela e tenta de novo.");
-}
-
-function downloadBytes(bytes, fileName, type) {
-  const blob = new Blob([bytes], { type });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = fileName;
-  anchor.hidden = true;
-  document.body.append(anchor);
-  anchor.click();
-  anchor.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 1500);
-}
-
-/** PDF is a raster of the contract already on screen: logo, type and signature. */
-export async function downloadSignedContractPdf(node, season = CONTRACT_SEASON) {
-  if (!node?.querySelector && !node?.classList?.contains("contract-instrument")) {
-    throw new Error("signed_contract_unavailable");
-  }
-  const sheet = node.classList?.contains("contract-instrument") ? node : node.querySelector(".contract-instrument");
-  if (!sheet) throw new Error("signed_contract_unavailable");
-  const canvas = await capture(sheet, 1);
-  assertPainted(canvas);
-  const blob = await new Promise((resolve, reject) => {
-    canvas.toBlob((result) => (result ? resolve(result) : reject(new Error("signed_contract_unavailable"))), "image/jpeg", 0.92);
-  });
-  const jpeg = new Uint8Array(await blob.arrayBuffer());
-  const pdf = pdfFromJpeg(jpeg, canvas.width, canvas.height);
-  downloadBytes(pdf, `strix-fc27-contrato-${String(season).replaceAll("/", "-")}.pdf`, "application/pdf");
 }
 
 /** Same sheet, with the signature drawing across the frames. */

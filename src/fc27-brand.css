@@ -38,18 +38,16 @@ body{background:var(--strix-bg)}
 .discord-login-icon{filter:grayscale(1) contrast(1.25)}
 .login-note{color:#747b84}
 
-.panel,.competition-section,.matches-list,.import-workbench,
-.statistics-stat-card,.statistics-ranking-card,.statistics-goalkeeper-card,.statistics-team-identity,
-.analysis-group,.analysis-context,.analysis-xray,.library-card,.data-card{
+.panel,.matches-list,.import-workbench,.data-card{
   border-color:var(--strix-border)!important;
   background-color:var(--strix-surface)!important;
   box-shadow:inset 0 1px #ffffff05,0 18px 48px #0004;
 }
 
-.page-title>span,.agenda-modal header span,.statistics-section-heading span,.analysis-group header span{
+.page-title>span,.agenda-modal header span,.statistics-section-heading span{
   color:#c7ccd1!important;
 }
-.competition-back{color:#d9dde1}
+
 
 .agenda-actions{border-color:var(--strix-border-strong);background:#111419;box-shadow:0 18px 42px #000c}
 .agenda-actions button:hover{background:#20252b!important}
@@ -73,38 +71,34 @@ body{background:var(--strix-bg)}
   background:repeating-linear-gradient(0deg,#181c21 0 9%,#101318 9% 18%,#15191e 18% 27%,#0d1014 27% 36%)!important;
   box-shadow:inset 0 0 82px #000,0 22px 46px #0008!important;
 }
-.competition-view-tabs,.competition-tabs{border-color:var(--strix-border);background:#0b0d10}
-.competition-view-tabs button.active,.competition-tabs button.active{background:transparent!important;color:#090a0b!important}
-.competition-card-grid>button,.competition-detail-hero,.competition-inline-hero{background-color:#0b0d10!important}
-.standings-table>article,.competition-results article{border-color:var(--strix-border)}
-.bracket-grid article{background:#101318;border-color:var(--strix-border-strong)}
+
+
+
+
+
 .statistics-v3,.analysis-v2{position:relative;isolation:isolate}
-.statistics-stat-card>span,.statistics-ranking-card>header>span,.statistics-goalkeeper-card>header>span{
-  border-color:var(--strix-border-strong)!important;background:#171b20!important;color:#f2f3f4!important;
-}
+
 .statistics-tabs-v3{border-color:var(--strix-border)!important;background:#0a0c0f!important}
-.statistics-tabs-v3 button.active,.statistics-tabs-v3 button[aria-selected="true"],.analysis-filters button.selected{
+.statistics-tabs-v3 button.active,.statistics-tabs-v3 button[aria-selected="true"]{
   background:transparent!important;color:#090a0b!important;
 }
 .statistics-ranking-modal{border-color:var(--strix-border-strong)!important;background:#0b0d10!important}
 .statistics-ranking-list article{border-color:var(--strix-border)!important;background:#101318!important}
 .statistics-ranking-list article.is-top{background:linear-gradient(90deg,#191d22,#101318)!important}
-.analysis-radar-shell{border-color:var(--strix-border)!important;background:#0b0d10!important}
-.radar-grid,.radar-axis{stroke:#ffffff18!important}
 
-html .gameday-editor-page{--gd-ui-blue:#f5f5f5;--gd-ui-deep:#858d96;background:#050607}
-html .gameday-editor-page .gd-page-title>div:first-child span,html .gameday-editor-page .gd-forbidden>span,html .gameday-editor-page .gd-field>span,html .gameday-editor-page .gd-player-editor small,html .gameday-editor-page .gd-team-row>span{color:#aeb4bb}
-html .gameday-editor-page .gd-editor-panel,html .gameday-editor-page .gd-preview-panel{border-color:var(--strix-border-strong);background:#0b0d10}
-html .gameday-editor-page .gd-editor-panel>nav{border-color:var(--strix-border);background:#07080a}
-html .gameday-editor-page .gd-editor-panel>nav button:hover{background:#15191e}html .gameday-editor-page .gd-editor-panel>nav button.active{border-left-color:#f5f5f5;background:#20252b}
-html .gameday-editor-page .gd-editor-scroll{scrollbar-color:#4b525a #0b0d10}
-html .gameday-editor-page .gd-field input,html .gameday-editor-page .gd-field textarea,html .gameday-editor-page .gd-field select,html .gameday-editor-page .gd-team-row>input{border-color:#343a41;background:#0d1014}
-html .gameday-editor-page .gd-field input:focus,html .gameday-editor-page .gd-field textarea:focus,html .gameday-editor-page .gd-field select:focus,html .gameday-editor-page .gd-team-row>input:focus{border-color:#f5f5f5;box-shadow:0 0 0 3px #ffffff12}
-html .gameday-editor-page .gd-upload,html .gameday-editor-page .gd-primary,html .gameday-editor-page .gd-secondary,html .gameday-editor-page .gd-text-button,html .gameday-editor-page .gd-project-row button,html .gameday-editor-page .gd-inline-actions button,html .gameday-editor-page .gd-library-card button{border-color:#3f4145;background:#111419;color:#e8eaec}
-html .gameday-editor-page .gd-primary{border-color:#f5f5f5;background:#f5f5f5;color:#08090a;box-shadow:0 10px 28px #0008}
-html .gameday-editor-page .gd-primary:hover{background:#fff}html .gameday-editor-page .gd-secondary:hover,html .gameday-editor-page .gd-project-row button:hover,html .gameday-editor-page .gd-inline-actions button:hover{background:#1a1f24}
-html .gameday-editor-page .gd-toggle input:checked+i{background:#737b84}html .gameday-editor-page .gd-player-editor,html .gameday-editor-page .gd-recommendation{border-color:#3f4145;background:#101318}
-html .gameday-editor-page .gd-dashed{border-color:#454c54;color:#d6d9dc}html .gameday-editor-page .gd-layer-controls input{accent-color:#d6d9dc}
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 .rastro-signature{
   position:absolute;left:16px;right:16px;bottom:91px;display:flex;align-items:center;gap:8px;min-height:34px;padding:7px 10px;
@@ -114,22 +108,21 @@ html .gameday-editor-page .gd-dashed{border-color:#454c54;color:#d6d9dc}html .ga
 .rastro-signature b{color:var(--rastro-blue);font-weight:900}
 .rastro-signature.is-compact{left:10px;right:10px;justify-content:center;padding-inline:0}
 .rastro-signature.is-compact span{display:none}
-.rastro-watermark{position:absolute;z-index:-1;right:32px;top:110px;display:grid;justify-items:center;pointer-events:none;opacity:.04;color:var(--rastro-blue)}
-.rastro-watermark img{width:240px;height:240px;object-fit:contain}.rastro-watermark span{font-size:9px;letter-spacing:.16em;text-transform:uppercase}
+
+
 .rastro-data-signature{display:flex;align-items:center;gap:7px;color:#7d8793;font-size:8px;letter-spacing:.09em;text-transform:uppercase}
 .rastro-data-signature img{width:22px;height:22px;object-fit:contain}.rastro-data-signature b{color:var(--rastro-blue)}
 
 /* Institutional surfaces are monochrome; semantic success/error/warning colors remain untouched. */
 .squad-context-menu,.squad-modal-v2,.squad-preview,.member-picker button,.position-picker button,
-.matches-list,.matches-list article,.match-manual-modal,.matches-source-empty,.import-stage,.match-review-list article,.agenda-actions,.agenda-modal,.competition-section,.competition-inline-hero,
-.library-card,.library-player-shell,.library-tracking,.formation-picker,.preset-panel{
+.matches-list,.matches-list article,.match-manual-modal,.matches-source-empty,.import-stage,.match-review-list article,.agenda-actions,.agenda-modal,.formation-picker,.preset-panel{
   border-color:var(--strix-border)!important;background-color:var(--strix-surface-1)!important;color:var(--strix-text);
 }
-.squad-context-menu button,.matches-list>header,.matches-list article>small,.match-teams strong,.competition-header>span,.library-card small{
+.squad-context-menu button,.matches-list>header,.matches-list article>small,.match-teams strong{
   color:#b7bdc4!important;
 }
 .icon-button,.match-row-actions button,.agenda-actions button,
-.member-picker button,.position-picker button,.library-card button{
+.member-picker button,.position-picker button{
   border-color:var(--strix-border-strong)!important;background:#111419!important;color:#d8dce0!important;
 }
 .member-picker button.selected,.position-picker button.selected{
@@ -149,11 +142,6 @@ html .gameday-editor-page .gd-dashed{border-color:#454c54;color:#d6d9dc}html .ga
   .rastro-signature{bottom:88px}
   
 }
-@media(max-width:580px){
-  .statistics-v3:after,.analysis-v2:after{right:8px;top:100px;width:170px;opacity:.025}
-  .rastro-watermark{right:8px;top:90px;opacity:.025}.rastro-watermark img{width:150px;height:150px}
-}
-
 /* Selection, caret and focus rings live in src/design/tokens.css. */
 .rastro-signature:not(.is-compact){justify-content:center;text-align:center}
 .motion-tooltip:after,.motion-tooltip:before{border-color:var(--strix-border-strong)!important;background:#111419!important;color:#eef0f2!important}

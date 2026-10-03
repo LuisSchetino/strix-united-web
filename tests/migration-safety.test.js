@@ -11,7 +11,7 @@ const nightRelatedUrl = new URL("../supabase/migrations/20260902220000_fc27_nigh
 test("migration FC27 e aditiva e ativa RLS nos novos dominios", async () => {
   const sql = await readFile(migrationUrl, "utf8");
   assert.doesNotMatch(sql, /\b(drop\s+table|truncate|delete\s+from)\b/i);
-  for (const table of ["gameday_projects", "competitions", "competition_editions", "competition_sources", "competition_fixtures"]) {
+  for (const table of ["competitions", "competition_editions", "competition_sources", "competition_fixtures"]) {
     assert.match(sql, new RegExp(`create table if not exists public\\.${table}`, "i"));
     assert.match(sql, new RegExp(`alter table public\\.${table} enable row level security`, "i"));
   }

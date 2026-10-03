@@ -1,6 +1,5 @@
 /* Interaction and mobile pass. The player cards remain selectable controls; text does not. */
 body,.panel{user-select:none;-webkit-user-select:none}.command input{user-select:text;-webkit-user-select:text}img{-webkit-user-drag:none;user-select:none;-webkit-user-select:none}
-:root{--strix-blue:#47494d;--strix-deep:#202226;--strix-glow:#74767a}
 
 .primary{background:#696b6f;color:#fff;box-shadow:0 9px 26px #47494d88}.primary:hover{background:#7c7e82}.panel{background:#16181c}.panel:hover{background:#1c1e22}.crest{filter:drop-shadow(0 0 14px #47494d99)}
 

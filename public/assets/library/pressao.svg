@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400" role="img" aria-label="Pressão">
+  <defs>
+    <radialGradient id="light" cx="0.5" cy="0.42" r="0.55"><stop offset="0" stop-color="#ffffff" stop-opacity="0.1"/><stop offset="1" stop-color="#ffffff" stop-opacity="0"/></radialGradient>
+    <radialGradient id="zone" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#2F80FF" stop-opacity="0.16"/><stop offset="1" stop-color="#2F80FF" stop-opacity="0"/></radialGradient>
+    <linearGradient id="fade" x1="0" y1="0" x2="0" y2="1"><stop offset="0.5" stop-color="#050607" stop-opacity="0"/><stop offset="1" stop-color="#050607" stop-opacity="0.92"/></linearGradient>
+    <marker id="head" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 1 8 5 0 9z" fill="#f3f3f3"/></marker>
+  </defs>
+  <rect width="640" height="400" fill="#08090a"/>
+  <rect width="640" height="400" fill="url(#light)"/>
+  <path d="M320 20V380" stroke="#ffffff" stroke-opacity="0.08" stroke-width="1.4"/>
+  <circle cx="320" cy="168" r="120" fill="url(#zone)"/>
+  <!-- the trap closing: three rings tightening on the ball -->
+  <g fill="none" stroke="#2F80FF" stroke-width="1.6">
+    <circle cx="320" cy="168" r="118" stroke-opacity="0.22"/>
+    <circle cx="320" cy="168" r="82" stroke-opacity="0.42"/>
+    <circle cx="320" cy="168" r="46" stroke-width="2.4"/>
+  </g>
+  <!-- the man on the ball -->
+  <circle cx="320" cy="168" r="9" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="2"/>
+  <circle cx="331" cy="178" r="4.5" fill="#f3f3f3"/>
+  <!-- four pressers converging -->
+  <g stroke="#f3f3f3" stroke-width="2.2" stroke-linecap="round">
+    <path d="M196 92L270 132" marker-end="url(#head)"/><path d="M444 86L370 128" marker-end="url(#head)"/>
+    <path d="M190 252L268 208" marker-end="url(#head)"/><path d="M452 258L372 210" marker-end="url(#head)"/>
+  </g>
+  <g fill="#08090a" stroke="#f3f3f3" stroke-width="2.4">
+    <circle cx="186" cy="86" r="9"/><circle cx="454" cy="80" r="9"/><circle cx="180" cy="258" r="9"/><circle cx="462" cy="264" r="9"/>
+  </g>
+  <rect width="640" height="400" fill="url(#fade)"/>
+</svg>

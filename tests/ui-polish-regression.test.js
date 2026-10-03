@@ -63,7 +63,7 @@ test("analysis segmented control reuses statistics language without an extra box
   ]);
   assert.match(analysisPage, /<SegmentedControl\s+className="statistics-tabs-v3"/);
   assert.match(statsPage, /className="statistics-tabs-v3"/);
-  assert.match(analysisCss, /\.analysis-filters\{[^}]*background:transparent!important/);
-  assert.match(analysisCss, /\.analysis-filters\{[^}]*border:0!important/);
+  assert.match(analysisCss, /\.analysis-filters \{[^}]*border: 0;[^}]*background: transparent;/);
+  assert.doesNotMatch(analysisCss, /!important/);
   assert.doesNotMatch(analysisCss, /\.analysis-filters\{padding:4px;border:1px solid var\(--strix-border\)/);
 });

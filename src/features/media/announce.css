@@ -23,7 +23,5 @@
 .announce-order button:disabled{opacity:.35;cursor:default}
 .announce-role{padding:0 10px 10px}
 .announce-empty{padding:18px 4px;color:var(--strix-muted,#8e969f);font-size:13px}
-.announce-fields{display:grid;gap:12px}
 .announce-field{display:grid;gap:6px}
 .announce-field>span{color:#aeb4bb;font-size:10px;font-weight:900;letter-spacing:.12em}
-.announce-field.is-headline input{font-weight:800}

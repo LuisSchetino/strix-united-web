@@ -155,7 +155,7 @@
 .member-tag.teste {
   background: var(--state-warning-soft);
   box-shadow: none;
-  color: #f0cd8b;
+  color: var(--state-warning-text);
 }
 .squad-context {
   grid-column: 5;

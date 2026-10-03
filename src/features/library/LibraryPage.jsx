@@ -1,17 +1,23 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { MotionTabs, notify } from "../../ui/motion/motion.jsx";
 import { CloseButton } from "../../ui/CloseButton.jsx";
 import { ActionMenu } from "../../ui/ActionMenu.jsx";
 import { SelectControl } from "../../ui/SelectControl.jsx";
 import {
+  LIBRARY_CATEGORIES,
   archiveLibraryItem,
   asArray,
   canManageLibrary,
   canTrackLibrary,
+  categoryCover,
+  libraryCategoriesOf,
   librarySource,
+  libraryThumbnail,
+  primaryCategory,
   progressPatch,
 } from "./library-core.js";
+import { LibraryTracking } from "./LibraryTracking.jsx";
 import "./library.css";
 import { PageHeader } from "../../ui/PageHeader.jsx";
 
@@ -27,16 +33,39 @@ const formatTime = (seconds) => {
   return `${Math.floor(value / 60)}:${String(value % 60).padStart(2, "0")}`;
 };
 
+const categoryLabel = (id) => LIBRARY_CATEGORIES.find((category) => category.id === id)?.label || "Biblioteca";
+
 function LibraryCover({ item, open }) {
   const [failed, setFailed] = useState(false);
-  const thumbnail = item.thumbnail_url;
-  const hasImage = thumbnail && !failed;
-  return <button className={`library-cover editorial-cover${hasImage ? " has-thumbnail" : ""}`} onClick={open} aria-label={`Assistir ${item.title}`}>
-    {hasImage ? <img src={thumbnail} alt="" loading="lazy" decoding="async" onError={() => setFailed(true)}/> : <svg className="library-pitch-art" viewBox="0 0 320 200" aria-hidden="true"><path d="M22 20H298V180H22Z M160 20V180 M22 55H70V145H22 M298 55H250V145H298"/><circle cx="160" cy="100" r="34"/><path className="play-route" d="M48 128L126 130L188 76L270 76"/><circle cx="48" cy="128" r="5"/><circle cx="126" cy="130" r="5"/><circle cx="188" cy="76" r="5"/></svg>}
-    <span className="library-cover-brand">STRIX UNITED <b>FC27</b></span>
-    <span className="library-cover-caption">{item.category === "review" ? "REVIEW" : "JOGADA"}<b>{asArray(item.tags)[0] || (item.category === "review" ? "Leitura de jogo" : "Biblioteca tática")}</b></span>
-    <i className="library-play-mark" aria-hidden="true">▶</i>
+  const shelf = primaryCategory(item);
+  const source = item.thumbnail_url && !failed ? item.thumbnail_url : categoryCover(shelf);
+  return <button className={`library-cover${item.thumbnail_url && !failed ? " has-thumbnail" : ""}`} onClick={open} aria-label={`Assistir ${item.title}`}>
+    <img src={source} alt="" loading="lazy" decoding="async" onError={() => setFailed(true)} />
+    <span className="library-cover-caption">{categoryLabel(shelf)}</span>
+    <i className="library-play-mark" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor" /></svg></i>
   </button>;
+}
+
+/** The shelves: one editorial cover per category, with what is on it and how far you are. */
+function CategoryShelf({ items, progress, userId, active, onChange }) {
+  const shelves = LIBRARY_CATEGORIES.map((category) => {
+    const pool = items.filter((item) => libraryCategoriesOf(item).includes(category.id));
+    const done = pool.filter((item) => progress.some((row) => row.item_id === item.id && row.user_id === userId && row.completed_at)).length;
+    return { ...category, total: pool.length, done };
+  }).filter((shelf) => shelf.total > 0 || shelf.base);
+  return <div className="library-shelves" role="group" aria-label="Categorias da Biblioteca">
+    {shelves.map((shelf, index) => {
+      const selected = active === shelf.id;
+      return <button type="button" key={shelf.id} className={`library-shelf data-arrive${selected ? " is-active" : ""}`} style={{ "--i": index }} aria-pressed={selected} onClick={() => onChange(selected ? "all" : shelf.id)} disabled={!shelf.total}>
+        <img src={categoryCover(shelf.id)} alt="" loading={index < 3 ? "eager" : "lazy"} decoding="async" />
+        <span className="library-shelf-copy">
+          <b>{shelf.label}</b>
+          <small>{shelf.total ? `${shelf.total} ${shelf.total === 1 ? "conteúdo" : "conteúdos"}` : "Nenhum conteúdo ainda"}</small>
+          {shelf.total > 0 && <em>Você · <span className="data-value">{shelf.done}</span>/{shelf.total} concluídos</em>}
+        </span>
+      </button>;
+    })}
+  </div>;
 }
 
 let youtubeApiPromise;
@@ -142,7 +171,7 @@ function LibraryPlayer({ item, progress, close, saveProgress }) {
       >
         <header>
           <div>
-            <span>{item.category === "jogada" ? "JOGADA" : "REVIEW"}</span>
+            <span>{categoryLabel(primaryCategory(item)).toLocaleUpperCase("pt-BR")}</span>
             <h2>{item.title}</h2>
             <p>{item.description || "Material do Strix FC27."}</p>
           </div>
@@ -380,8 +409,8 @@ function LibraryItemModal({ client, profile, close, refresh }) {
 }
 
 export function LibraryPage({ client, profile }) {
-  const [tab, setTab] = useState("plays");
-  const [playFilter, setPlayFilter] = useState("all");
+  const [tab, setTab] = useState("library");
+  const [shelf, setShelf] = useState("all");
   const [items, setItems] = useState([]);
   const [progress, setProgress] = useState([]);
   const [selected, setSelected] = useState(null);
@@ -461,40 +490,11 @@ export function LibraryPage({ client, profile }) {
     if (!saveError) await refresh();
   };
   const tabs = [
-    ["plays", "JOGADAS"],
-    ["reviews", "REVIEWS"],
+    ["library", "BIBLIOTECA"],
     ...(canTrack ? [["tracking", "ACOMPANHAMENTO"]] : []),
   ];
-  const playFilters = [
-    ["all", "Todas"],
-    ["saida de bola", "Saída de bola"],
-    ["pressao", "Pressão"],
-    ["defesa", "Defesa"],
-    ["movimentacao", "Movimentação"],
-  ];
-  const normalizeFilter = (value) => String(value || "").toLocaleLowerCase("pt-BR").normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-  const visibleItems = items.filter((item) =>
-    tab === "plays"
-      ? item.category === "jogada" && (playFilter === "all" || (() => {
-          const tags = asArray(item.tags).map(normalizeFilter);
-          return playFilter === "saida de bola"
-            ? tags.some((tag) => tag === "saida" || tag === "saida de bola")
-            : tags.includes(playFilter);
-        })())
-      : tab === "reviews"
-        ? item.category === "review"
-        : true,
-  );
-  const trackingRows = useMemo(
-    () =>
-      progress
-        .map((row) => ({
-          ...row,
-          item: items.find((item) => item.id === row.item_id),
-        }))
-        .filter((row) => row.item),
-    [progress, items],
-  );
+  const shelfOptions = [["all", "Todas as categorias"], ...LIBRARY_CATEGORIES.filter((category) => items.some((item) => libraryCategoriesOf(item).includes(category.id))).map((category) => [category.id, category.label])];
+  const visibleItems = shelf === "all" ? items : items.filter((item) => libraryCategoriesOf(item).includes(shelf));
   return (
     <section className="data-page page-enter library-v2">
       <PageHeader
@@ -518,13 +518,14 @@ export function LibraryPage({ client, profile }) {
         <div className="library-empty">Carregando Biblioteca…</div>
       ) : tab !== "tracking" ? (
         <>
-        {tab === "plays" && <div className="library-play-filter">
-          <span>FILTRAR JOGADAS</span>
-          <SelectControl value={playFilter} onChange={setPlayFilter} label="Filtrar jogadas" options={playFilters} />
-        </div>}
-        <section className="library-grid">
+        <CategoryShelf items={items} progress={progress} userId={profile.user_id} active={shelf} onChange={setShelf} />
+        <div className="library-play-filter">
+          <span>{shelf === "all" ? `${items.length} ${items.length === 1 ? "conteúdo" : "conteúdos"}` : `${categoryLabel(shelf)} · ${visibleItems.length}`}</span>
+          <SelectControl value={shelf} onChange={setShelf} label="Filtrar por categoria" options={shelfOptions} />
+        </div>
+        <section className="library-grid" key={shelf}>
           {visibleItems.length ? (
-            visibleItems.map((item) => {
+            visibleItems.map((item, index) => {
               const own = progress.find(
                 (row) =>
                   row.item_id === item.id && row.user_id === profile.user_id,
@@ -536,12 +537,11 @@ export function LibraryPage({ client, profile }) {
                   : `Aberto em ${formatDate(own.last_accessed_at)}`
                 : "Ainda não aberto";
               return (
-                <article className="library-editorial-card" key={item.id}>
+                <article className="library-editorial-card data-arrive" style={{ "--i": Math.min(index, 10) }} key={item.id}>
                   <LibraryCover key={`${item.id}-${item.thumbnail_url || ""}`} item={item} open={() => setSelected(item)}/>
                   <div className="library-editorial-copy">
                     <small>
-                      {source.type.toUpperCase()} ·{" "}
-                      {formatDate(item.published_at)}
+                      {source.type === "youtube" ? "YouTube" : source.type === "drive" ? "Google Drive" : "Vídeo"} · {formatDate(item.published_at)}
                     </small>
                     {canManage && (
                       <div className="library-card-manage">
@@ -575,35 +575,7 @@ export function LibraryPage({ client, profile }) {
         </section>
         </>
       ) : (
-        <section className="library-tracking">
-          <header>
-            <span>MEMBRO</span>
-            <span>MATERIAL</span>
-            <span>PROGRESSO</span>
-            <span>ÚLTIMO ACESSO</span>
-          </header>
-          {trackingRows.length ? (
-            trackingRows.map((row) => {
-              const source = librarySource(row.item.source_url);
-              return <article key={`${row.item_id}-${row.user_id}`}>
-                <b>{row.viewer_display_name}</b>
-                <span>
-                  {row.item.title}
-                  <small>{source.type} · {source.trackable ? "progresso" : "abertura registrada"}</small>
-                </span>
-                <strong>
-                  {source.trackable ? `${Math.round(row.progress_percent)}%` : "ABERTO"}
-                  <i style={{ "--progress": source.trackable ? `${row.progress_percent}%` : "100%" }} />
-                </strong>
-                <time>{formatDate(row.last_accessed_at)}</time>
-              </article>;
-            })
-          ) : (
-            <div className="library-empty">
-              Ainda não há acompanhamento registrado.
-            </div>
-          )}
-        </section>
+        <LibraryTracking items={items} progress={progress} />
       )}
       {selected && (
         <LibraryPlayer

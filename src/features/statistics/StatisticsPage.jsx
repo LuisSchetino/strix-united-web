@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import {
   IconArrowRight, IconArrowsLeftRight, IconBallFootball, IconChartBar, IconHandStop,
   IconPlayerPlay, IconShieldCheck, IconShoe, IconStar, IconTargetArrow, IconTrophy,
-  IconScale, IconUsers, IconX,
+  IconScale, IconUsers,
 } from "@tabler/icons-react";
 import { ClubLogo } from "../../ui/ClubLogo.jsx";
 import { CloseButton } from "../../ui/CloseButton.jsx";
@@ -12,7 +12,7 @@ import { STRIX_BRAND } from "../../brand.js";
 import { AnimatedNumber, SegmentedControl } from "../../ui/motion/motion.jsx";
 import { RastroDataSignature } from "../../ui/RastroBrand.jsx";
 import { SelectControl } from "../../ui/SelectControl.jsx";
-import { aggregatePlayerStatistics, aggregateTeamStatistics, buildPlayerProfile, buildPlayerProfileChoices, buildPositionContext, buildRanking, formatPlayerHandle, saoPauloDay, summarizeNight } from "./statistics-core.js";
+import { aggregatePlayerStatistics, aggregateTeamStatistics, buildPlayerProfileChoices, buildRanking, formatPlayerHandle, saoPauloDay, summarizeNight } from "./statistics-core.js";
 import { FC27_CLUB } from "../../../shared/fc27-club.js";
 import { describeEaArchetype } from "./ea-archetypes.js";
 import { PlayerProfile, SheetIcon, display, observed } from "../players/PlayerProfile.jsx";
@@ -31,7 +31,7 @@ function StatCard({ metric, label, value, suffix = "", note, tooltip, index = 0 
   const numeric = typeof value === "number";
   return <article className="statistics-stat-card" style={{ "--delay": `${Math.min(index, 8) * 35}ms` }} title={tooltip || undefined}>
     <small>{label}</small>
-    <strong>{numeric ? <AnimatedNumber id={`stats-${metric}-${value}`} value={value} suffix={suffix}/> : display(value, suffix)}</strong>
+    <strong className={numeric ? "data-value" : undefined}>{numeric ? <AnimatedNumber id={`stats-${metric}-${value}`} value={value} suffix={suffix}/> : display(value, suffix)}</strong>
     {note && <p>{note}</p>}
   </article>;
 }
@@ -58,8 +58,8 @@ function RankingCard({ title, metric, players, icon: Icon, suffix = "", criterio
   const ranking = buildRanking(players, metric);
   const top = ranking.slice(0, 5);
   return <article className="statistics-ranking-card">
-    <header><div><h3>{title}</h3>{criterion && <p className="statistics-criterion">{criterion}</p>}</div></header>
-    {top.length ? <ol>{top.map((player, index) => <li key={player.handle}><em>{index + 1}</em><div><b>{player.name}</b><small>{player.handle !== player.name ? displayHandle(player.handle) : `${player.games} jogo(s)`}</small></div><strong><RatingValue metric={metric} value={player[metric]} suffix={suffix}/></strong></li>)}</ol> : <p className="statistics-no-data">Amostra insuficiente.</p>}
+    <header><h3>{title}{criterion && <span className="data-criterion">{criterion}</span>}</h3></header>
+    {top.length ? <ol>{top.map((player, index) => <li key={player.handle}><em>{index + 1}</em><div><b>{player.name}</b><small>{player.handle !== player.name ? displayHandle(player.handle) : `${player.games} jogo(s)`}</small></div><strong className="data-value"><RatingValue metric={metric} value={player[metric]} suffix={suffix}/></strong></li>)}</ol> : <p className="statistics-no-data">Amostra insuficiente.</p>}
     {ranking.length > 5 && <button type="button" onClick={() => setOpen(true)}>VER RANKING <IconArrowRight size={15}/></button>}
     {open && <RankingModal ranking={ranking} metric={metric} title={title} suffix={suffix} close={() => setOpen(false)}/>}
   </article>;
@@ -97,20 +97,41 @@ function GoalkeeperCard({ player }) {
   </article>;
 }
 
+const nightDate = (day) => new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "short" }).format(new Date(`${day}T12:00:00-03:00`)).replace(".", "").toLocaleUpperCase("pt-BR");
+const nightTime = (value) => new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(value));
+const RESULT = { V: "Vitória", E: "Empate", D: "Derrota" };
+const resultOf = (game) => (game.for > game.against ? "V" : game.for < game.against ? "D" : "E");
+
 function NightSummary({ matches, workspace }) {
   const days = [...new Set((matches || []).map((match) => saoPauloDay(match.played_at || match.date)).filter(Boolean))].sort().reverse();
   const [selectedDate, setSelectedDate] = useState(days[0] || "");
-  const [open, setOpen] = useState(false);
   const availableDate = days.includes(selectedDate) ? selectedDate : days[0] || "";
   const summary = useMemo(() => availableDate ? summarizeNight(matches, availableDate, { players: workspace.players, aliases: workspace.aliases }) : null, [availableDate, matches, workspace.players, workspace.aliases]);
-  const leaderLabels = [["goals", "ARTILHARIA", "gols", "goals"], ["assists", "ASSISTÊNCIAS", "assistências", "assists"], ["rating", "MAIOR NOTA MÉDIA", "", "rating"], ["passes", "PASSES CERTOS", "passes", "passes"], ["tackles", "DESARMES", "desarmes", "tackles"], ["saves", "DEFESAS", "defesas", "saves"], ["mom", "MOTM", "MOTM", "mom"]];
-  if (!days.length) return null;
-  return <section className="statistics-night-summary">
-    <header><div><span>JOGOS CONCLUÍDOS</span><h2>Resumo da noite</h2><p>Recorte dos resultados e estatísticas já importados. Não representa confirmação de encerramento da Agenda.</p></div><div className="statistics-night-controls"><SelectControl value={availableDate} onChange={setSelectedDate} options={days.map((day) => [day, new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "medium" }).format(new Date(`${day}T12:00:00-03:00`))])} label="Data do resumo da noite"/><button type="button" className="secondary" onClick={() => setOpen((value) => !value)}>{open ? "OCULTAR RESUMO" : "VER RESUMO DA NOITE"}</button></div></header>
-    {open && summary && <div className="statistics-night-body">
-      <div className="statistics-night-scoreline"><article><small>JOGOS</small><strong>{summary.games}</strong></article><article><small>CAMPANHA</small><strong>{summary.wins}V · {summary.draws}E · {summary.losses}D</strong></article><article><small>GOLS</small><strong>{summary.goalsFor}–{summary.goalsAgainst}</strong></article><article><small>CLEAN SHEETS</small><strong>{summary.cleanSheets}</strong></article></div>
-      <div className="statistics-night-leaders">{leaderLabels.map(([key, label, unit, icon]) => { const leader = summary.leaders[key]; return leader ? <article key={key}><small><SheetIcon name={icon}/>{label}</small><div>{leader.names.map((name) => <span key={name}><b>{name}</b><strong>{leader.value}{unit ? ` ${unit}` : ""}</strong></span>)}</div></article> : null; })}</div>
-    </div>}
+  const leaderLabels = [["goals", "Artilharia", "gols", "goals"], ["assists", "Assistências", "assist.", "assists"], ["rating", "Maior nota", "", "rating"], ["passes", "Passes certos", "passes", "passes"], ["tackles", "Desarmes", "desarmes", "tackles"], ["saves", "Defesas", "defesas", "saves"], ["mom", "MOTM", "", "mom"]];
+  if (!days.length || !summary) return null;
+  const last = summary.matches.at(-1);
+  const record = [["Partidas", summary.games], ["Vitórias", summary.wins], ["Empates", summary.draws], ["Derrotas", summary.losses]];
+  const leaders = leaderLabels.map(([key, label, unit, icon]) => [key, label, unit, icon, summary.leaders[key]]).filter((item) => item[4]);
+  return <section className="night-edition" key={availableDate} aria-labelledby="night-edition-title">
+    <header className="night-edition-head">
+      <div>
+        <h2 id="night-edition-title">Resumo da noite</h2>
+        <p className="night-edition-dateline"><time dateTime={availableDate}>{nightDate(availableDate)}</time>{last && <><i aria-hidden="true" />último apito às {nightTime(last.playedAt)}</>}</p>
+      </div>
+      {days.length > 1 && <SelectControl value={availableDate} onChange={setSelectedDate} options={days.map((day) => [day, new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "medium" }).format(new Date(`${day}T12:00:00-03:00`))])} label="Data do resumo da noite"/>}
+    </header>
+    <i className="night-edition-rule" aria-hidden="true" />
+    <dl className="night-edition-record">{record.map(([label, value], index) => <div key={label} className="data-arrive" style={{ "--i": index }}><dt>{label}</dt><dd className="data-value"><AnimatedNumber id={`night-${availableDate}-${label}-${value}`} value={value} /></dd></div>)}
+      <div className="data-arrive" style={{ "--i": 4 }}><dt>Gols</dt><dd className="data-value">{summary.goalsFor}<span>–</span>{summary.goalsAgainst}</dd></div>
+    </dl>
+    <ol className="night-edition-games">{summary.matches.map((game, index) => { const result = resultOf(game); return <li key={game.id || index} className={`data-arrive is-${result}`} style={{ "--i": 5 + index }}>
+      <time dateTime={game.playedAt}>{nightTime(game.playedAt)}</time>
+      <span><b>{game.opponent}</b><small>{game.competition}</small></span>
+      <strong className="data-value">{game.for}<i>–</i>{game.against}</strong>
+      <em>{RESULT[result]}</em>
+    </li>; })}</ol>
+    {leaders.length > 0 && <div className="night-edition-leaders"><h3>Destaques</h3><dl>{leaders.map(([key, label, unit, icon, leader], index) => <div key={key} className="data-arrive" style={{ "--i": 5 + summary.matches.length + index }}><dt><SheetIcon name={icon}/>{label}</dt><dd><span>{leader.names.join(" · ")}</span><b className="data-value">{leader.value}{unit ? <small> {unit}</small> : null}</b></dd></div>)}</dl></div>}
+    <p className="night-edition-note">Recorte dos resultados e estatísticas importados da EA. Não confirma o encerramento da Agenda.</p>
   </section>;
 }
 
@@ -126,7 +147,7 @@ function Summary({ team, players, matches, workspace }) {
   ];
   const rankings = [
     ["ARTILHARIA", "goals", IconBallFootball], ["ASSISTÊNCIAS", "assists", IconUsers],
-    ["MELHORES NOTAS", "averageRating", IconStar], ["PRECISÃO DE PASSE", "passAccuracy", IconTargetArrow, "%", "Mínimo de 10 passes tentados"],
+    ["MELHORES NOTAS", "averageRating", IconStar], ["PRECISÃO DE PASSE", "passAccuracy", IconTargetArrow, "%", "mín. 10 passes"],
     ["MAIS PASSES CERTOS", "passesMade", IconArrowsLeftRight], ["PASSES TENTADOS", "passAttempts", IconChartBar],
     ["FINALIZAÇÕES", "shots", IconShoe], ["DESARMES CERTOS", "tackles", IconShieldCheck],
     ["GOLS + ASSISTÊNCIAS", "goalAssists", IconArrowsLeftRight], ["MOTM", "mom", IconStar],

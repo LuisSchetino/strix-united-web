@@ -187,43 +187,217 @@
   translate: 3px 0;
 }
 
-/* Nothing scheduled at all: the crest holds the space. */
+/* Free night: the crest holds the space, then names what comes next. */
 .home-now.is-free-night {
-  place-items: center;
-  min-height: clamp(300px, 42vh, 440px);
-  padding: 0;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-8);
+  min-height: clamp(300px, 40vh, 420px);
   isolation: isolate;
 }
-.home .free-night-field {
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  overflow: hidden;
-  pointer-events: none;
-  background:
-    linear-gradient(90deg, transparent calc(50% - 0.5px), rgba(255, 255, 255, 0.05) calc(50% - 0.5px), rgba(255, 255, 255, 0.05) calc(50% + 0.5px), transparent calc(50% + 0.5px)),
-    repeating-linear-gradient(90deg, transparent 0 79px, rgba(255, 255, 255, 0.022) 79px 80px);
+.free-night-composition {
+  position: relative;
+  display: grid;
+  place-items: center;
+  align-self: stretch;
+  min-height: 260px;
 }
 .home .free-night-ring {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: min(62vw, 360px);
+  width: min(58vw, 250px);
   aspect-ratio: 1;
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 50%;
   translate: -50% -50%;
-  animation: home-ring 10s ease-in-out infinite;
 }
 .home .free-night-ring.is-b {
-  width: min(92vw, 600px);
-  border-color: rgba(255, 255, 255, 0.035);
-  animation-delay: -5s;
+  width: min(80vw, 380px);
+  border-color: rgba(255, 255, 255, 0.04);
 }
 .home .free-night-logo {
   position: relative;
   display: grid;
   place-items: center;
+}
+.free-night-copy {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-3);
+}
+.home-intro-label {
+  margin: 0;
+  color: var(--text-3);
+  font-size: var(--text-label);
+  font-weight: 700;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+}
+.free-night-when {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-3);
+  margin: 0;
+  color: var(--text-1);
+  font-size: clamp(30px, 3.6vw, 48px);
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 1;
+}
+.free-night-when span {
+  color: var(--text-3);
+  font-size: 0.55em;
+  font-variant-numeric: tabular-nums;
+}
+.free-night-when.is-quiet {
+  color: var(--text-2);
+  font-size: var(--text-xl);
+  letter-spacing: var(--track-tight);
+}
+.free-night-fixture {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-2);
+  color: var(--text-1);
+  font-size: var(--text-md);
+}
+.free-night-fixture small {
+  color: var(--text-3);
+  font-size: var(--text-xs);
+}
+
+/* Recent result: tonight's story until the night is over. */
+.home-recent-score {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-4);
+  font-size: clamp(16px, 1.7vw, 22px);
+  font-weight: 800;
+}
+.home-recent-score strong {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-1);
+  font-size: clamp(56px, 7vw, 104px);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.05em;
+  line-height: 0.9;
+}
+.home-recent-score strong i {
+  color: var(--text-4);
+  font-size: 0.5em;
+  font-style: normal;
+}
+.home-recent-result {
+  margin: calc(var(--space-2) * -1) 0 0;
+  color: var(--text-2);
+  font-size: var(--text-label);
+  font-weight: 700;
+  letter-spacing: var(--track-label);
+  text-align: center;
+  text-transform: uppercase;
+}
+.home-now.is-V .home-recent-result {
+  color: var(--text-1);
+}
+.home-recent-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  margin: 0;
+  border-top: 1px solid var(--line-1);
+}
+.home-recent-facts > div {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-4) var(--space-4) 0 0;
+}
+.home-recent-facts dt {
+  color: var(--text-3);
+  font-size: var(--text-label);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.home-recent-facts dd {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--text-xl);
+  font-weight: 800;
+}
+.home-recent-facts dd span {
+  overflow: hidden;
+  color: var(--text-1);
+  font-size: var(--text-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* --------------------------------------------------------- choreography
+   One entrance, then the composition rests:
+   blur → crest in focus → first ring → second ring → the now line sweeps
+   across → copy arrives. Nothing loops. */
+.home-intro-sweep {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55) 45%, transparent);
+  opacity: 0;
+  pointer-events: none;
+  animation: home-sweep 900ms var(--motion-ease) 420ms both;
+}
+.free-night-composition .home-intro-sweep {
+  top: 50%;
+}
+.home-intro .free-night-logo,
+.home-intro .home-kickoff,
+.home-intro .home-recent-score strong {
+  animation: home-focus 620ms var(--motion-ease) both;
+}
+.home-intro .free-night-ring.is-a {
+  animation: home-ring-in 560ms var(--motion-ease) 180ms both;
+}
+.home-intro .free-night-ring.is-b {
+  animation: home-ring-in 640ms var(--motion-ease) 300ms both;
+}
+.home-intro .home-fixture,
+.home-intro .home-recent-score .home-fixture-side,
+.home-intro .free-night-copy > *,
+.home-intro .home-recent-facts,
+.home-intro .home-now-foot {
+  animation: home-copy-in var(--motion-section) var(--motion-ease) both;
+  animation-delay: 560ms;
+}
+.home-intro .free-night-copy > :nth-child(2) { animation-delay: 620ms; }
+.home-intro .free-night-copy > :nth-child(3) { animation-delay: 680ms; }
+.home-intro .free-night-copy > :nth-child(4),
+.home-intro .home-now-foot { animation-delay: 740ms; }
+
+@keyframes home-focus {
+  from { opacity: 0; filter: blur(12px); transform: scale(0.96); }
+  60% { opacity: 1; }
+  to { opacity: 1; filter: none; transform: none; }
+}
+@keyframes home-ring-in {
+  from { opacity: 0; scale: 0.82; }
+  to { opacity: 1; scale: 1; }
+}
+@keyframes home-sweep {
+  from { opacity: 0; transform: scaleX(0); transform-origin: left center; }
+  30% { opacity: 1; }
+  to { opacity: 0; transform: scaleX(1); transform-origin: left center; }
+}
+@keyframes home-copy-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
 }
 
 /* ------------------------------------------------------ section shell */
@@ -574,21 +748,11 @@
     transform: scale(1.6);
   }
 }
-@keyframes home-ring {
-  0%,
-  100% {
-    opacity: 0.55;
-    scale: 0.97;
-  }
-  50% {
-    opacity: 1;
-    scale: 1.02;
-  }
-}
 @media (prefers-reduced-motion: reduce) {
   .home-now.is-started .home-now-pulse::after,
-  .home .free-night-ring {
-    animation: none;
+  .home-intro *,
+  .home-intro-sweep {
+    animation: none !important;
   }
 }
 
@@ -666,4 +830,29 @@
     border-top: 1px solid var(--line-1);
     border-left: 0;
   }
+}
+
+@media (max-width: 720px) {
+  .home-now.is-free-night {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-4);
+  }
+  .free-night-composition {
+    min-height: 200px;
+  }
+  .home-recent-score {
+    gap: var(--space-2);
+  }
+  .home-recent-score .home-fixture-side {
+    flex-direction: column;
+    text-align: center;
+  }
+  .home-recent-score .home-fixture-side.is-away {
+    flex-direction: column;
+  }
+}
+
+/* In the recent state the hero is the last result; the season holds the ledger alone. */
+.home-stage.is-recent + .home-ledger {
+  grid-template-columns: minmax(0, 1fr);
 }

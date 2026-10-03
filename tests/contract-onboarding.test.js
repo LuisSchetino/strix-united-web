@@ -138,10 +138,11 @@ test("contrato assinado pode ser revisto e baixado sem reenviar assinatura", asy
   assert.doesNotMatch(main, /ContractArchiveAction/, "o contrato não fica no menu");
   assert.match(main, /<SquadPageV3 workspace=\{workspace\} profile=\{auth\.profile\} contract=\{signedContract\} identity=\{contractIdentity\} client=\{auth\.client\} \/>/);
   assert.match(archive, /REVER ANIMAÇÃO/);
-  assert.match(archive, /BAIXAR PDF/);
+  assert.match(archive, /<DocumentDownload contract=\{contract\} identity=\{identity\}/);
   assert.match(archive, /BAIXAR VÍDEO/);
   assert.match(archive, /renderContractVideo\(sheetRef\.current\)/);
-  assert.match(archive, /downloadSignedContractPdf\(sheetRef\.current/);
+  // The document is drawn from the signed payload, never printed from the screen.
+  assert.doesNotMatch(archive, /downloadSignedContractPdf\(sheetRef/);
   assert.match(archive, /lockScroll: true/);
   assert.match(archive, /aria-modal="true"/);
   assert.match(css, /100dvh/);

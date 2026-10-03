@@ -14,9 +14,9 @@ test("Rastro brand blue stays on analytics tokens, not on generic UI tokens", as
   assert.equal(RASTRO_BRAND.color, "#2F80FF");
   assert.match(tokens, /--rastro-blue:\s*#2F80FF/i);
   assert.match(tokens, /--rastro-blue-soft:\s*rgba\(47,\s*128,\s*255/);
-  // Legacy "blue" names resolve to off-white: structure never turns blue.
-  assert.match(tokens, /--strix-blue:\s*var\(--text-1\)/);
-  assert.match(tokens, /--fc27-blue:\s*var\(--text-1\)/);
+  // Legacy "blue" aliases are gone; Rastro Blue reaches data only through --data.
+  assert.doesNotMatch(tokens, /--(strix|fc27)-blue/);
+  assert.match(tokens, /--data:\s*var\(--rastro-blue\)/);
   assert.match(tokens, /--text-1:\s*#f5f5f5/);
   assert.match(brandCss, /\.rastro-signature b\{color:var\(--rastro-blue\)/);
   assert.doesNotMatch(selectCss, /var\(--rastro-blue\)/);

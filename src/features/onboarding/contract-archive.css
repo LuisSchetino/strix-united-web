@@ -1,34 +1,150 @@
-.contract-archive-link,.contract-archive-compact{display:flex;align-items:center;justify-content:center;gap:8px;min-height:38px;border:1px solid #ffffff18;border-radius:7px;background:transparent;color:#c7cbd0;cursor:pointer;transition:background .16s ease,color .16s ease,border-color .16s ease}
-.contract-archive-link{width:100%;justify-content:flex-start;margin-top:7px;padding:0 9px;font-size:8px;font-weight:900;letter-spacing:.09em}
-.contract-archive-link:hover,.contract-archive-compact:hover{border-color:#ffffff42;background:#ffffff08;color:#fff}
-.contract-archive-compact{width:44px;height:44px;padding:0}
-.contract-archive-backdrop{position:fixed;z-index:1000;inset:0;display:grid;place-items:center;padding:max(18px,env(safe-area-inset-top)) 18px max(18px,env(safe-area-inset-bottom));background:#000c;backdrop-filter:blur(5px);animation:contract-archive-fade 160ms ease both}
-.contract-archive-dialog{width:min(640px,100%);max-height:calc(100dvh - max(36px,env(safe-area-inset-top) + env(safe-area-inset-bottom)));display:flex;flex-direction:column;overflow:hidden;border:1px solid #ffffff28;border-radius:8px;background:#0c0e11;color:#f2f1ed;box-shadow:0 28px 80px #000b;outline:none;animation:contract-archive-rise 190ms ease both}
-.contract-archive-dialog>header,.contract-archive-dialog>footer{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:18px 22px}
-.contract-archive-dialog>header{border-bottom:1px solid #ffffff16}
-.contract-archive-dialog>header span{color:#959ba2;font-size:9px;font-weight:900;letter-spacing:.14em}
-.contract-archive-dialog h2{margin:5px 0 0;font-size:23px;letter-spacing:-.04em}
-.contract-archive-document{overflow:auto;margin:8px 18px 16px;padding:8px 8px 4px;border:0;background:transparent;color:#f5f5f5}
-.contract-archive-missing{margin:0;padding:8px 22px 18px;color:#d8dce0;font-size:14px;line-height:1.6}
-.contract-archive-brand{display:flex;justify-content:space-between;gap:12px;padding-bottom:14px;border-bottom:1px solid rgba(255,255,255,.1);font-size:9px;letter-spacing:.1em}
-.contract-archive-brand span{color:#aeb4bb;text-align:right}
-.contract-archive-document h3{margin:22px 0 18px;font:800 31px/1.05 Rajdhani,Inter,sans-serif;text-transform:uppercase}
-.contract-archive-document dl{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0}
-.contract-archive-document dl div{display:grid;gap:5px;min-width:0;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.1)}
-.contract-archive-document dt{color:#8e969f;font-size:8px;font-weight:900;letter-spacing:.12em}
-.contract-archive-document dd{margin:0;overflow-wrap:anywhere;font-size:12px;font-weight:800}
-.contract-archive-commitment{max-width:62ch;margin:18px 0;color:#d8dce0;font-size:12px;line-height:1.65}
-.contract-archive-signature{padding:12px;border:1px solid rgba(255,255,255,.14);border-radius:6px;background:#07090b}
-.contract-archive-signature>span{font-size:8px;font-weight:900;letter-spacing:.12em;color:#aeb4bb}
-.contract-archive-signature svg{display:block;width:100%;height:100px;margin-top:8px}
-.contract-archive-signature path{fill:none;stroke:#f5f5f5;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1;stroke-dashoffset:1;animation:contract-archive-draw 1500ms cubic-bezier(.4,0,.2,1) 120ms forwards}
-.contract-archive-document>small{display:block;margin-top:12px;color:#8e969f;font-size:9px}
-.contract-archive-dialog>footer{justify-content:flex-end;flex-wrap:wrap;border-top:1px solid #ffffff16}
-.contract-archive-dialog>footer button{min-height:44px;padding-inline:15px;font-size:9px;font-weight:900;letter-spacing:.08em}
-.contract-archive-error{flex:1 0 100%;margin:0;color:#f0c7c7;font-size:12px}
-.contract-archive-link:focus-visible,.contract-archive-compact:focus-visible,.contract-archive-dialog>footer button:focus-visible{outline:2px solid #f2f1ed;outline-offset:2px}
-@keyframes contract-archive-fade{from{opacity:0}to{opacity:1}}
-@keyframes contract-archive-rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-@keyframes contract-archive-draw{to{stroke-dashoffset:0}}
-@media(max-width:600px){.contract-archive-backdrop{align-items:end;padding:0 0 env(safe-area-inset-bottom)}.contract-archive-dialog{width:100%;max-height:calc(100dvh - env(safe-area-inset-top));border-radius:14px 14px 0 0}.contract-archive-dialog>header,.contract-archive-dialog>footer{padding:15px 17px}.contract-archive-document{margin:12px 14px;padding:19px 17px}.contract-archive-document h3{font-size:26px}.contract-archive-dialog>footer{display:grid;grid-template-columns:1fr 1fr}.contract-archive-dialog>footer button{padding-inline:7px;font-size:8px}}
-@media(prefers-reduced-motion:reduce){.contract-archive-backdrop,.contract-archive-dialog{animation:none}.contract-archive-signature path{animation:none;stroke-dashoffset:0}}
+/* Arquivo pessoal: the signed contract opened from the roster. The document is
+   the same ContractInstrument paper; this file only owns the dialog around it. */
+
+.contract-archive-link,
+.contract-archive-compact {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 38px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-2);
+  transition: background var(--motion-micro), color var(--motion-micro), border-color var(--motion-micro);
+}
+.contract-archive-link {
+  width: 100%;
+  justify-content: flex-start;
+  margin-top: var(--space-2);
+  padding: 0 var(--space-3);
+  font-size: var(--text-label);
+  font-weight: 700;
+  letter-spacing: var(--track-label);
+}
+.contract-archive-link:hover,
+.contract-archive-compact:hover {
+  border-color: var(--line-3);
+  color: var(--text-1);
+}
+.contract-archive-compact {
+  width: var(--hit);
+  height: var(--hit);
+  padding: 0;
+}
+
+.contract-archive-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: grid;
+  place-items: center;
+  padding: max(18px, env(safe-area-inset-top)) 18px max(18px, env(safe-area-inset-bottom));
+  background: rgba(5, 6, 7, 0.78);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  animation: motion-overlay-in var(--motion-modal) var(--motion-ease) both;
+}
+.contract-archive-dialog {
+  display: flex;
+  flex-direction: column;
+  width: min(780px, 100%);
+  max-height: calc(100dvh - max(36px, env(safe-area-inset-top) + env(safe-area-inset-bottom)));
+  overflow: hidden;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-lg);
+  background: var(--ink-1);
+  color: var(--text-1);
+  box-shadow: var(--shadow-sheet);
+  outline: none;
+  animation: contract-archive-rise var(--motion-section) var(--motion-ease) both;
+}
+.contract-archive-dialog > header,
+.contract-archive-dialog > footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+}
+.contract-archive-dialog > header {
+  border-bottom: 1px solid var(--line-2);
+}
+.contract-archive-dialog > header span {
+  color: var(--text-3);
+  font-size: var(--text-label);
+  font-weight: 700;
+  letter-spacing: var(--track-label);
+}
+.contract-archive-dialog h2 {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-xl);
+  font-weight: 800;
+  letter-spacing: var(--track-tight);
+}
+.contract-archive-document {
+  overflow: auto;
+  padding: var(--space-5);
+  overscroll-behavior: contain;
+}
+.contract-archive-missing {
+  margin: 0;
+  padding: var(--space-3) var(--space-5) var(--space-5);
+  color: var(--text-2);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+}
+.contract-archive-dialog > footer {
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  border-top: 1px solid var(--line-2);
+}
+.contract-archive-dialog > footer button {
+  min-height: var(--hit);
+  padding-inline: var(--space-4);
+  font-size: var(--text-label);
+  font-weight: 800;
+  letter-spacing: var(--track-label);
+}
+.contract-archive-error {
+  flex: 1 0 100%;
+  margin: 0;
+  color: var(--state-danger-text);
+  font-size: var(--text-xs);
+}
+@keyframes contract-archive-rise {
+  from { opacity: 0; transform: translateY(12px); filter: blur(4px); }
+  to { opacity: 1; transform: none; filter: none; }
+}
+@media (max-width: 600px) {
+  .contract-archive-backdrop {
+    align-items: end;
+    padding: 0 0 env(safe-area-inset-bottom);
+  }
+  .contract-archive-dialog {
+    width: 100%;
+    max-height: calc(100dvh - env(safe-area-inset-top));
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  }
+  .contract-archive-dialog > header,
+  .contract-archive-dialog > footer {
+    padding: var(--space-3) var(--space-4);
+  }
+  .contract-archive-document {
+    padding: var(--space-3);
+  }
+  .contract-archive-dialog > footer {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .contract-archive-dialog > footer .primary {
+    grid-column: 1 / -1;
+  }
+}
+@media (prefers-reduced-motion:reduce) {
+  .contract-archive-backdrop,
+  .contract-archive-dialog {
+    animation: none;
+  }
+}

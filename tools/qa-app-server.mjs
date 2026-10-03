@@ -94,18 +94,9 @@ const tables = {
     { id: "a2", scheduled_at: at("21:40"), opponent_name: "Sinceridade FC", status: "scheduled", competition_name: "Amistoso", opponent_logos: null },
     { id: "a3", scheduled_at: at("22:10"), opponent_name: "POA City", status: "scheduled", competition_name: "Copa Yeshua", opponent_logos: null },
   ],
-  // Synthetic EA-shaped player rows (QA only) so populated fichas and rankings can be reviewed.
   club_matches: [
-    { id: "m1", played_at: at("21:10"), opponent_name: "POA City", strix_score: 2, opponent_score: 1, competition_name: "Copa Yeshua", opponent_logos: null, agenda_matches: null, performance: { players: [
-      { eaName: "NUNES", rating: 8.1, goals: 1, assists: 1, passesMade: 31, passesAttempts: 36, shots: 3, tackles: 4, saves: 0, secondsPlayed: 5400 },
-      { eaName: "Santozz", rating: 7.6, goals: 1, assists: 0, passesMade: 14, passesAttempts: 19, shots: 5, tackles: 1, saves: 0, secondsPlayed: 5400 },
-      { eaName: "DORNELLAS", rating: 7.2, goals: 0, assists: 0, passesMade: 22, passesAttempts: 25, shots: 0, tackles: 6, saves: 0, secondsPlayed: 5400 },
-    ] } },
-    { id: "m2", played_at: at("22:10"), opponent_name: "Maquina FC", strix_score: 3, opponent_score: 0, competition_name: "Copa Yeshua", opponent_logos: null, agenda_matches: null, performance: { players: [
-      { eaName: "NUNES", rating: 8.6, goals: 1, assists: 2, passesMade: 35, passesAttempts: 39, shots: 2, tackles: 3, saves: 0, secondsPlayed: 5400 },
-      { eaName: "Santozz", rating: 8.3, goals: 2, assists: 0, passesMade: 12, passesAttempts: 16, shots: 6, tackles: 0, saves: 0, secondsPlayed: 5400 },
-      { eaName: "DORNELLAS", rating: 7.4, goals: 0, assists: 1, passesMade: 27, passesAttempts: 29, shots: 1, tackles: 5, saves: 0, secondsPlayed: 5400 },
-    ] } },
+    { id: "m1", played_at: at("21:10"), opponent_name: "POA City", strix_score: 2, opponent_score: 1, competition_name: "Copa Yeshua", opponent_logos: null, agenda_matches: null },
+    { id: "m2", played_at: at("22:10"), opponent_name: "Maquina FC", strix_score: 3, opponent_score: 0, competition_name: "Copa Yeshua", opponent_logos: null, agenda_matches: null },
   ],
   night_related: [{ id: "n1", night_date: today, player_ids: ["p1", "p2", "p3", "p4"] }],
 };

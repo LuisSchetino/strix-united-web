@@ -17,7 +17,7 @@ import "./fc27-data.css";
 import "./fc27-fixes.css";
 import { nextAgendaSlot } from "./features/agenda/agenda-slots.js";
 import { availableLineupPlayers, duplicateLineupPlayers, validateLineupUnique } from "./features/agenda/lineup-core.js";
-import { activeAgendaMatches, agendaHeroSelection, nextAgendaMatches, todayAgendaMatches } from "./features/agenda/agenda-time.js";
+import { activeAgendaMatches, nextAgendaMatches, todayAgendaMatches } from "./features/agenda/agenda-time.js";
 import { agendaStandingComparison } from "./features/agenda/agenda-standings.js";
 import { resolveAgendaTeamIdentity, resolveTeamIdentity } from "./features/teams/team-identity.js";
 import { buildEaClubLogoIndex, eaClubLogoFor, readOpponentClubId } from "./features/teams/ea-club-logo.js";
@@ -27,7 +27,6 @@ import { ActionMenu } from "./ui/ActionMenu.jsx";
 import { LaunchGate } from "./features/launch/LaunchGate.jsx";
 import { ContractGate, ContractValidating } from "./features/onboarding/ContractGate.jsx";
 import { hasSignedContract, readContract, resolveContractIdentity } from "./features/onboarding/contract-core.js";
-import { SignedContractArchive } from "./features/onboarding/SignedContractArchive.jsx";
 import { HomePage } from "./features/home/HomePage.jsx";
 import { PageHeader } from "./ui/PageHeader.jsx";
 import { useMinuteClock } from "./ui/useMinuteClock.js";
@@ -45,6 +44,7 @@ import "./ui-bugfix.css";
 import "./mobile-safe.css";
 import "./ui/strix-polish.css";
 import "./design/page.css";
+import "./design/data.css";
 import "./features/agenda/agenda-list.css";
 import "./design/shell.css";
 import { saveRosterPlayer } from "./features/squad/player-save.js";
@@ -73,7 +73,6 @@ import {
   pageFromLocation,
   permissionDenied,
   resolveLocation,
-  visibleNavItems,
 } from "./access.js";
 import { commandItems, filterCommandItems } from "./command-palette.js";
 import { mobileTabsFor, navGroupsFor } from "./navigation.js";
@@ -100,6 +99,8 @@ const StatisticsPage = lazy(routeLoaders.estatisticas);
 const AnalysisPage = lazy(routeLoaders.analise);
 const RosterTools = lazy(routeLoaders.elencoTools);
 const PlayerSheet = lazy(routeLoaders.playerSheet);
+// Opened from Elenco only; its document and video downloads load with it.
+const SignedContractArchive = lazy(() => import("./features/onboarding/SignedContractArchive.jsx").then((module) => ({ default: module.SignedContractArchive })));
 
 const icons = {
   menu: "M4 7h16M4 12h16M4 17h16",
@@ -2275,7 +2276,7 @@ function SquadPageV3({ workspace, profile, contract = null, identity = null, cli
         );
       }) : <div className="matches-empty">O elenco FC 27 começa vazio. Adicione os jogadores oficiais quando estiver pronto.</div>}
       {sheetPlayer && <Suspense fallback={null}><PlayerSheet rosterPlayer={sheetPlayer} workspace={workspace} onClose={() => setSheetPlayer(null)} actions={(canReadContracts || ownsContract(sheetPlayer)) && <button type="button" className="secondary" onClick={() => void openPlayerContract(sheetPlayer)}>VER CONTRATO</button>} /></Suspense>}
-      {contractOpen && <SignedContractArchive contract={viewedContract} identity={viewedIdentity} onClose={() => setContractOpen(false)} />}
+      {contractOpen && <Suspense fallback={null}><SignedContractArchive contract={viewedContract} identity={viewedIdentity} onClose={() => setContractOpen(false)} /></Suspense>}
       {editing !== null && <ViewportDialog className="match-manual-backdrop squad-dialog-layer" onClose={() => { if (!savingRef.current) close(); }}><form className="match-manual-modal squad-modal-v2" role="dialog" aria-modal="true" aria-labelledby="squad-editor-title" aria-busy={saving} onSubmit={save}>
         <header><div><span>ELENCO · {editing?.id ? "EDITAR PERFIL" : "NOVO PERFIL"}</span><h2 id="squad-editor-title">{editing?.id ? "Editar jogador" : "Adicionar jogador"}</h2><p>O preview acompanha a ficha antes de entrar no elenco.</p></div><CloseButton onClick={close} disabled={saving} /></header>
         <div className="squad-editor"><section className="manual-form-grid">
@@ -2320,7 +2321,7 @@ function DataPage({ id, workspace, profile, client }) {
     estatisticas: ["ESTATÍSTICAS", "Leitura da temporada.", "Os indicadores entram conforme as partidas forem importadas."],
     analise: ["ANÁLISE", "Sala de análise.", "Cruze resultados, adversários e desempenho sem preencher dados fictícios."],
     biblioteca: ["BIBLIOTECA", "Jogadas e reviews.", "A biblioteca FC 27 recebe os materiais quando a estrutura de mídia for liberada."],
-    midia: ["MÍDIA", "Central social.", "Artes, Gameday e Resumo do Dia entram nesta nova temporada."],
+    midia: ["MÍDIA", "Central social.", "Agenda do dia, relacionados, resumos e anúncios da temporada."],
     desenvolvedor: ["DESENVOLVEDOR", "Saúde do sistema.", "Auditoria e diagnósticos ficam disponíveis apenas para Desenvolvimento."],
   };
   const [eyebrow, title, description] = details[id] || ["STRIX FC 27", "Em construção.", ""];

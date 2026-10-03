@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { librarySource, libraryThumbnail, progressPatch, canTrackLibrary } from "../src/features/library/library-core.js";
+import { librarySource, libraryThumbnail, memberTracking, progressPatch, progressStatus, canTrackLibrary } from "../src/features/library/library-core.js";
 
 test("Biblioteca reconhece YouTube, Drive e mídia direta sem inventar tracking", () => {
   assert.equal(librarySource("https://youtu.be/abc123").type, "youtube");
@@ -18,8 +18,34 @@ test("progresso conclui em 90% e nunca regride segundos assistidos", () => {
   assert.equal(canTrackLibrary("player"), false);
 });
 
-test("thumbnail editorial é usada quando não há imagem manual", () => {
-  assert.equal(libraryThumbnail({ category: "jogada" }), "/assets/library-jogada.svg");
-  assert.equal(libraryThumbnail({ category: "review" }), "/assets/library-review.svg");
+test("cada categoria tem sua capa; a imagem manual vence quando existe", () => {
+  assert.equal(libraryThumbnail({ category: "jogada" }), "/assets/library/jogadas.svg");
+  assert.equal(libraryThumbnail({ category: "review" }), "/assets/library/reviews.svg");
+  assert.equal(libraryThumbnail({ category: "jogada", tags: ["Pressão"] }), "/assets/library/pressao.svg");
+  assert.equal(libraryThumbnail({ category: "jogada", tags: ["saída de bola"] }), "/assets/library/construcao.svg");
   assert.equal(libraryThumbnail({ category: "review", thumbnail_url: "https://cdn.example/custom.webp" }), "https://cdn.example/custom.webp");
+});
+
+test("acompanhamento por membro sai só das linhas reais de progresso", () => {
+  const items = [
+    { id: "a", category: "jogada", tags: ["pressao"], source_url: "https://youtu.be/x1" },
+    { id: "b", category: "review", tags: [], source_url: "https://youtu.be/x2" },
+    { id: "c", category: "review", tags: [], source_url: "https://drive.google.com/file/d/z/view" },
+  ];
+  const progress = [
+    { item_id: "a", user_id: "u1", viewer_display_name: "Nunes", progress_percent: 100, completed_at: "2026-10-02T23:00:00Z", last_accessed_at: "2026-10-02T23:00:00Z" },
+    { item_id: "b", user_id: "u1", viewer_display_name: "Nunes", progress_percent: 40, completed_at: null, last_accessed_at: "2026-10-02T22:00:00Z" },
+    { item_id: "gone", user_id: "u2", viewer_display_name: "Ex", progress_percent: 100, completed_at: "2026-10-01T00:00:00Z" },
+  ];
+  const [member, ...rest] = memberTracking(items, progress);
+  assert.equal(rest.length, 0, "rows of archived material do not create members");
+  assert.equal(member.name, "Nunes");
+  assert.equal(member.completed, 1);
+  assert.equal(member.opened, 2);
+  assert.equal(member.total, 3);
+  assert.equal(member.lastAccess, "2026-10-02T23:00:00Z");
+  assert.deepEqual(member.byCategory.find((entry) => entry.id === "reviews"), { id: "reviews", label: "Reviews", total: 2, done: 0, opened: 1 });
+  assert.equal(progressStatus(progress[1], items[1]), "in-progress");
+  assert.equal(progressStatus(null, items[2]), "none");
+  assert.equal(progressStatus({ progress_percent: 0 }, items[2]), "opened");
 });

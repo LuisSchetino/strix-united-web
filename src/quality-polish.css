@@ -19,24 +19,24 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 .workspace .agenda-standing-team small{font-size:10px}
 .workspace .agenda-standing-team dl{gap:8px}
 .workspace .agenda-standing-team dt,.workspace .agenda-standing-team dd{font-size:11px}
-.competitions-page .competition-detail-hero,.competitions-page .provider-next-match{background:#0e1013!important;border-color:var(--strix-border)!important}
-.competitions-page .competition-detail-hero>div>small{color:var(--strix-muted)}
-.competitions-page .competition-selector-item>button.active{border-color:#ffffff40!important;box-shadow:none!important}
-.competitions-page .competition-detail-hero .rolling-action{background:#191c20;color:#eeefef;border-color:#ffffff20}
-.competitions-page .competition-identity-logo{width:72px;height:72px;padding:0;background:none;border-radius:0}
-.competitions-page .competition-selector-logo{width:36px;height:36px;padding:0}
-.competitions-page .standing-logo{width:28px;height:28px}
-.competitions-page .competition-delete-trigger{min-width:44px;min-height:44px}
-.competitions-page .standings-table article{min-height:52px}
-.competitions-page .standings-table article:hover{background:#ffffff04}
-.competitions-page .standings-table article.is-strix> b:first-child{color:var(--next-clubs-accent,#c7ff2f)}
-.competitions-page .standings-table,.competitions-page .standings-table header,.competitions-page .standings-table article{background:#0b0d10!important;border-color:var(--strix-border)!important}
-.competitions-page .standings-table article.is-strix{background:#171a1e!important;box-shadow:none!important}
-.competitions-page .standings-table article:before{display:none!important}
-.competitions-page .standings-table article>div,.competitions-page .standings-table article>b{background:transparent!important}
-.competitions-page .standings-table article strong small{background:none!important;color:var(--next-clubs-accent,#c7ff2f)!important}
-.competitions-page .competition-section>header span{color:var(--strix-muted)!important}
-.competitions-page .qualification-legend{color:var(--next-clubs-accent,#c7ff2f)!important}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 .agenda-modal .modal-close,.formation-roster>header button,.statistics-ranking-modal>header button{min-width:44px;min-height:44px;background:#171a1e;color:#e6e8eb}
 .library-v2 .library-tabs{background:#111317!important;border-color:var(--strix-border)!important}
 .library-v2 .library-play-filter-menu{background:#111317;border-color:var(--strix-border)}

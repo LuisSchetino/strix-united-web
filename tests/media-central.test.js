@@ -31,7 +31,6 @@ test("o MediaRenderer decide o painter e o formato; o usuário nunca escolhe", (
   assert.deepEqual(resolveMediaOutput({ sectionId: "agenda", format: "feed" }), { type: "video", ext: "mp4", label: "MP4" });
   assert.equal(resolveMediaOutput({ sectionId: "announce", kind: "individual", format: "feed" }).type, "image");
   assert.equal(resolveMediaOutput({ sectionId: "announce", kind: "team", format: "story" }).type, "video");
-  assert.equal(resolveMediaOutput({ sectionId: "announce", kind: "seletiva" }).ext, "png");
   assert.equal(mediaGenerateLabel({ type: "image" }), "GERAR PNG");
   assert.equal(mediaGenerateLabel({ type: "video" }), "GERAR VÍDEO");
 });
@@ -78,7 +77,7 @@ test("motion: tokens centralizados, sem spring com overshoot e com reduced motio
   const [css, tokens] = await Promise.all([read("src/ui/motion/motion.css"), read("src/ui/motion/motion-tokens.js")]);
   for (const token of ["micro", "control", "modal", "section", "hero"]) assert.match(css, new RegExp(`--motion-${token}:`));
   assert.match(css, /--motion-ease-in:/);
-  assert.match(css, /--motion-spring: var\(--motion-ease\)/, "o spring antigo (1.15) saltava; agora é o mesmo easing de saída");
+  assert.doesNotMatch(css, /--motion-spring/, "o spring antigo saltava; o alias foi removido e todos usam --motion-ease");
   assert.doesNotMatch(css, /cubic-bezier\(0\.2, 0\.9, 0\.25, 1\.15\)/);
   assert.match(css, /prefers-reduced-motion: reduce\) \{\s*:root \{[^}]*--motion-section: 1ms/);
   assert.deepEqual(Object.keys(MOTION), ["micro", "control", "modal", "section", "hero"]);

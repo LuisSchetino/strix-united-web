@@ -12,12 +12,6 @@
   --motion-ease-inout: cubic-bezier(0.65, 0, 0.35, 1);
   --motion-enter-y: 6px;
   --motion-section-y: 10px;
-  /* Legacy names stay valid but resolve to the tokens above. The old spring
-     overshot; nothing in the product bounces any more. */
-  --motion-fast: var(--motion-micro);
-  --motion-normal: var(--motion-control);
-  --motion-slow: var(--motion-section);
-  --motion-spring: var(--motion-ease);
 }
 @media (prefers-reduced-motion: reduce) {
   :root {
@@ -62,7 +56,7 @@
   font-size: 10px;
   font-weight: 900;
   white-space: nowrap;
-  transition: color var(--motion-fast) ease;
+  transition: color var(--motion-micro) ease;
 }
 .motion-tabs button.active {
   color: #08090a;
@@ -81,15 +75,15 @@
   box-shadow: 0 5px 16px rgba(0,0,0,.28), inset 0 1px rgba(255,255,255,.7);
   opacity: 0;
   transition:
-    transform var(--motion-normal) var(--motion-spring),
-    width var(--motion-normal) var(--motion-spring),
-    opacity var(--motion-fast);
+    transform var(--motion-control) var(--motion-ease),
+    width var(--motion-control) var(--motion-ease),
+    opacity var(--motion-micro);
 }
 .motion-tabs-indicator.is-ready {
   opacity: 1;
 }
 .motion-panel-enter {
-  animation: motion-panel-enter var(--motion-normal) var(--motion-ease) both;
+  animation: motion-panel-enter var(--motion-control) var(--motion-ease) both;
 }
 @keyframes motion-panel-enter {
   from {
@@ -110,8 +104,8 @@
 .rolling-label > span {
   grid-area: 1/1;
   transition:
-    transform var(--motion-normal) var(--motion-ease),
-    opacity var(--motion-fast);
+    transform var(--motion-control) var(--motion-ease),
+    opacity var(--motion-micro);
 }
 .rolling-label > span:nth-child(2) {
   transform: translateY(120%);
@@ -133,8 +127,8 @@ button:focus-visible .rolling-label > span:nth-child(2) {
   justify-content: center;
   min-width: 96px;
   transition:
-    color var(--motion-fast),
-    background var(--motion-fast);
+    color var(--motion-micro),
+    background var(--motion-micro);
 }
 .motion-state-badge.is-loading {
   color: #bec0c4;
@@ -183,10 +177,10 @@ button:focus-visible .rolling-label > span:nth-child(2) {
   transform-origin: bottom center;
   transform: translate3d(var(--toast-drag, 0), calc(-1 * var(--toast-stack-y, 0px)), 0) scale(var(--toast-scale, 1));
   opacity: calc(1 - var(--toast-depth, 0) * 0.08);
-  animation: motion-toast-in var(--motion-normal) var(--motion-spring) both;
+  animation: motion-toast-in var(--motion-control) var(--motion-ease) both;
   transition:
-    opacity var(--motion-fast),
-    transform var(--motion-normal) var(--motion-spring);
+    opacity var(--motion-micro),
+    transform var(--motion-control) var(--motion-ease);
 }
 .motion-toast-viewport:hover .motion-toast,
 .motion-toast-viewport:focus-within .motion-toast {
@@ -293,7 +287,7 @@ button:focus-visible .rolling-label > span:nth-child(2) {
 .command-backdrop,
 .competition-modal-layer,
 .match-flow-backdrop {
-  animation: motion-overlay-in var(--motion-fast) ease both;
+  animation: motion-overlay-in var(--motion-micro) ease both;
 }
 .motion-dialog-panel,
 .command,
@@ -301,7 +295,7 @@ button:focus-visible .rolling-label > span:nth-child(2) {
 .archive-preview,
 .match-review-modal,
 .agenda-modal{
-  animation: motion-dialog-in var(--motion-normal) var(--motion-spring) both;
+  animation: motion-dialog-in var(--motion-control) var(--motion-ease) both;
 }
 @keyframes motion-overlay-in {
   from {
@@ -322,7 +316,7 @@ button:focus-visible .rolling-label > span:nth-child(2) {
   }
 }
 .motion-stack-stage {
-  animation: motion-stack var(--motion-normal) var(--motion-ease) both;
+  animation: motion-stack var(--motion-control) var(--motion-ease) both;
 }
 @keyframes motion-stack {
   from {
@@ -356,8 +350,8 @@ button:focus-visible .rolling-label > span:nth-child(2) {
   opacity: 0;
   pointer-events: none;
   transition:
-    opacity var(--motion-fast),
-    translate var(--motion-fast);
+    opacity var(--motion-micro),
+    translate var(--motion-micro);
 }
 .motion-tooltip:hover:after,
 .motion-tooltip:focus-visible:after {
@@ -379,12 +373,6 @@ button:focus-visible .rolling-label > span:nth-child(2) {
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  :root {
-    --motion-fast: 1ms;
-    --motion-normal: 1ms;
-    --motion-slow: 1ms;
-    --motion-enter-y: 0px;
-  }
   *,
   *:before,
   *:after {
@@ -468,7 +456,7 @@ body,
 }
 .agenda-actions {
   transform-origin: bottom right;
-  animation: motion-menu-in var(--motion-fast) var(--motion-ease) both;
+  animation: motion-menu-in var(--motion-micro) var(--motion-ease) both;
 }
 .agenda-actions button:focus-visible {
   outline: 2px solid #b4b6ba;
@@ -508,10 +496,10 @@ body,
 .secondary,
 .competition-detail-hero aside button{
   transition:
-    transform var(--motion-fast) var(--motion-spring),
-    background var(--motion-fast),
-    border-color var(--motion-fast),
-    color var(--motion-fast);
+    transform var(--motion-micro) var(--motion-ease),
+    background var(--motion-micro),
+    border-color var(--motion-micro),
+    color var(--motion-micro);
 }
 .primary:active,
 .secondary:active,
@@ -521,41 +509,17 @@ body,
 .icon-button svg,
 .match-row-actions svg,
 .agenda-actions svg {
-  transition: transform var(--motion-fast) var(--motion-spring);
+  transition: transform var(--motion-micro) var(--motion-ease);
 }
 .icon-button:hover svg,
 .match-row-actions button:hover svg,
 .agenda-actions button:hover svg {
   transform: translateY(-1px) rotate(-2deg);
 }
-/* Editor motion stays in the controls only; the export canvas remains deterministic. */
-.gd-editor-panel > nav button,
-.gd-mode-picker button,
-.gd-layer-controls button,
-.gd-inline-actions button,
-.gd-toggle i,
-.gd-toggle i:after {
-  transition:
-    color var(--motion-fast),
-    background var(--motion-fast),
-    border-color var(--motion-fast),
-    transform var(--motion-normal) var(--motion-spring);
-}
-.gd-editor-panel > nav button:active,
-.gd-mode-picker button:active,
-.gd-inline-actions button:active {
-  transform: scale(0.985);
-}
-.gd-editor-scroll > section,
-.gd-library-modal,
-.gd-modal-layer > section {
-  animation: motion-panel-enter var(--motion-normal) var(--motion-ease) both;
-}
-.gd-layer-controls button:focus-visible,
-.gd-editor-panel > nav button:focus-visible {
-  outline: 2px solid #b2b4b8;
-  outline-offset: -2px;
-}
+
+
+
+
 @media (max-width: 700px) {
   
   
@@ -612,9 +576,9 @@ body,
   border-radius: 11px;
   background: transparent !important;
   transition:
-    border-color var(--motion-fast),
-    transform var(--motion-fast) var(--motion-spring),
-    color var(--motion-fast);
+    border-color var(--motion-micro),
+    transform var(--motion-micro) var(--motion-ease),
+    color var(--motion-micro);
 }
 .command-results button.is-action {
   min-height: 82px;
@@ -628,8 +592,8 @@ body,
   flex: 0 0 19px;
   margin-top: 1px;
   transition:
-    transform var(--motion-fast) var(--motion-spring),
-    color var(--motion-fast);
+    transform var(--motion-micro) var(--motion-ease),
+    color var(--motion-micro);
 }
 .command-results button.selected > svg {
   color: #c3c5c9;
@@ -663,17 +627,17 @@ body,
   opacity: 0;
   pointer-events: none;
   transition:
-    transform var(--motion-normal) var(--motion-spring),
-    width var(--motion-normal) var(--motion-spring),
-    height var(--motion-normal) var(--motion-spring),
-    opacity var(--motion-fast);
+    transform var(--motion-control) var(--motion-ease),
+    width var(--motion-control) var(--motion-ease),
+    height var(--motion-control) var(--motion-ease),
+    opacity var(--motion-micro);
 }
 .command-selection-indicator.is-ready {
   opacity: 1;
 }
 .command-empty {
   grid-column: 1/-1;
-  animation: motion-panel-enter var(--motion-normal) var(--motion-ease) both;
+  animation: motion-panel-enter var(--motion-control) var(--motion-ease) both;
 }
 
 /* Stateful feedback has an internal transition and a short, visible exit. */
@@ -682,9 +646,9 @@ body,
   width: 98px;
   min-width: 0;
   transition:
-    width var(--motion-normal) var(--motion-spring),
-    color var(--motion-fast),
-    background var(--motion-fast);
+    width var(--motion-control) var(--motion-ease),
+    color var(--motion-micro),
+    background var(--motion-micro);
 }
 .motion-state-badge.is-loading {
   width: 126px;
@@ -700,7 +664,7 @@ body,
   align-items: center;
   gap: 6px;
   white-space: nowrap;
-  animation: motion-state-swap var(--motion-normal) var(--motion-ease) both;
+  animation: motion-state-swap var(--motion-control) var(--motion-ease) both;
 }
 .motion-state-content i {
   position: relative;
@@ -733,8 +697,8 @@ body,
 }
 .motion-toast {
   transition:
-    transform var(--motion-normal) var(--motion-spring),
-    opacity var(--motion-fast);
+    transform var(--motion-control) var(--motion-ease),
+    opacity var(--motion-micro);
 }
 .motion-toast.is-leaving {
   pointer-events: none;
@@ -743,14 +707,11 @@ body,
 @media (min-width: 701px) and (prefers-reduced-motion: no-preference) {
   
   
-  .page-enter > .gd-editor-header{
-    animation: motion-section-enter 430ms var(--motion-ease) both;
-  }
+  
   
   
   .page-enter > .matches-feedback,
-  .page-enter > .competition-selector,
-  .page-enter > .gd-editor-shell{
+  .page-enter > .competition-selector{
     animation: motion-section-enter 460ms var(--motion-ease) 55ms both;
   }
   
@@ -759,23 +720,15 @@ body,
     animation: motion-section-enter 500ms var(--motion-ease) 95ms both;
   }
   .panel,
-  .data-card,
-  .competition-overview-grid > article,
-  .competition-selector > button,
-  .competition-timeline > article,
-  .provider-next-match{
+  .data-card{
     transition:
-      transform var(--motion-normal) var(--motion-spring),
-      border-color var(--motion-fast),
-      box-shadow var(--motion-normal),
-      background var(--motion-fast);
+      transform var(--motion-control) var(--motion-ease),
+      border-color var(--motion-micro),
+      box-shadow var(--motion-control),
+      background var(--motion-micro);
   }
   .panel:hover,
-  .data-card:hover,
-  .competition-overview-grid > article:hover,
-  .competition-selector > button:hover,
-  .competition-timeline > article:hover,
-  .provider-next-match:hover{
+  .data-card:hover{
     transform: translateY(-2px);
     border-color: #64666a;
     box-shadow: 0 14px 32px #0004;
@@ -819,4 +772,4 @@ body,
 
 .command-results button:hover,.command-results button:focus-visible{border-color:#59616a!important}
 .command-results button.selected>svg{color:#f2f3f4}.command-results button.selected small{color:#b7bdc4}
-.agenda-actions button:focus-visible,.gd-layer-controls button:focus-visible,.gd-editor-panel>nav button:focus-visible{outline-color:#dfe2e5}
+.agenda-actions button:focus-visible{outline-color:#dfe2e5}

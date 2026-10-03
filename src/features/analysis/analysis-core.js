@@ -42,11 +42,24 @@ export function comparePeriods(matches = [], period = "last5") {
     const up = change > 0;
     return inverse ? (up ? "down" : "up") : (up ? "up" : "down");
   };
+  // Raw difference against the previous window of the same size; null when either side has no sample.
+  const delta = (currentValue, previousValue) => {
+    if (currentValue == null || previousValue == null) return null;
+    const a = Number(currentValue); const b = Number(previousValue);
+    return Number.isFinite(a) && Number.isFinite(b) ? Number((a - b).toFixed(1)) : null;
+  };
   return {
     goals: trend(current.averageGoalsFor, previous.averageGoalsFor),
     conceded: trend(current.averageGoalsAgainst, previous.averageGoalsAgainst, true),
     passing: trend(current.passAccuracy, previous.passAccuracy),
     rating: trend(current.averageRating, previous.averageRating),
+    window: size,
+    deltas: {
+      goals: delta(current.averageGoalsFor, previous.averageGoalsFor),
+      conceded: delta(current.averageGoalsAgainst, previous.averageGoalsAgainst),
+      passing: delta(current.passAccuracy, previous.passAccuracy),
+      rating: delta(current.averageRating, previous.averageRating),
+    },
   };
 }
 

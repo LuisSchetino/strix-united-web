@@ -2,7 +2,7 @@
 .matches-list>header,.matches-list article{grid-template-columns:120px minmax(280px,1fr) 105px minmax(110px,.55fr) 90px auto}.matches-list article>span>small{display:block;margin-top:3px;color:#919397;font-size:10px}.import-preview{opacity:.92}
 
 /* FC27 dark-blue system: no cyan panels or oversized native-looking controls. */
-:root{--fc27-blue:#47494d;--fc27-blue-deep:#17191d;--fc27-label:#696b6f;--fc27-line:#424448;--fc27-surface:#121418;--fc27-surface-raised:#191b1f}
+:root{--fc27-label:#696b6f;--fc27-line:#424448}
 .data-card small,.match-details-modal header span,.squad-preview>span,.import-workbench>header span,.import-link>span,.import-players>span,.match-player-data header span,.manual-form-grid label,.position-picker legend,.member-picker legend{color:var(--fc27-label)!important}
 .data-card,.empty-section,.analysis-line,.import-workbench,.matches-list,.match-manual-modal,.match-details-modal{border-color:var(--fc27-line)}
 .data-card,.empty-section,.analysis-line{background:linear-gradient(145deg,#16181c,#0c0e12)}

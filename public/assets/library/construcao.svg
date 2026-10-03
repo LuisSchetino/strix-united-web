@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400" role="img" aria-label="Saída de bola">
+  <defs>
+    <radialGradient id="light" cx="0.12" cy="0.5" r="0.7"><stop offset="0" stop-color="#ffffff" stop-opacity="0.11"/><stop offset="1" stop-color="#ffffff" stop-opacity="0"/></radialGradient>
+    <linearGradient id="fade" x1="0" y1="0" x2="0" y2="1"><stop offset="0.45" stop-color="#050607" stop-opacity="0"/><stop offset="1" stop-color="#050607" stop-opacity="0.92"/></linearGradient>
+    <marker id="head" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 1 8 5 0 9z" fill="#2F80FF"/></marker>
+  </defs>
+  <rect width="640" height="400" fill="#08090a"/>
+  <rect width="640" height="400" fill="url(#light)"/>
+  <!-- own box at the left, the build-up climbs to the right -->
+  <g fill="none" stroke="#ffffff" stroke-opacity="0.14" stroke-width="1.4">
+    <path d="M60 40V360"/><path d="M60 120H150V280H60"/><path d="M60 168H92V232H60"/><path d="M150 168A44 44 0 0 1 150 232"/>
+    <path d="M420 40V360" stroke-opacity="0.08"/>
+  </g>
+  <!-- passing triangles of the first line -->
+  <path d="M84 200L176 128L176 272Z M176 128L268 168L176 272" fill="none" stroke="#ffffff" stroke-opacity="0.22" stroke-width="1.4"/>
+  <!-- progression in steps -->
+  <path d="M176 128L268 168" stroke="#2F80FF" stroke-width="2.8" stroke-linecap="round" marker-end="url(#head)"/>
+  <path d="M268 168L356 112" stroke="#2F80FF" stroke-width="2.8" stroke-linecap="round" marker-end="url(#head)"/>
+  <path d="M356 112L470 150" stroke="#2F80FF" stroke-width="2.8" stroke-linecap="round" stroke-dasharray="1 8" marker-end="url(#head)"/>
+  <g fill="#08090a" stroke="#f3f3f3" stroke-width="2.4">
+    <circle cx="84" cy="200" r="9"/><circle cx="176" cy="128" r="9"/><circle cx="176" cy="272" r="9"/><circle cx="268" cy="168" r="9"/><circle cx="356" cy="112" r="9"/>
+  </g>
+  <!-- the first press line, hollow -->
+  <g fill="none" stroke="#ffffff" stroke-opacity="0.32" stroke-width="2"><circle cx="232" cy="230" r="7"/><circle cx="312" cy="206" r="7"/><circle cx="318" cy="290" r="7"/></g>
+  <rect width="640" height="400" fill="url(#fade)"/>
+</svg>

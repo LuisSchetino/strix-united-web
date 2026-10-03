@@ -2,8 +2,9 @@ import React, { useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { CloseButton } from "../../ui/CloseButton.jsx";
 import { useDialog } from "../../ui/useDialog.js";
-import { downloadSignedContractPdf, renderContractVideo } from "./contract-export-lazy.js";
-import { CONTRACT_SEASON } from "./contract-core.js";
+import { renderContractVideo } from "./contract-export-lazy.js";
+import { CONTRACT_SEASON, contractDocumentId } from "./contract-core.js";
+import { DocumentDownload } from "./DocumentDownload.jsx";
 import { ContractInstrument } from "./ContractInstrument.jsx";
 import { downloadBlob } from "../../lib/download-blob.js";
 import "./contract.css";
@@ -65,12 +66,12 @@ export function SignedContractArchive({ contract, identity, onClose }) {
           <CloseButton onClick={onClose} label="Fechar contrato" />
         </header>
         <div className="contract-archive-document" ref={sheetRef}>
-          <ContractInstrument identity={identity} season={contract.season || CONTRACT_SEASON} signedAtLabel={dateLabel(contract.signedAt)} signature={contract.signature.d} replayKey={replay} />
+          <ContractInstrument identity={identity} season={contract.season || CONTRACT_SEASON} signedAtLabel={dateLabel(contract.signedAt)} signature={contract.signature.d} documentId={contractDocumentId(contract)} replayKey={replay} />
         </div>
         <footer>
           {videoError && <p className="contract-archive-error" role="alert">{videoError}</p>}
           <button type="button" className="secondary" onClick={() => setReplay((value) => value + 1)}>REVER ANIMAÇÃO</button>
-          <button type="button" className="secondary" onClick={() => downloadSignedContractPdf(sheetRef.current, contract.season).catch((error) => setVideoError(error?.message || "Não foi possível gerar o PDF."))}>BAIXAR PDF</button>
+          <DocumentDownload contract={contract} identity={identity} onError={setVideoError} />
           <button type="button" className="primary" disabled={rendering} onClick={() => void downloadVideo()}>{rendering ? "GERANDO…" : "BAIXAR VÍDEO"}</button>
         </footer>
       </article>

@@ -1,0 +1,93 @@
+/* ==========================================================================
+   Data language
+   Rastro Blue (--data) marks what was measured: a value, its trend, its mark.
+   Labels, structure and actions stay ink and off-white.
+   ========================================================================== */
+
+/* A utility: the measured value is blue wherever it sits, so it wins over
+   component colour rules. */
+.data-value {
+  color: var(--data) !important;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Trend against a real previous sample: arrow · amount · comparison. */
+.data-trend {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  color: var(--text-3);
+  font-size: var(--text-label);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.data-trend svg {
+  align-self: center;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.data-trend b {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.data-trend small {
+  color: var(--text-4);
+  font-size: inherit;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+.data-trend.is-up {
+  color: var(--data);
+}
+.data-trend.is-down {
+  color: var(--text-2);
+}
+
+/* Methodology sits on the label's line, one step quieter. */
+.data-criterion {
+  color: var(--text-4);
+  font-size: var(--text-label);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: none;
+}
+.data-criterion::before {
+  content: "· ";
+}
+
+/* Values arrive: a short rise as the block enters, once. */
+@keyframes data-arrive {
+  from { opacity: 0; transform: translateY(6px); filter: blur(3px); }
+  to { opacity: 1; transform: none; filter: none; }
+}
+.data-arrive {
+  animation: data-arrive var(--motion-section) var(--motion-ease) both;
+  animation-delay: calc(var(--i, 0) * var(--motion-stagger));
+}
+
+/* The now line, data edition: a hairline that fills to a measured share. */
+.data-meter {
+  position: relative;
+  display: block;
+  height: 2px;
+  overflow: hidden;
+  background: var(--line-2);
+}
+.data-meter > i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 100%;
+  background: var(--data);
+  transform: scaleX(var(--value, 0));
+  transform-origin: left center;
+  transition: transform var(--motion-hero) var(--motion-ease);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .data-arrive { animation: none; }
+  .data-meter > i { transition: none; }
+}

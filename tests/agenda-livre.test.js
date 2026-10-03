@@ -4,22 +4,24 @@ import { readFile } from "node:fs/promises";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 
-test("Agenda Livre é só logo central + background sutil, sem texto de estado", async () => {
+test("noite livre: composição do escudo com entrada única e o próximo compromisso real da Agenda", async () => {
   const [main, home, css] = await Promise.all([
     read("../src/main.jsx"),
     read("../src/features/home/HomePage.jsx"),
     read("../src/features/home/home.css"),
   ]);
-  const hero = home.slice(home.indexOf("function FreeNight"), home.indexOf("function statusFor"));
+  const hero = home.slice(home.indexOf("function FreeNight"), home.indexOf("function RecentBlock"));
   assert.match(hero, /is-free-night/);
   assert.match(hero, /free-night-logo/);
-  assert.match(hero, /free-night-field/);
-  for (const copy of [/NOITE LIVRE/i, /SEM JOGOS HOJE/i, /AGENDA LIVRE/i, /Nenhum compromisso programado/i, /free-night-mark/]) {
-    assert.doesNotMatch(hero, copy);
-  }
+  assert.match(hero, /free-night-ring/);
+  // The commitment comes from the agenda row itself; without one the copy says the agenda is free.
+  assert.match(hero, /Próximo compromisso/);
+  assert.match(hero, /upcoming\.scheduled_at/);
+  assert.match(hero, /Agenda livre/);
   assert.doesNotMatch(main, /SEM PARTIDA/);
   assert.doesNotMatch(main, /AGUARDANDO ADVERSÁRIO/);
-  assert.match(css, /\.free-night-ring/);
+  // One entrance, then rest: no looping animation on the Home.
+  assert.doesNotMatch(css, /@keyframes home-ring \{/);
   assert.match(css, /prefers-reduced-motion:\s*reduce/);
 });
 

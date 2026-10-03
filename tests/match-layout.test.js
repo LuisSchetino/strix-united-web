@@ -6,7 +6,7 @@ test("escudos do histórico ficam dentro de um container com limites rígidos", 
   const [component, css, competitionCss, matchDisplay, matchDisplayCss, clubLogo, clubLogoCss] = await Promise.all([
     readFile(new URL("../src/features/matches/MatchesPage.jsx", import.meta.url), "utf8"),
     readFile(new URL("../src/features/matches/match-fixes.css", import.meta.url), "utf8"),
-    readFile(new URL("../src/features/competitions/competitions-inline.css", import.meta.url), "utf8"),
+    readFile(new URL("../src/features/competitions/competitions.css", import.meta.url), "utf8"),
     readFile(new URL("../src/ui/MatchDisplay.jsx", import.meta.url), "utf8"),
     readFile(new URL("../src/ui/match-display.css", import.meta.url), "utf8"),
     readFile(new URL("../src/ui/ClubLogo.jsx", import.meta.url), "utf8"),
@@ -33,6 +33,6 @@ test("escudos do histórico ficam dentro de um container com limites rígidos", 
   assert.match(component, /is-disconnected/);
   assert.match(component, /CAIU DA PARTIDA/);
   assert.match(css, /\.match-flow-backdrop\{z-index:2500\}/);
-  assert.match(competitionCss, /\.fixture-clubs \.match-display-mark\{[^}]*max-width:42px[^}]*max-height:42px/);
+  assert.match(competitionCss, /\.fixture-clubs \.match-display-mark \{[^}]*max-width: 42px;[^}]*max-height: 42px;/);
   assert.match(css, /\.match-player-table>header,\.match-player-table>article\{display:grid;grid-template-columns:minmax\(190px,1\.6fr\) 70px 55px 55px 95px 76px 90px 75px/);
 });

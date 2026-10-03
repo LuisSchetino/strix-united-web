@@ -249,6 +249,10 @@ export function summarizeNight(matches = [], date, options = {}) {
   };
   for (const key of ["goals", "assists", "passes", "tackles", "saves", "mom"]) result.leaders[key] = leaderFor(key);
   result.leaders.rating = leaderFor("rating", (item) => item.ratingGames ? item.ratingTotal / item.ratingGames : 0);
+  // The night as played, in kickoff order: the edition lists these as they happened.
+  result.matches = nightMatches
+    .map((match) => ({ id: match.id, opponent: match.opponent_name, competition: match.competition_name || "Amistoso", playedAt: match.played_at || match.date, for: number(match.strix_score), against: number(match.opponent_score) }))
+    .sort((left, right) => String(left.playedAt).localeCompare(String(right.playedAt)));
   return result;
 }
 

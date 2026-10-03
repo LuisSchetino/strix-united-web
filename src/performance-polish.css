@@ -24,8 +24,8 @@
 
 /* Fast, informative entrance motion. */
 @media(min-width:701px) and (prefers-reduced-motion:no-preference){
-  .page-enter>.gd-editor-header{animation-duration:160ms!important}
-  .page-enter>.matches-feedback,.page-enter>.competition-selector,.page-enter>.gd-editor-shell{animation-duration:175ms!important;animation-delay:12ms!important}
+  
+  .page-enter>.matches-feedback,.page-enter>.competition-selector{animation-duration:175ms!important;animation-delay:12ms!important}
   .page-enter>.progressive-history,.page-enter>.competition-inline{animation-duration:190ms!important;animation-delay:24ms!important}
   .agenda-standing-compare>header{animation:performance-rise 180ms ease both}.agenda-standing-compare .agenda-standing-team{animation:performance-rise 190ms ease both}.agenda-standing-compare .agenda-standing-team:nth-child(1){animation-delay:24ms}.agenda-standing-compare .agenda-standing-team:nth-child(2){animation-delay:48ms}
   

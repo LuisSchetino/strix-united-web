@@ -3,11 +3,14 @@ import { useMinuteClock } from "../../ui/useMinuteClock.js";
 import { ClubLogo } from "../../ui/ClubLogo.jsx";
 import { STRIX_BRAND } from "../../brand.js";
 import { RESULT_LABEL, STARTED_WINDOW_MIN, buildHomeModel, kickoffTime, shortDate } from "./home-core.js";
+import { AnimatedNumber } from "../../ui/motion/motion.jsx";
 import "./home.css";
 
 const ZONE = "America/Sao_Paulo";
 const TIER_LABEL = { dev: "Desenvolvimento", diretoria: "Diretoria", conselho: "Conselho", player: "Jogador", teste: "Teste" };
 
+const commitmentDate = (value) => new Intl.DateTimeFormat("pt-BR", { timeZone: ZONE, weekday: "short", day: "2-digit", month: "short" })
+  .format(new Date(value)).replace(/\./g, "").replace(",", " ·").replace(/ de /i, " ").toLocaleUpperCase("pt-BR");
 const longDate = (now) => new Intl.DateTimeFormat("pt-BR", { timeZone: ZONE, weekday: "long", day: "numeric", month: "long" }).format(now);
 const firstName = (name) => String(name || "").trim().split(/\s+/)[0] || "";
 
@@ -29,7 +32,8 @@ const DOT = "M12 12h.01";
 function NowBlock({ next, navigate }) {
   const { match, state, lineup, isToday } = next;
   return (
-    <section className={`home-now is-${state.kind}`} aria-labelledby="home-now-title">
+    <section className={`home-now home-intro is-${state.kind}`} aria-labelledby="home-now-title">
+      <i className="home-intro-sweep" aria-hidden="true" />
       <header className="home-now-head">
         <p className="home-now-when"><span className="home-now-pulse" aria-hidden="true" /><span key={state.label} className="home-now-state">{isToday ? "Hoje" : "Próxima partida"} · {state.label}</span></p>
         <p className="home-now-competition">{match.round_label || match.competition_name || "Amistoso"}</p>
@@ -50,13 +54,56 @@ function NowBlock({ next, navigate }) {
   );
 }
 
-function FreeNight() {
+function FreeNight({ upcoming, navigate }) {
   return (
-    <section className="home-now is-free-night" aria-label="Strix United">
-      <div className="free-night-field" aria-hidden="true">
+    <section className="home-now home-intro is-free-night" aria-labelledby="home-free-title">
+      <div className="free-night-composition" aria-hidden="true">
         <i className="free-night-ring is-a" /><i className="free-night-ring is-b" />
+        <i className="home-intro-sweep" />
+        <div className="free-night-logo"><Strix size={148} priority /></div>
       </div>
-      <div className="free-night-logo"><Strix size={168} priority /></div>
+      <div className="free-night-copy">
+        {upcoming ? <>
+          <p className="home-intro-label" id="home-free-title">Próximo compromisso</p>
+          <p className="free-night-when"><time dateTime={upcoming.scheduled_at}>{commitmentDate(upcoming.scheduled_at)}</time><span>{kickoffTime(upcoming.scheduled_at)}</span></p>
+          <p className="free-night-fixture"><Opponent match={upcoming} size={26} /><b>{upcoming.opponent_name}</b><small>{upcoming.round_label || upcoming.competition_name || "Amistoso"}</small></p>
+        </> : <>
+          <p className="home-intro-label" id="home-free-title">Agenda livre</p>
+          <p className="free-night-when is-quiet">Nenhum jogo marcado.</p>
+        </>}
+        <button type="button" className="secondary" onClick={() => navigate("agenda")}>Abrir Agenda<Icon path={ARROW} /></button>
+      </div>
+    </section>
+  );
+}
+
+/** A result from tonight leads the Home until the night is over. */
+function RecentBlock({ recent, navigate }) {
+  const { match, result, teamRating, standout, night } = recent;
+  return (
+    <section className={`home-now home-intro is-recent is-${result || "none"}`} aria-labelledby="home-recent-title">
+      <i className="home-intro-sweep" aria-hidden="true" />
+      <header className="home-now-head">
+        <p className="home-now-when" id="home-recent-title">Último jogo · {kickoffTime(match.played_at)}</p>
+        <p className="home-now-competition">{match.competition_name || "Amistoso"}</p>
+      </header>
+      <div className="home-recent-score" aria-label={`Strix United ${match.strix_score} a ${match.opponent_score} ${match.opponent_name}`}>
+        <span className="home-fixture-side"><Strix size={52} priority /><b>Strix United</b></span>
+        <strong><span>{match.strix_score}</span><i aria-hidden="true">–</i><span>{match.opponent_score}</span></strong>
+        <span className="home-fixture-side is-away"><Opponent match={match} size={52} priority /><b>{match.opponent_name}</b></span>
+      </div>
+      {result && <p className="home-recent-result">{RESULT_LABEL[result]}</p>}
+      {(teamRating != null || standout || night) && <dl className="home-recent-facts">
+        {teamRating != null && <div><dt>Nota média do time</dt><dd className="data-value"><AnimatedNumber id={`home-team-rating-${match.id}`} value={teamRating} /></dd></div>}
+        {standout && <div><dt>Maior nota da noite</dt><dd><span>{standout.names.join(" · ")}</span><b className="data-value">{standout.value}</b></dd></div>}
+        {night && <div><dt>A noite</dt><dd className="data-value">{night.wins}V {night.draws}E {night.losses}D</dd></div>}
+      </dl>}
+      <footer className="home-now-foot">
+        <p className="home-lineup">{night ? `${night.games} jogos importados hoje` : "Resultado importado da EA"}</p>
+        <div className="home-now-actions">
+          <button type="button" className="primary" onClick={() => navigate("estatisticas")}>Resumo da noite<Icon path={ARROW} /></button>
+        </div>
+      </footer>
     </section>
   );
 }
@@ -180,7 +227,7 @@ export function HomePage({ workspace, profile, navigate }) {
   const logoOf = (match) => match.resolved_opponent_logo_url || (match.opponent_logos?.storage_path ? workspace.assetUrl(match.opponent_logos.storage_path) : "");
   const agenda = useMemo(() => workspace.agenda.map((match) => ({ ...match, resolvedLogo: logoOf(match) })), [workspace.agenda]);
   const matches = useMemo(() => workspace.matches.map((match) => ({ ...match, resolvedLogo: logoOf(match) })), [workspace.matches]);
-  const model = useMemo(() => buildHomeModel({ agenda, matches, now }), [agenda, matches, now]);
+  const model = useMemo(() => buildHomeModel({ agenda, matches, now, players: workspace.players, aliases: workspace.aliases }), [agenda, matches, now, workspace.players, workspace.aliases]);
   const name = firstName(profile?.display_name);
   const hasTonight = model.tonight.length > 0;
   return (
@@ -189,14 +236,16 @@ export function HomePage({ workspace, profile, navigate }) {
         <h1>{model.greeting}{name ? `, ${name}` : ""}.</h1>
         <p><span>{TIER_LABEL[profile?.access_tier] || "Membro"}</span><span>Temporada 2026/27</span><span className="home-date">{longDate(now)}</span></p>
       </header>
-      <div className={`home-stage${hasTonight ? "" : " is-solo"}`}>
-        {model.next ? <NowBlock next={model.next} navigate={navigate} /> : <FreeNight />}
+      <div className={`home-stage is-${model.mode}${hasTonight ? "" : " is-solo"}`}>
+        {model.mode === "next" ? <NowBlock next={model.next} navigate={navigate} />
+          : model.mode === "recent" ? <RecentBlock recent={model.recent} navigate={navigate} />
+            : <FreeNight upcoming={model.upcoming} navigate={navigate} />}
         {hasTonight
-          ? <Tonight tonight={model.tonight} heroId={model.next?.match.id} now={now} navigate={navigate} />
-          : model.next && <NextDays matches={model.nextDays.filter((match) => match.id !== model.next.match.id)} navigate={navigate} title="Depois disso" />}
+          ? <Tonight tonight={model.tonight} heroId={model.mode === "next" ? model.next?.match.id : null} now={now} navigate={navigate} />
+          : model.upcoming && model.nextDays.some((match) => match.id !== model.upcoming.id) && <NextDays matches={model.nextDays.filter((match) => match.id !== model.upcoming.id)} navigate={navigate} title="Depois disso" />}
       </div>
       <div className="home-ledger">
-        <LastResult last={model.last} navigate={navigate} />
+        {model.mode !== "recent" && <LastResult last={model.last} navigate={navigate} />}
         <Season season={model.season} navigate={navigate} />
       </div>
       {hasTonight && model.nextDays.length > 0 && <NextDays matches={model.nextDays} navigate={navigate} />}

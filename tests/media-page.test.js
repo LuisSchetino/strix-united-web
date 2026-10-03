@@ -85,30 +85,12 @@ test("encode usa H.264 e nunca troca logo depois que o render começa", async ()
   assert.doesNotMatch(encode, /html-to-image/);
 });
 
-test("Seletiva continua sendo template estático registrado, agora dentro de Anúncios", async () => {
+test("a mídia de Seletiva saiu do produto; Anúncios mantém só Individual e Time", async () => {
   const [, , announce] = await centralSources();
-  const template = await read("src/features/media/SeletivaTemplate.jsx");
-  const logo = await read("src/features/media/StaticMediaV2Logo.jsx");
-  const core = await read("src/features/media/static-media-v2-core.js");
-  const registry = await read("src/features/media/static-media-v2-templates.js");
-  const canvas = await read("src/features/media/StaticMediaV2Canvas.jsx");
-  const exporter = await read("src/features/media/static-media-v2-export.js");
   const job = await read("src/features/media/media-jobs.js");
-  assert.match(core, /STATIC_MEDIA_V2_CANVAS/);
-  assert.match(core, /STATIC_MEDIA_V2_TEMPLATES/);
-  assert.match(registry, /SeletivaTemplate/);
-  assert.match(registry, /sanitizeSeletivaInput/);
-  assert.match(canvas, /STATIC_MEDIA_V2_CANVAS/);
-  assert.match(canvas, /import "\.\/static-media-v2\.css"/, "o artboard da Seletiva precisa do próprio CSS");
-  assert.match(exporter, /exportStaticMediaV2Png/);
-  assert.match(exporter, /toBlob\(element/);
-  assert.match(exporter, /downloadBlob\(blob, fileName\)/);
-  assert.match(template, /StaticMediaV2Logo/);
-  assert.match(logo, /STRIX_BRAND\.logo/);
-  assert.match(template, /size = SELETIVA_POSTER_SIZE/);
-  assert.match(announce, /STATIC_MEDIA_V2_TEMPLATE_REGISTRY/);
-  assert.match(announce, /exportStaticMediaV2Png/);
-  assert.match(announce, /\["seletiva", "SELETIVA"\]/);
+  const renderer = await read("src/features/media/media-renderer.js");
+  assert.match(announce, /const CONTENT_ITEMS = \[\["individual", "INDIVIDUAL"\], \["team", "TIME"\]\];/);
+  assert.doesNotMatch(announce + renderer, /seletiva|StaticMediaV2|static-media-v2/i);
   assert.doesNotMatch(announce, /startAgendaRender|startRelatedNightRender|startSummaryRender/);
   assert.match(job, /startAgendaRender/);
   assert.match(job, /startRelatedNightRender/);

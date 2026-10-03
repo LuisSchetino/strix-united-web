@@ -6,8 +6,12 @@ import { SIGNATURE_VIEWBOX, isMeaningfulSignature } from "./contract-core.js";
  * touch e caneta; os traços são guardados normalizados (viewBox 600×200), então
  * redimensionar a tela nunca deforma nem perde a assinatura.
  */
+// Ink on paper: the pad sits on the contract's letterhead sheet.
+const INK = "#15171b";
+
 export const SignaturePad = forwardRef(function SignaturePad({ disabled = false, onChange }, ref) {
   const canvasRef = useRef(null);
+  const padRef = useRef(null);
   const strokesRef = useRef([]);
   const activeRef = useRef(null);
   const [count, setCount] = useState(0);
@@ -25,7 +29,7 @@ export const SignaturePad = forwardRef(function SignaturePad({ disabled = false,
     }
     context.setTransform(ratio, 0, 0, ratio, 0, 0);
     context.clearRect(0, 0, width, height);
-    context.strokeStyle = "#f5f5f5";
+    context.strokeStyle = INK;
     context.lineWidth = 2.6;
     context.lineCap = "round";
     context.lineJoin = "round";
@@ -67,6 +71,15 @@ export const SignaturePad = forwardRef(function SignaturePad({ disabled = false,
     return () => observer.disconnect();
   }, [paint]);
 
+  const pen = (event, visible = true) => {
+    const pad = padRef.current;
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!pad || !rect) return;
+    pad.style.setProperty("--pen-x", `${event.clientX - rect.left}px`);
+    pad.style.setProperty("--pen-y", `${event.clientY - rect.top}px`);
+    pad.classList.toggle("has-pen", visible && !disabled);
+  };
+
   const point = (event) => {
     const rect = canvasRef.current.getBoundingClientRect();
     const x = ((event.clientX - rect.left) / rect.width) * SIGNATURE_VIEWBOX.width;
@@ -78,6 +91,7 @@ export const SignaturePad = forwardRef(function SignaturePad({ disabled = false,
     if (disabled || (event.pointerType === "mouse" && event.button !== 0)) return;
     event.preventDefault();
     try { canvasRef.current.setPointerCapture?.(event.pointerId); } catch { /* sem captura, o traço continua dentro do canvas */ }
+    pen(event);
     const stroke = [point(event)];
     activeRef.current = { id: event.pointerId, stroke };
     strokesRef.current = [...strokesRef.current, stroke];
@@ -85,6 +99,8 @@ export const SignaturePad = forwardRef(function SignaturePad({ disabled = false,
     paint();
   };
   const move = (event) => {
+    // Mouse and stylus show the pen while hovering; touch shows it only while drawing.
+    if (event.pointerType !== "touch" || activeRef.current) pen(event);
     const active = activeRef.current;
     if (!active || active.id !== event.pointerId) return;
     event.preventDefault();
@@ -104,11 +120,12 @@ export const SignaturePad = forwardRef(function SignaturePad({ disabled = false,
     if (!active || active.id !== event.pointerId) return;
     activeRef.current = null;
     setDrawing(false);
+    if (event.pointerType === "touch") padRef.current?.classList.remove("has-pen");
     emit();
   };
 
   return (
-    <div className={`signature-pad${drawing ? " is-drawing" : ""}${count ? " has-ink" : ""}${disabled ? " is-disabled" : ""}`}>
+    <div ref={padRef} className={`signature-pad${drawing ? " is-drawing" : ""}${count ? " has-ink" : ""}${disabled ? " is-disabled" : ""}`} onPointerLeave={() => { if (!activeRef.current) padRef.current?.classList.remove("has-pen"); }}>
       <canvas
         ref={canvasRef}
         aria-label="Área de assinatura. Desenhe com o mouse, o dedo ou a caneta."
@@ -121,6 +138,9 @@ export const SignaturePad = forwardRef(function SignaturePad({ disabled = false,
       />
       <span className="signature-pad-line" aria-hidden="true" />
       <span className="signature-pad-hint" aria-hidden="true">ASSINE AQUI</span>
+      <span className="signature-pen" aria-hidden="true">
+        <svg viewBox="0 0 32 32" width="32" height="32"><path d="M3 29 6.5 19.5 21 5a3.5 3.5 0 0 1 5 5L11.5 24.5Z" /><path d="M6.5 19.5l6 6M19 7l6 6" /></svg>
+      </span>
     </div>
   );
 });

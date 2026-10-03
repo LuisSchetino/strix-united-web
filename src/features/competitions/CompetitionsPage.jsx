@@ -35,7 +35,6 @@ import { extractPalette } from "./palette-core.js";
 import { sortBracketFixtures } from "../../../shared/bracket-slots.js";
 import { canManageCompetitions } from "../../access.js";
 import "./competitions.css";
-import "./competitions-inline.css";
 import { PageHeader } from "../../ui/PageHeader.jsx";
 
 const fallbackPalettes = {
@@ -327,7 +326,7 @@ function Standings({ groups, accent, slots, canEdit, onSlotsChange }) {
                     {row.isStrix && <small>STRIX</small>}
                   </strong>
                 </div>
-                <b>{row.points}</b>
+                <b className="data-value">{row.points}</b>
                 <span>{row.played}</span>
                 <span>{row.wins}</span>
                 <span>{row.draws}</span>
@@ -681,11 +680,11 @@ function ScenarioPanel({ edition, snapshot, qualificationSlots }) {
       <div className="scenario-metrics">
         <article>
           <small>POSIÇÃO</small>
-          <b><AnimatedNumber id={`scenario-position-${edition.id}`} value={result.currentPosition} suffix="º" /></b>
+          <b className="data-value"><AnimatedNumber id={`scenario-position-${edition.id}`} value={result.currentPosition} suffix="º" /></b>
         </article>
         <article>
           <small>DISTÂNCIA</small>
-          <b>{result.tiedAtCutoff ? "Empatado" : `${result.distanceToCutoff} pts`}</b>
+          <b className="data-value">{result.tiedAtCutoff ? "Empatado" : `${result.distanceToCutoff} pts`}</b>
           {result.tiedAtCutoff && (
             <em className="scenario-context">
               Fora pelos critérios · corte {result.cutoffPosition}º
@@ -694,11 +693,11 @@ function ScenarioPanel({ edition, snapshot, qualificationSlots }) {
         </article>
         <article>
           <small>JOGOS</small>
-          <b><AnimatedNumber id={`scenario-games-${edition.id}`} value={result.remainingMatches} /></b>
+          <b className="data-value"><AnimatedNumber id={`scenario-games-${edition.id}`} value={result.remainingMatches} /></b>
         </article>
         <article>
           <small>DISPONÍVEIS</small>
-          <b><AnimatedNumber id={`scenario-points-${edition.id}`} value={result.pointsAvailable} suffix=" pts" /></b>
+          <b className="data-value"><AnimatedNumber id={`scenario-points-${edition.id}`} value={result.pointsAvailable} suffix=" pts" /></b>
         </article>
       </div>
     </section>
@@ -720,7 +719,7 @@ function HistoryCompetitionCard({ group }) {
               </div>
               <div className="history-efficiency">
                 <small>APROVEITAMENTO</small>
-                <b>{group.efficiency}%</b>
+                <b className="data-value">{group.efficiency}%</b>
               </div>
             </header>
             <dl className="history-metrics">
@@ -855,6 +854,9 @@ function CompetitionExplorer({
     ?.flatMap((group) => group.standings || [])
     .find((row) => row.isStrix);
   const zone = qualificationState(strixStanding, view.qualificationSlots);
+  // Participants as published by the provider: every distinct team across the standings groups.
+  const participants = new Set((view.standings.groups || []).flatMap((group) => (group.standings || []).map((row) => row.team))).size;
+  const isHistorical = edition?.status === "historical";
   const setQualificationSlots = async (qualificationSlots) => {
     setBusy("Salvando vagas");
     setError("");
@@ -882,14 +884,12 @@ function CompetitionExplorer({
       <header className="competition-detail-hero">
         <ClubLogo name={competition.name} url={competition.logo_url} className="competition-identity-logo" />
         <div>
-          <small>{competition.organization || "COMPETIÇÃO"}</small>
+          <p className="competition-hero-meta"><span className={`competition-status ${isHistorical ? "is-historical" : "is-active"}`}>{isHistorical ? "Histórico" : "Em andamento"}</span>{competition.organization && <span>{competition.organization}</span>}</p>
           <h1>{competition.name}</h1>
-          <p>
-            {edition?.label} · {view.currentStage}
-          </p>
+          <p>{edition?.label} · {view.currentStage}</p>
         </div>
         <aside>
-          <span>ÚLTIMA ATUALIZAÇÃO</span>
+          <span>Atualizado</span>
           <b>{dateTime(view.lastSyncedAt)}</b>
           {canManageCompetitions(profile) && sources[0] && (
             <button className="rolling-action" disabled={!!busy} onClick={() => void sync()}>
@@ -903,20 +903,22 @@ function CompetitionExplorer({
       {tab === "overview" && (
         <div className="motion-panel-enter competition-tab-panel" key="overview">
           <section className="competition-overview-grid">
-            <article>
+            <article className="data-arrive" style={{ "--i": 0 }}>
               <small>FASE ATUAL</small>
               <b>{view.currentStage}</b>
             </article>
-            <article>
-              <small>GRUPO ANTERIOR</small>
-              <b>{view.standings.strixGroup || "—"}</b>
+            <article className="data-arrive" style={{ "--i": 1 }}>
+              <small>{view.standings.strixGroup ? "GRUPO DO STRIX" : "PARTICIPANTES"}</small>
+              <b>{view.standings.strixGroup || (participants ? <span className="data-value">{participants}</span> : "—")}</b>
+              {view.standings.strixGroup && participants > 0 && <em>{participants} clubes na classificação</em>}
             </article>
-            <article>
+            <article className="data-arrive" style={{ "--i": 2 }}>
               <small>POSIÇÃO</small>
-              <b>{strixStanding ? <AnimatedNumber id={`overview-position-${edition.id}`} value={strixStanding.position} suffix="º" /> : "—"}</b>
+              <b className={strixStanding ? "data-value" : ""}>{strixStanding ? <AnimatedNumber id={`overview-position-${edition.id}`} value={strixStanding.position} suffix="º" /> : "—"}</b>
               {zone && <em className={zone.inside ? "inside" : "outside"}>{zone.label}</em>}
+              {strixStanding && <em>{strixStanding.points} pts · {strixStanding.played} jogos</em>}
             </article>
-            <article>
+            <article className="data-arrive" style={{ "--i": 3 }}>
               <small>{view.strixFixture ? "FONTE DO CONFRONTO" : "PRÓXIMO CONFRONTO"}</small>
               <b>
                 {view.strixFixture
@@ -1124,10 +1126,10 @@ export function CompetitionsPage({ profile, workspace, client }) {
                 <ClubLogo name={competition.name} url={competition.logo_url} className="competition-selector-logo" decorative />
                 <div className="competition-selector-copy">
                   <b>{competition.name}</b>
-                  <small>{edition.label}</small>
+                  <small>{edition.label}{competition.organization ? ` · ${competition.organization}` : ""}</small>
                 </div>
               </button>
-              {canManageCompetitions(profile) && <button type="button" className="competition-delete-trigger" aria-label={`Excluir ${competition.name} · ${edition.label}`} title="Excluir competição" onClick={() => { setDeleteError(""); setPendingDelete({ competition, edition }); }}>⌫</button>}
+              {canManageCompetitions(profile) && <button type="button" className="competition-delete-trigger" aria-label={`Excluir ${competition.name} · ${edition.label}`} title="Excluir competição" onClick={() => { setDeleteError(""); setPendingDelete({ competition, edition }); }}><svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg></button>}
               </div>
             ))}
           </div>

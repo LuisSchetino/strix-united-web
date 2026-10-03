@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { RollingLabel, notify, useReducedMotion } from "../../ui/motion/motion.jsx";
+import { RollingLabel, notify } from "../../ui/motion/motion.jsx";
 import { SelectControl } from "../../ui/SelectControl.jsx";
 import {
   ANNOUNCE_CACHE_DAY,
@@ -23,10 +23,6 @@ import { loadAnnounceAssets } from "./media-assets.js";
 import { withMediaLook } from "./media-look.js";
 import { downloadBlob, listCachedRenders, startAnnounceRender } from "./media-jobs.js";
 import { MEDIA_FORMAT_LABELS, mediaGenerateLabel, resolveMediaOutput } from "./media-renderer.js";
-import { STATIC_MEDIA_V2_CANVAS } from "./static-media-v2-core.js";
-import { STATIC_MEDIA_V2_TEMPLATE_REGISTRY } from "./static-media-v2-templates.js";
-import { StaticMediaV2Canvas } from "./StaticMediaV2Canvas.jsx";
-import { exportStaticMediaV2Png } from "./static-media-v2-export.js";
 import {
   ArchiveList,
   FormatGroup,
@@ -41,7 +37,6 @@ import {
   StageEmpty,
   StageLoading,
   StageResult,
-  ToolbarFact,
   jobPercent,
   ToolbarGroup,
   isImageRecord,
@@ -59,8 +54,7 @@ const TYPE_OPTIONS = [
   ["conselho", "CONSELHO"],
   ["manager", "MANAGER"],
 ];
-const CONTENT_ITEMS = [["individual", "INDIVIDUAL"], ["team", "TIME"], ["seletiva", "SELETIVA"]];
-const SELETIVA = Object.values(STATIC_MEDIA_V2_TEMPLATE_REGISTRY)[0];
+const CONTENT_ITEMS = [["individual", "INDIVIDUAL"], ["team", "TIME"]];
 const pad = (value) => String(value).padStart(2, "0");
 
 const Chevron = ({ up = false }) => (
@@ -93,8 +87,7 @@ export function AnnounceStudio({ workspace, look, job, running, openViewer }) {
   const [result, setResult] = useState(null);
   const dragIndex = useRef(null);
   const migrated = useRef(false);
-  const isSeletiva = kind === "seletiva";
-  const pieceKind = isSeletiva ? "individual" : kind;
+  const pieceKind = kind;
 
   const people = useMemo(() => applyAnnounceRoles(collectAnnouncePeople(workspace), pendingRoles), [workspace, pendingRoles]);
 
@@ -132,12 +125,11 @@ export function AnnounceStudio({ workspace, look, job, running, openViewer }) {
   useEffect(() => { setResult(null); }, [pieceKey]);
 
   useEffect(() => {
-    if (isSeletiva) return undefined;
     let cancelled = false;
     setAssets(null);
     loadAnnounceAssets(selected).then((result) => { if (!cancelled) setAssets(result); });
     return () => { cancelled = true; };
-  }, [fingerprintKey, isSeletiva]);
+  }, [fingerprintKey]);
 
   useEffect(() => {
     let alive = true;
@@ -203,9 +195,7 @@ export function AnnounceStudio({ workspace, look, job, running, openViewer }) {
   const mine = job?.template === ANNOUNCE_TEMPLATE_ID;
   const record = (mine && job?.status === "ready" && job.result && (isImageRecord(job.result) === (output.type === "image")) ? job.result : null)
     || cache.find((row) => row.format === format) || null;
-  const meta = isSeletiva
-    ? "Divulgação de posições abertas"
-    : `${pad(selected.length)} ${selected.length === 1 ? "nome na peça" : "nomes na peça"}`;
+  const meta = `${pad(selected.length)} ${selected.length === 1 ? "nome na peça" : "nomes na peça"}`;
 
   const toolbar = (
     <MediaToolbar title="Anúncios FC27" meta={meta}>
@@ -213,13 +203,9 @@ export function AnnounceStudio({ workspace, look, job, running, openViewer }) {
         setKind(value);
         if (value === "individual") setSelectedIds((current) => current.slice(0, 1));
       }} />
-      {isSeletiva ? <ToolbarFact label="FORMATO" value="STORY 9:16 · PNG" /> : <FormatGroup value={format} onChange={setFormat} />}
+      <FormatGroup value={format} onChange={setFormat} />
     </MediaToolbar>
   );
-
-  if (isSeletiva) {
-    return <>{toolbar}<SeletivaPanel /></>;
-  }
 
   const archive = cache.slice(0, 6).map((row) => recordToArchiveItem(row, {
     label: isImageRecord(row) ? "POST 4:5 · PNG" : "REELS 9:16 · MP4", unit: "nome", onView: () => openViewer(row),
@@ -350,65 +336,5 @@ export function AnnounceStudio({ workspace, look, job, running, openViewer }) {
         }
       />
     </>
-  );
-}
-
-/** Static "Seletiva" art, living inside the same shell as every other announcement. */
-function SeletivaPanel() {
-  const template = SELETIVA;
-  const Template = template.Component;
-  const reduced = useReducedMotion();
-  const [draft, setDraft] = useState(template.defaultCopy);
-  const [status, setStatus] = useState("idle");
-  const [error, setError] = useState("");
-  const artboardRef = useRef(null);
-  const fileName = useMemo(() => template.fileName(draft), [template, draft]);
-
-  const update = (key, value) => {
-    setDraft((current) => ({ ...current, [key]: template.sanitizeInput(key, value) }));
-    setStatus("idle");
-    setError("");
-  };
-  const exportPng = async () => {
-    if (!artboardRef.current || status === "exporting") return;
-    setStatus("exporting");
-    setError("");
-    try {
-      await exportStaticMediaV2Png(artboardRef.current, fileName, STATIC_MEDIA_V2_CANVAS);
-      setStatus("ready");
-    } catch (exportError) {
-      setError(exportError?.message || "Não foi possível exportar o PNG.");
-      setStatus("error");
-    }
-  };
-
-  return (
-    <MediaWorkspace
-      stage={
-        <PreviewStage pieceKey={`seletiva:${template.id}`} ratio="story" caption="STORY 9:16 · PNG" label={`Preview do template ${template.name}`}>
-          <StaticMediaV2Canvas artboardRef={artboardRef} label={`Canvas do template ${template.name}`}><Template copy={draft} /></StaticMediaV2Canvas>
-        </PreviewStage>
-      }
-      actions={
-        <>
-          <PieceActions primary={<button type="button" className="primary" disabled={status === "exporting"} onClick={() => void exportPng()}><RollingLabel>{status === "exporting" ? "PREPARANDO PNG…" : "EXPORTAR PNG"}</RollingLabel></button>} />
-          {status === "ready" && <MediaNotice tone="info">PNG {STATIC_MEDIA_V2_CANVAS.width} × {STATIC_MEDIA_V2_CANVAS.height} exportado.</MediaNotice>}
-          {status === "error" && <MediaNotice tone="error" title="A exportação falhou.">{error}</MediaNotice>}
-        </>
-      }
-      rail={
-        <RailBlock kicker="TEXTO DA PEÇA" aside={`${template.name}`} className={reduced ? "announce-roster is-reduced" : "announce-roster"}>
-          <div className="announce-fields">
-            {template.fields.map(({ key, label, maxLength, prominent }) => (
-              <label key={key} className={`announce-field${prominent ? " is-headline" : ""}`}>
-                <span>{label}</span>
-                <input value={draft[key]} maxLength={maxLength} onChange={(event) => update(key, event.target.value)} />
-              </label>
-            ))}
-          </div>
-          <p className="media-block-empty">{fileName}</p>
-        </RailBlock>
-      }
-    />
   );
 }

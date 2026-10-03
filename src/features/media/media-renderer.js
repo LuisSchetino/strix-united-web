@@ -47,7 +47,6 @@ export function resolveMediaLook() {
  * 4:5 post format are stills (PNG); everything else is an MP4.
  */
 export function resolveMediaOutput({ sectionId, kind = "individual", format = "story" } = {}) {
-  if (sectionId === "announce" && kind === "seletiva") return { type: "image", ext: "png", label: "PNG" };
   if (sectionId === "announce" && format === "feed") return { type: "image", ext: "png", label: "PNG" };
   return { type: "video", ext: "mp4", label: "MP4" };
 }

@@ -154,3 +154,20 @@ export function contractDateLabel(now = new Date()) {
   return new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "long", year: "numeric" })
     .format(now).toLocaleUpperCase("pt-BR");
 }
+
+/**
+ * Identificador do documento: derivado do próprio aceite (temporada, data e
+ * traço), então o mesmo contrato sempre mostra o mesmo número. Não é um
+ * registro de servidor — serve para o vínculo e o PDF citarem o mesmo papel.
+ */
+export function contractDocumentId(contract) {
+  if (!contract?.signature?.d || !contract?.signedAt) return "";
+  const source = `${contract.season}|${contract.signedAt}|${contract.signature.d}`;
+  let hash = 0x811c9dc5;
+  for (let index = 0; index < source.length; index += 1) {
+    hash ^= source.charCodeAt(index);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  const season = String(contract.season || CONTRACT_SEASON).replace(/\D/g, "").slice(2, 4) + String(contract.season || CONTRACT_SEASON).replace(/\D/g, "").slice(-2);
+  return `STX-${season}-${hash.toString(16).toUpperCase().padStart(8, "0").slice(0, 6)}`;
+}

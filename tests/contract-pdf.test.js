@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildSignedContractPdf, pdfFromJpeg } from "../src/features/onboarding/contract-pdf.js";
-import { CONTRACT_SEASON } from "../src/features/onboarding/contract-core.js";
+import { buildSignedContractPdf } from "../src/features/onboarding/contract-pdf.js";
+import { CONTRACT_SEASON, contractDocumentId } from "../src/features/onboarding/contract-core.js";
 
 test("PDF do contrato inclui compromisso, identidade, data e traço vetorial assinado", () => {
   const contract = {
@@ -23,16 +23,23 @@ test("PDF do contrato inclui compromisso, identidade, data e traço vetorial ass
   assert.ok(pdf.includes(`<${Buffer.from("CONTRATO DE VÍNCULO", "latin1").toString("hex")}>`));
 });
 
-test("o PDF do download é a imagem do contrato que está na tela", () => {
-  const jpeg = new Uint8Array([0xff, 0xd8, 0xff, 0xd9]);
-  const pdf = pdfFromJpeg(jpeg, 640, 900);
-  const text = new TextDecoder().decode(pdf);
-  assert.match(text, /^%PDF-1\.4/);
+test("o PDF é um documento oficial: timbre, identificador, rodapé paginado e escudo embutido", () => {
+  const contract = { season: CONTRACT_SEASON, signedAt: "2026-10-01T20:15:00.000Z", signature: { d: "M10 100L300 60L590 120" } };
+  const id = contractDocumentId(contract);
+  assert.match(id, /^STX-2627-[0-9A-F]{6}$/);
+  assert.equal(contractDocumentId(contract), id, "o mesmo aceite gera sempre o mesmo número");
+  const crest = { bytes: new Uint8Array([0xff, 0xd8, 0xff, 0xd9]), width: 240, height: 240 };
+  const pdf = buildSignedContractPdf(contract, { name: "NUNES" }, { crest });
+  const text = new TextDecoder("latin1").decode(pdf);
+  const hex = (value) => `<${Buffer.from(value, "latin1").toString("hex")}>`;
+  assert.match(text, /\/MediaBox \[0 0 595 842\]/);
   assert.match(text, /\/Filter \/DCTDecode/);
-  assert.match(text, /\/Count 1/);
-  assert.match(text, /\/MediaBox \[0 0 595 837\]/);
-  assert.match(text, /%%EOF$/);
-  assert.ok(pdf.includes(0xff) && pdf.includes(0xd8));
+  assert.match(text, /\/XObject << \/Crest 7 0 R >>/);
+  assert.ok(text.includes(hex(id)), "o identificador aparece no documento");
+  assert.ok(text.includes(hex("Página 1 de 1")), "rodapé paginado");
+  assert.ok(text.includes(hex("STRIX UNITED")), "timbre do clube");
+  const xref = Number(text.match(/startxref\n(\d+)/)[1]);
+  assert.equal(text.slice(xref, xref + 4), "xref", "o xref aponta para o byte certo mesmo com o JPEG binário");
 });
 
 test("não fabrica um PDF quando não há contrato assinado válido", () => {

@@ -4,8 +4,11 @@
    Motion tokens live in src/ui/motion/motion.css (mirrored in motion-tokens.js).
 
    STRIX UI is ink, graphite, off-white and hairlines.
-   RASTRO UI is the partner signature and the only owner of Rastro Blue:
-   --rastro-* tokens may be read inside .rastro-* / [data-rastro] scopes only.
+   Rastro Blue has exactly two jobs:
+     1. the Rastro partner signature (--rastro-* inside .rastro-* scopes);
+     2. the language of measured performance (--data-*): values, ratings,
+        deltas and chart marks on Estatísticas, Análise, Resumo da noite and
+        player sheets. Never a background, a button or structure.
 
    Breakpoints (media queries cannot read custom properties; keep these in sync):
      --bp-phone  560px   single column, bottom navigation
@@ -48,12 +51,20 @@
   --state-warning-soft: rgba(232, 176, 74, 0.14);
   --state-success: #4cc38a;
   --state-success-soft: rgba(76, 195, 138, 0.14);
+  --state-danger-text: #f3b4b6;   /* error copy on ink */
+  --state-warning-text: #f0cd8b;  /* warning copy on ink */
 
   /* Partner scopes. */
   --rastro-blue: #2F80FF;
   --rastro-blue-soft: rgba(47, 128, 255, 0.16);
   --rastro-blue-subtle: rgba(47, 128, 255, 0.08);
   --next-clubs-accent: #c7ff2f;
+
+  /* Data. Rastro Blue as information: a measured value, its trend, its mark. */
+  --data: var(--rastro-blue);
+  --data-soft: var(--rastro-blue-soft);
+  --data-subtle: var(--rastro-blue-subtle);
+  --data-line: rgba(47, 128, 255, 0.55);
 
   /* Type. One family; contrast comes from size, weight and tracking. */
   --font-sans: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -124,7 +135,6 @@
   --strix-bg: var(--ink-0);
   --strix-surface: var(--ink-1);
   --strix-surface-1: var(--ink-1);
-  --strix-surface-2: var(--ink-2);
   --strix-surface-raised: var(--ink-2);
   --strix-surface-soft: var(--ink-3);
   --strix-border: var(--line-2);
@@ -132,15 +142,8 @@
   --strix-text: var(--text-1);
   --strix-muted: var(--text-3);
   --strix-subtle: var(--text-4);
-  --strix-blue: var(--text-1);
-  --strix-deep: var(--ink-3);
-  --strix-glow: rgba(255, 255, 255, 0.12);
-  --fc27-blue: var(--text-1);
-  --fc27-blue-deep: var(--ink-2);
   --fc27-label: #aeb4bb;
   --fc27-line: var(--ink-5);
-  --fc27-surface: var(--ink-1);
-  --fc27-surface-raised: var(--ink-2);
   --sp-surface: var(--ink-1);
   --sp-raised: var(--ink-2);
   --sp-hover: var(--ink-3);

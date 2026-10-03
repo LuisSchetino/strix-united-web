@@ -4,66 +4,304 @@
   "title": "Design System: STRIX UNITED FC27",
   "extensions": {
     "colorMeta": {
-      "ink-0": { "role": "neutral", "displayName": "Pitch Ink", "canonical": "#050607", "tonalRamp": ["#050607", "#0c0c0d", "#121314", "#18191a", "#1f2021", "#2a2b2c", "#767e88", "#f5f5f5"] },
-      "ink-1": { "role": "neutral", "displayName": "Raised Ink", "canonical": "#0c0c0d", "tonalRamp": ["#050607", "#0c0c0d", "#121314", "#18191a", "#1f2021", "#2a2b2c", "#767e88", "#f5f5f5"] },
-      "ink-2": { "role": "neutral", "displayName": "Field Ink", "canonical": "#121314" },
-      "ink-3": { "role": "neutral", "displayName": "Selected Ink", "canonical": "#18191a" },
-      "ink-4": { "role": "neutral", "displayName": "Pressed Ink", "canonical": "#1f2021" },
-      "ink-5": { "role": "neutral", "displayName": "Graphite", "canonical": "#2a2b2c" },
-      "text-1": { "role": "neutral", "displayName": "Off-White", "canonical": "#f5f5f5", "tonalRamp": ["#767e88", "#8e969f", "#c9cdd2", "#f5f5f5"] },
-      "text-2": { "role": "neutral", "displayName": "Body Grey", "canonical": "#c9cdd2" },
-      "text-3": { "role": "neutral", "displayName": "Meta Grey", "canonical": "#8e969f" },
-      "text-4": { "role": "neutral", "displayName": "Quiet Grey", "canonical": "#767e88" },
-      "text-on-light": { "role": "neutral", "displayName": "Ink on Paper", "canonical": "#08090a" },
-      "line-1": { "role": "neutral", "displayName": "Row Hairline", "canonical": "rgba(255, 255, 255, 0.06)" },
-      "line-2": { "role": "neutral", "displayName": "Section Hairline", "canonical": "rgba(255, 255, 255, 0.1)" },
-      "line-3": { "role": "neutral", "displayName": "Emphasis Hairline", "canonical": "rgba(255, 255, 255, 0.16)" },
-      "line-focus": { "role": "neutral", "displayName": "Focus Ring", "canonical": "rgba(245, 245, 245, 0.72)" },
-      "paper-1": { "role": "primary", "displayName": "Paper White", "canonical": "#f3f3f3", "tonalRamp": ["#f3f3f3", "#ffffff"] },
-      "paper-2": { "role": "primary", "displayName": "Paper White (hover)", "canonical": "#ffffff" },
-      "state-danger": { "role": "state", "displayName": "Danger Red", "canonical": "#e5484d", "soft": "rgba(229, 72, 77, 0.14)" },
-      "state-warning": { "role": "state", "displayName": "Warning Amber", "canonical": "#e8b04a", "soft": "rgba(232, 176, 74, 0.14)" },
-      "state-success": { "role": "state", "displayName": "Success Green", "canonical": "#4cc38a", "soft": "rgba(76, 195, 138, 0.14)" },
-      "rastro-blue": { "role": "partner", "displayName": "Rastro Blue", "canonical": "#2F80FF", "scope": ".rastro-* / [data-rastro] only", "tonalRamp": ["rgba(47, 128, 255, 0.08)", "rgba(47, 128, 255, 0.16)", "#2F80FF"] },
-      "next-clubs-accent": { "role": "partner", "displayName": "Next Clubs Lime", "canonical": "#c7ff2f", "scope": "Next Clubs competitions surfaces only" }
+      "ink-0": {
+        "role": "neutral",
+        "displayName": "Pitch Ink",
+        "canonical": "#050607",
+        "tonalRamp": [
+          "#050607",
+          "#0c0c0d",
+          "#121314",
+          "#18191a",
+          "#1f2021",
+          "#2a2b2c",
+          "#767e88",
+          "#f5f5f5"
+        ]
+      },
+      "ink-1": {
+        "role": "neutral",
+        "displayName": "Raised Ink",
+        "canonical": "#0c0c0d",
+        "tonalRamp": [
+          "#050607",
+          "#0c0c0d",
+          "#121314",
+          "#18191a",
+          "#1f2021",
+          "#2a2b2c",
+          "#767e88",
+          "#f5f5f5"
+        ]
+      },
+      "ink-2": {
+        "role": "neutral",
+        "displayName": "Field Ink",
+        "canonical": "#121314"
+      },
+      "ink-3": {
+        "role": "neutral",
+        "displayName": "Selected Ink",
+        "canonical": "#18191a"
+      },
+      "ink-4": {
+        "role": "neutral",
+        "displayName": "Pressed Ink",
+        "canonical": "#1f2021"
+      },
+      "ink-5": {
+        "role": "neutral",
+        "displayName": "Graphite",
+        "canonical": "#2a2b2c"
+      },
+      "text-1": {
+        "role": "neutral",
+        "displayName": "Off-White",
+        "canonical": "#f5f5f5",
+        "tonalRamp": [
+          "#767e88",
+          "#8e969f",
+          "#c9cdd2",
+          "#f5f5f5"
+        ]
+      },
+      "text-2": {
+        "role": "neutral",
+        "displayName": "Body Grey",
+        "canonical": "#c9cdd2"
+      },
+      "text-3": {
+        "role": "neutral",
+        "displayName": "Meta Grey",
+        "canonical": "#8e969f"
+      },
+      "text-4": {
+        "role": "neutral",
+        "displayName": "Quiet Grey",
+        "canonical": "#767e88"
+      },
+      "text-on-light": {
+        "role": "neutral",
+        "displayName": "Ink on Paper",
+        "canonical": "#08090a"
+      },
+      "line-1": {
+        "role": "neutral",
+        "displayName": "Row Hairline",
+        "canonical": "rgba(255, 255, 255, 0.06)"
+      },
+      "line-2": {
+        "role": "neutral",
+        "displayName": "Section Hairline",
+        "canonical": "rgba(255, 255, 255, 0.1)"
+      },
+      "line-3": {
+        "role": "neutral",
+        "displayName": "Emphasis Hairline",
+        "canonical": "rgba(255, 255, 255, 0.16)"
+      },
+      "line-focus": {
+        "role": "neutral",
+        "displayName": "Focus Ring",
+        "canonical": "rgba(245, 245, 245, 0.72)"
+      },
+      "paper-1": {
+        "role": "primary",
+        "displayName": "Paper White",
+        "canonical": "#f3f3f3",
+        "tonalRamp": [
+          "#f3f3f3",
+          "#ffffff"
+        ]
+      },
+      "paper-2": {
+        "role": "primary",
+        "displayName": "Paper White (hover)",
+        "canonical": "#ffffff"
+      },
+      "state-danger": {
+        "role": "state",
+        "displayName": "Danger Red",
+        "canonical": "#e5484d",
+        "soft": "rgba(229, 72, 77, 0.14)"
+      },
+      "state-warning": {
+        "role": "state",
+        "displayName": "Warning Amber",
+        "canonical": "#e8b04a",
+        "soft": "rgba(232, 176, 74, 0.14)"
+      },
+      "state-success": {
+        "role": "state",
+        "displayName": "Success Green",
+        "canonical": "#4cc38a",
+        "soft": "rgba(76, 195, 138, 0.14)"
+      },
+      "rastro-blue": {
+        "role": "partner",
+        "displayName": "Rastro Blue",
+        "canonical": "#2F80FF",
+        "scope": "Rastro signatures and measured data via --data tokens",
+        "tonalRamp": [
+          "rgba(47, 128, 255, 0.08)",
+          "rgba(47, 128, 255, 0.16)",
+          "#2F80FF"
+        ]
+      },
+      "next-clubs-accent": {
+        "role": "partner",
+        "displayName": "Next Clubs Lime",
+        "canonical": "#c7ff2f",
+        "scope": "Next Clubs competitions surfaces only"
+      }
     },
     "typographyMeta": {
-      "kickoff": { "displayName": "Kickoff", "purpose": "Next match kickoff in the Home now block. One per screen." },
-      "score": { "displayName": "Score", "purpose": "Last result scoreline and season figures (token --text-score)." },
-      "display": { "displayName": "Display", "purpose": "Page titles (tagline with a period) and the Home greeting." },
-      "headline": { "displayName": "Headline", "purpose": "Selected piece title in the Central de mídia toolbar; sheet headings." },
-      "title": { "displayName": "Title", "purpose": "Opponent, player and pauta names in rows." },
-      "time": { "displayName": "Time", "purpose": "Kickoff times in timetable rows, tabular." },
-      "body": { "displayName": "Body", "purpose": "Descriptions and prose, max 62ch." },
-      "meta": { "displayName": "Meta", "purpose": "Competitions, counts, dates, sub-lines." },
-      "label": { "displayName": "Label", "purpose": "Uppercase tracked data metadata: section heads, columns, rail groups, breadcrumb, status. Never an eyebrow above a title." }
+      "kickoff": {
+        "displayName": "Kickoff",
+        "purpose": "Next match kickoff in the Home now block. One per screen."
+      },
+      "score": {
+        "displayName": "Score",
+        "purpose": "Last result scoreline and season figures (token --text-score)."
+      },
+      "display": {
+        "displayName": "Display",
+        "purpose": "Page titles (tagline with a period) and the Home greeting."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Selected piece title in the Central de mídia toolbar; sheet headings."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Opponent, player and pauta names in rows."
+      },
+      "time": {
+        "displayName": "Time",
+        "purpose": "Kickoff times in timetable rows, tabular."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Descriptions and prose, max 62ch."
+      },
+      "meta": {
+        "displayName": "Meta",
+        "purpose": "Competitions, counts, dates, sub-lines."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Uppercase tracked data metadata: section heads, columns, rail groups, breadcrumb, status. Never an eyebrow above a title."
+      }
     },
     "shadows": [
-      { "name": "shadow-raise", "value": "0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 10px 28px rgba(0, 0, 0, 0.35)", "purpose": "The one raised object on a page (Home now block)." },
-      { "name": "shadow-pop", "value": "0 18px 48px rgba(0, 0, 0, 0.62)", "purpose": "Menus, tooltips, player sheet, the Media preview piece (with a line-2 ring)." },
-      { "name": "shadow-sheet", "value": "0 -16px 48px rgba(0, 0, 0, 0.6)", "purpose": "Mobile bottom sheets." }
+      {
+        "name": "shadow-raise",
+        "value": "0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 10px 28px rgba(0, 0, 0, 0.35)",
+        "purpose": "The one raised object on a page (Home now block)."
+      },
+      {
+        "name": "shadow-pop",
+        "value": "0 18px 48px rgba(0, 0, 0, 0.62)",
+        "purpose": "Menus, tooltips, player sheet, the Media preview piece (with a line-2 ring)."
+      },
+      {
+        "name": "shadow-sheet",
+        "value": "0 -16px 48px rgba(0, 0, 0, 0.6)",
+        "purpose": "Mobile bottom sheets."
+      }
     ],
     "motion": [
-      { "name": "motion-micro", "value": "140ms", "purpose": "Hover, press, focus, colour." },
-      { "name": "motion-control", "value": "200ms", "purpose": "Tabs, segmented controls, menus, toggles, status swaps." },
-      { "name": "motion-modal", "value": "220ms", "purpose": "Dialogs and sheets." },
-      { "name": "motion-section", "value": "320ms", "purpose": "Content swaps inside a stable shell (Media sections rise 10px)." },
-      { "name": "motion-hero", "value": "560ms", "purpose": "Now line draw-in, preview assembly." },
-      { "name": "motion-stagger", "value": "45ms", "purpose": "Step between toolbar, stage, actions, rail." },
-      { "name": "motion-ease", "value": "cubic-bezier(0.22, 1, 0.36, 1)", "purpose": "Decelerate; every entrance." },
-      { "name": "motion-ease-in", "value": "cubic-bezier(0.4, 0, 1, 1)", "purpose": "Accelerate; leaving." },
-      { "name": "motion-ease-inout", "value": "cubic-bezier(0.65, 0, 0.35, 1)", "purpose": "Indeterminate progress scan." },
-      { "name": "reduced-motion", "value": "durations 1ms, stagger 0ms, offsets 0px", "purpose": "prefers-reduced-motion collapses every token." }
+      {
+        "name": "motion-micro",
+        "value": "140ms",
+        "purpose": "Hover, press, focus, colour."
+      },
+      {
+        "name": "motion-control",
+        "value": "200ms",
+        "purpose": "Tabs, segmented controls, menus, toggles, status swaps."
+      },
+      {
+        "name": "motion-modal",
+        "value": "220ms",
+        "purpose": "Dialogs and sheets."
+      },
+      {
+        "name": "motion-section",
+        "value": "320ms",
+        "purpose": "Content swaps inside a stable shell (Media sections rise 10px)."
+      },
+      {
+        "name": "motion-hero",
+        "value": "560ms",
+        "purpose": "Now line draw-in, preview assembly."
+      },
+      {
+        "name": "motion-stagger",
+        "value": "45ms",
+        "purpose": "Step between toolbar, stage, actions, rail."
+      },
+      {
+        "name": "motion-ease",
+        "value": "cubic-bezier(0.22, 1, 0.36, 1)",
+        "purpose": "Decelerate; every entrance."
+      },
+      {
+        "name": "motion-ease-in",
+        "value": "cubic-bezier(0.4, 0, 1, 1)",
+        "purpose": "Accelerate; leaving."
+      },
+      {
+        "name": "motion-ease-inout",
+        "value": "cubic-bezier(0.65, 0, 0.35, 1)",
+        "purpose": "Indeterminate progress scan."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "durations 1ms, stagger 0ms, offsets 0px",
+        "purpose": "prefers-reduced-motion collapses every token."
+      }
     ],
     "breakpoints": [
-      { "name": "phone", "value": "560px" },
-      { "name": "header-stack", "value": "760px" },
-      { "name": "tablet", "value": "900px" },
-      { "name": "wide", "value": "1180px" },
-      { "name": "chip-compact", "value": "1280px" }
+      {
+        "name": "phone",
+        "value": "560px"
+      },
+      {
+        "name": "header-stack",
+        "value": "760px"
+      },
+      {
+        "name": "tablet",
+        "value": "900px"
+      },
+      {
+        "name": "wide",
+        "value": "1180px"
+      },
+      {
+        "name": "chip-compact",
+        "value": "1280px"
+      }
     ],
-    "layers": { "raised": 2, "sticky": 20, "sidebar": 30, "dock": 40, "scrim": 900, "drawer": 950, "modal": 1000, "menu": 1100, "toast": 1200 },
-    "shell": { "sidebar": "248px", "sidebarCompact": "72px", "topbar": "64px", "tabbar": "64px", "pageMax": "1240px" }
+    "layers": {
+      "raised": 2,
+      "sticky": 20,
+      "sidebar": 30,
+      "dock": 40,
+      "scrim": 900,
+      "drawer": 950,
+      "modal": 1000,
+      "menu": 1100,
+      "toast": 1200
+    },
+    "shell": {
+      "sidebar": "248px",
+      "sidebarCompact": "72px",
+      "topbar": "64px",
+      "tabbar": "64px",
+      "pageMax": "1240px"
+    }
   },
   "components": [
     {
@@ -151,14 +389,46 @@
       "Paper-white pill for the one primary action."
     ],
     "rules": [
-      { "name": "The No-Blue Rule", "body": "Rastro Blue is read only inside `.rastro-*` / `[data-rastro]` scopes. Strix structure (nav, buttons, focus, rows, charts) never turns blue.", "section": "colors" },
-      { "name": "The State-Only Hue Rule", "body": "Green, amber and red appear only when the system is reporting a state. A row, header or piece never takes a hue to look lively.", "section": "colors" },
-      { "name": "The One Paper Rule", "body": "Paper white is the only filled light surface. One primary pill per action group; the rest is outlined or text.", "section": "colors" },
-      { "name": "The Tabular Rule", "body": "Every time, score, count and date renders with tabular numerals (`time`, `.tabular`, `[data-tabular]`).", "section": "typography" },
-      { "name": "The Tagline Title Rule", "body": "Page titles are short declarative taglines that end with a period (\"Elenco FC 27.\", \"Central de mídia.\", \"Boa noite, Dornellas.\"). The period is intentional.", "section": "typography" },
-      { "name": "The No-Eyebrow Rule", "body": "Nothing sits above a page title. The route name lives in the topbar breadcrumb; uppercase labels are reserved for data metadata (section heads, columns, status), never as an overtitle.", "section": "typography" },
-      { "name": "The One Lift Rule", "body": "A view lifts one object. Lists, ledgers and section content stay flat on the ground.", "section": "elevation" },
-      { "name": "The Soft Shadow Rule", "body": "Shadows are offset and softly blurred black. No zero-offset glows, no hard offset shadows.", "section": "elevation" }
+      {
+        "name": "The Data-Blue Rule",
+        "body": "Blue means measured: --data on EA values, ratings, trends, progress and data marks. Never on structure, buttons, surfaces or decoration.",
+        "section": "colors"
+      },
+      {
+        "name": "The State-Only Hue Rule",
+        "body": "Green, amber and red appear only when the system is reporting a state. A row, header or piece never takes a hue to look lively.",
+        "section": "colors"
+      },
+      {
+        "name": "The One Paper Rule",
+        "body": "Paper white is the only filled light surface. One primary pill per action group; the rest is outlined or text.",
+        "section": "colors"
+      },
+      {
+        "name": "The Tabular Rule",
+        "body": "Every time, score, count and date renders with tabular numerals (`time`, `.tabular`, `[data-tabular]`).",
+        "section": "typography"
+      },
+      {
+        "name": "The Tagline Title Rule",
+        "body": "Page titles are short declarative taglines that end with a period (\"Elenco FC 27.\", \"Central de mídia.\", \"Boa noite, Dornellas.\"). The period is intentional.",
+        "section": "typography"
+      },
+      {
+        "name": "The No-Eyebrow Rule",
+        "body": "Nothing sits above a page title. The route name lives in the topbar breadcrumb; uppercase labels are reserved for data metadata (section heads, columns, status), never as an overtitle.",
+        "section": "typography"
+      },
+      {
+        "name": "The One Lift Rule",
+        "body": "A view lifts one object. Lists, ledgers and section content stay flat on the ground.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Soft Shadow Rule",
+        "body": "Shadows are offset and softly blurred black. No zero-offset glows, no hard offset shadows.",
+        "section": "elevation"
+      }
     ],
     "dos": [
       "Do build on the ink ramp and four text tiers from `src/design/tokens.css`; read tokens, never literals.",
@@ -181,12 +451,9 @@
     ]
   },
   "drift": [
-    "src/features/competitions/competitions-inline.css and competitions.css: 3px inset side-stripe accents in competition colour (e.g. .competition-timeline article.is-strix).",
-    "src/gameday/gameday.css: orphaned GameDay editor with 3–7px border-left stripes, hard offset shadows (10px 10px 0 / 14px 14px 0), Arial Narrow display face and #696b6f grey-blue accents.",
     "Command palette still renders as a tile grid, not hairline rows.",
     "src/fc27-brand.css overrides .primary with box-shadow 0 9px 28px #0008, adding a shadow to the flat paper pill defined in src/styles.css.",
     "src/ui/motion/motion.css .motion-tabs (used as the Media format control) carries literal values: 10px/900 labels, 14px/10px radii, gradient thumb #f4f4f5 to #d4d4d8.",
-    "src/features/media/media.css: incomplete readiness label uses literal #f0cd8b instead of a state token.",
-    "Legacy alias tokens (--strix-*, --fc27-*, --sp-*, --ui-space-*) remain for older layers; --fc27-label and --sp-kicker are off-ramp literals (#aeb4bb)."
+    "Legacy alias tokens (--strix-border*, --strix-text/muted, --fc27-label/line, --sp-*) remain for older layers; the blue and surface aliases were removed; --fc27-label and --sp-kicker are off-ramp literals (#aeb4bb)."
   ]
 }

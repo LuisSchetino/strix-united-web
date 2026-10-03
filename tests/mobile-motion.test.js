@@ -11,8 +11,9 @@ test("motion system centralizes tokens and honors reduced motion", async () => {
     read("src/main.jsx"),
     read("package.json"),
   ]);
-  assert.match(css, /--motion-fast:/);
-  assert.match(css, /--motion-normal:/);
+  assert.match(css, /--motion-micro:/);
+  assert.match(css, /--motion-control:/);
+  assert.doesNotMatch(css, /--motion-(fast|normal|slow|spring):/);
   assert.match(css, /prefers-reduced-motion:\s*reduce/);
   assert.match(source, /matchMedia\("\(prefers-reduced-motion: reduce\)"\)/);
   assert.match(main, /ArrowDown/);
@@ -51,15 +52,17 @@ test("mobile history uses cards, sheet and horizontal swipe without page table o
 test("competition mobile selector, sticky standings and round navigation stay bounded", async () => {
   const [source, css] = await Promise.all([
     read("src/features/competitions/CompetitionsPage.jsx"),
-    read("src/features/competitions/competitions-inline.css"),
+    read("src/features/competitions/competitions.css"),
   ]);
   assert.match(source, /bracket-round-nav/);
   assert.match(source, /data-mobile-active/);
   assert.match(source, /SegmentedControl/);
-  assert.match(css, /scroll-snap-type:x proximity/);
-  assert.match(css, /-webkit-line-clamp:2/);
-  assert.match(css, /\.standings-table>header>\*:nth-child\(3\)/);
-  assert.match(css, /column-gap:0/);
+  assert.match(css, /scroll-snap-type: x proximity/);
+  assert.match(css, /-webkit-line-clamp: 2/);
+  assert.match(css, /\.standings-table > header > \*:nth-child\(3\)/);
+  assert.match(css, /column-gap: 0/);
+  // The club column stays put while the numbers scroll.
+  assert.match(css, /position: sticky;/);
   assert.match(css, /--standings-row-bg/);
   assert.match(css, /\.bracket-round\[data-mobile-active="true"\]/);
   assert.match(source, /function BracketConnectors/);

@@ -3,12 +3,14 @@ import { ClubLogo } from "../../ui/ClubLogo.jsx";
 import { STRIX_BRAND } from "../../brand.js";
 import { SignaturePad } from "./SignaturePad.jsx";
 import { ContractInstrument } from "./ContractInstrument.jsx";
-import { downloadSignedContractPdf, renderContractVideo } from "./contract-export-lazy.js";
+import { renderContractVideo } from "./contract-export-lazy.js";
+import { DocumentDownload } from "./DocumentDownload.jsx";
 import { downloadBlob } from "../../lib/download-blob.js";
 import {
   CONTRACT_METADATA_KEY,
   CONTRACT_SEASON,
   buildContractPayload,
+  contractDocumentId,
   contractDateLabel,
   resolveContractIdentity,
 } from "./contract-core.js";
@@ -103,10 +105,12 @@ export function ContractGate({ client, session, profile, players = [], onShown, 
           season={CONTRACT_SEASON}
           signedAtLabel={phase === "done" ? today : ""}
           signature={phase === "done" ? signed?.signature?.d : ""}
+          documentId={phase === "done" ? contractDocumentId(signed) : ""}
         >
           <SignaturePad ref={padRef} disabled={busy} onChange={(_strokes, meaningful) => { setReady(meaningful); if (meaningful) setError(""); }} />
         </ContractInstrument>
         </div>
+        {phase === "done" && <p className="contract-confirmed" role="status"><svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16"><path d="m5 12.5 4.2 4.2L19 7" /></svg>Vínculo registrado no seu perfil · {contractDocumentId(signed)}</p>}
         {phase !== "done" && <div className="contract-pad-tools">
           <button type="button" onClick={() => padRef.current?.undo()} disabled={busy}>REFAZER</button>
           <button type="button" onClick={() => padRef.current?.clear()} disabled={busy}>LIMPAR</button>
@@ -119,7 +123,7 @@ export function ContractGate({ client, session, profile, players = [], onShown, 
           </button>
           <button type="button" className="contract-switch" onClick={onSignOut} disabled={busy}>Não é você? Sair</button>
         </footer> : <footer className="contract-actions contract-downloads">
-          <button type="button" className="secondary" disabled={rendering} onClick={() => downloadSignedContractPdf(sheetRef.current, CONTRACT_SEASON).catch((cause) => setVideoError(cause?.message || "Não foi possível gerar o PDF."))}>BAIXAR PDF</button>
+          <DocumentDownload contract={signed} identity={identity} onError={setVideoError} />
           <button type="button" className="secondary" disabled={rendering} onClick={() => { setRendering(true); void downloadVideo(); }}>{rendering ? "GERANDO…" : "BAIXAR VÍDEO"}</button>
           <button type="button" className="primary" onClick={() => onSigned?.(signed)}>CONTINUAR</button>
         </footer>}

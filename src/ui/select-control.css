@@ -1,5 +1,5 @@
 .select-control{position:relative;min-width:176px;color:var(--strix-text)}
-.select-control>button{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:40px;padding:0 12px;border:1px solid var(--strix-border-strong);border-radius:10px;background:#101318;color:#d8dce0;font:850 9px/1 Inter,sans-serif;letter-spacing:.06em;text-align:left;transition:border-color var(--motion-fast),background var(--motion-fast),box-shadow var(--motion-fast)}
+.select-control>button{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:40px;padding:0 12px;border:1px solid var(--strix-border-strong);border-radius:10px;background:#101318;color:#d8dce0;font:850 9px/1 Inter,sans-serif;letter-spacing:.06em;text-align:left;transition:border-color var(--motion-micro),background var(--motion-micro),box-shadow var(--motion-micro)}
 .select-control>button:hover,.select-control>button:focus-visible,.select-control>button[aria-expanded=true]{border-color:#59616a;background:#15191e;outline:0;box-shadow:0 0 0 3px #ffffff0b}
 .select-control>button svg{display:block;flex:0 0 auto;color:#8e969f;transition:rotate 160ms var(--motion-ease,cubic-bezier(.2,.8,.2,1))}
 .select-control>button[aria-expanded=true] svg{rotate:180deg}

@@ -9,9 +9,6 @@ import { StatisticsPage } from "./features/statistics/StatisticsPage.jsx";
 import { AnalysisPage } from "./features/analysis/AnalysisPage.jsx";
 import { RosterTools } from "./features/squad/RosterTools.jsx";
 import { notify, ToastViewport } from "./ui/motion/motion.jsx";
-import { GameDayCanvas } from "./gameday/GameDayCanvas.jsx";
-import { GameDayEditor } from "./gameday/GameDayEditor.jsx";
-import { createDefaultProject } from "./gameday/defaults.js";
 import "./styles.css";
 import "./fc27-polish.css";
 import "./interaction-polish.css";
@@ -24,8 +21,6 @@ import "./agenda-final.css";
 import "./agenda-sync.css";
 import "./fc27-data.css";
 import "./fc27-fixes.css";
-import "./gameday/gameday.css";
-import "./gameday/gameday-controls.css";
 import "./features/squad-cards.css";
 import "./fc27-brand.css";
 import "./round-discovery.css";
@@ -102,21 +97,6 @@ else if (page === "statistics") content = <StatisticsPage profile={profile} work
 else if (page === "analysis") content = <AnalysisPage profile={profile} workspace={workspace} matches={workspace.matches}/>;
 else if (page === "roster-tools") content = <section className="data-page"><header className="data-page-header"><div><span>ELENCO FC27</span><h1>Ferramentas do elenco.</h1></div><RosterTools workspace={workspace}/></header></section>;
 else if (page === "developer") content = <DeveloperPage profile={profile} workspace={{ ...workspace, competitionSyncLogs: [], competitionAuditLogs: [], systemFlags: [{ key: "site_maintenance", label: "Modo manutenção", description: "Pausa o acesso dos demais tiers.", enabled: false }] }} client={client}/>;
-else if (page === "gameday-editor") content = <GameDayEditor profile={profile} workspace={workspace} client={client}/>;
-else if (page === "gameday") {
-  const project = createDefaultProject();
-  Object.assign(project, { opponentName: "POA CITY", matchTime: "22:10", championshipName: "COPA YESHUA", visualSettings: { ...project.visualSettings, showGuides: false } });
-  if (new URLSearchParams(location.search).get("mode") === "agenda") {
-    project.mode = "agenda";
-    project.competitionLogos = ["YESHUA", "MASTER LEAGUE", "VPR ELITE", "SUPERLIGA", "AMISTOSO"].map((name, index) => ({ id: String(index), name, url: index < 2 ? STRIX_BRAND.logo : "" }));
-    project.dailyGames = [
-      ["21:10", "VIBE ES", "AMISTOSO"], ["21:40", "WINNER ELEVENS", "SUPERLIGA YESHUA"],
-      ["22:10", "TKV", "MASTER LEAGUE"], ["22:40", "RB UNIDOS", "AMISTOSO"],
-      ["23:10", "ITUANO FV", "COPA YESHUA"], ["23:40", "POA CITY", "VPR ELITE"],
-    ].map(([time, opponent, competition], index) => ({ id: String(index), time, opponent, competition, opponentLogo: "" }));
-    project.elements = { ...project.elements, mainLogo: { ...project.elements.mainLogo, x: 650, y: 1320, scale: .5 }, timeCard: { ...project.elements.timeCard, x: 88, y: 455, scale: 1.08 }, group: { ...project.elements.group, visible: false }, dailyGames: { ...project.elements.dailyGames, x: 88, y: 700, scale: 1, visible: true } };
-  }
-  content = <main className="visual-gameday"><GameDayCanvas project={project} selectedId="" onSelect={() => {}} onLayerChange={() => {}} exportMode/></main>;
-} else content = <CompetitionsPage profile={profile} workspace={workspace} client={client}/>;
+else content = <CompetitionsPage profile={profile} workspace={workspace} client={client}/>;
 export { workspace, profile, client };
 if (document.getElementById("root")) createRoot(document.getElementById("root")).render(<div className="app-shell"><main className="content visual-content">{content}</main></div>);

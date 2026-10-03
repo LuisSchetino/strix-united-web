@@ -12,12 +12,9 @@ import {
   useSwipeActions,
 } from "../../ui/motion/motion.jsx";
 import {
-  dedupeImportedMatches,
-  normalizeEaMatch,
   normalizeName,
   resolvePlayerAliases,
   resultLabel,
-  suggestAgendaMatches,
   validateImport,
 } from "./import-core.js";
 import { canonicalPlayerName, isStrixMotm } from "../statistics/statistics-core.js";
@@ -692,8 +689,8 @@ function PlayerMatchSheet({ player, match, workspace, close }) {
   return createPortal(<div className="player-match-sheet-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && close()}>
     <section ref={dialogRef} tabIndex={-1} className="player-match-sheet" role="dialog" aria-modal="true" aria-label={`Ficha pós-jogo de ${name}`}>
       <header><div><span>FICHA PÓS-JOGO · {dateLabel}</span><h2>{name}</h2><p>{[position, archetypeName, `Strix ${match.strix_score} × ${match.opponent_score} ${match.opponent_name}`].filter(Boolean).join(" · ")}</p></div><CloseButton onClick={close}/></header>
-      <div className="player-match-sheet-rating"><small><StatIcon name="rating"/> NOTA EA</small><strong>{hasOwnValue(player.rating) ? player.rating : "—"}</strong></div>
-      <div className="player-match-sheet-grid">{(goalkeeper ? goalkeeperMetrics : normalMetrics).filter(([, value]) => value !== null && value !== undefined && value !== "").map(([label, value, icon]) => <article key={label}><StatIcon name={icon}/><small>{label}</small><b>{value}</b></article>)}</div>
+      <div className="player-match-sheet-rating"><small><StatIcon name="rating"/> NOTA EA</small><strong className={hasOwnValue(player.rating) ? "data-value" : undefined}>{hasOwnValue(player.rating) ? player.rating : "—"}</strong></div>
+      <div className="player-match-sheet-grid">{(goalkeeper ? goalkeeperMetrics : normalMetrics).filter(([, value]) => value !== null && value !== undefined && value !== "").map(([label, value, icon]) => <article key={label}><StatIcon name={icon}/><small>{label}</small><b className="data-value">{value}</b></article>)}</div>
       {!goalkeeper && <p className="player-match-sheet-note">Métricas defensivas e disciplina conforme os campos fornecidos pela EA.</p>}
       <footer><button type="button" className="secondary" onClick={close}>FECHAR</button></footer>
     </section>
@@ -779,7 +776,7 @@ function MatchDetails({ match, workspace, close }) {
           <div className="match-detail-metrics">
             {metrics.map(([label, value, icon]) => (
               <article key={label}>
-                <StatIcon name={icon}/><div><small>{label}</small><strong>{value}</strong></div>
+                <StatIcon name={icon}/><div><small>{label}</small><strong className="data-value">{value}</strong></div>
               </article>
             ))}
           </div>
@@ -793,7 +790,7 @@ function MatchDetails({ match, workspace, close }) {
                 {players.map((player, index) => (
                   <article role="row" className={`${Number(player.rating) === bestRating && bestRating > 0 ? "is-best " : ""}${disconnected(player) ? "is-disconnected" : ""}`} key={player.id || player.eaName || index}>
                     <div><b><button type="button" className="match-player-profile-trigger" onClick={() => setSelectedPlayer(player)} aria-label={`Abrir ficha de ${canonicalPlayerName(player.name || player.eaName, workspace.players, workspace.aliases)} nesta partida`}>{canonicalPlayerName(player.name || player.eaName, workspace.players, workspace.aliases)}</button></b><small>{disconnected(player) && <em className="disconnect-badge">CAIU DA PARTIDA</em>}{!disconnected(player) && Number(player.rating) === bestRating && bestRating > 0 && <em className="match-player-tag"><StatIcon name="rating"/> MELHOR NOTA</em>}{isStrixMotm(match, player, { players: workspace.players, aliases: workspace.aliases }) && <em className="match-player-tag"><StatIcon name="mom"/> MOTM</em>}{Number(player.goals) === maxGoals && maxGoals > 0 && <em className="match-player-tag"><StatIcon name="goals"/> ARTILHEIRO</em>}{Number(player.assists) === maxAssists && maxAssists > 0 && <em className="match-player-tag"><StatIcon name="assists"/> ASSISTÊNCIA</em>}{Number(player.passesMade) === maxPasses && maxPasses > 0 && <em className="match-player-tag"><StatIcon name="passes"/> MAIS PASSES</em>}</small></div>
-                    <strong>{player.rating ?? "—"}</strong><span>{player.goals ?? "—"}</span><span>{player.assists ?? "—"}</span><span>{player.passes ?? "—"}</span><span>{player.shots ?? "—"}</span><span>{player.tackles ?? "—"}</span><span>{player.saves ?? "—"}</span>
+                    <strong className={player.rating == null ? undefined : "data-value"}>{player.rating ?? "—"}</strong><span>{player.goals ?? "—"}</span><span>{player.assists ?? "—"}</span><span>{player.passes ?? "—"}</span><span>{player.shots ?? "—"}</span><span>{player.tackles ?? "—"}</span><span>{player.saves ?? "—"}</span>
                   </article>
                 ))}
               </div></div>

@@ -42,7 +42,7 @@ test("team analytics uses an em dash rather than zero when the EA metric is miss
   ]);
   assert.match(statistics, /team\.metricSamples\?\.shots \? team\.shots : null/);
   assert.match(statistics, /team\.metricSamples\?\.saves \? team\.saves : null/);
-  assert.match(analysis, /note=\{value == null \? "Sem dados registrados" : note\}/);
+  assert.match(analysis, /\{value == null \? "Sem dados registrados" : note\}/);
   assert.match(analysis, /team\.metricSamples\?\.passesMade \? team\.passesMadePerGame : null/);
 });
 

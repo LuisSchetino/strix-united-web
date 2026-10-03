@@ -23,6 +23,7 @@ colors:
   state-warning: "#e8b04a"
   state-success: "#4cc38a"
   rastro-blue: "#2F80FF"
+  data: "var(--rastro-blue)"
   next-clubs-accent: "#c7ff2f"
 typography:
   kickoff:
@@ -179,7 +180,7 @@ STRIX UNITED is the club's own room at night, read as a timetable. The ground is
 
 The signature is the **now line**: a 1px off-white hairline with a 7px dot that marks where the night stands inside the timetable. It draws in from the left on the Home and in the Agenda, and the same mark sweeps down the generated videos as their scene transition. The product and its social pieces speak one language: same ink stage, same type, same hairlines, same now line.
 
-Color carries no decoration. The UI is monochrome; hue appears only as system state (success, warning, danger) and inside partner scopes (Rastro Blue in the "Powered by Rastro" mark, Next Clubs and competition colours in their own surfaces). Density follows the Agenda, the reference surface: generous row heights, firm type contrast, nothing ornamental.
+Color carries no decoration. The UI is monochrome; hue appears only as system state (success, warning, danger), as the language of measured data (Rastro Blue on values, ratings, trends and chart marks), and inside partner scopes (the Rastro mark, Next Clubs and competition colours in their own surfaces). Density follows the Agenda, the reference surface: generous row heights, firm type contrast, nothing ornamental.
 
 **Key Characteristics:**
 - Ink ramp ground (#050607 up to graphite #2a2b2c) with off-white type in four tiers.
@@ -215,11 +216,11 @@ A restrained, near-monochrome palette: ink, graphite, off-white and translucent 
 - **Danger Red** (state-danger): errors and destructive actions. Each has a 14% soft fill for backgrounds.
 
 ### Partner scopes
-- **Rastro Blue** (rastro-blue, with 16% and 8% soft variants): belongs to the Rastro analytics partner. Appears only in the "Powered by Rastro" / "Analytics by Rastro" signatures.
+- **Rastro Blue** (rastro-blue, with 16% and 8% soft variants): belongs to the Rastro analytics partner. It has exactly two jobs: the "Powered by Rastro" signatures, and — through the `--data`, `--data-soft`, `--data-subtle`, `--data-line` tokens — every measured value: statistics, ratings, rankings, positions, deltas, progress meters, the first radar series and the night's record.
 - **Next Clubs Lime** (next-clubs-accent): competitions partner brand only. Competition identity colours come from each competition's own data.
 
 ### Named Rules
-**The No-Blue Rule.** Rastro Blue is read only inside `.rastro-*` / `[data-rastro]` scopes. Strix structure (nav, buttons, focus, rows, charts) never turns blue.
+**The Data-Blue Rule.** Blue means "this was measured". Use `--data` (or the `.data-value` utility) on numbers that come from EA data or library tracking, on trends and on data marks. Never on backgrounds, buttons, structure, navigation, focus or decoration; labels next to a blue value stay ink/off-white. Legacy blue aliases (`--strix-blue`, `--fc27-blue`) no longer exist.
 
 **The State-Only Hue Rule.** Green, amber and red appear only when the system is reporting a state. A row, header or piece never takes a hue to look lively.
 
@@ -328,6 +329,30 @@ One component wherever a player is opened: from the right on desktop (up to 760p
 ### Generated pieces (videos)
 One painter for every piece. Ink stage (gradient #0e1114 → ink-0 → #08090b) with one slow, faint light drifting across it. Header: crest, "STRIX UNITED" tracked 800, piece name right-aligned in meta grey, over a hairline; footer: date and count over a hairline at a 64px margin (1080 base). Timetable rows and ledgers mirror the app. Names never clip: they shrink to fit one line down to 50%, then split into two balanced lines; fixed-size meta truncates with an ellipsis. Missing values paint as "—".
 
+### Data trend
+`DataTrend` (src/ui/DataTrend.jsx): arrow · amount · "vs <window>". Up in --data, down in --text-2, stable in --text-3; red is not used for performance. Methodology sits on the label line as `.data-criterion` ("PRECISÃO DE PASSE · mín. 10 passes").
+
+### Reading blocks (Análise)
+Four blocks with one structure: a 32px hairline ring holding the block's mark, the title on a hairline, three metrics divided by hairlines, values in --data with the trend on the label line. Two label lines are reserved so values share a baseline.
+
+### Resumo da noite (edition)
+Dateline (date · last whistle), a now-line rule that draws once, the night's record (partidas / vitórias / empates / derrotas / gols) in --data, the games in kickoff order, then the standouts. Rows arrive in sequence with `.data-arrive`.
+
+### Home states
+The hero reflects the club: `next` (match today), `recent` (result imported in the last 12 h: score, result, top rating, the night's record) or `free` (crest composition + "Próximo compromisso" from the agenda, or "Agenda livre"). In `recent` the season holds the ledger alone.
+
+### Library shelves and covers
+One editorial cover per shelf (public/assets/library/<id>.svg): ink ground, one soft light, hairline pitch, off-white drawing, a single data-blue move that names the concept (route, playhead, build-up steps, closing trap, the line, the run). Materials without a manual thumbnail use their shelf's cover. Covers zoom slightly and catch one pass of light on hover.
+
+### Acompanhamento
+Member rows (initials inside a progress ring in --data, completed/total, last access, shelf meters). The member panel slides in from the right with blur: shelf breakdown, then every published material with status (Concluído / Em andamento / Aberto / Sem registro), percent and meter when the player measures it, last access and last position. Built only from library_view_progress.
+
+### Contract document
+The contract is paper on ink: letterhead (crest, club, Nº and document id), identification ledger, numbered clauses, signature block, paginated footer. The pad writes ink under a pen that follows the pointer; after signing the stroke redraws, a seal settles in focus and one light passes across the paper. The PDF (contract-pdf.js) draws the same document as A4 vectors with the crest embedded.
+
+### Next Clubs lockup
+Partner mark · one lime hairline that draws in once · "Powered by Next Clubs" + what the partner does. Lime never leaves the lockup.
+
 ## Do's and Don'ts
 
 ### Do:
@@ -341,7 +366,9 @@ One painter for every piece. Ink stage (gradient #0e1114 → ink-0 → #08090b) 
 - **Do** render missing data as "—" and write honest empty states (max 46ch, text-3).
 
 ### Don't:
-- **Don't** let Rastro Blue or any hue into Strix structural UI; colour is for state and partner scopes only.
+- **Don't** let Rastro Blue into structure, surfaces or decoration; it belongs to measured values (`--data`) and the Rastro mark only.
+- **Don't** show a trend without two real samples: "↑ 0,4 vs 5 anteriores" needs a previous window; a season no longer than the recent window shows the value alone.
+- **Don't** loop entrance animations. Compositions enter once (blur → focus → rings → now-line sweep → copy) and rest.
 - **Don't** put an eyebrow or kicker label above a page title; the breadcrumb already names the route.
 - **Don't** mark state with thick coloured side stripes on rows or cards; active rows use the 1px off-white rule or a fill step.
 - **Don't** use zero-offset glows, hard offset shadows, bounce or parallax.

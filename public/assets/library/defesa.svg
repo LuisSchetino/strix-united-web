@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400" role="img" aria-label="Defesa">
+  <defs>
+    <radialGradient id="light" cx="0.5" cy="0.08" r="0.7"><stop offset="0" stop-color="#ffffff" stop-opacity="0.11"/><stop offset="1" stop-color="#ffffff" stop-opacity="0"/></radialGradient>
+    <linearGradient id="fade" x1="0" y1="0" x2="0" y2="1"><stop offset="0.48" stop-color="#050607" stop-opacity="0"/><stop offset="1" stop-color="#050607" stop-opacity="0.92"/></linearGradient>
+    <linearGradient id="line" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#2F80FF" stop-opacity="0"/><stop offset="0.15" stop-color="#2F80FF"/><stop offset="0.85" stop-color="#2F80FF"/><stop offset="1" stop-color="#2F80FF" stop-opacity="0"/></linearGradient>
+  </defs>
+  <rect width="640" height="400" fill="#08090a"/>
+  <rect width="640" height="400" fill="url(#light)"/>
+  <!-- the box behind the line -->
+  <g fill="none" stroke="#ffffff" stroke-opacity="0.13" stroke-width="1.4">
+    <path d="M40 330H600"/><path d="M190 330V258H450V330"/><path d="M262 330V302H378V330"/><path d="M270 258A50 50 0 0 1 370 258"/>
+  </g>
+  <!-- the line: four, connected, stepping together -->
+  <path d="M30 168H610" stroke="url(#line)" stroke-width="2.4"/>
+  <path d="M146 176L262 168L378 168L494 176" fill="none" stroke="#ffffff" stroke-opacity="0.35" stroke-width="1.6"/>
+  <g fill="#08090a" stroke="#f3f3f3" stroke-width="2.4">
+    <circle cx="146" cy="176" r="10"/><circle cx="262" cy="168" r="10"/><circle cx="378" cy="168" r="10"/><circle cx="494" cy="176" r="10"/>
+  </g>
+  <!-- cover arrows: the line holds -->
+  <g stroke="#f3f3f3" stroke-opacity="0.5" stroke-width="1.8" stroke-linecap="round"><path d="M262 186V214M378 186V214"/></g>
+  <!-- opponents caught beyond the line -->
+  <g fill="none" stroke="#ffffff" stroke-opacity="0.32" stroke-width="2"><circle cx="210" cy="118" r="7"/><circle cx="336" cy="102" r="7"/><circle cx="452" cy="124" r="7"/></g>
+  <rect width="640" height="400" fill="url(#fade)"/>
+</svg>
