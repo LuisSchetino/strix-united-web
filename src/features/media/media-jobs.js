@@ -529,15 +529,15 @@ export function progressLabel(progress) {
   if (!progress) return "";
   if (progress.stage === "preparing") {
     return progress.total
-      ? `Preparando assets ${progress.loaded}/${progress.total}`
-      : "Preparando assets";
+      ? `Preparando imagens · ${progress.loaded}/${progress.total}`
+      : "Preparando imagens";
   }
   if (progress.stage === "rendering") {
-    return `Renderizando ${progress.frame}/${progress.totalFrames} frames`;
+    return `Montando o vídeo · quadro ${progress.frame} de ${progress.totalFrames}`;
   }
-  if (progress.stage === "encoding") return "Codificando vídeo";
+  if (progress.stage === "encoding") return "Finalizando o MP4";
   if (progress.stage === "image") return "Gerando imagem";
   if (progress.stage === "finishing") return "Finalizando";
-  if (progress.stage === "cached") return "Render em cache";
+  if (progress.stage === "cached") return "Esta versão já estava pronta";
   return "";
 }

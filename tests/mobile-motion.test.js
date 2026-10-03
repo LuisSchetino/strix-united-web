@@ -71,8 +71,10 @@ test("global mobile shell reserves safe area without masking horizontal overflow
   const [shell, motion] = await Promise.all([read("src/design/shell.css"), read("src/ui/motion/motion.css")]);
   // Overflow is fixed at its cause, never hidden on html/body.
   assert.doesNotMatch(motion, /html,\s*body,\s*#root\s*\{[^}]*overflow-x/);
-  assert.match(shell, /padding-bottom:\s*calc\(var\(--tabbar-h\) \+ 118px \+ env\(safe-area-inset-bottom\)\)/);
-  assert.match(shell, /bottom:\s*calc\(var\(--tabbar-h\) \+ env\(safe-area-inset-bottom\) \+ var\(--space-2\)\)/);
+  assert.match(shell, /padding-bottom:\s*calc\(var\(--tabbar-h\) \+ var\(--space-10\) \+ env\(safe-area-inset-bottom\)\)/);
+  // The next-match chip lives in the desktop topbar; on mobile nothing floats over rows.
+  assert.match(shell, /\.now-playing \{\s*display: none;\s*\}/);
+  assert.doesNotMatch(shell, /\.now-playing \{[^}]*position: fixed/);
   assert.match(shell, /height:\s*calc\(var\(--tabbar-h\) \+ env\(safe-area-inset-bottom\)\)/);
   assert.match(shell, /100dvh/);
 });

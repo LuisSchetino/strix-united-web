@@ -69,5 +69,5 @@ test("empty agenda widget exposes only the centered crest with an accessible act
   assert.match(widget, /aria-label=\{item \? `Próxima partida:/);
   assert.match(widget, /Agenda: nenhuma partida programada/);
   assert.match(widget, /item \? <><Crest small\/>/);
-  assert.match(css, /button\.now-playing\.is-agenda-free \{[^}]*width: 56px[^}]*height: 56px/s);
+  assert.match(css, /button\.now-playing\.is-agenda-free \{[^}]*width: 40px[^}]*height: 40px/s);
 });

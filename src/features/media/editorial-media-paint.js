@@ -54,6 +54,28 @@ function drawText(ctx, value, x, y, size, { color = WHITE, weight = 800, align =
   return fitted;
 }
 
+/** Fixed-size text: shortens with an ellipsis instead of shrinking. */
+function drawClipped(ctx, value, x, y, size, maxWidth, options = {}) {
+  let text = String(value ?? "");
+  setFont(ctx, options.weight || 600, size);
+  if (ctx.measureText(text).width > maxWidth) {
+    while (text.length > 1 && ctx.measureText(`${text}…`).width > maxWidth) text = text.slice(0, -1);
+    text = `${text.trimEnd()}…`;
+  }
+  drawText(ctx, text, x, y, size, { ...options });
+}
+
+/** Names stay whole: shrink to fit one line (down to 50%) before splitting at a word. */
+function fitName(ctx, text, size, weight, maxWidth) {
+  const name = String(text || "").trim();
+  setFont(ctx, weight, size);
+  const width = ctx.measureText(name).width;
+  if (width <= maxWidth) return { lines: [name], size };
+  const scaled = size * (maxWidth / width);
+  if (scaled >= size * 0.5) return { lines: [name], size: scaled };
+  return { lines: twoLines(ctx, name, size * 0.86, weight, maxWidth), size: size * 0.86 };
+}
+
 /** Splits a name into at most two balanced lines for display sizes. */
 function twoLines(ctx, text, size, weight, maxWidth) {
   const words = String(text || "").trim().split(/\s+/).filter(Boolean);
@@ -262,7 +284,6 @@ function paintAgendaCover(ctx, timeline, elapsed, { count, dayLabel }) {
   const x = M * s;
   const max = width - 2 * M * s;
   const feed = timeline.format === "feed";
-  drawRise(ctx, dayLabel.toUpperCase(), x, height * (feed ? 0.27 : 0.29), 30 * s, remap(elapsed, 0.05, 0.6), { color: MUTED, weight: 700, tracking: 0.08, maxWidth: max });
   drawRise(ctx, "AGENDA", x - 6 * s, height * (feed ? 0.40 : 0.385), (feed ? 200 : 236) * s, remap(elapsed, 0.12, 0.85), { color: WHITE, weight: 800, tracking: -0.04, maxWidth: max });
   drawRise(ctx, "DO DIA", x - 2 * s, height * (feed ? 0.535 : 0.49), (feed ? 120 : 140) * s, remap(elapsed, 0.22, 0.95), { color: MUTED, weight: 800, tracking: -0.03, maxWidth: max });
   drawGrowRule(ctx, x, height * (feed ? 0.62 : 0.56), width - x, remap(elapsed, 0.3, 1.1));
@@ -279,8 +300,8 @@ function paintTimetableRow(ctx, timeline, match, { rowTop, rowH, progress, asset
   if (p <= 0) return;
   const x = M * s;
   const right = width - M * s;
-  const crestSize = Math.min(160 * s, rowH * 0.46);
-  const timeSize = Math.min(164 * s, rowH * 0.4);
+  const crestSize = Math.min(124 * s, rowH * 0.36);
+  const timeSize = Math.min(148 * s, rowH * 0.36);
   const mid = rowTop + rowH / 2;
   ctx.save();
   ctx.globalAlpha *= Math.min(1, p * 1.3);
@@ -290,17 +311,18 @@ function paintTimetableRow(ctx, timeline, match, { rowTop, rowH, progress, asset
   const timeText = match.kickoff || "—";
   drawText(ctx, timeText, x - 4 * s, mid, timeSize, { color: WHITE, weight: 800, tracking: -0.04 });
   const timeW = Math.max(ctx.measureText("00:00").width, ctx.measureText(timeText).width);
-  const nameX = x + timeW + 40 * s;
-  const nameMax = right - crestSize - 30 * s - nameX;
+  const nameX = x + timeW + 32 * s;
+  const nameMax = right - crestSize - 24 * s - nameX;
   const nameSize = Math.min(76 * s, rowH * 0.2);
-  const lines = twoLines(ctx, match.opponent || "Adversário", nameSize, 800, nameMax);
-  const lineGap = nameSize * 1.04;
+  const fitted = fitName(ctx, match.opponent || "Adversário", nameSize, 800, nameMax);
+  const lines = fitted.lines;
+  const lineGap = fitted.size * 1.04;
   const metaSize = Math.min(32 * s, rowH * 0.09);
   const blockH = lines.length * lineGap + metaSize * 1.5;
-  let y = mid - blockH / 2 + nameSize * 0.5;
-  lines.forEach((line) => { drawText(ctx, line, nameX, y, nameSize, { color: WHITE, weight: 800, tracking: -0.02, maxWidth: nameMax }); y += lineGap; });
+  let y = mid - blockH / 2 + fitted.size * 0.5;
+  lines.forEach((line) => { drawText(ctx, line, nameX, y, fitted.size, { color: WHITE, weight: 800, tracking: -0.02 }); y += lineGap; });
   const meta = [match.competition || "Amistoso", match.round].filter(Boolean).join("  ·  ");
-  drawText(ctx, meta, nameX, y + metaSize * 0.2, metaSize, { color: MUTED, weight: 600, maxWidth: nameMax });
+  drawClipped(ctx, meta, nameX, y + metaSize * 0.2, metaSize, nameMax, { color: MUTED, weight: 600 });
   drawCrest(ctx, asset, right - crestSize / 2, mid, crestSize, match.opponent);
   ctx.restore();
 }
@@ -385,7 +407,6 @@ function paintSummaryCover(ctx, timeline, elapsed) {
   const period = timeline.period || {};
   const stats = period.stats || {};
   const week = period.mode === "week";
-  drawRise(ctx, (period.rangeLabel || "").toUpperCase(), x, height * 0.29, 30 * s, remap(elapsed, 0.05, 0.6), { color: MUTED, weight: 700, tracking: 0.08, maxWidth: max });
   drawRise(ctx, "RESUMO", x - 6 * s, height * 0.385, 236 * s, remap(elapsed, 0.12, 0.85), { color: WHITE, weight: 800, tracking: -0.04, maxWidth: max });
   drawRise(ctx, week ? "DA SEMANA" : "DO DIA", x - 2 * s, height * 0.49, 140 * s, remap(elapsed, 0.22, 0.95), { color: MUTED, weight: 800, tracking: -0.03, maxWidth: max });
   drawGrowRule(ctx, x, height * 0.56, width - x, remap(elapsed, 0.3, 1.1));
@@ -399,8 +420,7 @@ function paintSummaryStats(ctx, timeline, elapsed) {
   const x = M * s;
   const stats = timeline.period?.stats || {};
   const headY = height * 0.25;
-  drawRise(ctx, "O RECORTE", x, headY, 30 * s, remap(elapsed, 0.04, 0.5), { color: MUTED, weight: 700, tracking: 0.1 });
-  drawRise(ctx, "DA NOITE.", x - 4 * s, headY + 96 * s, 110 * s, remap(elapsed, 0.1, 0.7), { color: WHITE, weight: 800, tracking: -0.04 });
+  drawRise(ctx, "A NOITE.", x - 4 * s, headY + 60 * s, 110 * s, remap(elapsed, 0.06, 0.66), { color: WHITE, weight: 800, tracking: -0.04 });
   const cells = [
     ["JOGOS", dash(stats.games)],
     ["CAMPANHA", `${dash(stats.wins)}V ${dash(stats.draws)}E ${dash(stats.losses)}D`],
@@ -523,11 +543,11 @@ function paintPersonScene(ctx, timeline, person, asset, elapsed, { counter = "",
   if (counter) drawRise(ctx, counter, x, baseY, 24 * s, remap(elapsed, 0.1, 0.6), { color: MUTED, weight: 700, tracking: 0.1 });
   const name = upper ? String(person.name || "").toUpperCase() : person.name;
   const nameSize = (feed ? 110 : 132) * s;
-  const lines = twoLines(ctx, name, nameSize, 800, max);
+  const fitted = fitName(ctx, name, nameSize, 800, max);
   let y = baseY + 96 * s;
-  lines.forEach((line, lineIndex) => {
-    drawRise(ctx, line, x - 4 * s, y, nameSize, remap(elapsed, 0.16 + lineIndex * 0.08, 0.8 + lineIndex * 0.08), { color: WHITE, weight: 800, tracking: -0.035, maxWidth: max });
-    y += nameSize * 0.98;
+  fitted.lines.forEach((line, lineIndex) => {
+    drawRise(ctx, line, x - 4 * s, y, fitted.size, remap(elapsed, 0.16 + lineIndex * 0.08, 0.8 + lineIndex * 0.08), { color: WHITE, weight: 800, tracking: -0.035 });
+    y += fitted.size * 0.98;
   });
   const detailY = y + 4 * s;
   const position = person.position || "";
@@ -588,7 +608,6 @@ export function paintEditorialRelated(ctx, { timeline, time = 0, assets, dayLabe
     withNowLine(ctx, timeline, remap(elapsed, 0, 0.55), () => {
       const x = M * s;
       const max = width - 2 * M * s;
-      drawRise(ctx, (dayLabel || "").toUpperCase(), x, height * 0.29, 30 * s, remap(elapsed, 0.05, 0.6), { color: MUTED, weight: 700, tracking: 0.08, maxWidth: max });
       drawRise(ctx, "RELACIONADOS", x - 4 * s, height * 0.385, 150 * s, remap(elapsed, 0.12, 0.85), { color: WHITE, weight: 800, tracking: -0.04, maxWidth: max });
       drawRise(ctx, "DA NOITE", x - 2 * s, height * 0.47, 150 * s, remap(elapsed, 0.22, 0.95), { color: MUTED, weight: 800, tracking: -0.04, maxWidth: max });
       drawGrowRule(ctx, x, height * 0.54, width - x, remap(elapsed, 0.3, 1.1));
@@ -620,7 +639,6 @@ function paintAnnounceIntro(ctx, timeline, elapsed, lines) {
   const { width, height } = timeline;
   const s = scaleOf(timeline);
   const max = width - 2 * M * s;
-  drawRise(ctx, lines[0], width / 2, height * 0.37, 34 * s, remap(elapsed, 0.05, 0.6), { color: SOFT, weight: 700, align: "center", tracking: 0.12, maxWidth: max });
   drawRise(ctx, lines[1], width / 2, height * 0.46, 170 * s, remap(elapsed, 0.12, 0.85), { color: WHITE, weight: 800, align: "center", tracking: -0.04, maxWidth: max });
   drawRise(ctx, lines[2], width / 2, height * 0.55, 170 * s, remap(elapsed, 0.22, 0.95), { color: MUTED, weight: 800, align: "center", tracking: -0.04, maxWidth: max });
 }

@@ -318,7 +318,7 @@
   flex: 1 1 auto;
   min-width: 0;
   width: 100%;
-  padding: 0 var(--gutter) calc(112px + env(safe-area-inset-bottom));
+  padding: 0 var(--gutter) calc(var(--space-16) + env(safe-area-inset-bottom));
 }
 
 .topbar {
@@ -483,59 +483,55 @@
   font-size: var(--text-xs);
 }
 
-/* ------------------------------------------------------ next-match dock */
+/* ------------------------------------------------------ next-match chip */
+/* The next match lives in the topbar, in flow: it never sits over a row.
+   Below 900px it steps aside; Central and Agenda are one tab away. */
 
 .now-playing {
-  position: fixed;
-  bottom: calc(18px + env(safe-area-inset-bottom));
-  left: 50%;
-  z-index: var(--z-dock);
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: var(--space-3);
-  width: min(400px, calc(100vw - 32px));
-  min-height: 56px;
-  padding: var(--space-2) var(--space-3) var(--space-2) var(--space-2);
+  gap: var(--space-2);
+  max-width: 320px;
+  min-width: 0;
+  height: 40px;
+  padding: 0 var(--space-3) 0 4px;
   border: 1px solid var(--line-2);
   border-radius: var(--radius-pill);
-  background: rgba(11, 13, 16, 0.94);
-  box-shadow: var(--shadow-pop);
+  background: var(--ink-1);
   color: var(--text-1);
   text-align: left;
-  transform: translateX(-50%);
-  -webkit-backdrop-filter: blur(14px);
-  backdrop-filter: blur(14px);
   transition: border-color var(--motion-micro), background var(--motion-micro);
 }
 .now-playing:hover {
   border-color: var(--line-3);
-  background: rgba(16, 19, 24, 0.96);
+  background: var(--ink-2);
 }
 .now-playing .crest {
-  width: 36px;
-  flex: 0 0 36px;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
 }
 .now-playing > div {
   display: grid;
-  gap: 2px;
   min-width: 0;
+  line-height: 1.15;
 }
 .now-playing small {
   color: var(--text-3);
-  font-size: 10px;
+  font-size: 9.5px;
   font-weight: 700;
   letter-spacing: var(--track-label);
 }
 .now-playing b {
   overflow: hidden;
-  font-size: var(--text-sm);
+  font-size: var(--text-xs);
   font-weight: 700;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 .now-playing strong {
-  margin-left: auto;
-  font-size: var(--text-lg);
+  margin-left: var(--space-1);
+  font-size: var(--text-sm);
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   letter-spacing: var(--track-tight);
@@ -550,16 +546,21 @@
 }
 button.now-playing.is-agenda-free {
   justify-content: center;
-  width: 56px;
-  height: 56px;
-  min-width: 56px;
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
   padding: 0;
   gap: 0;
 }
 button.now-playing.is-agenda-free .crest {
-  width: 38px;
-  height: 38px;
-  flex-basis: 38px;
+  width: 30px;
+  height: 30px;
+  flex-basis: 30px;
+}
+@media (max-width: 1280px) {
+  .now-playing > div {
+    display: none;
+  }
 }
 
 /* ------------------------------------------------------------- tab bar */
@@ -571,7 +572,7 @@ button.now-playing.is-agenda-free .crest {
 
 @media (max-width: 900px) {
   .workspace {
-    padding-bottom: calc(var(--tabbar-h) + 118px + env(safe-area-inset-bottom));
+    padding-bottom: calc(var(--tabbar-h) + var(--space-10) + env(safe-area-inset-bottom));
   }
 
   .topbar {
@@ -786,17 +787,7 @@ button.now-playing.is-agenda-free .crest {
   }
 
   .now-playing {
-    right: var(--space-3);
-    bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom) + var(--space-2));
-    left: var(--space-3);
-    width: auto;
-    transform: none;
-  }
-  button.now-playing.is-agenda-free {
-    right: auto;
-    left: 50%;
-    width: 56px;
-    transform: translateX(-50%);
+    display: none;
   }
 }
 

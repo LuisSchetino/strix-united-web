@@ -1,0 +1,192 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-03T00:00:00Z",
+  "title": "Design System: STRIX UNITED FC27",
+  "extensions": {
+    "colorMeta": {
+      "ink-0": { "role": "neutral", "displayName": "Pitch Ink", "canonical": "#050607", "tonalRamp": ["#050607", "#0c0c0d", "#121314", "#18191a", "#1f2021", "#2a2b2c", "#767e88", "#f5f5f5"] },
+      "ink-1": { "role": "neutral", "displayName": "Raised Ink", "canonical": "#0c0c0d", "tonalRamp": ["#050607", "#0c0c0d", "#121314", "#18191a", "#1f2021", "#2a2b2c", "#767e88", "#f5f5f5"] },
+      "ink-2": { "role": "neutral", "displayName": "Field Ink", "canonical": "#121314" },
+      "ink-3": { "role": "neutral", "displayName": "Selected Ink", "canonical": "#18191a" },
+      "ink-4": { "role": "neutral", "displayName": "Pressed Ink", "canonical": "#1f2021" },
+      "ink-5": { "role": "neutral", "displayName": "Graphite", "canonical": "#2a2b2c" },
+      "text-1": { "role": "neutral", "displayName": "Off-White", "canonical": "#f5f5f5", "tonalRamp": ["#767e88", "#8e969f", "#c9cdd2", "#f5f5f5"] },
+      "text-2": { "role": "neutral", "displayName": "Body Grey", "canonical": "#c9cdd2" },
+      "text-3": { "role": "neutral", "displayName": "Meta Grey", "canonical": "#8e969f" },
+      "text-4": { "role": "neutral", "displayName": "Quiet Grey", "canonical": "#767e88" },
+      "text-on-light": { "role": "neutral", "displayName": "Ink on Paper", "canonical": "#08090a" },
+      "line-1": { "role": "neutral", "displayName": "Row Hairline", "canonical": "rgba(255, 255, 255, 0.06)" },
+      "line-2": { "role": "neutral", "displayName": "Section Hairline", "canonical": "rgba(255, 255, 255, 0.1)" },
+      "line-3": { "role": "neutral", "displayName": "Emphasis Hairline", "canonical": "rgba(255, 255, 255, 0.16)" },
+      "line-focus": { "role": "neutral", "displayName": "Focus Ring", "canonical": "rgba(245, 245, 245, 0.72)" },
+      "paper-1": { "role": "primary", "displayName": "Paper White", "canonical": "#f3f3f3", "tonalRamp": ["#f3f3f3", "#ffffff"] },
+      "paper-2": { "role": "primary", "displayName": "Paper White (hover)", "canonical": "#ffffff" },
+      "state-danger": { "role": "state", "displayName": "Danger Red", "canonical": "#e5484d", "soft": "rgba(229, 72, 77, 0.14)" },
+      "state-warning": { "role": "state", "displayName": "Warning Amber", "canonical": "#e8b04a", "soft": "rgba(232, 176, 74, 0.14)" },
+      "state-success": { "role": "state", "displayName": "Success Green", "canonical": "#4cc38a", "soft": "rgba(76, 195, 138, 0.14)" },
+      "rastro-blue": { "role": "partner", "displayName": "Rastro Blue", "canonical": "#2F80FF", "scope": ".rastro-* / [data-rastro] only", "tonalRamp": ["rgba(47, 128, 255, 0.08)", "rgba(47, 128, 255, 0.16)", "#2F80FF"] },
+      "next-clubs-accent": { "role": "partner", "displayName": "Next Clubs Lime", "canonical": "#c7ff2f", "scope": "Next Clubs competitions surfaces only" }
+    },
+    "typographyMeta": {
+      "kickoff": { "displayName": "Kickoff", "purpose": "Next match kickoff in the Home now block. One per screen." },
+      "score": { "displayName": "Score", "purpose": "Last result scoreline and season figures (token --text-score)." },
+      "display": { "displayName": "Display", "purpose": "Page titles (tagline with a period) and the Home greeting." },
+      "headline": { "displayName": "Headline", "purpose": "Selected piece title in the Central de mídia toolbar; sheet headings." },
+      "title": { "displayName": "Title", "purpose": "Opponent, player and pauta names in rows." },
+      "time": { "displayName": "Time", "purpose": "Kickoff times in timetable rows, tabular." },
+      "body": { "displayName": "Body", "purpose": "Descriptions and prose, max 62ch." },
+      "meta": { "displayName": "Meta", "purpose": "Competitions, counts, dates, sub-lines." },
+      "label": { "displayName": "Label", "purpose": "Uppercase tracked data metadata: section heads, columns, rail groups, breadcrumb, status. Never an eyebrow above a title." }
+    },
+    "shadows": [
+      { "name": "shadow-raise", "value": "0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 10px 28px rgba(0, 0, 0, 0.35)", "purpose": "The one raised object on a page (Home now block)." },
+      { "name": "shadow-pop", "value": "0 18px 48px rgba(0, 0, 0, 0.62)", "purpose": "Menus, tooltips, player sheet, the Media preview piece (with a line-2 ring)." },
+      { "name": "shadow-sheet", "value": "0 -16px 48px rgba(0, 0, 0, 0.6)", "purpose": "Mobile bottom sheets." }
+    ],
+    "motion": [
+      { "name": "motion-micro", "value": "140ms", "purpose": "Hover, press, focus, colour." },
+      { "name": "motion-control", "value": "200ms", "purpose": "Tabs, segmented controls, menus, toggles, status swaps." },
+      { "name": "motion-modal", "value": "220ms", "purpose": "Dialogs and sheets." },
+      { "name": "motion-section", "value": "320ms", "purpose": "Content swaps inside a stable shell (Media sections rise 10px)." },
+      { "name": "motion-hero", "value": "560ms", "purpose": "Now line draw-in, preview assembly." },
+      { "name": "motion-stagger", "value": "45ms", "purpose": "Step between toolbar, stage, actions, rail." },
+      { "name": "motion-ease", "value": "cubic-bezier(0.22, 1, 0.36, 1)", "purpose": "Decelerate; every entrance." },
+      { "name": "motion-ease-in", "value": "cubic-bezier(0.4, 0, 1, 1)", "purpose": "Accelerate; leaving." },
+      { "name": "motion-ease-inout", "value": "cubic-bezier(0.65, 0, 0.35, 1)", "purpose": "Indeterminate progress scan." },
+      { "name": "reduced-motion", "value": "durations 1ms, stagger 0ms, offsets 0px", "purpose": "prefers-reduced-motion collapses every token." }
+    ],
+    "breakpoints": [
+      { "name": "phone", "value": "560px" },
+      { "name": "header-stack", "value": "760px" },
+      { "name": "tablet", "value": "900px" },
+      { "name": "wide", "value": "1180px" },
+      { "name": "chip-compact", "value": "1280px" }
+    ],
+    "layers": { "raised": 2, "sticky": 20, "sidebar": 30, "dock": 40, "scrim": 900, "drawer": 950, "modal": 1000, "menu": 1100, "toast": 1200 },
+    "shell": { "sidebar": "248px", "sidebarCompact": "72px", "topbar": "64px", "tabbar": "64px", "pageMax": "1240px" }
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The single paper pill per action group.",
+      "html": "<button class=\"ds-btn-primary\">Abrir Agenda <svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M5 12h14M13 6l6 6-6 6\"/></svg></button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 20px; border: 0; border-radius: 999px; background: var(--paper-1, #f3f3f3); color: var(--text-on-light, #08090a); font: 800 12px/1 Inter, system-ui, sans-serif; letter-spacing: 0.06em; cursor: pointer; transition: background 140ms, transform 140ms cubic-bezier(0.22, 1, 0.36, 1); } .ds-btn-primary svg { transition: translate 140ms cubic-bezier(0.22, 1, 0.36, 1); } .ds-btn-primary:hover { background: var(--paper-2, #fff); } .ds-btn-primary:hover svg { translate: 3px 0; } .ds-btn-primary:active { transform: scale(0.98); } .ds-btn-primary:focus-visible { outline: 2px solid rgba(245, 245, 245, 0.72); outline-offset: 2px; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Outlined pill for every non-primary action.",
+      "html": "<button class=\"ds-btn-secondary\">ALIASES</button>",
+      "css": ".ds-btn-secondary { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px; border: 1px solid var(--line-2, rgba(255,255,255,0.1)); border-radius: 999px; background: transparent; color: var(--text-2, #c9cdd2); font: 800 12px/1 Inter, system-ui, sans-serif; letter-spacing: 0.06em; cursor: pointer; transition: background 140ms, border-color 140ms, color 140ms, transform 140ms; } .ds-btn-secondary:hover { border-color: var(--line-3, rgba(255,255,255,0.16)); background: var(--ink-2, #121314); color: var(--text-1, #f5f5f5); } .ds-btn-secondary:active { transform: scale(0.98); } .ds-btn-secondary:focus-visible { outline: 2px solid rgba(245, 245, 245, 0.72); outline-offset: 2px; }"
+    },
+    {
+      "name": "Search Field",
+      "kind": "input",
+      "refersTo": "search-field",
+      "description": "Topbar search with keyboard hint.",
+      "html": "<button class=\"ds-search\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><circle cx=\"11\" cy=\"11\" r=\"7\"/><path d=\"m20 20-3.5-3.5\"/></svg><span>Buscar páginas, partidas, jogadores...</span><kbd>Ctrl K</kbd></button>",
+      "css": ".ds-search { display: flex; align-items: center; gap: 10px; width: 360px; min-height: 40px; padding: 0 8px 0 12px; border: 1px solid var(--line-2, rgba(255,255,255,0.1)); border-radius: 10px; background: var(--ink-1, #0c0c0d); color: var(--text-3, #8e969f); font: 400 13px Inter, system-ui, sans-serif; cursor: text; transition: border-color 140ms, background 140ms; } .ds-search span { flex: 1; text-align: left; } .ds-search kbd { padding: 2px 6px; border: 1px solid var(--line-2, rgba(255,255,255,0.1)); border-radius: 6px; font: 600 11px Inter, sans-serif; color: var(--text-3, #8e969f); } .ds-search:hover { border-color: var(--line-3, rgba(255,255,255,0.16)); background: var(--ink-2, #121314); } .ds-search:focus-visible { outline: 2px solid rgba(245, 245, 245, 0.72); outline-offset: 2px; }"
+    },
+    {
+      "name": "Rail Navigation",
+      "kind": "nav",
+      "refersTo": "nav-item-active",
+      "description": "Grouped rail: Clube / Dados / Estúdio; active item is a graphite fill.",
+      "html": "<nav class=\"ds-rail\"><p>Clube</p><button class=\"active\">Central</button><button>Agenda</button><button>Elenco</button><p>Estúdio</p><button>Mídia</button></nav>",
+      "css": ".ds-rail { display: grid; gap: 2px; width: 224px; padding: 12px; background: var(--ink-0, #050607); font-family: Inter, system-ui, sans-serif; } .ds-rail p { margin: 16px 12px 6px; color: var(--text-4, #767e88); font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; } .ds-rail p:first-child { margin-top: 0; } .ds-rail button { min-height: 40px; padding: 0 12px; border: 0; border-radius: 10px; background: transparent; color: var(--text-3, #8e969f); font-size: 13.5px; font-weight: 600; text-align: left; cursor: pointer; transition: background 140ms, color 140ms; } .ds-rail button:hover { background: var(--ink-2, #121314); color: var(--text-1, #f5f5f5); } .ds-rail button.active { background: var(--ink-3, #18191a); box-shadow: inset 0 0 0 1px var(--line-1, rgba(255,255,255,0.06)); color: var(--text-1, #f5f5f5); } .ds-rail button:focus-visible { outline: 2px solid rgba(245, 245, 245, 0.72); outline-offset: 2px; }"
+    },
+    {
+      "name": "Status Pills",
+      "kind": "chip",
+      "refersTo": "status-pill-next",
+      "description": "Paper pill for the next match; tracked text status otherwise.",
+      "html": "<div class=\"ds-status\"><em class=\"is-next\">PRÓXIMO</em><em>AGENDADO</em><em class=\"is-outline\">JOGADO</em></div>",
+      "css": ".ds-status { display: flex; gap: 16px; align-items: center; font-family: Inter, system-ui, sans-serif; } .ds-status em { color: var(--text-3, #8e969f); font-size: 11px; font-style: normal; font-weight: 700; letter-spacing: 0.1em; } .ds-status em.is-next { padding: 4px 9px; border-radius: 999px; background: var(--paper-1, #f3f3f3); color: var(--text-on-light, #08090a); } .ds-status em.is-outline { padding: 4px 9px; border-radius: 999px; box-shadow: inset 0 0 0 1px var(--line-2, rgba(255,255,255,0.1)); }"
+    },
+    {
+      "name": "Timetable with Now Line",
+      "kind": "custom",
+      "refersTo": "timetable-row",
+      "description": "The signature: hairline rows with the now line drawn in at the current minute.",
+      "html": "<div class=\"ds-tt\"><div class=\"ds-now\"><time>20:20</time><i></i></div><div class=\"ds-row\"><time>21:10</time><span class=\"ds-crest\">M</span><div><b>Maquina</b><small>Amistoso</small></div><em class=\"is-next\">PRÓXIMO</em></div><div class=\"ds-row\"><time>21:40</time><span class=\"ds-crest\">SF</span><div><b>Sinceridade FC</b><small>Amistoso</small></div><em>AGENDADO</em></div></div>",
+      "css": ".ds-tt { width: 440px; font-family: Inter, system-ui, sans-serif; color: var(--text-1, #f5f5f5); } .ds-now { display: grid; grid-template-columns: 58px 1fr; align-items: center; gap: 12px; height: 30px; } .ds-now time { font-size: 11px; font-weight: 800; letter-spacing: 0.08em; font-variant-numeric: tabular-nums; } .ds-now i { position: relative; height: 1px; background: linear-gradient(90deg, #f5f5f5, rgba(245,245,245,0.08)); transform-origin: left center; animation: ds-line 560ms cubic-bezier(0.22, 1, 0.36, 1) both; } .ds-now i::before { content: ''; position: absolute; top: -3px; left: -1px; width: 7px; height: 7px; border-radius: 50%; background: #f5f5f5; } @keyframes ds-line { from { transform: scaleX(0); } to { transform: none; } } .ds-row { display: grid; grid-template-columns: 58px 28px minmax(0,1fr) auto; align-items: center; gap: 12px; min-height: 64px; border-bottom: 1px solid var(--line-1, rgba(255,255,255,0.06)); } .ds-row time { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; } .ds-crest { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; box-shadow: inset 0 0 0 1px var(--line-3, rgba(255,255,255,0.16)); font-size: 8px; font-weight: 800; } .ds-row div { display: grid; gap: 2px; } .ds-row b { font-size: 15px; font-weight: 700; } .ds-row small { color: var(--text-3, #8e969f); font-size: 12px; } .ds-row em { color: var(--text-3, #8e969f); font-size: 11px; font-style: normal; font-weight: 700; letter-spacing: 0.1em; } .ds-row em.is-next { padding: 4px 9px; border-radius: 999px; background: #f3f3f3; color: #08090a; } @media (prefers-reduced-motion: reduce) { .ds-now i { animation: none; } }"
+    },
+    {
+      "name": "Now Block",
+      "kind": "card",
+      "refersTo": "now-block",
+      "description": "The one raised object on the Home: status, kickoff numerals, fixture, lineup state and action.",
+      "html": "<article class=\"ds-nowblock\"><header><p><i></i>HOJE · EM 50 MIN</p><p class=\"m\">AMISTOSO</p></header><strong>21:10</strong><h3>Strix United <span>×</span> Maquina</h3><footer><span>Escalação ainda não definida</span><button>Abrir Agenda</button></footer></article>",
+      "css": ".ds-nowblock { display: grid; gap: 20px; width: 560px; padding: 32px; border: 1px solid var(--line-2, rgba(255,255,255,0.1)); border-radius: 20px; background: radial-gradient(ellipse 70% 60% at 0% 0%, rgba(255,255,255,0.045), transparent 70%), var(--ink-1, #0c0c0d); box-shadow: 0 1px 0 rgba(255,255,255,0.03) inset, 0 10px 28px rgba(0,0,0,0.35); color: var(--text-1, #f5f5f5); font-family: Inter, system-ui, sans-serif; } .ds-nowblock header { display: flex; justify-content: space-between; } .ds-nowblock header p { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; } .ds-nowblock header p.m { color: var(--text-3, #8e969f); } .ds-nowblock header i { width: 7px; height: 7px; border-radius: 50%; background: #f5f5f5; } .ds-nowblock strong { font-size: 108px; font-weight: 800; line-height: 0.86; letter-spacing: -0.055em; font-variant-numeric: tabular-nums; } .ds-nowblock h3 { margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -0.02em; } .ds-nowblock h3 span { color: var(--text-4, #767e88); font-weight: 400; margin: 0 12px; } .ds-nowblock footer { display: flex; justify-content: space-between; align-items: center; padding-top: 20px; border-top: 1px solid var(--line-1, rgba(255,255,255,0.06)); color: var(--text-3, #8e969f); font-size: 13px; font-weight: 600; } .ds-nowblock footer button { min-height: 44px; padding: 0 20px; border: 0; border-radius: 999px; background: #f3f3f3; color: #08090a; font: 800 12px Inter, sans-serif; letter-spacing: 0.06em; cursor: pointer; } .ds-nowblock footer button:hover { background: #fff; } .ds-nowblock footer button:focus-visible { outline: 2px solid rgba(245,245,245,0.72); outline-offset: 2px; }"
+    },
+    {
+      "name": "Pauta List",
+      "kind": "custom",
+      "refersTo": "pauta-item-active",
+      "description": "Central de mídia pauta: hairline rows, 1px active rule, readiness dots.",
+      "html": "<ul class=\"ds-pauta\"><li><button class=\"is-active is-ready\"><b>Agenda do dia</b><small>3 jogos hoje</small><em>Pronta</em></button></li><li><button class=\"is-incomplete\"><b>Relacionados da noite</b><small>falta salvar a lista</small><em>Falta um passo</em></button></li><li><button><b>Resumo do dia</b><small>nenhum jogo concluído</small><em>Sem dados</em></button></li></ul>",
+      "css": ".ds-pauta { width: 248px; margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--line-2, rgba(255,255,255,0.1)); font-family: Inter, system-ui, sans-serif; } .ds-pauta button { position: relative; display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 2px 12px; width: 100%; min-height: 68px; padding: 12px 12px 12px 16px; border: 0; border-bottom: 1px solid var(--line-1, rgba(255,255,255,0.06)); background: transparent; color: var(--text-2, #c9cdd2); text-align: left; cursor: pointer; transition: background 140ms, color 140ms; } .ds-pauta button::before { content: ''; position: absolute; top: 12px; bottom: 12px; left: 0; width: 1px; background: #f5f5f5; opacity: 0; transform: scaleY(0.4); transition: opacity 200ms, transform 200ms cubic-bezier(0.22,1,0.36,1); } .ds-pauta button:hover, .ds-pauta button.is-active { background: var(--ink-1, #0c0c0d); color: var(--text-1, #f5f5f5); } .ds-pauta button.is-active::before { opacity: 1; transform: none; } .ds-pauta button:focus-visible { outline: 2px solid rgba(245,245,245,0.72); outline-offset: -2px; } .ds-pauta b { grid-column: 1; font-size: 15px; font-weight: 700; } .ds-pauta small { grid-column: 1; color: var(--text-3, #8e969f); font-size: 12px; } .ds-pauta em { grid-column: 2; grid-row: 1 / 3; align-self: center; display: inline-flex; align-items: center; gap: 6px; color: var(--text-3, #8e969f); font-size: 10.5px; font-style: normal; font-weight: 700; letter-spacing: 0.06em; } .ds-pauta em::before { content: ''; width: 6px; height: 6px; border-radius: 50%; box-shadow: inset 0 0 0 1px var(--text-4, #767e88); } .ds-pauta .is-ready em { color: #f5f5f5; } .ds-pauta .is-ready em::before { background: #f5f5f5; box-shadow: none; } .ds-pauta .is-incomplete em::before { background: var(--state-warning, #e8b04a); box-shadow: none; }"
+    },
+    {
+      "name": "Next-match Chip",
+      "kind": "chip",
+      "refersTo": "next-match-chip",
+      "description": "Topbar pill with the next fixture; hidden at 900px and below.",
+      "html": "<button class=\"ds-chip\"><span class=\"ds-chip-crest\"></span><span><small>PRÓXIMA PARTIDA</small><b>Strix United vs Maquina</b></span><strong>21:10</strong></button>",
+      "css": ".ds-chip { display: inline-flex; align-items: center; gap: 10px; min-height: 40px; padding: 0 14px 0 4px; border: 1px solid var(--line-2, rgba(255,255,255,0.1)); border-radius: 999px; background: var(--ink-1, #0c0c0d); color: var(--text-1, #f5f5f5); font-family: Inter, system-ui, sans-serif; cursor: pointer; transition: border-color 140ms, background 140ms; } .ds-chip:hover { border-color: var(--line-3, rgba(255,255,255,0.16)); background: var(--ink-2, #121314); } .ds-chip:focus-visible { outline: 2px solid rgba(245,245,245,0.72); outline-offset: 2px; } .ds-chip-crest { width: 30px; height: 30px; border-radius: 50%; box-shadow: inset 0 0 0 1px var(--line-3, rgba(255,255,255,0.16)); } .ds-chip > span:nth-child(2) { display: grid; text-align: left; } .ds-chip small { color: var(--text-3, #8e969f); font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; } .ds-chip b { font-size: 12px; font-weight: 700; } .ds-chip strong { font-size: 13px; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Night Ledger",
+    "overview": "STRIX UNITED is the club's own room at night, read as a timetable. The ground is near-black ink, type is off-white Inter at heavy display weights with tabular numerals, and structure comes from hairlines rather than boxes. Most content sits directly on the ground as rows divided by 1px lines; only one object per screen gets lifted onto a raised ink surface (the next match on the Home, the preview piece in the Central de mídia, the Agenda's list frame).\n\nThe signature is the now line: a 1px off-white hairline with a 7px dot that marks where the night stands inside the timetable. It draws in from the left on the Home and in the Agenda, and the same mark sweeps down the generated videos as their scene transition. The product and its social pieces speak one language: same ink stage, same type, same hairlines, same now line.\n\nColor carries no decoration. The UI is monochrome; hue appears only as system state (success, warning, danger) and inside partner scopes (Rastro Blue in the \"Powered by Rastro\" mark, Next Clubs and competition colours in their own surfaces). Density follows the Agenda, the reference surface: generous row heights, firm type contrast, nothing ornamental.",
+    "keyCharacteristics": [
+      "Ink ramp ground (#050607 up to graphite #2a2b2c) with off-white type in four tiers.",
+      "Hairline rows (1px, 6–16% white) instead of cards.",
+      "One elevated object per view; everything else is flat on the ground.",
+      "Inter only; contrast from size, weight (800 for display) and tracking; tabular numerals for every time, score and count.",
+      "The now line as the single recurring signature, in the app and in the videos.",
+      "Paper-white pill for the one primary action."
+    ],
+    "rules": [
+      { "name": "The No-Blue Rule", "body": "Rastro Blue is read only inside `.rastro-*` / `[data-rastro]` scopes. Strix structure (nav, buttons, focus, rows, charts) never turns blue.", "section": "colors" },
+      { "name": "The State-Only Hue Rule", "body": "Green, amber and red appear only when the system is reporting a state. A row, header or piece never takes a hue to look lively.", "section": "colors" },
+      { "name": "The One Paper Rule", "body": "Paper white is the only filled light surface. One primary pill per action group; the rest is outlined or text.", "section": "colors" },
+      { "name": "The Tabular Rule", "body": "Every time, score, count and date renders with tabular numerals (`time`, `.tabular`, `[data-tabular]`).", "section": "typography" },
+      { "name": "The Tagline Title Rule", "body": "Page titles are short declarative taglines that end with a period (\"Elenco FC 27.\", \"Central de mídia.\", \"Boa noite, Dornellas.\"). The period is intentional.", "section": "typography" },
+      { "name": "The No-Eyebrow Rule", "body": "Nothing sits above a page title. The route name lives in the topbar breadcrumb; uppercase labels are reserved for data metadata (section heads, columns, status), never as an overtitle.", "section": "typography" },
+      { "name": "The One Lift Rule", "body": "A view lifts one object. Lists, ledgers and section content stay flat on the ground.", "section": "elevation" },
+      { "name": "The Soft Shadow Rule", "body": "Shadows are offset and softly blurred black. No zero-offset glows, no hard offset shadows.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do build on the ink ramp and four text tiers from `src/design/tokens.css`; read tokens, never literals.",
+      "Do divide content with 1px hairlines (line-1 rows, line-2 section heads) and keep it flat on ink-0.",
+      "Do lift exactly one object per view onto ink-1 with the Raise or Pop shadow.",
+      "Do use the now line to mark the present wherever a timetable or a generated scene shows the night.",
+      "Do set every time, score and count in tabular numerals at 800 weight.",
+      "Do use the paper pill for the single primary action and outlined pills for the rest.",
+      "Do keep motion to decelerating entrances (140ms micro, 200ms controls, 320ms sections, 560ms hero) and collapse it to 1ms under `prefers-reduced-motion`.",
+      "Do render missing data as \"—\" and write honest empty states (max 46ch, text-3)."
+    ],
+    "donts": [
+      "Don't let Rastro Blue or any hue into Strix structural UI; colour is for state and partner scopes only.",
+      "Don't put an eyebrow or kicker label above a page title; the breadcrumb already names the route.",
+      "Don't mark state with thick coloured side stripes on rows or cards; active rows use the 1px off-white rule or a fill step.",
+      "Don't use zero-offset glows, hard offset shadows, bounce or parallax.",
+      "Don't wrap rows in individual cards or build dashboards of metric tiles.",
+      "Don't truncate opponent or player names; wrap in the app, shrink-then-split in the videos.",
+      "Don't add a second typeface."
+    ]
+  },
+  "drift": [
+    "src/features/competitions/competitions-inline.css and competitions.css: 3px inset side-stripe accents in competition colour (e.g. .competition-timeline article.is-strix).",
+    "src/gameday/gameday.css: orphaned GameDay editor with 3–7px border-left stripes, hard offset shadows (10px 10px 0 / 14px 14px 0), Arial Narrow display face and #696b6f grey-blue accents.",
+    "Command palette still renders as a tile grid, not hairline rows.",
+    "src/fc27-brand.css overrides .primary with box-shadow 0 9px 28px #0008, adding a shadow to the flat paper pill defined in src/styles.css.",
+    "src/ui/motion/motion.css .motion-tabs (used as the Media format control) carries literal values: 10px/900 labels, 14px/10px radii, gradient thumb #f4f4f5 to #d4d4d8.",
+    "src/features/media/media.css: incomplete readiness label uses literal #f0cd8b instead of a state token.",
+    "Legacy alias tokens (--strix-*, --fc27-*, --sp-*, --ui-space-*) remain for older layers; --fc27-label and --sp-kicker are off-ramp literals (#aeb4bb)."
+  ]
+}

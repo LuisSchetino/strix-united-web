@@ -2253,7 +2253,7 @@ function SquadPageV3({ workspace, profile, contract = null, identity = null, cli
   return (
     <section className="data-page page-enter squad-page-v3">
       <PageHeader
-        title="Squad FC 27."
+        title="Elenco FC 27."
         description="Posições e vínculos organizados para escalar sem procurar jogador."
         actions={canCreate && <><Suspense fallback={<span className="roster-tools-loading">CARREGANDO FERRAMENTAS…</span>}><RosterTools workspace={workspace} /></Suspense><button className="primary" onClick={openCreate}><Icon name="plus" size={16} />ADICIONAR JOGADOR</button></>}
       />
@@ -2266,9 +2266,9 @@ function SquadPageV3({ workspace, profile, contract = null, identity = null, cli
             {players.length ? <div className="squad-list squad-compact-list">{players.map((player) => <article className="squad-player-card" key={player.id}>
               <button type="button" className="squad-card-open" aria-label={`Abrir ficha de ${player.display_name}`} onClick={() => setSheetPlayer(player)} onPointerEnter={() => { void preloadRoute("playerSheet"); }} />
               <Avatar name={player.display_name} logo={player.avatar_path ? workspace.assetUrl(player.avatar_path) : player.external_avatar_url || ""} kind="photo" size="md" />
-              <div className="squad-card-identity"><b>{player.display_name}</b><small>{player.positions?.join(" · ") || "Posição não definida"}</small><span>{gamesForPlayer(player)} jogo(s)</span></div>
+              <div className="squad-card-identity"><b>{player.display_name}</b><small>{player.positions?.join(" · ") || "Posição não definida"}</small><span>{(() => { const games = gamesForPlayer(player); return games ? `${games} ${games === 1 ? "jogo" : "jogos"}` : "Sem jogos importados"; })()}</span></div>
               <strong className="squad-shirt-number">{player.shirt_number === null || player.shirt_number === undefined ? "—" : `#${String(player.shirt_number).padStart(2, "0")}`}</strong>
-              <em className={`member-tag ${player.member_type || "elenco"}`}>{player.member_type === "teste" ? `TESTE${player.trial_expires_at ? ` · até ${datePart(player.trial_expires_at)}` : ""}` : player.member_type === "complete" ? "COMPLETE" : "ELENCO"}</em>
+              {["teste", "complete"].includes(player.member_type) ? <em className={`member-tag ${player.member_type}`}>{player.member_type === "teste" ? `TESTE${player.trial_expires_at ? ` · até ${datePart(player.trial_expires_at)}` : ""}` : "COMPLETE"}</em> : <span className="member-tag-slot" aria-hidden="true" />}
               {(canEdit || canArchive || ownsContract(player)) && <div className="squad-context"><ActionMenu className="squad-more" label={`Ações de ${player.display_name}`} items={[(canReadContracts || ownsContract(player)) && { id: "contract", icon: "file", label: "Contrato", onSelect: () => void openPlayerContract(player) }, canEdit && { id: "edit", icon: "edit", label: "Editar", onSelect: () => openEdit(player) }, canArchive && { id: "archive", icon: "trash", label: "Arquivar", tone: "danger", onSelect: () => { void workspace.removePlayer(player.id).catch((removeError) => setError(removeError.message)); } }].filter(Boolean)} /></div>}
             </article>)}</div> : <p className="squad-sector-empty">Nenhum jogador nesta faixa.</p>}
           </section>
@@ -3066,6 +3066,8 @@ function App() {
             <kbd>Ctrl K</kbd>
           </button>
           <div className="top-actions">
+            {/* Home and Agenda already lead with the next match; the media studio keeps its header quiet. */}
+            {!["central", "agenda", "midia"].includes(active) && locationState.kind === "page" && <CurrentGameLive navigate={navigate} workspace={workspace} />}
             {(canManageAgenda(auth.profile) || canCreatePlayer(auth.profile) || canViewMedia(auth.profile) || canManageCompetitions(auth.profile)) && (
             <button className={`add-button create-trigger${createOpen ? " is-open" : ""}`} onClick={() => setCreateOpen((value) => !value)} aria-expanded={createOpen} aria-haspopup="menu" aria-label="Novo">
               <Icon name="plus" size={16} />
@@ -3100,8 +3102,6 @@ function App() {
           <DataPage id={active} workspace={workspace} profile={auth.profile} client={auth.client} />
         )}
       </main>
-      {/* The Home already leads with the next match, and the media studio needs its stage clear. */}
-      {!["central", "midia"].includes(active) && locationState.kind === "page" && <CurrentGameLive navigate={navigate} workspace={workspace} />}
       <nav className="tabbar" aria-label="Navegação rápida">
         {mobileTabsFor(auth.profile).map(([id, label, icon]) => (
           <button type="button" key={id} className={active === id ? "active" : ""} aria-current={active === id ? "page" : undefined} onClick={() => navigate(id)} onTouchStart={() => { void preloadRoute(id); }}>

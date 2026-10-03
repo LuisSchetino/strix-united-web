@@ -46,6 +46,19 @@
   align-self: center;
 }
 
+/* Tool pages whose work area must fit the first viewport. */
+.page-header.is-compact {
+  margin: var(--space-6) 0 var(--space-5);
+  padding-bottom: var(--space-4);
+}
+.page-header.is-compact h1 {
+  font-size: var(--text-3xl);
+}
+.page-header.is-compact p {
+  margin-top: var(--space-1);
+  font-size: var(--text-sm);
+}
+
 @media (max-width: 760px) {
   .page-header {
     align-items: stretch;
@@ -81,4 +94,5 @@
 .workspace > :is(.data-page, .matches-page, .competitions-page, .agenda-page, .media-page, .library-v2) {
   padding-inline: 0;
   padding-top: 0;
+  margin-top: 0;
 }

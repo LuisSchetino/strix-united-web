@@ -238,7 +238,8 @@
 /* ----------------------------------------------------------- workspace */
 
 .media-workspace {
-  --stage-h: clamp(440px, calc(100dvh - 280px), 860px);
+  /* Topbar, compact header, toolbar and stage label sit above the piece. */
+  --stage-h: clamp(360px, calc(100dvh - 384px), 860px);
   display: grid;
   grid-template-columns: max-content minmax(280px, 1fr);
   grid-template-areas: "stage actions" "stage rail";
@@ -443,7 +444,9 @@
   align-content: center;
   gap: var(--space-2) var(--space-3);
   padding: var(--space-6);
-  background: rgba(5, 6, 7, 0.72);
+  background: rgba(5, 6, 7, 0.9);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
   animation: motion-overlay-in var(--motion-control) var(--motion-ease) both;
 }
 .media-stage-progress b {
@@ -863,9 +866,9 @@ dialog.media-viewer.is-closing section {
   }
   .media-nav {
     position: static;
-    margin: 0 calc(var(--gutter) * -1);
-    padding: 0 var(--gutter);
     overflow-x: auto;
+    border-top: 1px solid var(--line-2);
+    border-bottom: 1px solid var(--line-1);
     scroll-snap-type: x proximity;
     scrollbar-width: none;
   }
@@ -874,7 +877,6 @@ dialog.media-viewer.is-closing section {
   }
   .media-nav ol {
     display: flex;
-    gap: var(--space-2);
     width: max-content;
     border-top: 0;
   }
@@ -884,10 +886,12 @@ dialog.media-viewer.is-closing section {
   .media-pauta-item {
     grid-template-columns: minmax(0, 1fr);
     align-content: start;
-    width: 196px;
-    min-height: 88px;
-    border: 1px solid var(--line-1);
-    border-radius: var(--radius-md);
+    width: 184px;
+    min-height: 84px;
+    padding-left: var(--space-1);
+    border: 0;
+    border-right: 1px solid var(--line-1);
+    background: transparent;
   }
   .media-pauta-item em {
     grid-column: 1;
@@ -896,15 +900,16 @@ dialog.media-viewer.is-closing section {
   }
   .media-pauta-item::before {
     top: auto;
-    right: var(--space-4);
+    right: var(--space-3);
     bottom: -1px;
-    left: var(--space-4);
+    left: var(--space-1);
     width: auto;
     height: 1px;
     transform: scaleX(0.4);
   }
+  .media-pauta-item:hover,
   .media-pauta-item.is-active {
-    border-color: var(--line-3);
+    background: transparent;
   }
 }
 @media (max-width: 900px) {

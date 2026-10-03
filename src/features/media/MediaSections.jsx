@@ -173,8 +173,7 @@ export function AgendaSection({ workspace, look, job, running, openViewer }) {
       matches, format, day: day.iso, dayLabel: day.label,
       timeline: withMediaLook(buildAgendaTimeline(matches, { format }), look), force,
     });
-    if (started.status === "ready") notify(started.stage === "cached" ? "Esta versão já estava pronta." : "Vídeo pronto.");
-    else if (started.status === "error") notify(started.error, "error");
+    if (started.status === "error") notify(started.error, "error");
     return started;
   };
 
@@ -234,8 +233,7 @@ export function RelatedSection({ workspace, profile, look, job, running, openVie
   const generate = async (force) => {
     if (!ready || running) return null;
     const started = await startRelatedNightRender({ players: related, format: "story", day: day.iso, dayLabel: day.label, timeline, force });
-    if (started.status === "ready") notify(started.stage === "cached" ? "Esta versão já estava pronta." : "Vídeo pronto.");
-    else if (started.status === "error") notify(started.error, "error");
+    if (started.status === "error") notify(started.error, "error");
     return started;
   };
 
@@ -282,8 +280,7 @@ export function SummarySection({ mode, workspace, look, job, running, openViewer
   const generate = async (force) => {
     if (!has || running) return null;
     const started = await startSummaryRender({ period: summary, format: "story", day: day.iso, dayLabel: summary.rangeLabel, timeline, force });
-    if (started.status === "ready") notify(started.stage === "cached" ? "Esta versão já estava pronta." : "Vídeo pronto.");
-    else if (started.status === "error") notify(started.error, "error");
+    if (started.status === "error") notify(started.error, "error");
     return started;
   };
   const title = mode === "week" ? "Resumo da semana" : "Resumo do dia";

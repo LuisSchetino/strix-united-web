@@ -85,7 +85,7 @@ export function MediaWorkspace({ stage, actions, rail }) {
 export function PreviewStage({ pieceKey, ratio = "story", label, state = "ready", children, caption, job = null, showingResult = false }) {
   return (
     <section className="media-stage" aria-label={label}>
-      <div className="media-stage-head"><span>{showingResult ? "PRONTO PARA POSTAR" : "PRÉVIA"}</span>{caption && <b>{caption}</b>}</div>
+      <div className="media-stage-head"><span aria-live="polite">{showingResult ? (job?.stage === "cached" ? "ESTA VERSÃO JÁ ESTAVA PRONTA" : "PRONTO PARA POSTAR") : "PRÉVIA"}</span>{caption && <b>{caption}</b>}</div>
       <div className={`media-stage-frame is-${ratio}`} data-state={showingResult ? "result" : state}>
         <div className="media-stage-piece" key={showingResult ? `result:${pieceKey}` : pieceKey}>
           <i className="media-piece-sweep" aria-hidden="true" />
@@ -238,7 +238,7 @@ export function ArchiveList({ items = [], empty = "Nada gerado ainda." }) {
         <ul className="media-archive">
           {items.map((item) => (
             <li key={item.id} className={item.stale ? "is-stale" : ""}>
-              <div><b>{item.label}</b><small title={item.fileName}>{item.meta}</small>{item.stale && <em>Os dados mudaram desde este render.</em>}</div>
+              <div><b>{item.label}</b><small title={item.fileName}>{item.meta}</small>{item.stale && <em>Os dados mudaram; gere de novo para atualizar.</em>}</div>
               <div className="media-archive-actions">
                 <button type="button" className="secondary" aria-label={`Visualizar ${item.fileName || item.label}`} onClick={item.onView}>VER</button>
                 <button type="button" className="secondary" aria-label={`Baixar ${item.fileName || item.label}`} onClick={item.onDownload}>BAIXAR</button>

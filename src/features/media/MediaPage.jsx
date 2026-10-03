@@ -35,7 +35,7 @@ export function MediaPage({ profile, client, workspace }) {
 
   return (
     <section className="media-page page-enter">
-      <PageHeader title="Central de mídia." description="Escolha a peça da noite, confira a prévia e baixe pronta para postar." />
+      <PageHeader className="is-compact" title="Central de mídia." description="Escolha a peça da noite, confira a prévia e baixe pronta para postar." />
       <div className="media-studio">
         <MediaNav sections={rundown} active={active} onChange={setSection} />
         <div className="media-section" key={active}>

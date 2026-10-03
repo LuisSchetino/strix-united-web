@@ -195,7 +195,6 @@ export function AnnounceStudio({ workspace, look, job, running, openViewer }) {
     if (next.status === "error") notify(next.error || "Não foi possível gerar o anúncio.", "error");
     else if (next.status === "ready") {
       if (phrase.id && phrase.id !== "custom") setUsedPhraseIds((current) => [...current.filter((id) => id !== phrase.id), phrase.id].slice(-8));
-      notify(format === "feed" ? "Post pronto." : "Reels pronto.");
       if (next.result) setResult(next.result);
     }
   };

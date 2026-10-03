@@ -54,7 +54,7 @@ test("resumo: recorte em livro-razão e placar com contraste, sem inventar valor
   const ctx = canvas();
   const stats = timeline.scenes.find((scene) => scene.type === "stats");
   paintEditorialSummary(ctx, { timeline, time: stats.start + 1.6 });
-  const heading = ctx.placements.find((item) => item.text === "DA NOITE.");
+  const heading = ctx.placements.find((item) => item.text === "A NOITE.");
   const firstLabel = ctx.placements.find((item) => item.text === "JOGOS");
   assert.ok(heading && firstLabel && firstLabel.y > heading.y, "os números começam abaixo da chamada");
   assert.ok(ctx.texts.includes("100%"));

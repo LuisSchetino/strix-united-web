@@ -77,6 +77,7 @@ export function PlayerProfile({ player, players, matches, workspace, onClose }) 
       </div>
     </header>
     {lastMatch && <section className="statistics-last-game" aria-label="Última atuação"><small>ÚLTIMA ATUAÇÃO</small><b>{lastMatch.opponent_name || lastMatch.opponent || "Partida"}</b>{lastScore && <span>{lastScore}</span>}<span>{dateLabel(lastMatch.played_at)}</span>{lastGame.rating != null && Number.isFinite(Number(lastGame.rating)) && <strong>NOTA {Number(lastGame.rating).toFixed(1)}</strong>}{player.goalkeeper ? (Number.isFinite(Number(lastGame.saves)) ? <em>{Number(lastGame.saves)} defesas</em> : null) : (Number.isFinite(Number(lastGame.goals)) && Number.isFinite(Number(lastGame.assists)) ? <em>G/A {Number(lastGame.goals)}/{Number(lastGame.assists)}</em> : null)}</section>}
+    {player.noSample ? <p className="statistics-profile-empty">Ainda não há atuação reconciliada com a EA para {player.name}. Forma, recordes e contexto por posição aparecem depois da primeira partida importada com este jogador.</p> : <>
     <nav className="statistics-profile-shortcuts" aria-label="Atalhos da ficha"><button type="button" onClick={() => jump("statistics-profile-form")}><SheetIcon name="form"/>VER FORMA</button><button type="button" onClick={() => jump("statistics-profile-records")}><SheetIcon name="records"/>VER RECORDES</button></nav>
     <div className="statistics-profile-season">{seasonMetrics.map(([label, value]) => <article key={label}><small>{label}</small><strong>{value}</strong></article>)}</div>
     <div className="statistics-profile-lower">
@@ -87,5 +88,6 @@ export function PlayerProfile({ player, players, matches, workspace, onClose }) 
         <div className="statistics-position-context"><small>CONTEXTO · {player.goalkeeper ? "GOL" : "POSIÇÃO"}</small>{contextMetrics.map(([metric, label]) => { const context = buildPositionContext(player, players, metric); const contextValue = metric === "cleanSheets" ? (player.goalkeeper && player.metricSamples?.cleansheetsgk > 0 ? player.cleanSheetsGk : player.cleanSheets) : player[metric]; const known = contextValue !== null && contextValue !== undefined && contextValue !== "" && Number.isFinite(Number(contextValue)); const hasMetricSample = metric === "averageRating" ? player.ratings > 0 : metric === "cleanSheets" ? (player.metricSamples?.cleansheetsdef || 0) + (player.metricSamples?.cleansheetsgk || 0) > 0 : metric === "savesPerGame" ? player.metricSamples?.saves > 0 && player.goalkeeperGames > 0 : Boolean(player.metricSamples?.[metric]); const groupWord = context.group === "GOL" ? "GKs" : context.group === "DEF" ? "DEFs" : context.group === "ATA" ? "ATAs" : "MEIs"; return <span key={metric}><b>{label}</b><em>{!hasMetricSample || !known ? "Sem amostra suficiente" : context.total > 1 ? `${display(contextValue)} · ${context.rank}º entre ${context.total} ${groupWord}` : display(contextValue)}</em></span>; })}</div>
       </section>
     </div>
+    </>}
   </section>;
 }
