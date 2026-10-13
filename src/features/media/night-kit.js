@@ -83,6 +83,18 @@ function ellipseMask(layer, width, height, inner) {
   layer.fillStyle = fade; layer.fillRect(-2, -2, 4, 4);
   layer.restore();
 }
+// How much of the club's blue the black-and-white face takes: enough to read as blue in the
+// shadows and mid-tones, while the highlights stay white and the picture stays a photo.
+export const FACE_TINT = 0.45;
+
+/** Tones a grey picture partly in the club's blue (`amount` 0..1). */
+function tint(layer, width, height, amount = FACE_TINT) {
+  layer.save();
+  layer.globalCompositeOperation = "color"; layer.globalAlpha = amount;
+  layer.fillStyle = RASTRO_BLUE; layer.fillRect(0, 0, width, height);
+  layer.restore();
+}
+
 /**
  * A picture as this model shows it: the face in hard black and white, and two copies of its
  * bright parts bleeding past their edges. Made once per picture and shape; `whole` is for a
@@ -94,19 +106,20 @@ function faceLayers(source, ratio, whole = false) {
   if (!byRatio) { byRatio = new Map(); layers.set(source, byRatio); }
   const key = `${ratio.toFixed(2)}:${whole}`;
   if (byRatio.has(key)) return byRatio.get(key);
-  const make = (width, filter, inner, glow = 0) => {
+  const make = (width, filter, inner, glow = 0, toned = false) => {
     const canvas = document.createElement("canvas");
     canvas.width = width; canvas.height = Math.round(width * ratio);
     const layer = canvas.getContext("2d");
     if (typeof layer.filter === "string") layer.filter = filter;
     if (whole) contain(layer, source, canvas.width, canvas.height); else cover(layer, source, canvas.width, canvas.height, 0.2);
     layer.filter = "none";
+    if (toned) tint(layer, canvas.width, canvas.height);
     if (glow > 0) { layer.save(); layer.globalCompositeOperation = "multiply"; layer.globalAlpha = glow; layer.fillStyle = RASTRO_BLUE; layer.fillRect(0, 0, canvas.width, canvas.height); layer.restore(); }
     ellipseMask(layer, canvas.width, canvas.height, inner);
     return canvas;
   };
   const made = {
-    base: make(720, "grayscale(1) contrast(1.5) brightness(1.5)", 0.5),
+    base: make(720, "grayscale(1) contrast(1.5) brightness(1.5)", 0.5, 0, true),
     far: make(180, "grayscale(1) contrast(2.4) brightness(1.9) blur(8px)", 0.62, 1),
     near: make(240, "grayscale(1) contrast(3) brightness(2.2) blur(3px)", 0.56),
   };
@@ -145,7 +158,9 @@ function medalOf(source) {
   };
   place("grayscale(1) contrast(1.5) brightness(1.4)", 1, "source-over");
   place("grayscale(1) contrast(2.6) brightness(2) blur(5px)", 0.6, "screen");
-  layer.filter = "none"; layer.globalAlpha = 1; layer.globalCompositeOperation = "destination-in";
+  layer.filter = "none"; layer.globalAlpha = 1;
+  tint(layer, size, size);
+  layer.globalAlpha = 1; layer.globalCompositeOperation = "destination-in";
   layer.beginPath(); layer.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2); layer.fill();
   medals.set(source, canvas);
   return canvas;
