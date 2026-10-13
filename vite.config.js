@@ -26,8 +26,24 @@ function jsonApi404() {
   };
 }
 
+// Libraries change far less often than the app: kept in their own chunks, a phone that already
+// has them only downloads the app's code again after a deploy.
+const VENDOR_CHUNKS = [
+  ["react", /[\\/]node_modules[\\/](react|react-dom|scheduler)[\\/]/],
+  ["supabase", /[\\/]node_modules[\\/](@supabase|iceberg-js)[\\/]/],
+];
+
 export default defineConfig({
   plugins: [jsonApi404()],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          return VENDOR_CHUNKS.find(([, pattern]) => pattern.test(id))?.[0];
+        },
+      },
+    },
+  },
   server: {
     // Vite does not run Pages Functions. Reuse only the public image endpoint
     // during local review; authentication and mutation endpoints are not proxied.
