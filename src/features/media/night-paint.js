@@ -88,6 +88,43 @@ function drawPitch(ctx, box, grow) {
   ctx.restore();
 }
 
+/** A short jolt of the whole cover on each hit, settling within a few frames. */
+function coverShake(t, hits, k) {
+  const power = Math.max(0, ...hits.map((at) => (t >= at ? Math.exp(-(t - at) / 0.07) : 0)));
+  return { x: Math.sin(t * 97) * 14 * k * power, y: Math.cos(t * 83) * 10 * k * power };
+}
+
+/** A ring of Rastro blue leaving the crest on each hit, growing and fading as it goes. */
+function coverRings(ctx, g, t, hits) {
+  const cx = g.width / 2, cy = g.box.y + g.box.h * 0.42;
+  ctx.save();
+  ctx.strokeStyle = PALE; ctx.shadowColor = RASTRO_BLUE; ctx.shadowBlur = 30;
+  for (const at of hits) {
+    const p = (t - at) / 0.9;
+    if (p < 0 || p > 1) continue;
+    ctx.globalAlpha = 0.85 * (1 - p) ** 1.5;
+    ctx.lineWidth = lerp(14, 2, p) * g.k;
+    ctx.beginPath(); ctx.arc(cx, cy, lerp(120, 760, 1 - (1 - p) ** 3) * g.k, 0, Math.PI * 2); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+/** A slanted beam of light sweeping across the crest once, on its way in. */
+function coverBeam(ctx, g, t, until) {
+  const p = clampUnit(t / Math.max(F, until * 0.8));
+  if (p <= 0 || p >= 1) return;
+  const x = lerp(-0.4, 1.4, p) * g.width, y = g.box.y + g.box.h * 0.42;
+  ctx.save();
+  ctx.globalCompositeOperation = "screen";
+  ctx.translate(x, y); ctx.rotate(-0.42);
+  const beam = ctx.createLinearGradient(-120 * g.k, 0, 120 * g.k, 0);
+  beam.addColorStop(0, "rgba(47,128,255,0)"); beam.addColorStop(0.45, "rgba(120,176,255,0.35)"); beam.addColorStop(0.5, "rgba(255,255,255,0.55)"); beam.addColorStop(0.55, "rgba(120,176,255,0.35)"); beam.addColorStop(1, "rgba(47,128,255,0)");
+  ctx.fillStyle = beam; ctx.fillRect(-120 * g.k, -g.height, 240 * g.k, g.height * 2);
+  ctx.restore();
+}
+
+const clampUnit = (value) => Math.max(0, Math.min(1, value));
+
 const SEPARATOR = "   ·   ";
 /** Names set in a row, broken into lines no wider than `width` (a name is never split). */
 function nameLines(ctx, names, size, width) {
@@ -111,18 +148,29 @@ export function paintNightRelated(ctx, { timeline, time = 0, assets, dayLabel = 
   const crest = assets?.strix?.bitmap, first = `${dayStamp(dayLabel)}\nBRASIL`;
 
   if (t < S) {
-    // the cover: the crest, the piece's name
-    drawFace(ctx, crest, g.box, { alpha: ramp(t, 0, 0.5, linear), zoom: 1.03, punch, flare, whole: true });
+    // the cover: the crest comes in from close and lands on the first hit, each hit sends a
+    // ring out of it, a beam of light crosses it, and the piece's name slides in word by word
+    const { first: hit1, second: hit2 } = plan.title;
+    const landed = ramp(t, hit1, 0.35), shake = coverShake(t, [hit1, hit2], g.k);
+    ctx.save();
+    ctx.translate(shake.x, shake.y);
+    coverRings(ctx, g, t, [0, hit1, hit2]);
+    drawFace(ctx, crest, g.box, { alpha: ramp(t, 0, 0.35, linear), zoom: lerp(lerp(1.5, 1.18, ramp(t, 0, hit1, linear)), 1.03, landed) + 0.05 * punch, punch, flare, whole: true });
+    coverBeam(ctx, g, t, S);
+    ctx.restore();
+    readout(ctx, `NOITE DE JOGO   ·   ${count}`, g.width / 2, 120 * g.k, 18 * g.s, { align: "center", color: RASTRO_BLUE, alpha: ramp(t, 0.1, 0.3) * (0.75 + 0.25 * Math.sin(t * 18)) });
     const head = Math.min(230 * g.s, fit(ctx, "Relacionados", GOTHIC, 700, "normal", g.width - 150, 230));
     const top = g.band - head * 1.84 - 84 * g.k;
-    if (t >= plan.title.first) gothic(ctx, "Relacionados", 74, top, head, { soft: 1 - ramp(t, plan.title.first, 0.27) });
-    if (t >= plan.title.second) gothic(ctx, "da Noite", 250, top + head * 0.84, head, { soft: 1 - ramp(t, plan.title.second, 0.27) });
-    drawBand(ctx, g, ramp(t, plan.title.second, 0.27, linear), { first, middle: `${count}\nNOITE DE JOGO` });
+    if (t >= hit1) gothic(ctx, "Relacionados", 74 - 160 * (1 - ramp(t, hit1, 0.3)), top, head, { soft: 1 - ramp(t, hit1, 0.27) });
+    if (t >= hit2) gothic(ctx, "da Noite", 250 + 160 * (1 - ramp(t, hit2, 0.3)), top + head * 0.84, head, { soft: 1 - ramp(t, hit2, 0.27) });
+    drawBand(ctx, g, ramp(t, hit2, 0.27, linear), { first, middle: `${count}\nNOITE DE JOGO` });
   } else {
     // the pitch: every line of the team lands on a strong beat, from the goal forward
     drawFace(ctx, crest, g.box, { alpha: 0.2, zoom: 1.03, punch, flare, whole: true });
-    const head = pitch.lined ? "Titulares" : "Relacionados";
-    gothic(ctx, head, g.width / 2, 150 * g.k, Math.min(132 * g.s, fit(ctx, head, GOTHIC, 700, "normal", g.width - 300, 132)), { align: "center", soft: 1 - ramp(t, S, 0.27) });
+    // With a line-up the headline is the eleven, set in the readouts' heavy wide capitals
+    // (blackletter capitals do not read); without one it stays the piece's blackletter name.
+    if (pitch.lined) write(ctx, "XI INICIAL", g.width / 2, 168 * g.k, { weight: 900, size: Math.min(96 * g.s, fit(ctx, "XI INICIAL", WIDE, 900, "expanded", g.width - 300, 96, 0.06)), stretch: "expanded", tracking: 0.06, align: "center", glow: 18, soft: 1 - ramp(t, S, 0.27) });
+    else gothic(ctx, "Relacionados", g.width / 2, 150 * g.k, Math.min(132 * g.s, fit(ctx, "Relacionados", GOTHIC, 700, "normal", g.width - 300, 132)), { align: "center", soft: 1 - ramp(t, S, 0.27) });
     const box = { x: 70, y: 318 * g.k, w: g.width - 140, h: 1030 * g.k };
     drawPitch(ctx, box, ramp(t, S, 0.5));
     const rows = pitch.rows, gap = rows.length > 1 ? 0.81 * box.h / (rows.length - 1) : box.h;
@@ -150,7 +198,7 @@ export function paintNightRelated(ctx, { timeline, time = 0, assets, dayLabel = 
     // who is on the list for the night's other games
     if (plan.strip != null && t >= plan.strip && pitch.bench.length) {
       const top = box.y + box.h + 46 * g.k, names = pitch.bench.map((entry) => String(entry.player.name || "").toUpperCase());
-      readout(ctx, "TAMBÉM RELACIONADOS", 74, top, 16 * g.s, { color: RASTRO_BLUE, alpha: ramp(t, plan.strip, 0.25) });
+      readout(ctx, "RELACIONADOS", 74, top, 16 * g.s, { color: RASTRO_BLUE, alpha: ramp(t, plan.strip, 0.25) });
       let size = 27 * g.s, lines = nameLines(ctx, names, size, g.width - 148);
       while (lines.length > 2 && size > 15) { size -= 2; lines = nameLines(ctx, names, size, g.width - 148); }
       lines.slice(0, 3).forEach((line, i) => write(ctx, line, 74, top + 34 * g.s + i * size * 1.45, { weight: 700, size, stretch: "expanded", tracking: 0.04, alpha: ramp(t, plan.strip + 0.07 + i * 0.07, 0.25) }));
