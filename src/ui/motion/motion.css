@@ -140,99 +140,145 @@ button:focus-visible .rolling-label > span:nth-child(2) {
   color: #65e1ad;
 }
 .motion-state-badge.is-error {
-  color: #ff8394;
+  color: #b1b1b1;
 }
 @keyframes motion-fill {
   to {
     background-position: 0;
   }
 }
+/* Notifications: the Strix surface (ink, hairline, white type). The tone is a
+   line icon in a ring, a slim edge and the countdown — never a filled block. */
 .motion-toast-viewport {
   position: fixed;
   z-index: 4000;
-  right: 18px;
-  bottom: calc(92px + env(safe-area-inset-bottom));
-  width: min(360px, calc(100vw - 28px));
-  height: 78px;
+  right: 20px;
+  bottom: calc(24px + env(safe-area-inset-bottom));
+  width: min(380px, calc(100vw - 28px));
+  height: 76px;
   pointer-events: none;
 }
 .motion-toast {
+  --toast-tone: var(--text-1);
   position: absolute;
   left: 0;
   bottom: 0;
   overflow: hidden;
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr) auto;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
   align-items: center;
-  gap: 11px;
+  gap: 12px;
   width: 100%;
-  padding: 13px 14px 14px;
-  border: 1px solid #595b5f;
-  border-radius: 14px;
-  background: linear-gradient(135deg, #1c1e22f8, #101216f8);
-  color: #eaf7ff;
-  box-shadow:
-    0 20px 55px #000c,
-    inset 0 1px #e2e4e812;
+  min-height: 64px;
+  padding: 12px 14px 13px 16px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--ink-2) 94%, transparent);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  color: var(--text-1);
+  box-shadow: var(--shadow-pop), inset 0 1px rgba(255, 255, 255, 0.04);
   text-align: left;
   pointer-events: auto;
   touch-action: pan-y;
   transform-origin: bottom center;
   transform: translate3d(var(--toast-drag, 0), calc(-1 * var(--toast-stack-y, 0px)), 0) scale(var(--toast-scale, 1));
-  opacity: calc(1 - var(--toast-depth, 0) * 0.08);
-  animation: motion-toast-in var(--motion-control) var(--motion-ease) both;
-  transition:
-    opacity var(--motion-micro),
-    transform var(--motion-control) var(--motion-ease);
+  opacity: calc(1 - var(--toast-depth, 0) * 0.12);
+  animation: motion-toast-in 420ms cubic-bezier(0.2, 0.9, 0.25, 1.1) both;
+  transition: opacity var(--motion-micro), transform var(--motion-control) var(--motion-ease);
+}
+.motion-toast.is-error { --toast-tone: var(--state-danger-text); }
+.motion-toast.is-warning { --toast-tone: var(--state-warning-text); }
+.motion-toast::before {
+  content: "";
+  position: absolute;
+  top: 12px;
+  bottom: 12px;
+  left: 0;
+  width: 2px;
+  border-radius: 0 2px 2px 0;
+  background: var(--toast-tone);
 }
 .motion-toast-viewport:hover .motion-toast,
 .motion-toast-viewport:focus-within .motion-toast {
   transform: translate3d(var(--toast-drag, 0), var(--toast-fan-y, 0px), 0) scale(1);
   opacity: 1;
 }
+/* A toast that offers the way back ("Desfazer"): the action reads as the control it is. */
+.motion-toast-action {
+  flex: none;
+  align-self: center;
+  padding: 6px 12px;
+  border: 1px solid var(--line-3);
+  border-radius: var(--radius-pill);
+  color: var(--text-1);
+  font-size: var(--text-label);
+  font-weight: 800;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  white-space: nowrap;
+  transition: background var(--motion-micro), border-color var(--motion-micro);
+}
+.motion-toast:hover .motion-toast-action {
+  border-color: var(--text-1);
+  background: var(--ink-3);
+}
 .motion-toast.is-leaving {
   opacity: 0 !important;
-  transform: translate3d(calc(var(--toast-drag, 0px) + 36px), calc(-1 * var(--toast-stack-y, 0px)), 0) scale(0.98) !important;
+  pointer-events: none;
+  transform: translate3d(calc(var(--toast-drag, 0px) + 40px), calc(-1 * var(--toast-stack-y, 0px)), 0) scale(0.97) !important;
 }
 .motion-toast > span {
   display: grid;
   place-items: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
-  background: #124638;
-  color: #76e8b8;
-  font-weight: 950;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--toast-tone) 40%, transparent);
+  color: var(--toast-tone);
 }
-.motion-toast.is-error {
-  border-color: #743544;
+.motion-toast > span svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
-.motion-toast.is-error > span {
-  background: #4a1722;
-  color: #ff8b9b;
-}
-.motion-toast.is-warning > span {
-  background: #493715;
-  color: #ffd374;
+.motion-toast > span path {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: motion-toast-mark 420ms var(--motion-ease) 160ms forwards;
 }
 .motion-toast > div {
   display: grid;
   gap: 3px;
-}
-.motion-toast b {
-  font-size: 12px;
-  line-height: 1.35;
+  min-width: 0;
 }
 .motion-toast small {
-  color: #c5c7cb;
-  font-size: 7px;
-  font-weight: 950;
-  letter-spacing: 0.13em;
+  color: var(--toast-tone);
+  font-size: var(--text-label);
+  font-weight: 800;
+  letter-spacing: var(--track-label);
+}
+.motion-toast b {
+  color: var(--text-1);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  line-height: 1.4;
 }
 .motion-toast > em {
-  color: #808286;
-  font-size: 18px;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  color: var(--text-3);
   font-style: normal;
+  transition: background var(--motion-micro), color var(--motion-micro);
+}
+.motion-toast:hover > em {
+  background: var(--ink-3);
+  color: var(--text-1);
 }
 .motion-toast > i {
   position: absolute;
@@ -240,27 +286,22 @@ button:focus-visible .rolling-label > span:nth-child(2) {
   bottom: 0;
   width: 100%;
   height: 2px;
-  background: #55d8aa;
+  background: color-mix(in srgb, var(--toast-tone) 55%, transparent);
   transform-origin: left;
-  animation: motion-toast-life 3.6s linear both;
+  animation: motion-toast-life var(--toast-life, 4.2s) linear both;
 }
-.motion-toast.is-error > i {
-  background: #ff7185;
-}
-.motion-toast.is-warning > i {
-  background: #ffc85d;
+.motion-toast-viewport:hover .motion-toast > i {
+  animation-play-state: paused;
 }
 @keyframes motion-toast-life {
-  to {
-    transform: scaleX(0);
-  }
+  to { transform: scaleX(0); }
 }
 @keyframes motion-toast-in {
-  from {
-    opacity: 0;
-    filter: blur(3px);
-  }
+  from { opacity: 0; transform: translate3d(0, 18px, 0) scale(0.96); filter: blur(4px); }
   to { filter: none; }
+}
+@keyframes motion-toast-mark {
+  to { stroke-dashoffset: 0; }
 }
 .motion-skeleton {
   position: relative;
@@ -367,9 +408,6 @@ button:focus-visible .rolling-label > span:nth-child(2) {
     right: 14px;
     bottom: calc(84px + env(safe-area-inset-bottom));
     width: auto;
-  }
-  .motion-toast {
-    grid-template-columns: 34px minmax(0, 1fr) auto;
   }
   .motion-tooltip:after {
     display: none;
@@ -496,8 +534,7 @@ body,
   border-radius: 18px;
 }
 .primary,
-.secondary,
-.competition-detail-hero aside button{
+.secondary{
   transition:
     transform var(--motion-micro) var(--motion-ease),
     background var(--motion-micro),
@@ -505,8 +542,7 @@ body,
     color var(--motion-micro);
 }
 .primary:active,
-.secondary:active,
-.competition-detail-hero aside button:active{
+.secondary:active{
   transform: scale(0.98);
 }
 .icon-button svg,
@@ -519,9 +555,6 @@ body,
 .agenda-actions button:hover svg {
   transform: translateY(-1px) rotate(-2deg);
 }
-
-
-
 
 @media (max-width: 700px) {
   
@@ -698,14 +731,6 @@ body,
     rotate: 360deg;
   }
 }
-.motion-toast {
-  transition:
-    transform var(--motion-control) var(--motion-ease),
-    opacity var(--motion-micro);
-}
-.motion-toast.is-leaving {
-  pointer-events: none;
-}
 
 @media (min-width: 701px) and (prefers-reduced-motion: no-preference) {
   
@@ -768,8 +793,6 @@ body,
 
 /* Shared interaction chrome follows the monochrome Strix layer. */
 .motion-state-badge.is-loading{color:#d8dce0}
-.motion-toast{border-color:var(--strix-border-strong);background:linear-gradient(135deg,#15191ef8,#0b0d10f8);color:#f2f3f4}
-.motion-toast small{color:#aeb4bb}.motion-toast>em{color:#8e969f}
 .motion-skeleton{background:#15191e}.motion-skeleton:after{background:linear-gradient(100deg,transparent 20%,#ffffff12 48%,transparent 76%)}
 .command-selection-indicator{border-color:var(--strix-border-strong);background:linear-gradient(135deg,#171b20,#0d1014);box-shadow:0 22px 60px #000b}
 

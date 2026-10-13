@@ -1,8 +1,10 @@
+import { withOutro } from "./media-outro.js";
 import { MEDIA_FORMATS } from "./agenda-media-core.js";
 import { safeArea } from "./agenda-timeline.js";
 import {
   ANNOUNCE_FPS,
   ANNOUNCE_SEASON,
+  announceSections,
   announceTeamTiming,
   individualAnnounceDuration,
 } from "./announce-core.js";
@@ -19,7 +21,7 @@ export function finalePagesFor(people = []) {
   return pages;
 }
 
-export function buildAnnounceTimeline({
+function buildAnnounceTimelineBody({
   kind = "individual",
   format = "story",
   people = [],
@@ -98,46 +100,51 @@ export function buildAnnounceTimeline({
     };
   }
 
-  const timing = announceTeamTiming(selected.length);
+  // Team film: chapters (board, council, staff, squad from the back line forward),
+  // every name on one closing screen, then the crest.
+  const sections = announceSections(selected);
+  const ordered = sections.flatMap((section) => section.people);
+  const cards = sections.length > 1 ? sections.length : 0;
+  const timing = announceTeamTiming(ordered.length, cards);
   const duration = still ? 0.04 : timing.duration;
   const introEnd = still ? 0 : timing.intro;
-  const pages = finalePagesFor(selected);
   const scenes = [];
+  let finaleStart = 0;
   if (still) {
-    scenes.push({ id: "grid", type: "grid", start: 0, end: duration, people: selected, pages });
+    scenes.push({ id: "grid", type: "grid", start: 0, end: duration, people: ordered, pages: [ordered] });
   } else {
     scenes.push({ id: "intro", type: "intro", start: 0, end: introEnd });
-    selected.forEach((person, index) => {
-      const start = introEnd + index * (timing.beat - timing.overlap);
-      scenes.push({
-        id: `person-${person.id || index}`,
-        type: "person",
-        index,
-        start,
-        end: start + timing.beat,
-        person,
-        variant: look.variants[index],
-        enter: 0.48,
-        hold: timing.readable,
-        overlap: timing.overlap,
-      });
-    });
-    const finaleStart = introEnd + timing.beat + Math.max(0, selected.length - 1) * (timing.beat - timing.overlap);
-    const pageDur = pages.length > 1 ? timing.finale / pages.length : timing.finale;
-    pages.forEach((page, index) => {
-      scenes.push({
-        id: `finale-${index}`,
-        type: "finale",
-        start: finaleStart + index * pageDur,
-        end: index === pages.length - 1 ? duration : finaleStart + (index + 1) * pageDur,
-        people: page,
-        pageIndex: index,
-        pageCount: pages.length,
-      });
-    });
+    const step = timing.beat - timing.overlap;
+    let cursor = introEnd;
+    let index = 0;
+    for (const section of sections) {
+      if (cards) {
+        scenes.push({ id: `section-${section.id}`, type: "section", start: cursor, end: cursor + timing.section, section });
+        cursor += timing.section;
+      }
+      for (const person of section.people) {
+        scenes.push({
+          id: `person-${person.id || index}`,
+          type: "person",
+          index,
+          start: cursor,
+          end: cursor + step,
+          person,
+          section: section.id,
+          variant: look.variants[index],
+          enter: 0.48,
+          hold: timing.readable,
+          overlap: 0,
+        });
+        cursor += step;
+        index += 1;
+      }
+    }
+    finaleStart = cursor;
+    scenes.push({ id: "finale-0", type: "finale", start: finaleStart, end: finaleStart + timing.finale, people: ordered, pageIndex: 0, pageCount: 1 });
+    scenes.push({ id: "crest", type: "crest", start: finaleStart + timing.finale, end: duration });
   }
 
-  const finaleStart = still ? 0 : introEnd + timing.beat + Math.max(0, selected.length - 1) * (timing.beat - timing.overlap);
   return {
     ...empty,
     duration,
@@ -148,7 +155,8 @@ export function buildAnnounceTimeline({
     overlap: still ? 0 : timing.overlap,
     readable: still ? 0 : timing.readable,
     scenes,
-    people: selected,
+    sections,
+    people: ordered,
     phrase,
     title: title || "ELENCO FC 27",
   };
@@ -158,4 +166,9 @@ export function announceSceneAt(timeline, timeSec) {
   const time = Number(timeSec) || 0;
   const scenes = timeline?.scenes || [];
   return scenes.find((scene) => time >= scene.start && time < scene.end) || scenes.at(-1) || null;
+}
+
+/** The piece's own timeline, followed by the ending every video shares (see media-outro.js). */
+export function buildAnnounceTimeline(...args) {
+  return withOutro(buildAnnounceTimelineBody(...args));
 }

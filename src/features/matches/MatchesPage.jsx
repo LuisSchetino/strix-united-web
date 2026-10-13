@@ -16,7 +16,14 @@ import {
   resolvePlayerAliases,
   resultLabel,
   validateImport,
+  looksReplayed,
+  matchGoalScorers,
+  suggestAliasPlayer,
 } from "./import-core.js";
+import { IconListDetails, IconPencil, IconTrash } from "@tabler/icons-react";
+import { ConfirmDialog } from "../../ui/ConfirmDialog.jsx";
+import { matchClock, smallHoursNight, withMatchClock } from "./match-clock.js";
+import { StatIcon } from "../../ui/StatIcon.jsx";
 import { canonicalPlayerName, isStrixMotm } from "../statistics/statistics-core.js";
 import { describeEaArchetype } from "../statistics/ea-archetypes.js";
 import "./match-import.css";
@@ -27,6 +34,11 @@ import { canAddManualMatch, canCreatePlayer, canSearchEa } from "../../access.js
 import { ClubLogo } from "../../ui/ClubLogo.jsx";
 import { readApiJson } from "../../lib/read-api-json.js";
 import { PageHeader } from "../../ui/PageHeader.jsx";
+import { clearTarget, openTarget, useDeepTarget } from "../../ui/useDeepTarget.js";
+import { CopyLinkButton } from "../../ui/CopyLinkButton.jsx";
+import { ErrorNote } from "../../ui/ErrorNote.jsx";
+import { MatchStandings } from "../agenda/MatchView.jsx";
+import { agendaStandingComparison } from "../agenda/agenda-standings.js";
 const safeRows = (value) => Array.isArray(value) ? value : [];
 const matchTypeLabel = (value) => ({ friendlyMatch: "AMISTOSO EA", leagueMatch: "LIGA EA", playoffMatch: "PLAYOFF EA" })[value] || String(value || "PARTIDA EA").toUpperCase();
 const formatDate = (value) =>
@@ -34,6 +46,9 @@ const formatDate = (value) =>
     dateStyle: "short",
     timeZone: "America/Sao_Paulo",
   }).format(new Date(value));
+// "2026-10-08" → "08/10", and the day after a "YYYY-MM-DD".
+const brDay = (iso) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
+const dayAfter = (iso) => new Date(Date.parse(`${iso}T12:00:00Z`) + 86400000).toISOString().slice(0, 10);
 const formatTime = (value) =>
   new Intl.DateTimeFormat("pt-BR", {
     hour: "2-digit",
@@ -88,20 +103,13 @@ function MatchPreview({ match, workspace }) {
 function EditMatchModal({ match, workspace, close, save }) {
   const [draft, setDraft] = useState({
     ...match,
-    scorersText: (match.goalScorers || []).join(", "),
+    scorersText: matchGoalScorers(match).join(", "),
   });
   const patch = (value) => setDraft((current) => ({ ...current, ...value }));
-  const changeDate = (key, value) => {
-    const date = new Date(draft.date);
-    if (key === "date") {
-      const [year, month, day] = value.split("-").map(Number);
-      date.setFullYear(year, month - 1, day);
-    } else {
-      const [hour, minute] = value.split(":").map(Number);
-      date.setHours(hour, minute, 0, 0);
-    }
-    patch({ date: date.toISOString() });
-  };
+  // Date and hour are São Paulo's, and each one changes alone (match-clock.js).
+  const clock = matchClock(draft.date);
+  const changeDate = (key, value) => patch({ date: withMatchClock(draft.date, key, value) });
+  const night = smallHoursNight(draft.date);
   const preview = {
     ...draft,
     goalScorers: draft.scorersText
@@ -151,7 +159,7 @@ function EditMatchModal({ match, workspace, close, save }) {
                 DATA
                 <input
                   type="date"
-                  value={String(draft.date).slice(0, 10)}
+                  value={clock.date}
                   onChange={(event) => changeDate("date", event.target.value)}
                 />
               </label>
@@ -159,11 +167,12 @@ function EditMatchModal({ match, workspace, close, save }) {
                 HORÁRIO
                 <input
                   type="time"
-                  value={formatTime(draft.date)}
+                  value={clock.time}
                   onChange={(event) => changeDate("time", event.target.value)}
                 />
               </label>
             </div>
+            {night && <p className="match-review-note">Horário de madrugada: este jogo conta para a noite de {brDay(night)}. Se ele foi da noite de {brDay(clock.date)}, a data certa é {brDay(dayAfter(clock.date))}.</p>}
             <div>
               <label>
                 STRIX
@@ -291,10 +300,15 @@ function ReviewStep({
               <em className={resultLabel(match).toLowerCase()}>
                 {match.alreadyImported ? "JÁ IMPORTADO" : resultLabel(match)}
               </em>
+              {looksReplayed(match) && (
+                <em className="match-replayed-tag" title="A maioria do Strix terminou sem nenhum passe: costuma ser jogo abandonado e refeito. Dá para importar mesmo assim.">
+                  PARTIDA REFEITA?
+                </em>
+              )}
             </div>
             <p>
-              {match.goalScorers?.length
-                ? `Gols: ${match.goalScorers.join(", ")}`
+              {matchGoalScorers(match).length
+                ? `Gols: ${matchGoalScorers(match).join(", ")}`
                 : "Gols do Strix não identificados"}
               <small>{matchTypeLabel(match.matchType)}</small>
             </p>
@@ -369,6 +383,40 @@ function RosterQuickAdd({ eaName, onClose, onSaved, workspace }) {
       <footer>{error && <p className="squad-save-error" role="alert">{error}</p>}<div><button type="button" className="secondary" onClick={onClose} disabled={saving}>CANCELAR</button><button className="primary" disabled={saving}>{saving ? "SALVANDO…" : "SALVAR JOGADOR"}</button></div></footer>
     </form>
   </div>, document.body);
+}
+
+const dayOf = (value) => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date(value));
+
+/**
+ * The Agenda games a played match can be linked to: only the ones of its own day, closest
+ * kick-off first. A match played in the small hours also sees the day before (its night
+ * started then). The one already linked or suggested is always offered.
+ */
+function agendaAround(agenda, match) {
+  const played = new Date(match?.date || match?.played_at || Date.now());
+  if (!Number.isFinite(played.getTime())) return [];
+  const days = new Set([dayOf(played)]);
+  const hour = Number(new Intl.DateTimeFormat("en-GB", { timeZone: "America/Sao_Paulo", hour: "2-digit", hour12: false }).format(played));
+  if (hour < 6) days.add(dayOf(played.getTime() - 86400000));
+  const at = (entry) => new Date(entry.scheduled_at).getTime();
+  const pinned = new Set([match?.agendaId, match?.suggestedAgendaId].filter(Boolean).map(String));
+  return (Array.isArray(agenda) ? agenda : [])
+    .filter((entry) => pinned.has(String(entry.id)) || (Number.isFinite(at(entry)) && days.has(dayOf(entry.scheduled_at))))
+    .sort((left, right) => Math.abs(at(left) - played.getTime()) - Math.abs(at(right) - played.getTime()));
+}
+
+/**
+ * What linking a match to an Agenda game also fills in: that game's competition (a competition
+ * of the club, or a friendly). Nothing when the Agenda game names a competition the club does
+ * not have, so a wrong one is never chosen for the manager.
+ */
+function competitionOfAgenda(entry, competitions) {
+  if (!entry) return {};
+  const found = competitions.find((item) => item.id === entry.competition_id)
+    || competitions.find((item) => normalizeName(item.name) === normalizeName(entry.competition_name));
+  if (found) return { competitionId: found.id, competitionEditionId: entry.competition_edition_id || found.editionId || "", competition: found.name };
+  if (!entry.competition_name || /amistos/i.test(entry.competition_name)) return { competitionId: "", competitionEditionId: "", competition: "Amistoso" };
+  return {};
 }
 
 export function ResolveStep({
@@ -447,11 +495,15 @@ export function ResolveStep({
                 <select
                   value={match.agendaId || ""}
                   onChange={(event) =>
-                    patchMatch(match.id, { agendaId: event.target.value })
+                    patchMatch(match.id, {
+                      agendaId: event.target.value,
+                      // The Agenda game already says which competition it is.
+                      ...competitionOfAgenda(agenda.find((entry) => String(entry.id) === event.target.value), competitions),
+                    })
                   }
                 >
                   <option value="">Sem vínculo</option>
-                  {agenda.map((entry) => (
+                  {agendaAround(agenda, match).map((entry) => (
                     <option key={entry.id} value={entry.id}>
                       {entry.id === match.suggestedAgendaId
                         ? "SUGERIDO · "
@@ -483,6 +535,9 @@ export function ResolveStep({
               <div className="alias-resolver-columns" aria-hidden="true"><span>JOGADOR EA</span><span /><span>ELENCO</span><span>G</span><span>A</span></div>
               {(match.performance?.players || []).map((player) => {
                 const key = normalizeName(player.eaName);
+                // A name nobody linked yet: the likely roster player is offered, never applied on its own.
+                const taken = new Set((match.performance?.players || []).map((other) => aliases[normalizeName(other.eaName)]).filter(Boolean));
+                const suggestion = aliases[key] ? null : suggestAliasPlayer(player.eaName, players, { taken, lineup: agenda.find((entry) => entry.id === match.agendaId)?.lineup || [] });
                 return (
                   <div className="alias-player-row" key={`${match.id}-${key}`}>
                     <div className="alias-player-identity"><b>{player.eaName}</b>{canAdd && <button type="button" className="alias-add-player" aria-label={`Adicionar ${player.eaName} ao elenco`} onClick={() => onAddPlayer?.(player)}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>}</div>
@@ -490,7 +545,7 @@ export function ResolveStep({
                     <label className="alias-player-select"><select aria-label={`Jogador do elenco para ${player.eaName}`} value={aliases[key] ?? ""} onChange={(event) => patchAlias(key, event.target.value)}>
                         <option value="">Fora do elenco</option>
                         {players.filter((item) => item.is_active).map((item) => <option key={item.id} value={item.id}>{item.display_name}</option>)}
-                      </select></label>
+                      </select>{suggestion && <button type="button" className="alias-suggestion" title={`Sugestão por ${suggestion.reason}`} onClick={() => patchAlias(key, suggestion.playerId)}>Sugestão: <b>{suggestion.name}</b> · usar</button>}</label>
                     <span className="player-event-fields">
                       <label><input aria-label={`Gols de ${player.eaName}`} type="number" min="0" max="99" inputMode="numeric" value={Number(player.goals || 0)} onChange={(event) => patchMatch(match.id, { performance: { ...match.performance, players: match.performance.players.map((row) => row.id === player.id ? { ...row, goals: Number(event.target.value) } : row) } })} /></label>
                       <label><input aria-label={`Assistências de ${player.eaName}`} type="number" min="0" max="99" inputMode="numeric" value={Number(player.assists || 0)} onChange={(event) => patchMatch(match.id, { performance: { ...match.performance, players: match.performance.players.map((row) => row.id === player.id ? { ...row, assists: Number(event.target.value) } : row) } })} /></label>
@@ -617,31 +672,6 @@ function portuguesePosition(value) {
   }).filter(Boolean).join(" · ");
 }
 
-function StatIcon({ name }) {
-  const paths = {
-    possession: <><circle cx="12" cy="12" r="8"/><path d="M12 4v16M4 12h16"/></>,
-    shots: <><circle cx="12" cy="12" r="8.5"/><path d="m12 7 3.7 2.7-1.4 4.3H9.7L8.3 9.7 12 7Z"/><path d="m12 7-.4-3.4M15.7 9.7l3.2-1.1M14.3 14l2.1 2.8M9.7 14l-2.1 2.8M8.3 9.7 5.1 8.6"/></>,
-    passes: <><path d="M4 8h12m0 0-3-3m3 3-3 3M20 16H8m0 0 3-3m-3 3 3 3"/></>,
-    tackles: <><circle cx="12" cy="12" r="2.2"/><path d="M4 7.5 9.8 11M20 16.5 14.2 13M6.5 5 4 7.5l.8 3.4M17.5 19 20 16.5l-.8-3.4"/></>,
-    saves: <><path d="M6.5 20 4.8 10.5c-.2-1.1.5-2.1 1.5-2.3.9-.2 1.8.3 2.1 1.2l.4 1.1-.9-5.2c-.2-1.1.5-2.1 1.6-2.3 1.1-.2 2.1.5 2.3 1.6l.8 4.5-.4-4c-.1-1.1.7-2 1.8-2.1 1.1-.1 2 .7 2.1 1.8l.5 4.4-.1-2.8c0-1.1.8-2 1.9-2 1.1 0 2 .8 2 1.9l.1 6.7c.1 3.7-2.7 6.8-6.4 7H6.5Z"/></>,
-    rating: <path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9L12 3Z"/>,
-    goals: <><circle cx="12" cy="12" r="8"/><path d="m12 8 3 2-1 4h-4l-1-4 3-2Z"/></>,
-    assists: <><path d="M4 16c4-6 8-8 16-8"/><path d="m15 4 5 4-4 5"/></>,
-    accuracy: <><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none"/></>,
-    efficiency: <><path d="M4 16.5 9 11l3 3 8-8"/><path d="M14 6h6v6"/></>,
-    mom: <path d="m12 3 2.2 4.6 5 .7-3.6 3.5.9 5.1L12 14.8 7.5 16.9l.9-5.1L4.8 8.3l5-.7L12 3Z"/>,
-    cards: <path d="M8 3.5h8.5l2 2.2V20.5H8zM9.5 8h6M9.5 12h6M9.5 16h4"/>,
-    clean: <><path d="M12 3.5 5 6.2v5.2c0 4.2 2.8 6.8 7 8.1 4.2-1.3 7-3.9 7-8.1V6.2L12 3.5Z"/><path d="m8.8 12 2.1 2.1 4.3-4.4"/></>,
-    direction: <><path d="M4 16.5 12 8l8 8.5"/><path d="M12 8v9"/><path d="M8 12h8"/></>,
-    reflex: <><path d="M13 3 6 13h5l-1 8 8-12h-5l0-6Z"/></>,
-    cross: <><circle cx="7" cy="16" r="2.2"/><path d="M9 15c3-6 6-8 11-9"/><path d="m16 4 4 2-1 4"/></>,
-    dive: <><path d="M3 15h10"/><path d="m10 12 3 3-3 3"/><circle cx="18.5" cy="9" r="2.2"/></>,
-    parry: <><path d="M12 4 6 7v5c0 3.2 2.2 5.2 6 6.4 3.8-1.2 6-3.2 6-6.4V7L12 4Z"/><path d="M9 11.5 15 9"/></>,
-    punch: <><path d="M8 14V8.5a1.5 1.5 0 0 1 3 0V13"/><path d="M11 13V7.2a1.4 1.4 0 0 1 2.8 0V13"/><path d="M13.8 12.2V8.4a1.3 1.3 0 0 1 2.6 0v5.2c0 3-2 5.2-5.2 5.4H9.2C7 19 5.5 17.2 5.5 15.2V12"/></>,
-  };
-  return <svg className="match-stat-icon" viewBox="0 0 24 24" aria-hidden="true">{paths[name] || paths.rating}</svg>;
-}
-
 function PlayerMatchSheet({ player, match, workspace, close }) {
   const dialogRef = useDialog(close);
   useEffect(() => {
@@ -701,6 +731,11 @@ const hasOwnValue = (value) => value !== null && value !== undefined && value !=
 
 function MatchDetails({ match, workspace, close }) {
   const [selectedPlayer, setSelectedPlayer] = useState(null);
+  // Where this result left both clubs in the competition's table, as the organiser publishes it now.
+  const standings = useMemo(
+    () => agendaStandingComparison(match, workspace.competitionSources || [], workspace.competitionTeams || []),
+    [match, workspace.competitionSources, workspace.competitionTeams],
+  );
   const sheetDismiss = useSheetDismiss(close);
   useEffect(() => {
     const onKeyDown = (event) => {
@@ -800,8 +835,10 @@ function MatchDetails({ match, workspace, close }) {
               </p>
             )}
           </section>
+          {standings.available && <section className="match-detail-table"><MatchStandings standings={standings} competition={match.competition_name} /></section>}
         </div>
         <footer>
+          <CopyLinkButton page="partidas" id={match.id} className="is-leading" />
           <button type="button" className="secondary" onClick={close}>
             FECHAR
           </button>
@@ -814,9 +851,7 @@ function MatchDetails({ match, workspace, close }) {
 
 function MobileMatchCard({ match, opponentLogo, result, canManage, detail, edit, remove }) {
   const swipe = useSwipeActions(canManage ? 132 : 0);
-  const confirmRemove = () => {
-    if (window.confirm(`Excluir a partida contra ${match.opponent_name}?`)) remove(match.id);
-  };
+  const confirmRemove = () => { swipe.close(); remove(match); };
   return (
     <div className={`match-mobile-swipe${swipe.offset ? " is-open" : ""}${swipe.dragging ? " is-dragging" : ""}`}>
       {canManage && (
@@ -835,7 +870,7 @@ function MobileMatchCard({ match, opponentLogo, result, canManage, detail, edit,
             <time>{formatDate(match.played_at)} · {formatTime(match.played_at)}</time>
             <p><em className={result.toLowerCase()}>{result}</em><span>{match.competition_name || "AMISTOSO"}</span></p>
           </div>
-          <button type="button" onClick={() => detail(match)} aria-label={`Abrir detalhes contra ${match.opponent_name}`}>◎</button>
+          <button type="button" onClick={() => detail(match)} aria-label={`Abrir detalhes contra ${match.opponent_name}`}><IconListDetails aria-hidden="true" size={18} stroke={1.75} /></button>
         </header>
         <MatchDisplay
           homeName="STRIX UNITED"
@@ -894,15 +929,15 @@ function MatchHistory({ workspace, canManage, detail, edit, remove }) {
               <small>{match.competition_name || "AMISTOSO"}</small>
               <div className="match-row-actions">
                 <button className="motion-tooltip" data-tooltip="Ver dados" aria-label="Ver dados" title="Ver dados" onClick={() => detail(match)}>
-                  ◎
+                  <IconListDetails aria-hidden="true" size={17} stroke={1.75} />
                 </button>
                 {canManage && (
                   <>
                     <button className="motion-tooltip" data-tooltip="Editar" aria-label="Editar" title="Editar" onClick={() => edit(match)}>
-                      ✎
+                      <IconPencil aria-hidden="true" size={17} stroke={1.75} />
                     </button>
-                    <button className="motion-tooltip" data-tooltip="Excluir" aria-label="Excluir" title="Excluir" onClick={() => remove(match.id)}>
-                      ⌫
+                    <button className="motion-tooltip is-danger" data-tooltip="Excluir" aria-label="Excluir" title="Excluir" onClick={() => remove(match)}>
+                      <IconTrash aria-hidden="true" size={17} stroke={1.75} />
                     </button>
                   </>
                 )}
@@ -928,6 +963,7 @@ export function MatchesPage({ profile, workspace, client }) {
   const [aliases, setAliases] = useState({});
   const [editing, setEditing] = useState(null);
   const [detail, setDetail] = useState(null);
+  const [pendingDelete, setPendingDelete] = useState(null);
   const [loadingSource, setLoadingSource] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -936,6 +972,21 @@ export function MatchesPage({ profile, workspace, client }) {
   const [metrics, setMetrics] = useState(null);
   const [emptySource, setEmptySource] = useState("");
   const [creatingPlayer, setCreatingPlayer] = useState(null);
+  // A direct link (/partidas/<id>) opens that result; the address follows the open one.
+  const target = useDeepTarget("partidas");
+  useEffect(() => {
+    if (!target?.id || detail) return;
+    const match = safeRows(workspace.matches).find((entry) => String(entry.id) === target.id);
+    if (match) setDetail(match);
+  }, [target?.id, workspace.matches]);
+  const openDetail = (match) => {
+    setDetail(match);
+    if (match?.id) openTarget("partidas", match.id);
+  };
+  const closeDetail = () => {
+    setDetail(null);
+    clearTarget("partidas");
+  };
   const chosen = safeRows(found).filter((match) => selected.has(match.id));
   const competitionOptions = useMemo(
     () =>
@@ -1086,7 +1137,7 @@ export function MatchesPage({ profile, workspace, client }) {
       competitionEditionId: match.competition_edition_id || "",
       agendaId: match.agenda_match_id || "",
       performance: match.performance || {},
-      goalScorers: match.performance?.goalScorers || [],
+      goalScorers: matchGoalScorers({ performance: match.performance }),
       importSource: match.source || "manual",
     });
   const saveEdit = async (match) => {
@@ -1157,19 +1208,13 @@ export function MatchesPage({ profile, workspace, client }) {
         </div>
       )}
       {(error || workspace.error) && (
-        <p className="matches-error" role="alert">
-          <svg className="matches-error-icon" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M12 3 2.5 20h19L12 3z" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinejoin="round" />
-            <path d="M12 9v5M12 17.2h.01" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
-          </svg>
-          <span>
-            {error || workspace.error}
-            {errorDetail ? <small className="matches-error-detail">{errorDetail}</small> : null}
-          </span>
-        </p>
+        <ErrorNote message={error || workspace.error} detail={error ? errorDetail : ""} onRetry={error ? undefined : () => workspace.refresh()} />
       )}
       {success && (
         <p className="matches-success" role="status">
+          <svg className="matches-success-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m6 12.5 4 4L18 8" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
           {success}
         </p>
       )}
@@ -1236,14 +1281,25 @@ export function MatchesPage({ profile, workspace, client }) {
       <MatchHistory
         workspace={workspace}
         canManage={canManage}
-        detail={setDetail}
+        detail={openDetail}
         edit={editExisting}
-        remove={(id) =>
-          void workspace
-            .removeClubMatch(id)
-            .catch((removeError) => setError(removeError.message))
-        }
+        remove={setPendingDelete}
       />
+      {pendingDelete && (
+        <ConfirmDialog
+          kicker="EXCLUSÃO DEFINITIVA"
+          title={`Excluir Strix ${pendingDelete.strix_score} × ${pendingDelete.opponent_score} ${pendingDelete.opponent_name}?`}
+          confirmLabel="EXCLUIR PARTIDA"
+          onCancel={() => setPendingDelete(null)}
+          onConfirm={async () => {
+            await workspace.removeClubMatch(pendingDelete.id);
+            setPendingDelete(null);
+            notify("Partida excluída.");
+          }}
+        >
+          <p>A partida de <b>{formatDate(pendingDelete.played_at)}</b> sai do histórico e das estatísticas, junto com os dados dos jogadores neste jogo. Não dá para desfazer.</p>
+        </ConfirmDialog>
+      )}
       {editing && (
         <EditMatchModal
           match={editing}
@@ -1256,7 +1312,7 @@ export function MatchesPage({ profile, workspace, client }) {
           }
         />
       )}
-    {detail && <MatchDetails match={detail} workspace={workspace} close={() => setDetail(null)} />}
+    {detail && <MatchDetails match={detail} workspace={workspace} close={closeDetail} />}
     </section>
   );
 }

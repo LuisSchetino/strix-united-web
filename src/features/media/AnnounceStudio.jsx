@@ -6,6 +6,7 @@ import {
   ANNOUNCE_ROLES,
   ANNOUNCE_TEMPLATE_ID,
   ANNOUNCE_TITLES,
+  announceSections,
   applyAnnounceRoles,
   clearStoredAnnounceRoles,
   collectAnnouncePeople,
@@ -18,8 +19,10 @@ import {
   writeAnnounceDraft,
 } from "./announce-core.js";
 import { announceFrameTime, renderAnnounceFrame } from "./announce-frame.js";
-import { buildAnnounceTimeline } from "./announce-timeline.js";
-import { loadAnnounceAssets } from "./media-assets.js";
+import { buildNightAnnounceTimeline } from "./night-plan.js";
+import { loadNightRelatedAssets } from "./media-assets.js";
+import { readSongChoice, writeSongChoice } from "./music-library.js";
+import { MusicBlock, warnOpus } from "./MediaSections.jsx";
 import { withMediaLook } from "./media-look.js";
 import { downloadBlob, listCachedRenders, startAnnounceRender } from "./media-jobs.js";
 import { MEDIA_FORMAT_LABELS, mediaGenerateLabel, resolveMediaOutput } from "./media-renderer.js";
@@ -42,6 +45,7 @@ import {
   isImageRecord,
   recordToArchiveItem,
 } from "./MediaShell.jsx";
+import { ARCHIVE_VISIBLE } from "./render-archive.js";
 import "./announce.css";
 
 const ROLE_OPTIONS = Object.values(ANNOUNCE_ROLES).map((role) => [role.id, role.label.toUpperCase()]);
@@ -82,6 +86,8 @@ export function AnnounceStudio({ workspace, look, job, running, openViewer }) {
   const [customPhrase, setCustomPhrase] = useState(draft.customPhrase || "");
   const [title, setTitle] = useState(draft.title || "ELENCO FC 27");
   const [usedPhraseIds, setUsedPhraseIds] = useState(Array.isArray(draft.usedPhraseIds) ? draft.usedPhraseIds : []);
+  const [music, setMusic] = useState(readSongChoice);
+  const chooseMusic = (id) => { setMusic(id); writeSongChoice(id); };
   const [assets, setAssets] = useState(null);
   const [cache, setCache] = useState([]);
   const [result, setResult] = useState(null);
@@ -116,8 +122,9 @@ export function AnnounceStudio({ workspace, look, job, running, openViewer }) {
     return resolveAnnouncePhrase(selected[0], { type: announceType, phraseId, custom: customPhrase, usedIds: usedPhraseIds });
   }, [pieceKind, selected, announceType, phraseId, customPhrase, usedPhraseIds]);
 
-  const timeline = useMemo(() => withMediaLook(buildAnnounceTimeline({
-    kind: pieceKind, format, people: selected, phrase: phrase.text, title, announceType,
+  // The piece as the page shows it runs on a plain metronome; with a song it is rebuilt on the song's clock when generated.
+  const timeline = useMemo(() => withMediaLook(buildNightAnnounceTimeline({
+    kind: pieceKind, format, people: selected, sections: pieceKind === "team" ? announceSections(selected) : [], phrase: phrase.text, title, announceType,
   }), look), [pieceKind, format, selected, phrase.text, title, announceType, look]);
 
   const fingerprintKey = selected.map((person) => person.id).join(",");
@@ -127,7 +134,7 @@ export function AnnounceStudio({ workspace, look, job, running, openViewer }) {
   useEffect(() => {
     let cancelled = false;
     setAssets(null);
-    loadAnnounceAssets(selected).then((result) => { if (!cancelled) setAssets(result); });
+    loadNightRelatedAssets(selected).then((result) => { if (!cancelled) setAssets(result); });
     return () => { cancelled = true; };
   }, [fingerprintKey]);
 
@@ -183,9 +190,11 @@ export function AnnounceStudio({ workspace, look, job, running, openViewer }) {
     if (!selected.length || running) return;
     const next = await startAnnounceRender({
       kind: pieceKind, format, people: selected, phrase: phrase.text, phraseId: phrase.id, title, announceType, timeline, force,
+      music: music && format !== "feed" ? { id: music } : null,
     });
     if (next.status === "error") notify(next.error || "Não foi possível gerar o anúncio.", "error");
     else if (next.status === "ready") {
+      warnOpus(next);
       if (phrase.id && phrase.id !== "custom") setUsedPhraseIds((current) => [...current.filter((id) => id !== phrase.id), phrase.id].slice(-8));
       if (next.result) setResult(next.result);
     }
@@ -207,7 +216,7 @@ export function AnnounceStudio({ workspace, look, job, running, openViewer }) {
     </MediaToolbar>
   );
 
-  const archive = cache.slice(0, 6).map((row) => recordToArchiveItem(row, {
+  const archive = cache.slice(0, ARCHIVE_VISIBLE).map((row) => recordToArchiveItem(row, {
     label: isImageRecord(row) ? "POST 4:5 · PNG" : "REELS 9:16 · MP4", unit: "nome", onView: () => openViewer(row),
   }));
 
@@ -331,6 +340,7 @@ export function AnnounceStudio({ workspace, look, job, running, openViewer }) {
                 <SelectControl label="Título da peça" value={title} options={ANNOUNCE_TITLES.map((item) => [item, item])} onChange={setTitle} />
               )}
             </Options>
+            {format !== "feed" && <MusicBlock value={music} onChange={chooseMusic} />}
             <ArchiveList items={archive} empty="Nenhuma peça gerada ainda." />
           </>
         }

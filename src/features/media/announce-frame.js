@@ -1,4 +1,5 @@
 import { paintEditorialAnnounce } from "./editorial-media-paint.js";
+import { paintNightAnnounce } from "./night-announce-paint.js";
 import { announceSceneAt } from "./announce-timeline.js";
 
 export function announceFrameTime(frameIndex, timeline) {
@@ -15,7 +16,8 @@ export function renderAnnounceFrame(ctx, {
 } = {}) {
   const resolved = Number.isFinite(timeSec) ? timeSec : time;
   // Reels and Post share one direction: stills are the settled frame of the same painter.
-  paintEditorialAnnounce(ctx, { timeline, time: resolved, assets });
+  if (timeline?.night) paintNightAnnounce(ctx, { timeline, time: resolved, assets });
+  else paintEditorialAnnounce(ctx, { timeline, time: resolved, assets });
 }
 
 export function describeAnnounceFrame(timeline, timeSec) {

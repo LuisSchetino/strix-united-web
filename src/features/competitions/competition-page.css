@@ -1,0 +1,863 @@
+/* ==========================================================================
+   Competições · the competition as the rest of the product reads
+   A stage for the identity (the same moving line work as a fixture), text tabs
+   like the Agenda, facts on hairlines, tables and games in the Agenda's list
+   frame. Monochrome; positions, points and odds speak in --data.
+   ========================================================================== */
+
+.cx-stack {
+  display: grid;
+  gap: var(--space-7, 40px);
+}
+
+/* --------------------------------------------------------------------- hero
+   The competition's identity on a now card (src/ui/now-card.css): its name is
+   the giant element, the update sits in the foot. */
+
+.cx-hero-id {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-6);
+}
+.cx-hero-logo {
+  width: clamp(64px, 8vw, 96px);
+  width: clamp(64px, 9cqw, 96px);
+  height: clamp(64px, 8vw, 96px);
+  height: clamp(64px, 9cqw, 96px);
+  filter: drop-shadow(0 12px 22px rgba(0, 0, 0, 0.5));
+}
+.cx-hero-id h2 {
+  margin: 0;
+  color: var(--text-1);
+  font-size: clamp(28px, 5vw, 72px);
+  font-size: clamp(28px, 6.8cqw, 72px);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 0.98;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+.cx-hero-id p {
+  margin: var(--space-3) 0 0;
+  color: var(--text-2);
+  font-size: var(--text-md);
+  font-weight: 600;
+  animation: now-card-copy var(--motion-section) var(--motion-ease) 480ms both;
+}
+.cx-hero-sync {
+  min-width: 132px;
+  min-height: var(--hit);
+  padding: 0 var(--space-5);
+  border: 1px solid var(--line-3);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-1);
+  font-size: var(--text-label);
+  font-weight: 800;
+  letter-spacing: var(--track-label);
+  transition: border-color var(--motion-micro), background var(--motion-micro);
+}
+.cx-hero-sync:hover:not(:disabled) {
+  border-color: var(--text-1);
+  background: var(--ink-3);
+}
+
+/* --------------------------------------------------------------------- tabs */
+
+.cx-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+.cx-tabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 40px;
+  padding: 0 var(--space-4);
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-3);
+  font-size: var(--text-md);
+  font-weight: 600;
+  transition: background var(--motion-micro), color var(--motion-micro);
+}
+.cx-tabs button:hover {
+  color: var(--text-1);
+}
+.cx-tabs button.selected {
+  background: var(--ink-3);
+  color: var(--text-1);
+}
+.cx-tabs button b {
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+}
+.cx-tabs.is-small button {
+  min-height: 36px;
+  padding: 0 var(--space-3);
+  font-size: var(--text-sm);
+}
+
+/* -------------------------------------------------------------------- facts */
+
+.cx-facts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-block: 1px solid var(--line-2);
+}
+.cx-facts article {
+  display: grid;
+  align-content: start;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: var(--space-5) var(--space-5) var(--space-5) var(--space-5);
+  border-left: 1px solid var(--line-1);
+}
+.cx-facts article:first-child {
+  padding-left: 0;
+  border-left: 0;
+}
+.cx-facts small {
+  color: var(--text-4);
+  font-size: var(--text-label);
+  font-weight: 700;
+  letter-spacing: var(--track-label);
+}
+.cx-facts b {
+  color: var(--text-1);
+  font-size: clamp(20px, 2.4vw, 30px);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--track-tight);
+  line-height: 1.05;
+  overflow-wrap: anywhere;
+}
+.cx-facts b.data-value {
+  color: var(--data);
+}
+.cx-facts b i {
+  font-size: 0.55em;
+  font-style: normal;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+.cx-facts em {
+  color: var(--text-3);
+  font-size: var(--text-xs);
+  font-style: normal;
+  line-height: 1.4;
+}
+.cx-facts em.is-in {
+  color: var(--text-1);
+  font-weight: 700;
+}
+
+.cx-game em {
+  padding: 4px 10px;
+  border: 1px solid var(--line-3);
+  border-radius: 999px;
+  color: var(--text-2);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------------ fixture */
+
+.cx-fixture {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-4);
+  min-width: 0;
+}
+.cx-fixture-club {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.cx-fixture-club.is-home {
+  justify-content: flex-end;
+  text-align: right;
+}
+.cx-fixture-club b {
+  min-width: 0;
+  color: var(--text-2);
+  font-size: var(--text-md);
+  font-weight: 600;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+.cx-fixture-club.is-strix b {
+  color: var(--text-1);
+  font-weight: 800;
+}
+.cx-fixture-logo {
+  flex: none;
+  width: 40px;
+  height: 40px;
+}
+.cx-fixture > strong {
+  color: var(--text-4);
+  font-size: var(--text-md);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+.cx-fixture > strong.is-score {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-1);
+  font-size: var(--text-xl);
+  font-weight: 800;
+}
+.cx-fixture > strong.is-score i {
+  color: var(--text-4);
+  font-style: normal;
+  font-weight: 600;
+}
+
+/* ----------------------------------------------------------------- sections */
+
+.cx-section {
+  display: grid;
+  gap: var(--space-4);
+}
+.cx-section > header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-4);
+}
+.cx-section > header span,
+.cx-verdict > span,
+.cx-note > span {
+  color: var(--text-3);
+  font-size: var(--text-label);
+  font-weight: 700;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+}
+.cx-section > header h2,
+.cx-note h2 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  margin: 4px 0 0;
+  color: var(--text-1);
+  font-size: var(--text-xl);
+  font-weight: 800;
+  letter-spacing: var(--track-tight);
+}
+.cx-section > header h2 em {
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--paper-1);
+  color: var(--text-on-light);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+.cx-count {
+  color: var(--text-3);
+  font-size: var(--text-lg);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.cx-link {
+  min-height: 40px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-2);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-decoration: underline;
+  text-decoration-color: var(--line-3);
+  text-underline-offset: 4px;
+}
+.cx-link:hover {
+  color: var(--text-1);
+  text-decoration-color: var(--text-1);
+}
+.cx-empty,
+.cx-note {
+  margin: 0;
+  padding: var(--space-6) var(--space-5);
+  border: 1px dashed var(--line-2);
+  border-radius: var(--radius-lg);
+  color: var(--text-3);
+  font-size: var(--text-sm);
+  text-align: center;
+}
+.cx-note {
+  display: grid;
+  gap: var(--space-1);
+  justify-items: center;
+}
+.cx-note p {
+  margin: 0;
+}
+.cx-rule {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  margin: 0;
+  color: var(--text-3);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+}
+.cx-rule input {
+  width: 64px;
+  min-height: 36px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--line-3);
+  border-radius: var(--radius-sm);
+  background: var(--ink-2);
+  color: var(--text-1);
+  font: inherit;
+  text-align: center;
+}
+
+/* -------------------------------------------------------------------- table */
+
+.cx-table {
+  overflow: hidden;
+  --cx-cols: 28px minmax(0, 1fr) 40px 32px 32px 32px 32px 36px 36px 40px 132px;
+  border: 1px solid var(--line-1);
+  border-radius: var(--radius-lg);
+  background: var(--ink-1);
+}
+.cx-table.is-compact {
+  --cx-cols: 28px minmax(0, 1fr) 40px 32px 32px 32px 32px 36px 36px 40px;
+}
+.cx-table > header,
+.cx-table > article {
+  display: grid;
+  grid-template-columns: var(--cx-cols);
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-5);
+}
+.cx-table > header {
+  min-height: 44px;
+  border-bottom: 1px solid var(--line-1);
+  color: var(--text-4);
+  font-size: var(--text-label);
+  font-weight: 700;
+  letter-spacing: var(--track-label);
+}
+.cx-table > header span:nth-child(n + 3),
+.cx-table > article > span,
+.cx-table > article > b.is-points {
+  text-align: right;
+}
+.cx-table > header span:last-child:not(:nth-child(10)) {
+  text-align: left;
+  padding-left: var(--space-3);
+}
+.cx-table > article {
+  min-height: 60px;
+  border-bottom: 1px solid var(--line-1);
+  transition: background var(--motion-micro);
+}
+.cx-table > article:last-child {
+  border-bottom: 0;
+}
+.cx-table > article:hover {
+  background: var(--ink-2);
+}
+.cx-table > article > b:first-child {
+  color: var(--text-3);
+  font-size: var(--text-md);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.cx-table > article.is-in > b:first-child {
+  color: var(--text-1);
+}
+.cx-table > article > div:nth-child(2) {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.cx-table-logo {
+  flex: none;
+  width: 28px;
+  height: 28px;
+}
+.cx-table strong {
+  min-width: 0;
+  color: var(--text-2);
+  font-size: var(--text-md);
+  font-weight: 600;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+.cx-table > article > span {
+  color: var(--text-3);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+.cx-table b.is-points {
+  color: var(--data);
+  font-size: var(--text-md);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.cx-table > article.is-strix {
+  background: var(--ink-3);
+  box-shadow: inset 2px 0 var(--text-1);
+}
+.cx-table > article.is-strix strong {
+  color: var(--text-1);
+  font-weight: 800;
+}
+.cx-table .form-five {
+  justify-content: flex-start;
+  padding-left: var(--space-3);
+}
+/* The cut: everything above this line goes through. */
+.cx-table-cut {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: -1px 0 0;
+  padding: 0 var(--space-5);
+  color: var(--text-3);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+.cx-table-cut::before,
+.cx-table-cut::after {
+  content: "";
+  flex: 1;
+  border-top: 1px dashed var(--line-3);
+}
+.cx-table-cut span {
+  padding: 5px 0;
+}
+
+/* -------------------------------------------------------------------- games */
+
+.cx-games {
+  border: 1px solid var(--line-1);
+  border-radius: var(--radius-lg);
+  background: var(--ink-1);
+}
+.cx-game {
+  display: grid;
+  grid-template-columns: 104px minmax(0, 1fr) 96px 132px;
+  align-items: center;
+  gap: var(--space-4);
+  min-height: 80px;
+  padding: var(--space-3) var(--space-5);
+  border-bottom: 1px solid var(--line-1);
+  transition: background var(--motion-micro);
+}
+.cx-game:last-child {
+  border-bottom: 0;
+}
+.cx-game:hover {
+  background: var(--ink-2);
+}
+.cx-game time {
+  display: grid;
+  gap: 2px;
+}
+.cx-game time span {
+  color: var(--text-3);
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+.cx-game time b {
+  color: var(--text-1);
+  font-size: var(--text-xl);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--track-tight);
+}
+.cx-game > small {
+  color: var(--text-3);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.cx-game > em {
+  justify-self: end;
+}
+
+/* ---------------------------------------------------------------- scenarios */
+
+.cx-verdict {
+  display: grid;
+  gap: var(--space-3);
+  max-width: 68ch;
+}
+.cx-verdict h2 {
+  margin: 0;
+  color: var(--text-1);
+  font-size: clamp(26px, 4vw, 44px);
+  font-weight: 800;
+  letter-spacing: var(--track-display);
+  line-height: 1.02;
+  text-wrap: balance;
+}
+.cx-verdict p {
+  margin: 0;
+  color: var(--text-2);
+  font-size: var(--text-md);
+  line-height: 1.5;
+}
+.cx-odds {
+  display: flex;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--line-2);
+}
+.cx-odds i {
+  width: calc(var(--value, 0) * 100%);
+  transform-origin: left center;
+  animation: cx-grow 720ms var(--motion-ease) 160ms both;
+}
+.cx-odds i.is-in {
+  background: var(--data);
+}
+/* Level on points at the cut: neither in nor out, drawn as a lighter hatch. */
+.cx-odds i.is-tie {
+  background: repeating-linear-gradient(115deg, var(--data-line) 0 3px, transparent 3px 6px);
+}
+@keyframes cx-grow {
+  from { transform: scaleX(0); }
+  to { transform: none; }
+}
+.cx-odds-list,
+.cx-ladder {
+  border: 1px solid var(--line-1);
+  border-radius: var(--radius-lg);
+  background: var(--ink-1);
+}
+.cx-odds-list article,
+.cx-ladder article {
+  display: grid;
+  grid-template-columns: 96px minmax(80px, 1fr) minmax(0, 1.2fr);
+  align-items: center;
+  gap: var(--space-4);
+  min-height: 60px;
+  padding: var(--space-2) var(--space-5);
+  border-bottom: 1px solid var(--line-1);
+}
+.cx-odds-list article:last-child,
+.cx-ladder article:last-child {
+  border-bottom: 0;
+}
+.cx-odds-list b {
+  color: var(--text-1);
+  font-size: var(--text-label);
+  font-weight: 800;
+  letter-spacing: var(--track-label);
+}
+.cx-ladder b {
+  color: var(--text-1);
+  font-size: var(--text-lg);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.cx-ladder b i {
+  color: var(--text-3);
+  font-size: var(--text-xs);
+  font-style: normal;
+  font-weight: 700;
+}
+.cx-odds-list span:last-child,
+.cx-ladder span:last-child {
+  color: var(--text-2);
+  font-size: var(--text-sm);
+}
+.cx-ladder article.is-guaranteed span:last-child {
+  color: var(--text-1);
+  font-weight: 700;
+}
+.cx-ladder article.is-impossible b,
+.cx-ladder article.is-impossible span:last-child {
+  color: var(--text-4);
+}
+.cx-paths {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--space-3);
+}
+.cx-paths article {
+  display: grid;
+  align-content: start;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-lg);
+  background: var(--ink-1);
+}
+.cx-paths article > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.cx-paths article > header b {
+  color: var(--text-1);
+  font-size: var(--text-md);
+  font-weight: 800;
+  line-height: 1.25;
+}
+.cx-paths article > header em {
+  flex: none;
+  padding: 3px 9px;
+  border: 1px solid var(--line-3);
+  border-radius: 999px;
+  color: var(--text-2);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+.cx-paths article.is-guaranteed > header em {
+  border-color: var(--paper-1);
+  background: var(--paper-1);
+  color: var(--text-on-light);
+}
+.cx-paths article.is-impossible {
+  border-style: dashed;
+}
+.cx-paths article.is-impossible > header b,
+.cx-paths article.is-impossible > header em {
+  color: var(--text-4);
+}
+.cx-paths ul {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.cx-paths li {
+  position: relative;
+  padding-left: var(--space-4);
+  color: var(--text-1);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  line-height: 1.35;
+}
+.cx-paths li::before {
+  content: "";
+  position: absolute;
+  top: 0.55em;
+  left: 0;
+  width: 6px;
+  height: 1px;
+  background: var(--text-3);
+}
+.cx-paths p,
+.cx-paths small {
+  margin: 0;
+  color: var(--text-3);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+}
+
+/* --------------------------------------------------------------- responsive */
+
+@media (max-width: 900px) {
+  .cx-table,
+  .cx-table.is-compact {
+    --cx-cols: 24px minmax(0, 1fr) 36px 28px 36px;
+  }
+  .cx-table .is-wide {
+    display: none;
+  }
+  .cx-game {
+    grid-template-columns: 92px minmax(0, 1fr) auto;
+  }
+  .cx-game > small {
+    display: none;
+  }
+}
+@media (max-width: 720px) {
+  .cx-facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .cx-facts article {
+    padding: var(--space-4);
+  }
+  .cx-facts article:nth-child(odd) {
+    padding-left: 0;
+    border-left: 0;
+  }
+  .cx-facts article:nth-child(n + 3) {
+    border-top: 1px solid var(--line-1);
+  }
+  .cx-table > header,
+  .cx-table > article,
+  .cx-table-cut {
+    padding: 0 var(--space-3);
+  }
+  .cx-game {
+    grid-template-columns: minmax(0, 1fr) auto;
+    row-gap: var(--space-3);
+    padding: var(--space-4) var(--space-3);
+  }
+  .cx-game time {
+    grid-auto-flow: column;
+    align-items: baseline;
+    justify-content: start;
+    gap: var(--space-2);
+  }
+  .cx-game time b {
+    font-size: var(--text-lg);
+  }
+  .cx-game .cx-fixture {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+  .cx-game > em {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .cx-game > span:empty {
+    display: none;
+  }
+  .cx-fixture {
+    gap: var(--space-2);
+  }
+  .cx-fixture-club {
+    gap: var(--space-2);
+  }
+  .cx-fixture-club b {
+    font-size: var(--text-sm);
+  }
+  .cx-fixture-logo {
+    width: 32px;
+    height: 32px;
+  }
+  .cx-odds-list article,
+  .cx-ladder article {
+    grid-template-columns: 76px minmax(0, 1fr);
+    padding: var(--space-3);
+  }
+  .cx-odds-list article span:last-child,
+  .cx-ladder article span:last-child {
+    grid-column: 1 / -1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cx-odds i,
+  .cx-hero-id p {
+    animation: none;
+  }
+}
+
+/* Form chips in the table keep the legibility floor. */
+.cx-table .form-five i {
+  font-size: 10px;
+}
+
+/* ---------------------------------------------------------------------------
+   Próximo jogo, when the competition has more than one game that night: the
+   card takes turns. Strix stays where it is; the kick-off, the opponent and
+   the lines about that game leave to the left and the next ones arrive from
+   the right. Under the fixture, one short bar per game: the bar of the game on
+   show fills while it is there, and any bar can be pressed.
+   --------------------------------------------------------------------------- */
+.cx-next.has-turns .faceoff-side.is-home { animation: none; }
+.cx-next.has-turns .now-card-head > *,
+.cx-next.has-turns .now-card-foot > p,
+.cx-next.has-turns .now-card-stake {
+  animation: cx-next-in 360ms var(--motion-ease) both;
+}
+.cx-next.has-turns .faceoff-side.is-away {
+  --from: 28px;
+  animation: now-card-arrive 420ms var(--motion-ease) 40ms both;
+}
+.cx-next.has-turns .faceoff-time { animation: now-card-focus 460ms var(--motion-ease) both; }
+.cx-next.has-turns .faceoff-clock small { animation: cx-next-in 360ms var(--motion-ease) 120ms both; }
+@keyframes cx-next-in {
+  from { opacity: 0; transform: translateX(14px); }
+  to { opacity: 1; transform: none; }
+}
+.cx-next.is-leaving .now-card-head > *,
+.cx-next.is-leaving .now-card-foot > p,
+.cx-next.is-leaving .now-card-stake,
+.cx-next.is-leaving .faceoff-side.is-away,
+.cx-next.is-leaving .faceoff-time,
+.cx-next.is-leaving .faceoff-clock small {
+  animation: cx-next-out 240ms var(--motion-ease) both;
+}
+@keyframes cx-next-out {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: translateX(-14px); }
+}
+.cx-next-turns {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-1);
+  margin-top: calc(var(--space-2) * -1);
+}
+.cx-next-turns button {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+.cx-next-turns i {
+  display: block;
+  width: 40px;
+  height: 3px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--line-3);
+  transition: background var(--motion-micro);
+}
+.cx-next-turns button:hover i { background: var(--text-3); }
+.cx-next-turns b {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--paper-1);
+  transform-origin: left center;
+}
+.cx-next-turns b.is-running { animation: cx-next-fill var(--dwell, 8000ms) linear both; }
+@keyframes cx-next-fill {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+.cx-next-turns button:focus-visible {
+  outline: 2px solid var(--paper-1);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+@media (prefers-reduced-motion: reduce) {
+  .cx-next.has-turns *, .cx-next.is-leaving * { animation: none !important; }
+}
+
+/* The list is a rounded panel: its first and last rows follow the corners, so a hovered row
+   no longer shows a square over the round border. */
+.cx-games > .cx-game:first-child { border-top-left-radius: calc(var(--radius-lg) - 1px); border-top-right-radius: calc(var(--radius-lg) - 1px); }
+.cx-games > .cx-game:last-child { border-bottom-left-radius: calc(var(--radius-lg) - 1px); border-bottom-right-radius: calc(var(--radius-lg) - 1px); }

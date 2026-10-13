@@ -95,7 +95,7 @@ test("timeline adapta beats e nunca sai da safe area do Instagram", () => {
   assert.equal(sceneAt(one, one.finaleStart + 0.1).type, "finale");
   assert.equal(sceneAt(one, Math.max(0, one.duration - 0.05)).type, "finale");
   assert.ok(one.introEnd >= 2);
-  assert.ok(Math.abs(one.duration - one.finaleStart - 2.5) < 0.001);
+  assert.ok(Math.abs(one.duration - one.finaleStart - 5) < 0.001, "o crescimento do escudo e depois o cartão dos parceiros");
   assert.ok(typeScale("story").title >= 110);
   assert.ok(typeScale("story").kickoff >= 110);
   const box = typeScale("story").logoMatch;
@@ -124,7 +124,9 @@ test("easing premium não é linear e o render cobre abertura, páginas completa
   assert.ok(texts.includes("DO DIA"));
   assert.ok(texts.includes("HOJE"), "a página é a grade de horários de hoje");
   assert.ok(texts.includes("STRIX UNITED"));
-  assert.ok(texts.includes("A NOITE COMEÇA ÀS"), "o encerramento usa o primeiro horário real da noite");
+  assert.ok(!texts.includes("A NOITE COMEÇA ÀS"), "o encerramento é o escudo crescendo, não um aviso de horário");
+  assert.ok(!texts.some((text) => /JOGOS?  ·  02 SET 2026/.test(String(text))), "o encerramento é só o escudo crescendo: nenhum texto passa sob ele");
+  assert.ok(!texts.some((text) => /VALEM? CAMPEONATO/.test(String(text))), "a peça não usa mais a expressão vale campeonato");
   assert.ok(texts.some((text) => String(text).toUpperCase().includes("WINNER")));
   const lateMatch = mockContext();
   const lastPage = timeline.scenes.filter((scene) => scene.type === "page").at(-1);
@@ -139,7 +141,7 @@ test("easing premium não é linear e o render cobre abertura, páginas completa
 });
 
 test("nova identidade invalida o render anterior e mantém Strix em todas as páginas", () => {
-  assert.equal(AGENDA_TEMPLATE_VERSION, "agenda-nightshift-v3");
+  assert.equal(AGENDA_TEMPLATE_VERSION, "agenda-nightshift-v14");
   const timeline = buildAgendaTimeline(matches(5), { format: "story" });
   const assets = {
     strix: { bitmap: null, initials: "SU", name: "Strix United" },
@@ -164,8 +166,7 @@ test("nova identidade invalida o render anterior e mantém Strix em todas as pá
   const finale = mockContext();
   renderAgendaFrame(finale, { timeline, time: timeline.finaleStart + 0.14, assets, dayLabel: "02 SET 2026" });
   const finaleTexts = finale.calls.filter((call) => Array.isArray(call) && call[0] === "fillText").map((call) => call[1]);
-  assert.ok(finaleTexts.includes("A NOITE COMEÇA ÀS"));
-  assert.ok(finaleTexts.includes(timeline.matches[0].kickoff), "o horário do encerramento é o do primeiro jogo");
+  assert.ok(finaleTexts.some((text) => String(text).includes("02 SET 2026")), "o encerramento mostra a data da noite sob o escudo");
 });
 
 test("agenda completa adapta 3/5/6 jogos e separa competição do matchup", () => {

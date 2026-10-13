@@ -1,4 +1,5 @@
 import { paintEditorialSummary } from "./editorial-media-paint.js";
+import { paintNightSummary } from "./night-summary-paint.js";
 import { summarySceneAt } from "./summary-timeline.js";
 
 export function summaryFrameTime(frameIndex, timeline) {
@@ -15,7 +16,8 @@ export function renderSummaryFrame(ctx, {
   dayLabel,
 } = {}) {
   const resolved = Number.isFinite(timeSec) ? timeSec : time;
-  paintEditorialSummary(ctx, { timeline, time: resolved, assets, dayLabel });
+  if (timeline?.night) paintNightSummary(ctx, { timeline, time: resolved, assets, dayLabel });
+  else paintEditorialSummary(ctx, { timeline, time: resolved, assets, dayLabel });
 }
 
 export function describeSummaryFrame(timeline, timeSec) {

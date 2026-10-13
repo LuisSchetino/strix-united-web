@@ -6,7 +6,7 @@ const envLaunchAt =
 export const LAUNCH_CONFIG = Object.freeze({
   enabled: true,
   timezone: "America/Sao_Paulo",
-  launchAt: String(envLaunchAt || "2026-10-06T20:00:00-03:00"),
+  launchAt: String(envLaunchAt || "2026-10-05T18:50:00-03:00"),
 });
 
 const OFFICIAL_HOSTS = new Set(["strixunited.com.br"]);

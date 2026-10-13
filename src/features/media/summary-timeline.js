@@ -1,3 +1,4 @@
+import { withOutro } from "./media-outro.js";
 import { MEDIA_FORMATS } from "./agenda-media-core.js";
 import { safeArea } from "./agenda-timeline.js";
 import {
@@ -9,7 +10,7 @@ import {
   summaryStatsDuration,
 } from "./summary-core.js";
 
-export function buildSummaryTimeline(period = {}, { format = "story" } = {}) {
+function buildSummaryTimelineBody(period = {}, { format = "story" } = {}) {
   const spec = MEDIA_FORMATS[format] || MEDIA_FORMATS.story;
   const matches = period.matches || [];
   const count = matches.length;
@@ -85,4 +86,9 @@ export function summarySceneAt(timeline, time) {
   return (timeline?.scenes || []).find((scene) => time >= scene.start && time < scene.end)
     || timeline?.scenes?.at(-1)
     || null;
+}
+
+/** The piece's own timeline, followed by the ending every video shares (see media-outro.js). */
+export function buildSummaryTimeline(...args) {
+  return withOutro(buildSummaryTimelineBody(...args));
 }

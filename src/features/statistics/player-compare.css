@@ -1,0 +1,74 @@
+/* Two players face to face. It borrows the match sheet's duel (bars growing from the centre). */
+
+.player-compare {
+  display: grid;
+  gap: var(--space-4);
+  margin: 0 0 var(--space-5);
+  padding: var(--space-5);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-md);
+  background: var(--ink-1);
+}
+.player-compare > header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+.player-compare > header span {
+  color: var(--text-3);
+  font-size: var(--text-label);
+  font-weight: 800;
+  letter-spacing: var(--track-label);
+}
+.player-compare > header h2 {
+  margin: 5px 0;
+  color: var(--text-1);
+  font-size: var(--text-xl);
+  font-weight: 800;
+  letter-spacing: var(--track-tight);
+}
+.player-compare > header p,
+.player-compare-hint {
+  margin: 0;
+  color: var(--text-3);
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+}
+.player-compare-pick {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-3);
+  min-width: min(100%, 460px);
+}
+.player-compare-pick > i {
+  color: var(--text-4);
+  font-style: normal;
+}
+.player-compare-duel {
+  background: var(--ink-2);
+}
+.player-compare-duel .match-duel-row {
+  grid-template-columns: 44px minmax(0, 1fr) 132px minmax(0, 1fr) 44px;
+}
+.player-compare-duel .match-duel-head span {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 620px) {
+  .player-compare {
+    padding: var(--space-4);
+  }
+  .player-compare-pick {
+    grid-template-columns: minmax(0, 1fr);
+    min-width: 100%;
+  }
+  .player-compare-pick > i {
+    justify-self: center;
+  }
+  .player-compare-duel .match-duel-row {
+    grid-template-columns: 38px minmax(0, 1fr) 96px minmax(0, 1fr) 38px;
+  }
+}

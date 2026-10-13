@@ -1,5 +1,5 @@
 import { authenticateDiscordMember, json, requireTier } from "../../_lib/auth.js";
-import { CONTRACT_METADATA_KEY, CONTRACT_SEASON, hasSignedContract } from "../../../src/features/onboarding/contract-core.js";
+import { CONTRACT_METADATA_KEY, CONTRACT_SEASON, PLAYER_LINK_NONE, hasSignedContract, readPlayerLink } from "../../../src/features/onboarding/contract-core.js";
 
 function text(value) {
   return String(value ?? "").trim();
@@ -37,6 +37,8 @@ export async function onRequestGet({ request, env }) {
     const stored = user.user_metadata?.[CONTRACT_METADATA_KEY];
     return [{
       userId: user.id,
+      // The roster entry the member declared as theirs, when the names alone do not say it.
+      playerId: readPlayerLink(user) === PLAYER_LINK_NONE ? "" : readPlayerLink(user),
       identity: identityOf(user),
       contract: {
         season: stored.season,
@@ -46,5 +48,11 @@ export async function onRequestGet({ request, env }) {
       },
     }];
   });
-  return json({ contracts }, 200, { route: "contracts", request });
+  // Accounts that have not signed this season: so "no contract" can say whose account it is.
+  const unsigned = users.filter((user) => !hasSignedContract(user, CONTRACT_SEASON)).map((user) => ({
+    userId: user.id,
+    playerId: readPlayerLink(user) === PLAYER_LINK_NONE ? "" : readPlayerLink(user),
+    identity: identityOf(user),
+  }));
+  return json({ contracts, unsigned }, 200, { route: "contracts", request });
 }

@@ -27,11 +27,11 @@ const official = "strixunited.com.br";
 const www = "www.strixunited.com.br";
 const qa = "strix-united-fc27.pages.dev";
 const otherPages = "algum-outro.pages.dev";
-const launchAt = "2026-10-06T20:00:00-03:00";
+const launchAt = "2026-10-05T18:50:00-03:00";
 const pre = Date.parse("2026-09-16T23:00:00-03:00");
-const justBefore = Date.parse("2026-10-06T19:59:59-03:00");
+const justBefore = Date.parse("2026-10-05T18:49:59-03:00");
 const exact = Date.parse(launchAt);
-const post = Date.parse("2026-10-06T20:00:01-03:00");
+const post = Date.parse("2026-10-05T18:50:01-03:00");
 const memoryStorage = () => {
   const data = new Map();
   return {
@@ -207,7 +207,7 @@ test("public countdown uses the real remaining time", () => {
   const left = displayRemainingMs(pre, LAUNCH_CONFIG);
   assert.equal(left, remainingMs(pre, LAUNCH_CONFIG));
   assert.ok(left > 0);
-  assert.equal(countdownParts(left).days >= 19, true);
+  assert.equal(countdownParts(left).days >= 18, true);
   assert.doesNotMatch(String(LAUNCH_CONFIG.launchAt), /TODO\/CONFIG/);
 });
 

@@ -1,11 +1,11 @@
 import { lookAssetFingerprint } from "./media-look.js";
 import { CUTOUT_TEMPLATE_SEEDS } from "./cutout-text.js";
-import { saoPauloDay } from "../agenda/agenda-time.js";
+import { matchNightDay, saoPauloDay } from "../agenda/agenda-time.js";
 import { uniqueMatches, aggregateTeamStatistics } from "../statistics/statistics-core.js";
 import { formatAgendaDay, formatKickoff, MEDIA_FORMATS, opponentInitials } from "./agenda-media-core.js";
 
 export const SUMMARY_TEMPLATE_ID = "period-summary";
-export const SUMMARY_TEMPLATE_VERSION = "period-summary-studio-v4";
+export const SUMMARY_TEMPLATE_VERSION = "period-summary-studio-v11";
 export const SUMMARY_FPS = 30;
 
 const WEEKDAY = Object.freeze({
@@ -72,13 +72,56 @@ function decorateMatch(match, workspace = {}) {
   };
 }
 
+const dayLabel = (iso) => new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", timeZone: "America/Sao_Paulo" })
+  .format(new Date(`${iso}T12:00:00-03:00`)).replace(".", "").toUpperCase();
+
+/** Noon in São Paulo on a given day: the instant that stands for "that day" when a summary is asked for it. */
+export const summaryInstant = (iso) => new Date(`${iso}T12:00:00-03:00`);
+
+/**
+ * The periods a summary can be made for: today (or this week) and every earlier
+ * day (or week) that has imported results, newest first. Only real results count;
+ * a day without games is offered only when it is today.
+ */
+export function summaryPeriods(workspace = {}, { mode = "day", now = new Date(), limit = 8 } = {}) {
+  const today = saoPauloDay(now);
+  const thisWeek = saoPauloWeekBounds(now).start;
+  const counts = new Map();
+  for (const match of uniqueMatches(workspace.matches || []).filter(completedMatch)) {
+    if (!match.played_at) continue;
+    const day = matchNightDay(match.played_at);
+    const key = mode === "week" ? saoPauloWeekBounds(summaryInstant(day)).start : day;
+    if (key > (mode === "week" ? thisWeek : today)) continue;
+    counts.set(key, (counts.get(key) || 0) + 1);
+  }
+  const current = mode === "week" ? thisWeek : today;
+  if (!counts.has(current)) counts.set(current, 0);
+  return [...counts.entries()]
+    .sort((left, right) => right[0].localeCompare(left[0]))
+    .slice(0, limit)
+    .map(([key, count]) => ({
+      key,
+      count,
+      isCurrent: key === current,
+      label: mode === "week"
+        ? (key === current ? "ESTA SEMANA" : `${dayLabel(key)} – ${dayLabel(addSaoPauloDays(key, 6))}`)
+        : key === today ? "HOJE" : key === addSaoPauloDays(today, -1) ? "ONTEM" : dayLabel(key),
+      detail: mode === "week" ? `${dayLabel(key)} – ${dayLabel(addSaoPauloDays(key, 6))}` : dayLabel(key),
+    }));
+}
+
+/** The period a summary opens on: the current one when it has results, otherwise the latest that does. */
+export function defaultSummaryPeriod(periods = []) {
+  return (periods.find((period) => period.isCurrent && period.count) || periods.find((period) => period.count) || periods[0])?.key || "";
+}
+
 export function collectPeriodSummary(workspace = {}, { mode = "day", now = new Date() } = {}) {
   const day = saoPauloDay(now);
   const week = saoPauloWeekBounds(now);
   const all = uniqueMatches(workspace.matches || []).filter(completedMatch);
   const matches = all.filter((match) => {
     if (!match.played_at) return false;
-    const key = saoPauloDay(match.played_at);
+    const key = matchNightDay(match.played_at);
     return mode === "week" ? key >= week.start && key <= week.end : key === day;
   }).map((match) => decorateMatch(match, workspace));
   const stats = aggregateTeamStatistics(matches);
@@ -110,9 +153,15 @@ export function summaryIdentityPayload({
   matches = [],
   look = "editorial",
   mediaLook = "",
+  music = "",
+  model = "",
+  face = "",
   templateVersion = SUMMARY_TEMPLATE_VERSION,
 } = {}) {
   return {
+    ...(model ? { model: String(model) } : {}),
+    ...(music ? { music: String(music) } : {}),
+    ...(face ? { face: String(face) } : {}),
     day: String(day || ""),
     format: String(format || "story"),
     template: SUMMARY_TEMPLATE_ID,

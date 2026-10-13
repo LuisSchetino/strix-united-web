@@ -118,9 +118,10 @@
 .media-pauta-item.is-incomplete em {
   color: var(--state-warning-text);
 }
+/* One step missing: the dot is half filled. Ready is full, no data is a ring: three states, no hue. */
 .media-pauta-item.is-incomplete em::before {
-  background: var(--state-warning);
-  box-shadow: none;
+  background: linear-gradient(90deg, var(--state-warning) 50%, transparent 50%);
+  box-shadow: inset 0 0 0 1px var(--state-warning);
 }
 
 /* ------------------------------------------------- section content swap */
@@ -321,6 +322,35 @@
   height: 100%;
   background: #000;
   object-fit: contain;
+}
+.media-stage-sound {
+  position: absolute;
+  top: var(--space-3);
+  left: var(--space-3);
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: var(--hit);
+  padding: 0 14px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: var(--radius-sm);
+  background: rgba(5, 6, 7, 0.78);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  color: var(--text-1);
+  font-size: var(--text-label);
+  font-weight: 800;
+  letter-spacing: var(--track-label);
+  transition: background var(--motion-micro), border-color var(--motion-micro);
+}
+.media-stage-sound:hover {
+  background: rgba(20, 22, 24, 0.9);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+.media-stage-sound:focus-visible {
+  outline: 2px solid var(--line-focus);
+  outline-offset: 2px;
 }
 .media-piece-sweep {
   position: absolute;
@@ -554,7 +584,7 @@
   line-height: 1.45;
 }
 .media-notice.is-error {
-  border-color: rgba(229, 72, 77, 0.4);
+  border-color: rgba(106, 106, 106, 0.4);
   background: var(--state-danger-soft);
 }
 .media-notice b {
@@ -714,28 +744,6 @@
   padding: var(--space-1) 0 var(--space-4);
   animation: media-section-in var(--motion-section) var(--motion-ease) both;
 }
-.media-block-editor .night-related {
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: none;
-}
-.media-block-editor .night-related-selected button,
-.media-block-editor .night-related-pool button {
-  border-color: var(--line-3);
-  background: var(--ink-2);
-}
-.media-block-editor .night-related-selected button.is-on {
-  border-color: var(--text-1);
-}
-.media-block-editor .night-related-warn {
-  border-color: var(--line-3);
-  background: var(--state-warning-soft);
-  color: var(--text-2);
-}
-.media-block-editor .night-related-warn p {
-  color: var(--text-2);
-}
 
 /* ---------------------------------------------------- forms in the Central */
 
@@ -765,6 +773,32 @@
   outline: 0;
   border-color: var(--line-focus);
   box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.07);
+}
+
+.media-page select.media-select {
+  width: 100%;
+  min-width: 0;
+  min-height: var(--hit);
+  padding: 10px 12px;
+  border: 1px solid var(--line-3);
+  border-radius: var(--radius-sm);
+  background: var(--ink-2);
+  color: var(--text-1);
+  font: 600 14px/1.4 var(--font-sans);
+  transition: border-color var(--motion-micro), box-shadow var(--motion-micro);
+}
+.media-page select.media-select:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+.media-page select.media-select:focus-visible {
+  outline: 0;
+  border-color: var(--line-focus);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.07);
+}
+.media-music-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-5);
 }
 
 /* -------------------------------------------------------- full screen */
@@ -875,12 +909,111 @@ dialog.media-viewer.is-closing section {
   }
 }
 
+/* ----------------------------------------- the night's pieces in one go */
+
+.media-side {
+  position: sticky;
+  top: calc(var(--topbar-h) + var(--space-4));
+  display: grid;
+  gap: var(--space-6);
+  min-width: 0;
+}
+.media-side .media-nav {
+  position: static;
+}
+.media-batch {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--line-2);
+}
+.media-batch > header {
+  display: grid;
+  gap: 4px;
+}
+.media-batch > header span {
+  color: var(--text-3);
+  font-size: var(--text-label);
+  font-weight: 700;
+  letter-spacing: var(--track-label);
+}
+.media-batch > header p {
+  margin: 0;
+  color: var(--text-2);
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+}
+.media-batch ol {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.media-batch li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 2px var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--line-1);
+}
+.media-batch li b {
+  color: var(--text-1);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.media-batch li small {
+  grid-column: 1;
+  color: var(--text-3);
+  font-size: var(--text-xs);
+  line-height: var(--leading-snug);
+}
+.media-batch li.is-skipped b {
+  color: var(--text-3);
+}
+.media-batch li.is-running small,
+.media-batch li.is-ready small {
+  color: var(--text-1);
+}
+.media-batch li button {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  min-height: 36px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--line-3);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-1);
+  font-size: var(--text-label);
+  font-weight: 800;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+}
+.media-batch li button:hover {
+  border-color: var(--text-1);
+  background: var(--ink-3);
+}
+.media-batch > .primary {
+  width: 100%;
+  min-height: var(--hit);
+}
+
 /* --------------------------------------------------------- responsive */
 
 @media (max-width: 1180px) {
   .media-studio {
     grid-template-columns: minmax(0, 1fr);
     gap: var(--space-6);
+  }
+  .media-side {
+    position: static;
+    gap: var(--space-4);
+  }
+  .media-batch {
+    padding-top: 0;
+    border-top: 0;
   }
   .media-nav {
     position: static;
@@ -1032,5 +1165,55 @@ dialog.media-viewer.is-closing section {
   .media-stage-frame::after,
   .media-stage-piece::before {
     display: none;
+  }
+}
+
+/* Resumo: which day (or week) the summary is for. Only periods with imported results are offered. */
+.media-period {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.media-period button {
+  display: grid;
+  gap: 2px;
+  min-height: 44px;
+  padding: 7px 12px;
+  border: 1px solid var(--line-2);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text-2);
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--motion-micro) ease, border-color var(--motion-micro) ease, color var(--motion-micro) ease;
+}
+.media-period button b {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+.media-period button small {
+  color: var(--text-4);
+  font-size: 10px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+}
+.media-period button:hover {
+  border-color: var(--line-3);
+  background: var(--ink-2);
+  color: var(--text-1);
+}
+.media-period button.is-on {
+  border-color: var(--paper-1);
+  background: var(--paper-1);
+  color: var(--text-on-light);
+}
+.media-period button.is-on small {
+  color: rgba(8, 9, 10, 0.62);
+}
+@media (prefers-reduced-motion: reduce) {
+  .media-period button {
+    transition: none;
   }
 }

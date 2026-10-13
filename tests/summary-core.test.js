@@ -98,8 +98,9 @@ test("timeline cobre opening, números, resultados e fechamento", () => {
   assert.equal(describeSummaryFrame(timeline, 0.4).sceneType, "intro");
   assert.equal(describeSummaryFrame(timeline, timeline.statsStart + 0.2).sceneType, "stats");
   assert.equal(describeSummaryFrame(timeline, timeline.statsEnd + 0.2).sceneType, "result");
-  assert.equal(describeSummaryFrame(timeline, timeline.duration - 0.05).sceneType, "finale");
-  assert.equal(summaryDurationSeconds(2), timeline.duration);
+  assert.equal(describeSummaryFrame(timeline, timeline.outroStart - 0.05).sceneType, "finale");
+  assert.equal(summaryDurationSeconds(2), timeline.outroStart);
+  assert.equal(timeline.duration, timeline.outroStart + 5);
   assert.ok(timeline.duration >= 8 && timeline.duration <= 22);
 });
 
@@ -154,4 +155,27 @@ test("painter cobre intro, stats, resultado e finale", () => {
   assert.doesNotThrow(() => renderSummaryFrame(ctx, { timeline, timeSec: timeline.statsStart + 0.3, assets }));
   assert.doesNotThrow(() => renderSummaryFrame(ctx, { timeline, timeSec: timeline.statsEnd + 0.3, assets }));
   assert.doesNotThrow(() => renderSummaryFrame(ctx, { timeline, timeSec: timeline.finaleStart + 0.4, assets }));
+});
+
+test("the summary can be made for an earlier day: only days with imported results are offered", async () => {
+  const { summaryPeriods, defaultSummaryPeriod, collectPeriodSummary, summaryInstant } = await import("../src/features/media/summary-core.js");
+  const workspace = { matches: [
+    { id: "a", played_at: "2026-10-03T21:10:00-03:00", opponent_name: "POA CITY", strix_score: 2, opponent_score: 1 },
+    { id: "b", played_at: "2026-10-03T23:40:00-03:00", opponent_name: "SUMMIT", strix_score: 0, opponent_score: 0 },
+    { id: "c", played_at: "2026-10-01T22:10:00-03:00", opponent_name: "CTX", strix_score: 1, opponent_score: 3 },
+    { id: "d", played_at: "2026-09-25T22:10:00-03:00", opponent_name: "SEM PLACAR" },
+  ] };
+  const now = new Date("2026-10-04T00:22:00-03:00");
+  const days = summaryPeriods(workspace, { mode: "day", now });
+  assert.deepEqual(days.map((entry) => [entry.key, entry.count]), [["2026-10-04", 0], ["2026-10-03", 2], ["2026-10-01", 1]]);
+  assert.deepEqual(days.slice(0, 2).map((entry) => entry.label), ["HOJE", "ONTEM"]);
+  assert.match(days[2].label, /^01 /);
+  assert.equal(defaultSummaryPeriod(days), "2026-10-03", "depois da meia-noite o resumo abre no último dia com jogos");
+  const yesterday = collectPeriodSummary(workspace, { mode: "day", now: summaryInstant("2026-10-03") });
+  assert.deepEqual(yesterday.matches.map((match) => match.id), ["a", "b"]);
+  assert.equal(yesterday.day, "2026-10-03");
+  const weeks = summaryPeriods(workspace, { mode: "week", now });
+  assert.equal(weeks[0].label, "ESTA SEMANA");
+  assert.equal(weeks[0].count, 3);
+  assert.equal(weeks.length, 1, "uma partida sem placar não cria período");
 });

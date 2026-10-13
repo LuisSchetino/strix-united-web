@@ -1,0 +1,412 @@
+/* ==========================================================================
+   Now card
+   The Central's "now" block as a shared object: ink-1, a line-2 border, 20px
+   radius, the Raise shadow and a faint light from the top-left corner. A status
+   line, one giant element, a foot above a hairline.
+
+   Its motion is the now line: it sweeps along the top edge on entrance and again
+   every few seconds, and a shine travels the lower rule in the gap between two
+   sweeps. The light under the surface drifts slowly. Everything else arrives
+   once and rests.
+   ========================================================================== */
+
+.now-card {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  gap: var(--space-5);
+  min-width: 0;
+  padding: var(--space-8);
+  overflow: hidden;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-lg);
+  background: var(--ink-1);
+  box-shadow: var(--shadow-raise);
+  container-type: inline-size;
+}
+/* The light: the same corner glow as the Central's card, wider than the card so its
+   slow drift never shows an edge. */
+.now-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -35%;
+  z-index: -1;
+  width: 105%;
+  background: radial-gradient(ellipse 66% 62% at 33% 0%, rgba(255, 255, 255, 0.05), transparent 70%);
+  animation: now-card-light 22s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+@keyframes now-card-light {
+  from { transform: translateX(0); }
+  to { transform: translateX(26%); }
+}
+
+/* Flush inside a sheet: no frame of its own, the lower rule is its bottom edge. */
+.now-card.is-band {
+  padding: var(--space-6) var(--space-8) var(--space-8);
+  border: 0;
+  border-bottom: 1px solid var(--line-2);
+  border-radius: 0;
+  box-shadow: none;
+}
+
+/* ------------------------------------------------------------- now line */
+
+.now-card-sweep {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6) 45%, transparent);
+  opacity: 0;
+  transform-origin: left center;
+  pointer-events: none;
+  animation:
+    now-card-sweep 900ms var(--motion-ease) 420ms both,
+    now-card-sweep-again 8s var(--motion-ease) 4.5s infinite;
+}
+@keyframes now-card-sweep {
+  from { opacity: 0; transform: scaleX(0); }
+  30% { opacity: 1; }
+  to { opacity: 0; transform: scaleX(1); }
+}
+@keyframes now-card-sweep-again {
+  0% { opacity: 0; transform: scaleX(0); }
+  5% { opacity: 1; }
+  17%, 100% { opacity: 0; transform: scaleX(1); }
+}
+
+/* The shine on the lower rule: the foot's hairline, or the band's bottom edge. */
+.now-card-foot::before,
+.now-card.is-band::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  left: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.72), transparent) no-repeat -40% 0 / 22% 100%;
+  opacity: 0;
+  pointer-events: none;
+  animation: now-card-shine 8s linear 8.5s infinite;
+}
+.now-card-foot::before {
+  top: -1px;
+}
+.now-card.is-band::after {
+  bottom: 0;
+}
+@keyframes now-card-shine {
+  0% { opacity: 0; background-position: -40% 0; }
+  4% { opacity: 1; }
+  24% { opacity: 1; background-position: 140% 0; }
+  27%, 100% { opacity: 0; background-position: 140% 0; }
+}
+
+/* ------------------------------------------------------------------ head */
+
+.now-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+}
+.now-card-head p {
+  margin: 0;
+  color: var(--text-3);
+  font-size: var(--text-label);
+  font-weight: 700;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+}
+.now-card-head .now-card-state {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-1);
+}
+.now-card-state span + span,
+.now-card-state em {
+  color: var(--text-3);
+  font-style: normal;
+}
+.now-card-dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-1);
+}
+.now-card.is-quiet .now-card-dot,
+.now-card.is-past .now-card-dot,
+.now-card.is-cancelled .now-card-dot {
+  background: var(--text-3);
+}
+
+/* ------------------------------------------------------------------ foot */
+
+.now-card-foot {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-4);
+  margin-top: var(--space-2);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--line-1);
+}
+.now-card-foot p {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  margin: 0;
+  color: var(--text-3);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  line-height: var(--leading-snug);
+}
+.now-card-foot p.is-set {
+  color: var(--text-1);
+}
+.now-card-foot p.is-set svg {
+  color: var(--state-success);
+}
+.now-card-foot p b {
+  color: var(--text-1);
+  font-weight: 700;
+}
+
+/* What the game is worth, under the face-off: a label and one sentence. */
+.now-card-stake {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: center;
+  gap: var(--space-2) var(--space-3);
+  margin: 0;
+  color: var(--text-1);
+  font-size: var(--text-md);
+  font-weight: 600;
+  line-height: var(--leading-snug);
+  text-align: center;
+  animation: now-card-copy var(--motion-section) var(--motion-ease) 560ms both;
+}
+.now-card-stake span {
+  color: var(--text-3);
+  font-size: var(--text-label);
+  font-weight: 700;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+}
+
+/* A quiet way onward from the foot ("Abrir partida →"). */
+.now-card-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: var(--hit);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-2);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  transition: color var(--motion-micro);
+}
+.now-card-link:hover,
+.now-card-link:focus-visible {
+  color: var(--text-1);
+}
+.now-card-link svg {
+  transition: translate var(--motion-micro) var(--motion-ease);
+}
+.now-card-link:hover svg {
+  translate: 3px 0;
+}
+
+/* --------------------------------------------------------------- face-off */
+
+.faceoff {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-areas: "home clock away";
+  align-items: center;
+  gap: var(--space-6);
+  gap: clamp(12px, 4cqw, 56px);
+}
+.faceoff-side {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-4);
+  min-width: 0;
+  text-align: center;
+}
+.faceoff-side.is-home {
+  grid-area: home;
+}
+.faceoff-side.is-away {
+  grid-area: away;
+}
+.faceoff-crest {
+  width: clamp(56px, 8vw, 96px);
+  width: clamp(56px, 11.5cqw, 96px);
+  height: clamp(56px, 8vw, 96px);
+  height: clamp(56px, 11.5cqw, 96px);
+  filter: drop-shadow(0 12px 22px rgba(0, 0, 0, 0.5));
+}
+.faceoff-crest.is-fallback {
+  border: 1px solid var(--line-3);
+  border-radius: 50%;
+  background: var(--ink-3);
+  color: var(--text-2);
+  font-size: var(--text-md);
+  filter: none;
+}
+.faceoff-side b {
+  max-width: 100%;
+  color: var(--text-1);
+  font-size: clamp(16px, 2.2vw, 26px);
+  font-size: clamp(16px, 3.2cqw, 26px);
+  font-weight: 800;
+  letter-spacing: var(--track-tight);
+  line-height: 1.15;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+.faceoff-clock {
+  display: grid;
+  grid-area: clock;
+  justify-items: center;
+  gap: var(--space-3);
+}
+.faceoff-time {
+  color: var(--text-1);
+  font-size: clamp(56px, 9vw, 124px);
+  font-size: clamp(56px, 13cqw, 124px);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.055em;
+  line-height: 0.86;
+}
+.faceoff-clock small {
+  color: var(--text-3);
+  font-size: var(--text-label);
+  font-weight: 700;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.faceoff-x {
+  display: none;
+  grid-area: x;
+  color: var(--text-4);
+  font-size: var(--text-xl);
+  font-style: normal;
+  font-weight: 400;
+}
+.now-card.is-past .faceoff-time,
+.now-card.is-cancelled .faceoff-time {
+  color: var(--text-3);
+}
+.now-card.is-cancelled .faceoff-time {
+  text-decoration: line-through;
+  text-decoration-thickness: 3px;
+}
+
+/* A narrow card reads as the Central does on a phone: the kick-off on its own row, the clubs below. */
+@container (max-width: 520px) {
+  .faceoff {
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    grid-template-areas:
+      "clock clock clock"
+      "home x away";
+    align-items: start;
+    gap: var(--space-5) var(--space-3);
+  }
+  .faceoff-clock {
+    justify-items: start;
+    gap: var(--space-2);
+  }
+  .faceoff-time {
+    font-size: clamp(60px, 22cqw, 92px);
+  }
+  .faceoff-x {
+    display: block;
+    align-self: center;
+    margin-top: -18px;
+  }
+  .faceoff-side {
+    gap: var(--space-2);
+  }
+  .faceoff-side b {
+    font-size: var(--text-lg);
+  }
+}
+
+/* --------------------------------------------------------- choreography
+   One entrance, as on the Central: the giant element comes into focus, the
+   clubs arrive from their own sides, the copy follows. Then it rests. */
+.now-card .faceoff-time,
+.now-card-giant {
+  animation: now-card-focus 620ms var(--motion-ease) both;
+}
+.faceoff-side {
+  animation: now-card-arrive 560ms var(--motion-ease) 160ms both;
+}
+.faceoff-side.is-away {
+  --from: 18px;
+  animation-delay: 220ms;
+}
+.now-card-head,
+.faceoff-clock small,
+.now-card-foot {
+  animation: now-card-copy var(--motion-section) var(--motion-ease) 480ms both;
+}
+.now-card-foot {
+  animation-delay: 620ms;
+}
+@keyframes now-card-focus {
+  from { opacity: 0; filter: blur(12px); transform: scale(0.96); }
+  60% { opacity: 1; }
+  to { opacity: 1; filter: none; transform: none; }
+}
+@keyframes now-card-arrive {
+  from { opacity: 0; filter: blur(6px); transform: translateX(var(--from, -18px)); }
+  to { opacity: 1; filter: none; transform: none; }
+}
+@keyframes now-card-copy {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (max-width: 760px) {
+  .now-card {
+    gap: var(--space-4);
+    padding: var(--space-5);
+  }
+  .now-card.is-band {
+    padding: var(--space-5) var(--space-4) var(--space-6);
+  }
+  .now-card-foot {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .now-card::before,
+  .now-card *,
+  .now-card-sweep {
+    animation: none !important;
+  }
+  .now-card-sweep,
+  .now-card-foot::before,
+  .now-card.is-band::after {
+    display: none;
+  }
+}

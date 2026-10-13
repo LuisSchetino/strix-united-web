@@ -101,6 +101,16 @@ const tables = {
   night_related: [{ id: "n1", night_date: today, player_ids: ["p1", "p2", "p3", "p4"] }],
 };
 
+// QA-TEMP: real provider data prepared in the scratchpad (see make-qa-data.mjs) and a few library rows.
+const qaUploads = new Map();
+{
+  const { readFileSync, existsSync } = await import("node:fs");
+  const extra = JSON.parse(readFileSync("C:/Users/ObeeN/AppData/Local/Temp/claude/C--Users-ObeeN-Documents-STRIX-UNITED-FC27/afa9bd0c-6b62-4dff-936a-465d7aff3d04/scratchpad/qa-extra-real.json", "utf8"));
+  for (const [name, rows] of Object.entries(extra)) if (!/^library_/.test(name)) tables[name] = name === "agenda_matches" ? [...tables.agenda_matches, ...rows] : rows;
+  const more = "C:/Users/ObeeN/AppData/Local/Temp/claude/C--Users-ObeeN-Documents-STRIX-UNITED-FC27/afa9bd0c-6b62-4dff-936a-465d7aff3d04/scratchpad/qa-extra-more.json";
+  if (existsSync(more)) for (const [name, rows] of Object.entries(JSON.parse(readFileSync(more, "utf8")))) tables[name] = [...(tables[name] || []), ...rows];
+}
+
 function send(response, status, body, headers = {}) {
   response.writeHead(status, {
     "content-type": "application/json; charset=utf-8",
@@ -139,6 +149,46 @@ const server = createServer(async (request, response) => {
     });
   }
 
+  // QA-TEMP: provider images through the same address rule the Pages Function uses.
+  if (url.pathname === "/api/competitions/asset") {
+    try {
+      const { validateProviderAssetUrl } = await import("../shared/competition-providers.js");
+      const asset = await fetch(validateProviderAssetUrl(url.searchParams.get("url") || ""));
+      response.writeHead(asset.status, { "content-type": asset.headers.get("content-type") || "image/png", "cache-control": "public, max-age=3600" });
+      return response.end(Buffer.from(await asset.arrayBuffer()));
+    } catch (error) { return send(response, 502, { error: error.message }); }
+  }
+  // QA-TEMP: storage stand-in. Uploads are kept in memory and written to the scratchpad to be looked at.
+  if (path.startsWith("/storage/v1/object/")) {
+    const rest = decodeURIComponent(path.slice("/storage/v1/object/".length));
+    if (rest.startsWith("list/")) {
+      const body = await readBody(request);
+      const prefix = String(body.prefix || "").replace(/\/$/, "");
+      const names = [...qaUploads.keys()].filter((key) => key.startsWith(`${rest.slice(5)}/${prefix}/`)).map((key) => ({ name: key.split("/").pop() }));
+      return send(response, 200, names);
+    }
+    if (rest.startsWith("public/")) {
+      const hit = qaUploads.get(rest.slice(7));
+      if (!hit) return send(response, 404, { error: "not_found" });
+      response.writeHead(200, { "content-type": hit.type, "access-control-allow-origin": "*" });
+      return response.end(hit.bytes);
+    }
+    if (["POST", "PUT"].includes(request.method)) {
+      const chunks = [];
+      for await (const chunk of request) chunks.push(chunk);
+      const raw = Buffer.concat(chunks);
+      const start = raw.indexOf(Buffer.from([0xff, 0xd8, 0xff]));
+      const end = raw.lastIndexOf(Buffer.from([0xff, 0xd9]));
+      const bytes = start >= 0 && end > start ? raw.subarray(start, end + 2) : raw;
+      qaUploads.set(rest, { bytes, type: start >= 0 ? "image/jpeg" : "application/octet-stream" });
+      const { mkdirSync, writeFileSync } = await import("node:fs");
+      mkdirSync("C:/Users/ObeeN/AppData/Local/Temp/claude/C--Users-ObeeN-Documents-STRIX-UNITED-FC27/afa9bd0c-6b62-4dff-936a-465d7aff3d04/scratchpad/qa-uploads", { recursive: true });
+      writeFileSync(`C:/Users/ObeeN/AppData/Local/Temp/claude/C--Users-ObeeN-Documents-STRIX-UNITED-FC27/afa9bd0c-6b62-4dff-936a-465d7aff3d04/scratchpad/qa-uploads/${rest.replace(/[\\/]/g, "__")}`, bytes);
+      return send(response, 200, { Key: rest });
+    }
+    return send(response, 200, []);
+  }
+
   // Mock "Discord OAuth": issues a session for the server-side user, keeping whatever
   // user_metadata the server already holds (the GoTrue merge assumption).
   if (url.pathname === "/qa-login") {
@@ -174,10 +224,60 @@ const server = createServer(async (request, response) => {
   if (path === "/auth/v1/logout") return send(response, 204);
 
   // PostgREST stand-in: reads return fixtures or []
+  // QA-TEMP: table stand-in that filters (eq/in/is), orders, and accepts insert, update and delete in memory.
   const table = path.match(/^\/rest\/v1\/([a-z_]+)/)?.[1];
   if (table) {
-    if (request.method === "GET") return send(response, 200, tables[table] || [], { "content-range": "0-0/*" });
-    return send(response, 201, []);
+    tables[table] ||= [];
+    const reserved = new Set(["select", "order", "limit", "offset", "on_conflict", "columns"]);
+    const filters = [...url.searchParams].filter(([key]) => !reserved.has(key));
+    const matches = (row) => filters.every(([key, raw]) => {
+      const dot = raw.indexOf(".");
+      const op = raw.slice(0, dot);
+      const value = raw.slice(dot + 1);
+      if (op === "eq") return String(row[key]) === value;
+      if (op === "neq") return String(row[key]) !== value;
+      if (op === "in") return value.replace(/^\(|\)$/g, "").split(",").map((item) => item.replace(/^"|"$/g, "")).includes(String(row[key]));
+      if (op === "is") return value === "null" ? row[key] == null : true;
+      if (op === "gte") return String(row[key]) >= value;
+      if (op === "lte") return String(row[key]) <= value;
+      return true;
+    });
+    const single = String(request.headers.accept || "").includes("vnd.pgrst.object");
+    const reply = (rows, status = 200) => {
+      if (!single) return send(response, status, rows, { "content-range": "0-0/*" });
+      return rows.length === 1 ? send(response, status, rows[0]) : send(response, 406, { code: "PGRST116", message: "JSON object requested, multiple (or no) rows returned", details: `The result contains ${rows.length} rows` });
+    };
+    const wants = String(request.headers.prefer || "").includes("return=representation");
+    const actor = entryFromAuth(request);
+    if (request.method === "GET") {
+      let rows = tables[table].filter(matches);
+      const order = url.searchParams.get("order");
+      if (order) {
+        const [column, direction] = order.split(",")[0].split(".");
+        rows = [...rows].sort((left, right) => String(left[column] ?? "").localeCompare(String(right[column] ?? "")) * (direction === "desc" ? -1 : 1));
+      }
+      const limit = Number(url.searchParams.get("limit") || 0);
+      return reply(limit ? rows.slice(0, limit) : rows);
+    }
+    if (request.method === "POST") {
+      const body = await readBody(request);
+      const now = new Date().toISOString();
+      const rows = (Array.isArray(body) ? body : [body]).map((row) => ({ id: randomUUID(), created_at: now, updated_at: now, ...(table === "library_view_progress" ? { user_id: actor?.user.id, viewer_display_name: actor?.globalName } : {}), ...row }));
+      tables[table].push(...rows);
+      return wants ? reply(rows, 201) : send(response, 201, []);
+    }
+    if (request.method === "PATCH") {
+      const body = await readBody(request);
+      const rows = tables[table].filter(matches);
+      for (const row of rows) Object.assign(row, body, { updated_at: new Date().toISOString() });
+      return wants ? reply(rows) : send(response, 204);
+    }
+    if (request.method === "DELETE") {
+      const gone = tables[table].filter(matches);
+      tables[table] = tables[table].filter((row) => !gone.includes(row));
+      return wants ? reply(gone) : send(response, 204);
+    }
+    return send(response, 405, { error: "method" });
   }
   return send(response, 404, { error: "not_found" });
 });

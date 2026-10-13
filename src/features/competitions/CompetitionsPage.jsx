@@ -1,46 +1,35 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { MatchDisplay } from "../../ui/MatchDisplay.jsx";
-import { CloseButton } from "../../ui/CloseButton.jsx";
 import { ClubLogo } from "../../ui/ClubLogo.jsx";
 import { NextClubsSignature } from "../../ui/NextClubsBrand.jsx";
-import { STRIX_BRAND } from "../../brand.js";
-import {
-  AnimatedNumber,
-  MotionBadge,
-  SegmentedControl,
-  RollingLabel,
-  notify,
-} from "../../ui/motion/motion.jsx";
+import { ConfirmDialog } from "../../ui/ConfirmDialog.jsx";
+import { notify } from "../../ui/motion/motion.jsx";
 import { normalizeName } from "../matches/import-core.js";
 import {
   aggregateCompetitionHistory,
   campaignState,
   competitionHistoryStats,
   detectParticipationEnd,
+  editionLeaders,
 } from "./history-core.js";
-import { calculateQualificationScenarios } from "./scenario-engine.js";
 import {
   archiveCompetitionEdition,
   deleteCompetitionEdition,
   saveCompetitionPreview,
 } from "./competition-storage.js";
-import {
-  deriveCompetitionView,
-  qualificationScenarioInput,
-  qualificationState,
-  reconcileCompetitionResults,
-} from "./competition-core.js";
-import { extractPalette } from "./palette-core.js";
+import { deriveCompetitionView } from "./competition-core.js";
+import { analyzeCompetition } from "./competition-analysis.js";
+import { CompetitionHero, CompetitionTabs, GamesPanel, OverviewPanel, ScenariosPanel, StandingsPanel } from "./competition-views.jsx";
+import { ImportCompetitionModal } from "./ImportCompetitionModal.jsx";
 import { sortBracketFixtures } from "../../../shared/bracket-slots.js";
 import { canManageCompetitions } from "../../access.js";
 import "./competitions.css";
 import { PageHeader } from "../../ui/PageHeader.jsx";
+import { clearTarget, openTarget, useDeepTarget } from "../../ui/useDeepTarget.js";
+import { readRemembered, useRemembered, writeRemembered } from "../../ui/useRemembered.js";
+import { ErrorNote } from "../../ui/ErrorNote.jsx";
 
-const fallbackPalettes = {
-  ccb: ["#793cff", "#fab721", "#cf4cff", "#1b8cff"],
-  lb_esports: ["#26c96f", "#00b7ff", "#ffd54a", "#754aff"],
-};
 const dateTime = (value) =>
   value
     ? new Intl.DateTimeFormat("pt-BR", {
@@ -49,310 +38,6 @@ const dateTime = (value) =>
         timeZone: "America/Sao_Paulo",
       }).format(new Date(value))
     : "Nunca";
-
-async function analyzeCompetition(client, url) {
-  const { data } = await client.auth.getSession();
-  const response = await fetch("/api/competitions/analyze", {
-    method: "POST",
-    headers: {
-      authorization: `Bearer ${data.session?.access_token || ""}`,
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({ url }),
-  });
-  const payload = await response.json();
-  if (!response.ok)
-    throw new Error(
-      payload.message ||
-        payload.error ||
-        "Não foi possível analisar a competição.",
-    );
-  return payload.preview;
-}
-
-function ImportCompetitionModal({ client, profile, workspace, close }) {
-  const [url, setUrl] = useState("");
-  const [preview, setPreview] = useState(null);
-  const [palette, setPalette] = useState([]);
-  const [accent, setAccent] = useState("#168cff");
-  const [busy, setBusy] = useState("");
-  const [error, setError] = useState("");
-  const analyze = async () => {
-    setBusy("Analisando provider");
-    setError("");
-    try {
-      const result = await analyzeCompetition(client, url);
-      setPreview(result);
-      const colors = await extractPalette(client, result.logo).catch(() => []);
-      const next = colors.length
-        ? colors
-        : fallbackPalettes[result.provider] || ["#168cff"];
-      setPalette(next);
-      setAccent(next[0]);
-    } catch (cause) {
-      setError(cause.message);
-    } finally {
-      setBusy("");
-    }
-  };
-  const add = async () => {
-    setBusy("Adicionando competição");
-    setError("");
-    try {
-      await saveCompetitionPreview(client, profile, preview, palette, accent);
-      await workspace.refresh();
-      notify(`${preview.name || "Campeonato"} adicionado.`);
-      close();
-    } catch (cause) {
-      setError(cause.message);
-    } finally {
-      setBusy("");
-    }
-  };
-  const relatedKnockout = preview?.relatedPreviews?.find(
-    (item) => item.sourceKind === "knockout",
-  );
-  return createPortal((
-    <div className="competition-modal-layer" onMouseDown={(event) => event.target === event.currentTarget && close()}>
-      <section
-        className="competition-import-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-label="Adicionar competição"
-      >
-        <header>
-          <div>
-            <span>DEV · PROVIDER EXTERNO</span>
-            <h2>Adicionar campeonato</h2>
-            <p>A análise procura classificação e mata-mata da mesma edição.</p>
-          </div>
-          <CloseButton onClick={close} />
-        </header>
-        <div className="competition-url-row">
-          <label>
-            URL DO CAMPEONATO
-            <input
-              autoFocus
-              value={url}
-              onChange={(event) => setUrl(event.target.value)}
-              placeholder="https://ccbclubs.com.br/fifa.php?..."
-            />
-          </label>
-          <button
-            className="primary"
-            disabled={!url || !!busy}
-            onClick={() => void analyze()}
-          >
-            {busy || "ANALISAR"}
-          </button>
-        </div>
-        {error && (
-          <p className="competition-error" role="alert">
-            {error}
-          </p>
-        )}
-        {preview && (
-          <section
-            className="competition-import-preview"
-            style={{ "--competition-accent": accent }}
-          >
-            <div className="competition-preview-hero">
-              {preview.logo ? (
-                <img src={preview.logo} alt="" />
-              ) : (
-                <span>{preview.name.slice(0, 2)}</span>
-              )}
-              <div>
-                <small>
-                  {preview.organization} · {preview.provider}
-                </small>
-                <h3>{preview.name}</h3>
-                <p>
-                  {relatedKnockout
-                    ? `${relatedKnockout.knockout.currentStage} detectada`
-                    : preview.type || preview.phase}
-                </p>
-              </div>
-            </div>
-            <dl>
-              <div>
-                <dt>Fase atual</dt>
-                <dd>
-                  {relatedKnockout?.knockout.currentStage || preview.phase}
-                </dd>
-              </div>
-              <div>
-                <dt>Grupos</dt>
-                <dd>{preview.groups.length || "—"}</dd>
-              </div>
-              <div>
-                <dt>Fontes</dt>
-                <dd>{1 + (preview.relatedPreviews?.length || 0)}</dd>
-              </div>
-              <div>
-                <dt>Atualização</dt>
-                <dd>{dateTime(preview.fetchedAt)}</dd>
-              </div>
-            </dl>
-            <div className="palette-picker">
-              <span>ACCENT DA COMPETIÇÃO</span>
-              <div>
-                {palette.map((color) => (
-                  <button
-                    key={color}
-                    className={accent === color ? "selected" : ""}
-                    style={{ background: color }}
-                    onClick={() => setAccent(color)}
-                    aria-label={`Usar cor ${color}`}
-                  />
-                ))}
-              </div>
-            </div>
-            <footer>
-              <a href={preview.source} target="_blank" rel="noreferrer">
-                ABRIR FONTE
-              </a>
-              <button
-                className="primary"
-                disabled={!!busy}
-                onClick={() => void add()}
-              >
-                {busy || "ADICIONAR CAMPEONATO"}
-              </button>
-            </footer>
-          </section>
-        )}
-      </section>
-    </div>
-  ), document.body);
-}
-
-function Standings({ groups, accent, slots, canEdit, onSlotsChange }) {
-  const initial =
-    groups.find((group) => group.isStrixGroup)?.name || groups[0]?.name;
-  const [selected, setSelected] = useState(initial);
-  useEffect(() => {
-    if (!groups.some((group) => group.name === selected)) setSelected(initial);
-  }, [groups, initial, selected]);
-  const group = groups.find((item) => item.name === selected) || groups[0];
-  if (!group)
-    return (
-      <p className="competition-empty">
-        O provider ainda não publicou classificação.
-      </p>
-    );
-  const appliedSlots =
-    Number(group.qualificationSlots || group.qualification_slots || slots) ||
-    null;
-  return (
-    <section className="competition-section">
-      <header>
-        <div>
-          <span>CLASSIFICAÇÃO</span>
-          <h2>{group.name}</h2>
-          {appliedSlots && (
-            <small className="qualification-legend">
-              ZONA DE CLASSIFICAÇÃO · TOP {appliedSlots}
-            </small>
-          )}
-        </div>
-        <div className="standings-tools">
-          {groups.length > 1 && (
-            <nav>
-              {groups.map((item) => (
-                <button
-                  className={item.name === group.name ? "active" : ""}
-                  onClick={() => setSelected(item.name)}
-                  key={item.name}
-                >
-                  {item.name}
-                </button>
-              ))}
-            </nav>
-          )}
-          {canEdit && (
-            <label>
-              CLASSIFICAM
-              <input
-                type="number"
-                min="1"
-                max={group.standings.length}
-                value={appliedSlots || ""}
-                placeholder="—"
-                onChange={(event) =>
-                  onSlotsChange(
-                    event.target.value ? Number(event.target.value) : null,
-                  )
-                }
-              />
-            </label>
-          )}
-        </div>
-      </header>
-      <div className="standings-scroll">
-        <div
-          className="standings-table"
-          role="table"
-          style={{ "--competition-accent": accent }}
-        >
-          <header role="row">
-            <span>#</span>
-            <span>CLUBE</span>
-            <span>P</span>
-            <span>J</span>
-            <span>V</span>
-            <span>E</span>
-            <span>D</span>
-            <span>GP</span>
-            <span>GC</span>
-            <span>SG</span>
-            <span>FORMA</span>
-          </header>
-          {group.standings.map((row) => {
-            const inZone = appliedSlots && Number(row.position) <= appliedSlots;
-            const boundary =
-              appliedSlots && Number(row.position) === appliedSlots;
-            return (
-              <article
-                role="row"
-                className={`${row.isStrix ? "is-strix " : ""}${inZone ? "is-qualification-zone " : ""}${boundary ? "is-qualification-boundary" : ""}`}
-                key={row.team}
-              >
-                <b>{row.position}</b>
-                <div>
-                  <ClubLogo name={row.team} url={row.logo} className="standing-logo" decorative />
-                  <strong>
-                    {row.team}
-                    {row.isStrix && <small>STRIX</small>}
-                  </strong>
-                </div>
-                <b className="data-value">{row.points}</b>
-                <span>{row.played}</span>
-                <span>{row.wins}</span>
-                <span>{row.draws}</span>
-                <span>{row.losses}</span>
-                <span>{row.goalsFor}</span>
-                <span>{row.goalsAgainst}</span>
-                <span>
-                  {row.goalDifference > 0
-                    ? `+${row.goalDifference}`
-                    : row.goalDifference}
-                </span>
-                <div className="form-five">
-                  {(row.form || []).map((form, index) => (
-                    <i key={`${form}-${index}`} className={form.toLowerCase()}>
-                      {form}
-                    </i>
-                  ))}
-                </div>
-              </article>
-            );
-          })}
-        </div>
-      </div>
-    </section>
-  );
-}
 
 const fixtureLogo = (fixture, side) =>
   fixture.metadata?.[`${side}Logo`] ||
@@ -374,97 +59,6 @@ function FixtureClubs({ fixture }) {
 
 const fixtureTitle = (fixture) =>
   `${fixture.home_team_name} × ${fixture.away_team_name}`;
-
-function CompetitionGames({ competition, view, workspace, organization }) {
-  const internal = workspace.matches.filter(
-    (match) =>
-      match.competition_id === competition.id ||
-      (!match.competition_id &&
-        normalizeName(match.competition_name) ===
-          normalizeName(competition.name)),
-  );
-  const results = reconcileCompetitionResults(view.providerResults, internal);
-  const internalOnly = internal.filter(
-    (match) =>
-      !results.some((fixture) => fixture.internalMatch?.id === match.id),
-  );
-  return (
-    <div className="competition-games-stack">
-      <section className="competition-section">
-        <header>
-          <div>
-            <span>{organization || "FONTE OFICIAL"}</span>
-            <h2>Próximos jogos do Strix</h2>
-          </div>
-        </header>
-        {view.upcoming.length ? (
-          <div className="competition-timeline" tabIndex="0">
-            {view.upcoming.map((fixture) => (
-              <article
-                className="is-strix"
-                key={fixture.external_match_id || fixture.externalMatchId}
-              >
-                <small>{fixture.round_label || "Próxima fase"}</small>
-                <time>{dateTime(fixture.scheduled_at)}</time>
-                <FixtureClubs fixture={fixture} />
-                {fixture.agenda_match_id && <p>Agenda do clube conectada</p>}
-              </article>
-            ))}
-          </div>
-        ) : (
-          <p className="competition-empty">
-            {view.awaitingKnockout
-              ? "Fase encerrada. Aguardando a publicação do mata-mata."
-              : "Nenhum próximo confronto do Strix foi publicado pela fonte oficial."}
-          </p>
-        )}
-      </section>
-      <section className="competition-section">
-        <header>
-          <div>
-            <span>RESULTADOS DO STRIX</span>
-            <h2>Fonte oficial + histórico FC27</h2>
-          </div>
-        </header>
-        {results.length || internalOnly.length ? (
-          <div className="competition-results">
-            {results.map((fixture) => (
-              <article key={fixture.external_match_id}>
-                <time>{dateTime(fixture.scheduled_at)}</time>
-                <FixtureClubs fixture={fixture} />
-                <small>
-                  {fixture.internalMatch
-                    ? "Dados FC27 reconciliados"
-                    : organization || "Fonte oficial"}
-                </small>
-              </article>
-            ))}
-            {internalOnly.map((match) => (
-              <article key={match.id}>
-                <time>{dateTime(match.played_at)}</time>
-                <FixtureClubs fixture={{
-                  home_team_name: "STRIX UNITED",
-                  away_team_name: match.opponent_name,
-                  home_score: match.strix_score,
-                  away_score: match.opponent_score,
-                  home_logo: STRIX_BRAND.logo,
-                  away_logo: match.opponent_logos?.storage_path
-                    ? workspace.assetUrl(match.opponent_logos.storage_path)
-                    : "",
-                }} />
-                <small>Histórico FC27</small>
-              </article>
-            ))}
-          </div>
-        ) : (
-          <p className="competition-empty">
-            Nenhum resultado do Strix publicado ou reconciliado.
-          </p>
-        )}
-      </section>
-    </div>
-  );
-}
 
 function BracketConnectors({ gridRef, version }) {
   const [drawing, setDrawing] = useState({ width: 0, height: 0, paths: [] });
@@ -546,7 +140,7 @@ function BracketConnectors({ gridRef, version }) {
   );
 }
 
-function Knockout({ view, accent }) {
+function Knockout({ view }) {
   const [activeRound, setActiveRound] = useState(0);
   const gridRef = useRef(null);
   const rounds = view.knockout.knockout?.rounds || [];
@@ -589,7 +183,6 @@ function Knockout({ view, accent }) {
   return (
     <section
       className="competition-section knockout-section"
-      style={{ "--competition-accent": accent }}
     >
       <header>
         <div>
@@ -648,65 +241,14 @@ function Knockout({ view, accent }) {
   );
 }
 
-function ScenarioPanel({ edition, snapshot, qualificationSlots }) {
-  const scenarioInput = qualificationScenarioInput(snapshot, qualificationSlots);
-  if (!scenarioInput)
-    return (
-      <section className="competition-section scenario-panel">
-        <header>
-          <div>
-            <span>CENÁRIOS</span>
-            <h2>Classificação matemática</h2>
-          </div>
-        </header>
-        <p className="competition-empty">
-          Sem fixtures completas suficientes para calcular cenários confiáveis.
-        </p>
-      </section>
-    );
-  const result = calculateQualificationScenarios({
-    ...scenarioInput,
-    qualificationSlots,
-    tieBreakRules: edition.tie_break_rules || [],
-  });
-  return (
-    <section className="competition-section scenario-panel">
-      <header>
-        <div>
-          <span>CENÁRIOS</span>
-          <h2>Para classificar</h2>
-        </div>
-      </header>
-      <div className="scenario-metrics">
-        <article>
-          <small>POSIÇÃO</small>
-          <b className="data-value"><AnimatedNumber id={`scenario-position-${edition.id}`} value={result.currentPosition} suffix="º" /></b>
-        </article>
-        <article>
-          <small>DISTÂNCIA</small>
-          <b className="data-value">{result.tiedAtCutoff ? "Empatado" : `${result.distanceToCutoff} pts`}</b>
-          {result.tiedAtCutoff && (
-            <em className="scenario-context">
-              Fora pelos critérios · corte {result.cutoffPosition}º
-            </em>
-          )}
-        </article>
-        <article>
-          <small>JOGOS</small>
-          <b className="data-value"><AnimatedNumber id={`scenario-games-${edition.id}`} value={result.remainingMatches} /></b>
-        </article>
-        <article>
-          <small>DISPONÍVEIS</small>
-          <b className="data-value"><AnimatedNumber id={`scenario-points-${edition.id}`} value={result.pointsAvailable} suffix=" pts" /></b>
-        </article>
-      </div>
-    </section>
-  );
-}
-
-function HistoryCompetitionCard({ group }) {
+function HistoryCompetitionCard({ group, workspace }) {
   const [selectedId, setSelectedId] = useState(group.editions.at(-1)?.id || "");
   const selected = group.editions.find((edition) => edition.id === selectedId) || group.editions.at(-1);
+  // Retrospective of the selected edition, from the club's own matches imported for it.
+  const leaders = useMemo(
+    () => (selected ? editionLeaders((workspace?.statMatches || workspace?.matches || []).filter((match) => match.competition_edition_id === selected.id), { players: workspace?.players, aliases: workspace?.aliases }) : null),
+    [selected?.id, workspace?.statMatches, workspace?.matches, workspace?.players, workspace?.aliases],
+  );
   return (
           <article className="history-competition-card">
             <header className="history-competition-header">
@@ -762,11 +304,17 @@ function HistoryCompetitionCard({ group }) {
               {group.editions.map((edition) => <button type="button" className={`${campaignState(edition)} ${selected?.id === edition.id ? "selected" : ""}`} key={edition.id} onClick={() => setSelectedId(edition.id)} aria-pressed={selected?.id === edition.id}><i/><span>{edition.label}</span><small>{edition.outcome || edition.final_stage || "Encerrada"}</small></button>)}
             </div>
             {selected && <section className="history-edition-summary" aria-live="polite"><div><small>EDIÇÃO SELECIONADA</small><b>{selected.label}</b></div><strong>{selected.outcome || selected.final_stage || "Participação encerrada"}</strong><span>Nível da campanha · {selected.campaignLevel}%</span></section>}
+            {selected && leaders && (
+              <dl className="history-leaders" aria-label={`Destaques do Strix em ${selected.label}`}>
+                <div><dt>Artilheiro</dt><dd>{leaders.topScorer ? <><b>{leaders.topScorer.names.join(" · ")}</b><span className="data-value">{leaders.topScorer.goals} {leaders.topScorer.goals === 1 ? "gol" : "gols"}</span></> : <em>{leaders.games ? "Nenhum gol registrado nas partidas importadas" : "Sem partidas importadas desta edição"}</em>}</dd></div>
+                <div><dt>Melhor nota média</dt><dd>{leaders.bestRating ? <><b>{leaders.bestRating.names.join(" · ")}</b><span className="data-value">{leaders.bestRating.value.toFixed(1)}</span><small>mínimo de {leaders.bestRating.minimum} {leaders.bestRating.minimum === 1 ? "jogo" : "jogos"}</small></> : <em>{leaders.games ? "Sem notas registradas nas partidas importadas" : "Sem partidas importadas desta edição"}</em>}</dd></div>
+              </dl>
+            )}
           </article>
   );
 }
 
-function HistoryPanel({ editions }) {
+function HistoryPanel({ editions, workspace }) {
   const groups = aggregateCompetitionHistory(editions);
   return (
     <section className="competition-section history-panel">
@@ -777,7 +325,7 @@ function HistoryPanel({ editions }) {
         </div>
       </header>
       {groups.length ? (
-        groups.map((group) => <HistoryCompetitionCard group={group} key={group.competitionId} />)
+        groups.map((group) => <HistoryCompetitionCard group={group} workspace={workspace} key={group.competitionId} />)
       ) : (
         <p className="competition-empty">
           Nenhuma edição foi enviada ao histórico.
@@ -800,7 +348,12 @@ function CompetitionExplorer({
     () => deriveCompetitionView(sources, fixtures, edition),
     [sources, fixtures, edition],
   );
-  const [tab, setTab] = useState("overview");
+  // Each edition reopens on the section it was left on.
+  const [tab, setTabState] = useState(() => readRemembered(`competition-tab:${edition?.id}`, "overview"));
+  const setTab = (next) => {
+    setTabState(next);
+    writeRemembered(`competition-tab:${edition?.id}`, next);
+  };
   const [busy, setBusy] = useState("");
   const [syncState, setSyncState] = useState("");
   const [error, setError] = useState("");
@@ -808,15 +361,18 @@ function CompetitionExplorer({
   const [outcome, setOutcome] = useState(
     edition?.outcome || "Participação encerrada",
   );
-  useEffect(() => setTab("overview"), [edition?.id]);
   const tabs = [
     ["overview", "Visão geral"],
     view.standings.groups?.length && ["standings", "Classificação"],
-    ["games", "Jogos"],
+    ["games", "Jogos", view.upcoming.length || null],
     view.hasKnockout && ["knockout", "Mata-mata"],
     !view.hasKnockout &&
       view.standings.groups?.length && ["scenarios", "Cenários"],
   ].filter(Boolean);
+  useEffect(() => {
+    const remembered = readRemembered(`competition-tab:${edition?.id}`, "overview");
+    setTabState(tabs.some(([id]) => id === remembered) ? remembered : "overview");
+  }, [edition?.id]);
   const sync = async () => {
     const source = view.standingsSource || sources[0];
     if (!source) return;
@@ -824,15 +380,8 @@ function CompetitionExplorer({
     setSyncState("loading");
     setError("");
     try {
-      const preview = await analyzeCompetition(client, source.source_url);
-      await saveCompetitionPreview(
-        client,
-        profile,
-        preview,
-        competition.palette,
-        competition.accent_color,
-        { editionId: edition.id },
-      );
+      const preview = await analyzeCompetition(client, source.source_url, { fresh: true });
+      await saveCompetitionPreview(client, profile, preview, { editionId: edition.id });
       await workspace.refresh();
       setSyncState("success");
       notify(`${competition.name} atualizada.`);
@@ -850,10 +399,10 @@ function CompetitionExplorer({
     edition,
     fixtures: view.fixtures,
   });
-  const strixStanding = view.standings.groups
-    ?.flatMap((group) => group.standings || [])
-    .find((row) => row.isStrix);
-  const zone = qualificationState(strixStanding, view.qualificationSlots);
+  // When the end is certain, the archive preview opens already filled with what happened.
+  useEffect(() => {
+    if (!edition?.outcome && endDetection.ended && endDetection.outcome) setOutcome(endDetection.outcome);
+  }, [edition?.id, endDetection.ended, endDetection.outcome]);
   // Participants as published by the provider: every distinct team across the standings groups.
   const participants = new Set((view.standings.groups || []).flatMap((group) => (group.standings || []).map((row) => row.team))).size;
   const isHistorical = edition?.status === "historical";
@@ -877,119 +426,60 @@ function CompetitionExplorer({
     }
   };
   return (
-    <section
-      className="competition-detail competition-inline"
-      style={{ "--competition-accent": competition.accent_color }}
-    >
-      <header className="competition-detail-hero">
-        <ClubLogo name={competition.name} url={competition.logo_url} className="competition-identity-logo" />
-        <div>
-          <p className="competition-hero-meta"><span className={`competition-status ${isHistorical ? "is-historical" : "is-active"}`}>{isHistorical ? "Histórico" : "Em andamento"}</span>{competition.organization && <span>{competition.organization}</span>}</p>
-          <h1>{competition.name}</h1>
-          <p>{edition?.label} · {view.currentStage}</p>
-        </div>
-        <aside>
-          <span>Atualizado</span>
-          <b>{dateTime(view.lastSyncedAt)}</b>
-          {canManageCompetitions(profile) && sources[0] && (
-            <button className="rolling-action" disabled={!!busy} onClick={() => void sync()}>
-              {syncState ? <MotionBadge state={syncState} /> : <RollingLabel>ATUALIZAR</RollingLabel>}
-            </button>
-          )}
-        </aside>
-      </header>
-      {error && <p className="competition-error">{error}</p>}
-      <SegmentedControl className="competition-tabs" label="Seções da competição" items={tabs} active={tab} onChange={setTab} />
+    <section className="competition-detail competition-inline">
+      <CompetitionHero
+        competition={competition}
+        edition={edition}
+        view={view}
+        isHistorical={isHistorical}
+        canSync={canManageCompetitions(profile) && Boolean(sources[0])}
+        busy={!!busy}
+        syncState={syncState}
+        onSync={() => void sync()}
+      />
+      <ErrorNote message={error} onRetry={syncState === "error" || /atualiz|sincroniz|páginas|servidor/i.test(error) ? () => sync() : undefined} retryLabel="Atualizar de novo" />
+      <CompetitionTabs items={tabs} active={tab} onChange={setTab} />
       {tab === "overview" && (
         <div className="motion-panel-enter competition-tab-panel" key="overview">
-          <section className="competition-overview-grid">
-            <article className="data-arrive" style={{ "--i": 0 }}>
-              <small>FASE ATUAL</small>
-              <b>{view.currentStage}</b>
-            </article>
-            <article className="data-arrive" style={{ "--i": 1 }}>
-              <small>{view.standings.strixGroup ? "GRUPO DO STRIX" : "PARTICIPANTES"}</small>
-              <b>{view.standings.strixGroup || (participants ? <span className="data-value">{participants}</span> : "—")}</b>
-              {view.standings.strixGroup && participants > 0 && <em>{participants} clubes na classificação</em>}
-            </article>
-            <article className="data-arrive" style={{ "--i": 2 }}>
-              <small>POSIÇÃO</small>
-              <b className={strixStanding ? "data-value" : ""}>{strixStanding ? <AnimatedNumber id={`overview-position-${edition.id}`} value={strixStanding.position} suffix="º" /> : "—"}</b>
-              {zone && <em className={zone.inside ? "inside" : "outside"}>{zone.label}</em>}
-              {strixStanding && <em>{strixStanding.points} pts · {strixStanding.played} jogos</em>}
-            </article>
-            <article className="data-arrive" style={{ "--i": 3 }}>
-              <small>{view.strixFixture ? "FONTE DO CONFRONTO" : "PRÓXIMO CONFRONTO"}</small>
-              <b>
-                {view.strixFixture
-                  ? competition.organization || view.standings.organization || "Provider oficial"
-                  : view.awaitingKnockout
-                    ? "Aguardando mata-mata"
-                    : "A definir"}
-              </b>
-            </article>
-          </section>
-          {view.strixFixture && (
-            <section className="provider-next-match">
-              <span>{view.strixFixture.round_label} · {competition.organization || view.standings.organization || "FONTE OFICIAL"}</span>
-              <FixtureClubs fixture={view.strixFixture} />
-              <p>{dateTime(view.strixFixture.scheduled_at)}</p>
-            </section>
-          )}
-          {view.awaitingKnockout && (
-            <section className="competition-waiting">
-              <span>PRÓXIMA FASE</span>
-              <h2>Aguardando mata-mata</h2>
-              <p>A fase atual terminou e a fonte oficial ainda não publicou o chaveamento.</p>
-            </section>
-          )}
-          {canManageCompetitions(profile) && edition?.status !== "historical" && (
-            <section className="archive-callout">
-              <div>
-                <span>ENCERRAMENTO</span>
-                <h2>{endDetection.outcome || "Enviar edição ao histórico"}</h2>
-                <p>Nenhuma partida ou fonte será apagada.</p>
-              </div>
-              <button onClick={() => setArchiveOpen(true)}>
-                ENVIAR PARA HISTÓRICO
-              </button>
-            </section>
-          )}
+          <OverviewPanel competition={competition} edition={edition} view={view} participants={participants} goTo={setTab}>
+            {canManageCompetitions(profile) && edition?.status !== "historical" && (
+              <section className={`archive-callout${endDetection.ended ? " is-ended" : ""}`}>
+                <div>
+                  <span>{endDetection.ended ? "CAMPANHA ENCERRADA" : "ENCERRAMENTO"}</span>
+                  <h2>{endDetection.outcome || "Enviar edição ao histórico"}</h2>
+                  <p>{endDetection.ended ? "A participação do Strix nesta edição terminou. Envie ao Histórico para ela sair das ativas; nenhuma partida ou fonte será apagada." : "Nenhuma partida ou fonte será apagada."}</p>
+                </div>
+                <button onClick={() => setArchiveOpen(true)}>
+                  ENVIAR PARA HISTÓRICO
+                </button>
+              </section>
+            )}
+          </OverviewPanel>
         </div>
       )}
       {tab === "standings" && (
         <div className="motion-panel-enter competition-tab-panel" key="standings">
-        <Standings
-          groups={view.standings.groups || []}
-          accent={competition.accent_color}
-          slots={view.qualificationSlots}
-          canEdit={canManageCompetitions(profile)}
-          onSlotsChange={(value) => void setQualificationSlots(value)}
-        />
+          <StandingsPanel
+            groups={view.standings.groups || []}
+            slots={view.qualificationSlots}
+            canEdit={canManageCompetitions(profile)}
+            onSlotsChange={(value) => void setQualificationSlots(value)}
+          />
         </div>
       )}
       {tab === "games" && (
         <div className="motion-panel-enter competition-tab-panel" key="games">
-        <CompetitionGames
-          competition={competition}
-          view={view}
-          workspace={workspace}
-          organization={competition.organization}
-        />
+          <GamesPanel competition={competition} view={view} workspace={workspace} />
         </div>
       )}
       {tab === "knockout" && (
         <div className="motion-panel-enter competition-tab-panel" key="knockout">
-        <Knockout view={view} accent={competition.accent_color} />
+        <Knockout view={view} />
         </div>
       )}
       {tab === "scenarios" && (
         <div className="motion-panel-enter competition-tab-panel" key="scenarios">
-        <ScenarioPanel
-          edition={edition}
-          snapshot={view.standings}
-          qualificationSlots={view.qualificationSlots}
-        />
+          <ScenariosPanel edition={edition} snapshot={view.standings} qualificationSlots={view.qualificationSlots} />
         </div>
       )}
       {archiveOpen && createPortal((
@@ -1040,11 +530,11 @@ function CompetitionExplorer({
 }
 
 export function CompetitionsPage({ profile, workspace, client }) {
-  const [viewMode, setViewMode] = useState("active");
-  const [selectedEditionId, setSelectedEditionId] = useState("");
+  const [viewMode, setViewMode] = useRemembered("competition-view", "active", { allowed: ["active", "historical"] });
+  // The competition being followed stays selected on this device.
+  const [selectedEditionId, setSelectedEditionId] = useRemembered("competition-edition", "", { scope: "device" });
   const [modal, setModal] = useState(false);
   const [pendingDelete, setPendingDelete] = useState(null);
-  const [deleteError, setDeleteError] = useState("");
   const competitionEditions = Array.isArray(workspace.competitionEditions) ? workspace.competitionEditions : [];
   const competitions = Array.isArray(workspace.competitions) ? workspace.competitions : [];
   const competitionSources = Array.isArray(workspace.competitionSources) ? workspace.competitionSources : [];
@@ -1066,10 +556,27 @@ export function CompetitionsPage({ profile, workspace, client }) {
         .filter((item) => item.competition),
     [competitionEditions, competitions, viewMode],
   );
+  // A direct link (/campeonatos/<edition id>) opens that edition, in whichever list it lives.
+  const target = useDeepTarget("campeonatos");
+  useEffect(() => {
+    if (!target?.id) return;
+    const edition = competitionEditions.find((item) => String(item.id) === target.id);
+    if (!edition) return;
+    setViewMode(edition.status === "historical" ? "historical" : "active");
+    setSelectedEditionId(edition.id);
+  }, [target?.id, competitionEditions.length]);
   useEffect(() => {
     if (!available.some((item) => item.edition.id === selectedEditionId))
       setSelectedEditionId(available[0]?.edition.id || "");
   }, [available, selectedEditionId]);
+  const selectEdition = (id) => {
+    setSelectedEditionId(id);
+    openTarget("campeonatos", id);
+  };
+  const changeViewMode = (mode) => {
+    setViewMode(mode);
+    clearTarget("campeonatos");
+  };
   const selected =
     available.find((item) => item.edition.id === selectedEditionId) ||
     available[0];
@@ -1107,12 +614,14 @@ export function CompetitionsPage({ profile, workspace, client }) {
           A estrutura de Competições ainda não está disponível.
         </p>
       )}
-      <SegmentedControl
-        className="competition-view-tabs"
+      <CompetitionTabs
         label="Estado das competições"
-        items={[["active", "ATIVAS"], ["historical", "HISTÓRICO"]]}
+        items={[
+          ["active", "Ativas", competitionEditions.filter((edition) => edition.status !== "historical").length || null],
+          ["historical", "Histórico", competitionEditions.filter((edition) => edition.status === "historical").length || null],
+        ]}
         active={viewMode}
-        onChange={setViewMode}
+        onChange={changeViewMode}
       />
       {available.length ? (
         <>
@@ -1121,15 +630,15 @@ export function CompetitionsPage({ profile, workspace, client }) {
             aria-label="Selecionar competição"
           >
             {available.map(({ competition, edition }) => (
-              <div className="competition-selector-item" key={edition.id} style={{ "--competition-accent": competition.accent_color }}>
-              <button className={selected?.edition.id === edition.id ? "active" : ""} aria-pressed={selected?.edition.id === edition.id} onClick={() => setSelectedEditionId(edition.id)}>
+              <div className="competition-selector-item" key={edition.id}>
+              <button className={selected?.edition.id === edition.id ? "active" : ""} aria-pressed={selected?.edition.id === edition.id} onClick={() => selectEdition(edition.id)}>
                 <ClubLogo name={competition.name} url={competition.logo_url} className="competition-selector-logo" decorative />
                 <div className="competition-selector-copy">
                   <b>{competition.name}</b>
                   <small>{edition.label}{competition.organization ? ` · ${competition.organization}` : ""}</small>
                 </div>
               </button>
-              {canManageCompetitions(profile) && <button type="button" className="competition-delete-trigger" aria-label={`Excluir ${competition.name} · ${edition.label}`} title="Excluir competição" onClick={() => { setDeleteError(""); setPendingDelete({ competition, edition }); }}><svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg></button>}
+              {canManageCompetitions(profile) && <button type="button" className="competition-delete-trigger" aria-label={`Excluir ${competition.name} · ${edition.label}`} title="Excluir competição" onClick={() => setPendingDelete({ competition, edition })}><svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg></button>}
               </div>
             ))}
           </div>
@@ -1149,7 +658,7 @@ export function CompetitionsPage({ profile, workspace, client }) {
         <p className="competition-empty">Nenhuma competição nesta seção.</p>
       )}
       {viewMode === "historical" && (
-        <HistoryPanel editions={historicalEditions} />
+        <HistoryPanel editions={historicalEditions} workspace={workspace} />
       )}
       {modal && (
         <ImportCompetitionModal
@@ -1159,7 +668,22 @@ export function CompetitionsPage({ profile, workspace, client }) {
           close={() => setModal(false)}
         />
       )}
-      {pendingDelete && createPortal(<div className="competition-modal-layer" onMouseDown={(event) => event.target === event.currentTarget && setPendingDelete(null)}><section className="competition-delete-dialog" role="alertdialog" aria-modal="true"><span>EXCLUSÃO DEFINITIVA</span><h2>Excluir {pendingDelete.competition.name}?</h2><p>A edição <b>{pendingDelete.edition.label}</b> e os dados do provider serão removidos. Partidas e Agenda permanecem, apenas sem o vínculo da competição.</p>{deleteError && <p className="competition-error">{deleteError}</p>}<footer><button type="button" className="secondary" onClick={() => setPendingDelete(null)}>CANCELAR</button><button type="button" className="competition-danger" onClick={async () => { try { await deleteCompetitionEdition(client, profile, pendingDelete.edition); await workspace.refresh(); notify(`${pendingDelete.competition.name} excluída.`); setPendingDelete(null); } catch (cause) { setDeleteError(cause.message); } }}>EXCLUIR COMPETIÇÃO</button></footer></section></div>, document.body)}
+      {pendingDelete && (
+        <ConfirmDialog
+          kicker="EXCLUSÃO DEFINITIVA"
+          title={`Excluir ${pendingDelete.competition.name}?`}
+          confirmLabel="EXCLUIR COMPETIÇÃO"
+          onCancel={() => setPendingDelete(null)}
+          onConfirm={async () => {
+            await deleteCompetitionEdition(client, profile, pendingDelete.edition);
+            await workspace.refresh();
+            notify(`${pendingDelete.competition.name} excluída.`);
+            setPendingDelete(null);
+          }}
+        >
+          <p>A edição <b>{pendingDelete.edition.label}</b> e os dados do provider serão removidos. Partidas e Agenda permanecem, apenas sem o vínculo da competição.</p>
+        </ConfirmDialog>
+      )}
     </section>
   );
 }

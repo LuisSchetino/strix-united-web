@@ -112,6 +112,9 @@ export function createEaGateway({
         _fc27MatchType: matchType,
       }))),
       cached: settled.every(({ result }) => result.cached),
+      // A kind of match that could not be read is named, never hidden: without it the answer
+      // looks complete while a whole kind (the friendlies, say) is simply missing from it.
+      failedTypes: failures.map(({ matchType, error }) => ({ matchType, message: error?.message || "sem resposta", status: error?.status || 0 })),
       durationMs: Math.max(0, now() - startedAt),
     };
   };

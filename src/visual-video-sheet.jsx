@@ -52,6 +52,7 @@ const pieces = [
 
 const FRAMES = Number(new URLSearchParams(location.search).get("frames") || 8);
 const HEIGHT = Number(new URLSearchParams(location.search).get("h") || 300);
+const HEAD = Number(new URLSearchParams(location.search).get("head") || 0);
 
 function Piece({ piece }) {
   const [frames, setFrames] = useState([]);
@@ -64,7 +65,10 @@ function Piece({ piece }) {
       const total = timeline.totalFrames || 1;
       const out = [];
       for (let index = 0; index < FRAMES; index += 1) {
-        const frame = timeline.still ? 0 : Math.min(total - 1, Math.round(((index + 0.5) / FRAMES) * total));
+        // `head=2` samples the opening instead (frame 0, then evenly up to 2s): what the file's first frame, its thumbnail, looks like.
+        const frame = timeline.still ? 0 : HEAD > 0
+          ? Math.min(total - 1, Math.round((index / Math.max(1, FRAMES - 1)) * HEAD * (timeline.fps || 30)))
+          : Math.min(total - 1, Math.round(((index + 0.5) / FRAMES) * total));
         const canvas = document.createElement("canvas");
         canvas.width = timeline.width;
         canvas.height = timeline.height;

@@ -18,7 +18,7 @@ function describeSection(id, workspace, now) {
   }
   if (id === "related") {
     const related = describeTonightRelated(workspace, now);
-    if (related.saved && related.players.length) return { state: "ready", meta: count(related.players.length, "relacionado", "relacionados") };
+    if (related.saved && related.video.length) return { state: "ready", meta: count(related.video.length, "relacionado", "relacionados") };
     if (related.suggestion.length) return { state: "incomplete", meta: "Lista sugerida, falta salvar" };
     return { state: "empty", meta: "Sem escalação para sugerir" };
   }

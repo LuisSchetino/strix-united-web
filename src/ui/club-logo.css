@@ -33,6 +33,14 @@
   object-position:center 18%;
   border-radius:inherit;
 }
+/* A body shot cut out of its background, in a round token: the frame goes to where the head is
+   and closes in (the numbers come from the picture itself, see photo-focus.js), so what shows
+   is the head and shoulders instead of a torso without a face. */
+.club-logo.is-photo.has-focus img{
+  object-position:center var(--focus-top, 18%) !important;
+  transform:scale(var(--focus-zoom, 1));
+  transform-origin:var(--focus-x, 50%) var(--focus-y, 50%);
+}
 .club-logo.is-loading img{opacity:0}
 .club-logo-placeholder{
   position:absolute;
@@ -103,3 +111,8 @@
 }
 
 @media(prefers-reduced-motion:reduce){.club-logo img{transition:none}.club-logo-placeholder{animation:none}}
+
+/* The image always fills the square box and is fitted inside it. A crest taller
+   than wide (stars above the shield) used to keep its own height, overflow the
+   box and lose its bottom; pinned to the box, `contain` centres any proportion. */
+.club-logo img{position:absolute;inset:0;width:100%!important;height:100%!important;max-width:none;max-height:none}

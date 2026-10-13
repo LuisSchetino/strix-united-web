@@ -1,13 +1,13 @@
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { SIGNATURE_VIEWBOX, isMeaningfulSignature } from "./contract-core.js";
+import { INK, PEN_SVG } from "./contract-art.js";
 
 /**
  * Área de assinatura desenhada pelo usuário. Pointer Events cobrem mouse,
  * touch e caneta; os traços são guardados normalizados (viewBox 600×200), então
  * redimensionar a tela nunca deforma nem perde a assinatura.
  */
-// Ink on paper: the pad sits on the contract's letterhead sheet.
-const INK = "#15171b";
+// Ink on paper: the pad sits in the signature box of the contract sheet, in the sheet's ink.
 
 export const SignaturePad = forwardRef(function SignaturePad({ disabled = false, onChange }, ref) {
   const canvasRef = useRef(null);
@@ -30,11 +30,11 @@ export const SignaturePad = forwardRef(function SignaturePad({ disabled = false,
     context.setTransform(ratio, 0, 0, ratio, 0, 0);
     context.clearRect(0, 0, width, height);
     context.strokeStyle = INK;
-    context.lineWidth = 2.6;
-    context.lineCap = "round";
-    context.lineJoin = "round";
     const sx = width / SIGNATURE_VIEWBOX.width;
     const sy = height / SIGNATURE_VIEWBOX.height;
+    context.lineWidth = 3.2 * Math.min(sx, sy);
+    context.lineCap = "round";
+    context.lineJoin = "round";
     for (const stroke of strokesRef.current) {
       if (!stroke.length) continue;
       context.beginPath();
@@ -136,11 +136,8 @@ export const SignaturePad = forwardRef(function SignaturePad({ disabled = false,
         onPointerCancel={end}
         onContextMenu={(event) => event.preventDefault()}
       />
-      <span className="signature-pad-line" aria-hidden="true" />
       <span className="signature-pad-hint" aria-hidden="true">ASSINE AQUI</span>
-      <span className="signature-pen" aria-hidden="true">
-        <svg viewBox="0 0 32 32" width="32" height="32"><path d="M3 29 6.5 19.5 21 5a3.5 3.5 0 0 1 5 5L11.5 24.5Z" /><path d="M6.5 19.5l6 6M19 7l6 6" /></svg>
-      </span>
+      <span className="signature-pen" aria-hidden="true" dangerouslySetInnerHTML={{ __html: PEN_SVG }} />
     </div>
   );
 });

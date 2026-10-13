@@ -1,0 +1,163 @@
+/* ==========================================================================
+   Abertura · the season opens.
+   The Central's card at the scale of the screen: ink, the corner light, the
+   crest in focus, the season in display type and the now line. The screen is
+   two halves closed along that line; when it has been drawn they part and the
+   site is behind. One authored moment, about three seconds.
+   ========================================================================== */
+
+.season-opening {
+  --opening-part: 1900ms;
+  position: fixed;
+  inset: 0;
+  z-index: calc(var(--z-toast) + 100);
+  overflow: hidden;
+  color: var(--text-1);
+  cursor: pointer;
+}
+
+/* The two halves. Each carries its own content, so it leaves with it. */
+.season-opening-half {
+  position: absolute;
+  right: 0;
+  left: 0;
+  display: grid;
+  justify-items: center;
+  height: 50%;
+  padding: 0 var(--space-6);
+  background: var(--ink-0);
+  animation: season-part 900ms cubic-bezier(0.7, 0, 0.2, 1) var(--opening-part) both;
+}
+.season-opening-half.is-top {
+  top: 0;
+  --to: -100%;
+  align-content: end;
+  padding-bottom: clamp(28px, 5vh, 48px);
+  background:
+    radial-gradient(ellipse 70% 120% at 0% 0%, rgba(255, 255, 255, 0.06), transparent 70%),
+    repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.022) 0 1px, transparent 1px 46px),
+    var(--ink-0);
+}
+.season-opening-half.is-bottom {
+  bottom: 0;
+  --to: 100%;
+  align-content: start;
+  gap: var(--space-4);
+  padding-top: clamp(28px, 5vh, 44px);
+  background:
+    repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.022) 0 1px, transparent 1px 46px),
+    var(--ink-0);
+  text-align: center;
+}
+@keyframes season-part {
+  from { transform: none; }
+  to { transform: translateY(var(--to)); }
+}
+
+/* The crest comes into focus, as the kick-off does on the Central. */
+.season-opening-crest {
+  width: clamp(104px, 14vw, 136px);
+  height: clamp(104px, 14vw, 136px);
+  filter: drop-shadow(0 18px 34px rgba(0, 0, 0, 0.6));
+  animation: season-focus 700ms var(--motion-ease) 80ms both;
+}
+@keyframes season-focus {
+  from { opacity: 0; filter: blur(14px); transform: scale(0.94); }
+  60% { opacity: 1; }
+  to { opacity: 1; filter: drop-shadow(0 18px 34px rgba(0, 0, 0, 0.6)); transform: none; }
+}
+
+.season-opening h2 {
+  margin: 0;
+  font-size: clamp(38px, 7.4vw, 88px);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 0.95;
+  text-wrap: balance;
+  animation: season-copy 620ms var(--motion-ease) 320ms both;
+}
+.season-opening p {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  color: var(--text-2);
+  font-size: var(--text-label);
+  font-weight: 700;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  animation: season-copy 620ms var(--motion-ease) 520ms both;
+}
+.season-opening p span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-1);
+}
+@keyframes season-copy {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* The now line, drawn along the seam; it goes as the halves part. */
+.season-opening-line {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.9) 18%, rgba(255, 255, 255, 0.9) 82%, transparent);
+  transform-origin: left center;
+  animation:
+    season-line 800ms var(--motion-ease) 620ms both,
+    season-line-out 420ms ease-out var(--opening-part) forwards;
+  pointer-events: none;
+}
+@keyframes season-line {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+@keyframes season-line-out {
+  to { opacity: 0; }
+}
+
+.season-opening-skip {
+  position: absolute;
+  right: max(var(--space-6), env(safe-area-inset-right));
+  bottom: max(var(--space-6), env(safe-area-inset-bottom));
+  min-height: var(--hit);
+  padding: 0 var(--space-4);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-3);
+  font-size: var(--text-label);
+  font-weight: 800;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  animation:
+    season-copy 500ms var(--motion-ease) 700ms both,
+    season-line-out 300ms ease-out var(--opening-part) forwards;
+  transition: color var(--motion-micro), border-color var(--motion-micro);
+}
+.season-opening-skip:hover,
+.season-opening-skip:focus-visible {
+  border-color: var(--line-3);
+  color: var(--text-1);
+}
+
+/* Reduced motion: the same composition, still, and then it is simply gone. */
+.season-opening.is-still .season-opening-half,
+.season-opening.is-still .season-opening-crest,
+.season-opening.is-still h2,
+.season-opening.is-still p,
+.season-opening.is-still .season-opening-line,
+.season-opening.is-still .season-opening-skip {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .season-opening *,
+  .season-opening-half {
+    animation: none !important;
+  }
+}

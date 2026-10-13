@@ -1,122 +1,125 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { IconCheck, IconPlus } from "@tabler/icons-react";
 import { canManageMedia } from "../../access.js";
-import { describeTonightRelated } from "../media/related-night-core.js";
+import { GROUP_ORDER, describeTonightRelated, positionGroup } from "../media/related-night-core.js";
+import { saoPauloDay } from "./agenda-time.js";
 import "./night-related.css";
 
+const GROUP_LABEL = Object.freeze({ GOL: "GOLEIROS", DEF: "DEFESA", MEI: "MEIO-CAMPO", ATA: "ATAQUE" });
+const idsOf = (players) => players.map((player) => player.id);
+
+/**
+ * The night's list: the whole squad, by sector, each name a switch. Tapping a
+ * name puts it in or takes it out; the list on screen is a draft until SALVAR.
+ */
 export function NightRelatedEditor({ workspace, profile, compact = false }) {
   const canEdit = canManageMedia(profile);
   const snapshot = useMemo(
     () => describeTonightRelated(workspace),
     [workspace.nightRelated, workspace.agenda, workspace.players],
   );
-  const [selected, setSelected] = useState(() => (
-    snapshot.saved
-      ? snapshot.players.map((player) => player.id)
-      : snapshot.suggestion.map((player) => player.id)
-  ));
+  const savedIds = snapshot.saved ? idsOf(snapshot.players) : [];
+  const suggestionIds = idsOf(snapshot.suggestion);
+  const savedKey = snapshot.saved ? `saved:${savedIds.join(",")}` : "";
+  const suggestionKey = suggestionIds.join(",");
+  const [selected, setSelected] = useState(() => (snapshot.saved ? savedIds : suggestionIds));
   const [dirty, setDirty] = useState(false);
+  const dirtyRef = useRef(false);
+  dirtyRef.current = dirty;
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
 
+  // A saved list replaces the draft only when the saved list itself changes (first
+  // load, a save, someone else saving). An edit in progress is never overwritten by
+  // the same saved list arriving again — that used to undo every tap after a save.
   useEffect(() => {
-    if (snapshot.saved) {
-      setSelected(snapshot.players.map((player) => player.id));
-      setDirty(false);
-    } else if (!dirty) {
-      setSelected(snapshot.suggestion.map((player) => player.id));
-    }
-  }, [snapshot.saved, snapshot.players, snapshot.suggestion, dirty]);
+    if (!snapshot.saved) return;
+    setSelected(savedIds);
+    setDirty(false);
+  }, [savedKey]);
+  useEffect(() => {
+    if (!snapshot.saved && !dirtyRef.current) setSelected(suggestionIds);
+  }, [suggestionKey, snapshot.saved]);
 
   const roster = (workspace.players || []).filter((player) => player.is_active);
   const selectedSet = new Set(selected);
-  const selectedPlayers = roster.filter((player) => selectedSet.has(player.id));
-  const available = roster.filter((player) => !selectedSet.has(player.id));
+  const groups = GROUP_ORDER.map((id) => ({
+    id,
+    players: roster
+      .filter((player) => (positionGroup((player.positions || [])[0] || "") || "MEI") === id)
+      .sort((left, right) => String(left.display_name).localeCompare(String(right.display_name), "pt-BR")),
+  })).filter((group) => group.players.length);
+  const count = roster.filter((player) => selectedSet.has(player.id)).length;
 
-  const toggle = (id) => {
+  const edit = (next, note = "") => {
     setDirty(true);
-    setSelected((current) => (
-      current.includes(id) ? current.filter((item) => item !== id) : [...current, id]
-    ));
-    setMessage("");
+    setSelected(next);
+    setMessage(note);
   };
-
-  const fillFromLineups = () => {
-    setDirty(true);
-    setSelected(snapshot.suggestion.map((player) => player.id));
-    setMessage(snapshot.suggestion.length
-      ? "Sugestão das escalações. Revise e salve para virar a lista oficial."
-      : "Nenhuma escalação de hoje para sugerir.");
-  };
-
-  const addMissing = () => {
-    setDirty(true);
-    setSelected((current) => [...new Set([
-      ...current,
-      ...snapshot.missingFromSaved.map((player) => player.id),
-    ])]);
-    setMessage("Jogadores das escalações adicionados. Salve para confirmar.");
-  };
+  const toggle = (id) => edit(selectedSet.has(id) ? selected.filter((item) => item !== id) : [...selected, id]);
+  const fillFromLineups = () => edit(suggestionIds, suggestionIds.length
+    ? "Sugestão das escalações de hoje. Revise e salve."
+    : "Nenhuma escalação de hoje para sugerir.");
+  const addMissing = () => edit([...new Set([...selected, ...idsOf(snapshot.missingFromSaved)])], "Jogadores das escalações adicionados. Salve para confirmar.");
 
   const save = async () => {
     if (!canEdit || !workspace.saveNightRelated) return;
     setBusy(true);
     setMessage("");
     try {
-      await workspace.saveNightRelated(snapshot.day || saoPauloDay(), selected);
-      setMessage("Relacionados da noite salvos.");
+      await workspace.saveNightRelated(snapshot.day || saoPauloDay(new Date()), selected);
+      setDirty(false);
+      setMessage("Lista da noite salva.");
     } catch (error) {
-      setMessage(error.message || "Não foi possível salvar os relacionados.");
+      setMessage(error.message || "Não foi possível salvar a lista.");
     } finally {
       setBusy(false);
     }
   };
 
+  const state = dirty ? "Alterações não salvas" : snapshot.saved ? "Lista salva" : "Rascunho";
   return (
-    <section className={`night-related${compact ? " is-compact" : ""}`}>
-      {!compact && (
+    <section className={`night-list${compact ? " is-compact" : ""}`}>
       <header>
         <div>
-          <span>RELACIONADOS DA NOITE</span>
-          <h2>{snapshot.day || saoPauloDay()}</h2>
-          <p>Salve a lista para gerar o vídeo.</p>
+          {!compact && <span>RELACIONADOS DA NOITE · {snapshot.day || saoPauloDay(new Date())}</span>}
+          <p><b>{String(count).padStart(2, "0")}</b> {count === 1 ? "nome na lista" : "nomes na lista"}</p>
         </div>
-        <b>{selected.length}</b>
+        <em className={dirty ? "is-dirty" : ""}>{state}</em>
       </header>
-      )}
       {snapshot.saved && snapshot.missingFromSaved.length > 0 && (
-        <div className="night-related-warn">
-          <p>Escalação contém {snapshot.missingFromSaved.map((player) => player.name).join(", ")} fora desta lista.</p>
-          {canEdit && (
-            <button type="button" className="secondary" onClick={addMissing}>ADICIONAR À LISTA</button>
-          )}
+        <div className="night-list-warn" role="status">
+          <p>A escalação de hoje tem {snapshot.missingFromSaved.map((player) => player.name).join(", ")} fora desta lista.</p>
+          {canEdit && <button type="button" className="secondary" onClick={addMissing}>ADICIONAR À LISTA</button>}
         </div>
       )}
-      <div className="night-related-selected">
-        {selectedPlayers.length ? selectedPlayers.map((player) => (
-          <button key={player.id} type="button" className="is-on" disabled={!canEdit} onClick={() => toggle(player.id)}>
-            {player.display_name}
-            <small>{(player.positions || []).join(" · ") || "—"}</small>
-          </button>
-        )) : <p>Nenhum jogador selecionado.</p>}
-      </div>
-      {canEdit && available.length > 0 && (
-        <div className="night-related-pool">
-          {available.map((player) => (
-            <button key={player.id} type="button" onClick={() => toggle(player.id)}>
-              {player.display_name}
-            </button>
-          ))}
-        </div>
-      )}
+      {groups.length ? groups.map((group) => (
+        <fieldset key={group.id} className="night-list-group">
+          <legend>{GROUP_LABEL[group.id]}<small>{group.players.filter((player) => selectedSet.has(player.id)).length}/{group.players.length}</small></legend>
+          <div>
+            {group.players.map((player) => {
+              const on = selectedSet.has(player.id);
+              return (
+                <button key={player.id} type="button" className={on ? "is-on" : ""} aria-pressed={on} disabled={!canEdit} onClick={() => toggle(player.id)}>
+                  <i aria-hidden="true">{on ? <IconCheck size={13} stroke={2.6} /> : <IconPlus size={13} stroke={2.2} />}</i>
+                  <b>{player.display_name}</b>
+                  <small>{(player.positions || []).join(" · ") || "—"}</small>
+                </button>
+              );
+            })}
+          </div>
+        </fieldset>
+      )) : <p className="night-list-note">Nenhum jogador ativo no elenco.</p>}
       {canEdit && (
-        <div className="night-related-actions">
-          <button type="button" className="secondary" onClick={fillFromLineups}>PREENCHER PELAS ESCALAÇÕES</button>
-          <button type="button" className="primary" disabled={busy} onClick={() => void save()}>
-            {busy ? "SALVANDO…" : "SALVAR"}
+        <footer>
+          <button type="button" className="night-list-link" onClick={fillFromLineups}>PREENCHER PELAS ESCALAÇÕES</button>
+          <button type="button" className="night-list-link" onClick={() => edit([])} disabled={!count}>LIMPAR</button>
+          <button type="button" className="primary" disabled={busy || (!dirty && snapshot.saved)} onClick={() => void save()}>
+            {busy ? "SALVANDO…" : "SALVAR LISTA"}
           </button>
-        </div>
+        </footer>
       )}
-      {message && <p className="night-related-note">{message}</p>}
+      {(message || (canEdit && (dirty || !snapshot.saved))) && <p className="night-list-note" role="status">{message || "Salve a lista para gerar o vídeo."}</p>}
     </section>
   );
 }

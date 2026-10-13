@@ -1,8 +1,9 @@
-import { CONTRACT_COMMITMENT, CONTRACT_SEASON, SIGNATURE_VIEWBOX, contractDocumentId } from "./contract-core.js";
+import { CONTRACT_SEASON, contractDocumentId } from "./contract-core.js";
 
-// The official copy of the contract: an A4 vector document drawn from the
-// signed payload itself — letterhead, identification, clauses, the signature
-// stroke, the document id and a paginated footer. Not a screenshot of the page.
+// The official copy of the contract: one A4 page carrying the very sheet the
+// site shows (rasterised from the signed payload by contract-render.jsx at
+// print resolution), with an invisible text layer on top so the document can
+// be searched, selected and read by assistive technology.
 
 const cp1252 = new Map(Object.entries({
   "€": 0x80, "‚": 0x82, "ƒ": 0x83, "„": 0x84, "…": 0x85, "†": 0x86, "‡": 0x87, "ˆ": 0x88,
@@ -22,62 +23,9 @@ function winAnsiBytes(value) {
   return bytes;
 }
 
-const INK = "0.08 0.09 0.10";
-const MUTED = "0.42 0.44 0.47";
-const HAIR = "0.80 0.80 0.78";
-const PAPER = "0.985 0.982 0.972";
-
 const pdfText = (value) => `<${winAnsiBytes(value).map((byte) => byte.toString(16).padStart(2, "0")).join("")}>`;
-const line = (text, x, y, size, font = "F1", color = INK) => `${color} rg BT /${font} ${size} Tf ${x} ${y} Td ${pdfText(text)} Tj ET`;
-const rule = (x1, y1, x2, y2, color = HAIR, width = 0.7) => `${color} RG ${width} w ${x1} ${y1} m ${x2} ${y2} l S`;
-
-function dateTimeLabel(iso) {
-  const date = new Date(iso);
-  if (!Number.isFinite(date.getTime())) return "DATA INDISPONÍVEL";
-  return new Intl.DateTimeFormat("pt-BR", {
-    timeZone: "America/Sao_Paulo", dateStyle: "long", timeStyle: "short",
-  }).format(date).toLocaleUpperCase("pt-BR");
-}
-
-function wrapWords(value, limit = 96) {
-  const words = String(value || "").split(/\s+/).filter(Boolean);
-  const lines = [];
-  let current = "";
-  for (const word of words) {
-    const next = current ? `${current} ${word}` : word;
-    if (next.length > limit && current) { lines.push(current); current = word; }
-    else current = next;
-  }
-  if (current) lines.push(current);
-  return lines;
-}
-
-// Signature box on the page (points). The stroke keeps the pad's 600×200 proportions.
-const SIGN = Object.freeze({ left: 76, base: 246, width: 443, height: 102 });
-
-function signatureCommands(contract) {
-  const path = contract?.signature?.d;
-  if (typeof path !== "string") return "";
-  const tokens = [...path.matchAll(/([ML])(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)/g)];
-  if (!tokens.length) return "";
-  const commands = [];
-  let hasSegment = false;
-  for (const [, kind, rawX, rawY] of tokens) {
-    const x = SIGN.left + (Number(rawX) / SIGNATURE_VIEWBOX.width) * SIGN.width;
-    const y = SIGN.base + SIGN.height - (Number(rawY) / SIGNATURE_VIEWBOX.height) * SIGN.height;
-    if (kind === "M") {
-      if (hasSegment) commands.push("S");
-      // PDF path operators m/l use absolute page coordinates (unlike SVG's lowercase forms).
-      commands.push(`${x.toFixed(2)} ${y.toFixed(2)} m`);
-      hasSegment = false;
-      continue;
-    }
-    commands.push(`${x.toFixed(2)} ${y.toFixed(2)} l`);
-    hasSegment = true;
-  }
-  if (hasSegment) commands.push("S");
-  return commands.join(" ");
-}
+const PAGE = Object.freeze({ width: 595, height: 842 });
+const fixed = (value) => (Math.round(value * 100) / 100).toString();
 
 /** Serialises PDF objects whose bodies may mix text and binary chunks. */
 function assemble(objects) {
@@ -95,113 +43,63 @@ function assemble(objects) {
   });
   const xref = size;
   push(`xref\n0 ${objects.length + 1}\n0000000000 65535 f \n${offsets.map((offset) => `${String(offset).padStart(10, "0")} 00000 n \n`).join("")}`);
-  push(`trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`);
+  push(`trailer\n<< /Size ${objects.length + 1} /Root 1 0 R /Info 8 0 R >>\nstartxref\n${xref}\n%%EOF`);
   const pdf = new Uint8Array(size);
   let cursor = 0;
   chunks.forEach((chunk) => { pdf.set(chunk, cursor); cursor += chunk.length; });
   return pdf;
 }
 
+const pdfDate = (iso) => {
+  const date = new Date(iso);
+  const pad = (value) => String(value).padStart(2, "0");
+  return `D:${date.getUTCFullYear()}${pad(date.getUTCMonth() + 1)}${pad(date.getUTCDate())}${pad(date.getUTCHours())}${pad(date.getUTCMinutes())}${pad(date.getUTCSeconds())}Z`;
+};
+
 /**
  * The signed contract as a one-page A4 document.
- * `crest` (optional) is the club crest as JPEG bytes: { bytes, width, height }.
+ *  - `page`: the sheet as JPEG bytes { bytes, width, height } (required: the
+ *    document is never printed without the sheet);
+ *  - `words`: the sheet's words in sheet pixels { text, x, y (baseline), size, width, bold };
+ *  - `sheet`: the sheet's size in pixels (default 794×1123).
  */
-export function buildSignedContractPdf(contract, identity = {}, { crest = null } = {}) {
+export function buildSignedContractPdf(contract, identity = {}, { page = null, words = [], sheet = { width: 794, height: 1123 } } = {}) {
   if (!contract?.signature?.d || !Number.isFinite(Date.parse(contract.signedAt))) {
     throw new Error("signed_contract_unavailable");
   }
-  const name = String(identity.name || "MEMBRO STRIX").toLocaleUpperCase("pt-BR");
-  const role = String(identity.role || "—");
+  if (!(page?.bytes?.length > 0 && page.width > 0 && page.height > 0)) throw new Error("contract_sheet_unavailable");
   const season = String(contract.season || CONTRACT_SEASON);
   const documentId = contractDocumentId(contract);
-  const signedLabel = dateTimeLabel(contract.signedAt);
-  const hasCrest = crest?.bytes?.length > 0 && crest.width > 0 && crest.height > 0;
+  const sx = PAGE.width / sheet.width;
+  const sy = PAGE.height / sheet.height;
 
-  const commands = [
-    // Paper and a thin frame inside the margin.
-    `q ${PAPER} rg 0 0 595 842 re f Q`,
-    `${HAIR} RG 0.6 w 32 32 531 778 re S`,
-  ];
-  // Letterhead
-  const crestSize = 50;
-  const textLeft = hasCrest ? 56 + crestSize + 14 : 56;
-  if (hasCrest) commands.push(`q ${crestSize} 0 0 ${crestSize} 56 740 cm /Crest Do Q`);
-  commands.push(
-    line("STRIX UNITED", textLeft, 772, 16, "F2"),
-    line("FC 27  ·  SÃO PAULO  ·  TEMPORADA " + season, textLeft, 756, 7.5, "F2", MUTED),
-    line(`Nº FC27-${season}`, 404, 772, 9, "F2"),
-    line(documentId, 404, 758, 8, "F1", MUTED),
-    rule(56, 726, 539, 726, INK, 1.1),
-    line("CONTRATO DE VÍNCULO", 56, 694, 19, "F2"),
-    line("Instrumento particular de vínculo esportivo do elenco Strix United FC27.", 56, 678, 9, "F1", MUTED),
-  );
-  // Identification ledger: two columns, three rows.
-  const fields = [
-    ["VINCULADO", name], ["IDENTIFICAÇÃO", identity.handle || "—"],
-    ["FUNÇÃO", role], ["TEMPORADA", season],
-    ["ASSINADO EM", signedLabel], ["DOCUMENTO", documentId],
-  ];
-  let rowY = 646;
-  for (let index = 0; index < fields.length; index += 2) {
-    commands.push(rule(56, rowY + 14, 539, rowY + 14));
-    fields.slice(index, index + 2).forEach(([label, value], column) => {
-      const x = column ? 304 : 56;
-      commands.push(line(label, x, rowY + 2, 6.5, "F2", MUTED), line(value, x, rowY - 10, 9.5, "F2"));
+  const commands = [`q ${PAGE.width} 0 0 ${PAGE.height} 0 0 cm /Sheet Do Q`];
+  // Invisible text (render mode 3) over each word, sized to its box on the sheet.
+  const layer = words
+    .filter((word) => word?.text && Number.isFinite(word.x) && Number.isFinite(word.y) && word.size > 0)
+    .map((word) => {
+      const size = word.size * sy;
+      const natural = word.text.length * size * 0.5;
+      const stretch = natural > 0 ? Math.max(30, Math.min(300, ((word.width * sx) / natural) * 100)) : 100;
+      return `BT /${word.bold ? "F2" : "F1"} ${fixed(size)} Tf ${fixed(stretch)} Tz ${fixed(word.x * sx)} ${fixed(PAGE.height - word.y * sy)} Td ${pdfText(word.text)} Tj ET`;
     });
-    rowY -= 30;
-  }
-  commands.push(rule(56, rowY + 14, 539, rowY + 14));
-  // Clauses
-  const clauses = [
-    ["DAS PARTES", `Strix United FC27, agremiação com sede em São Paulo, representada pela sua direção, e o vinculado identificado acima ajustam este contrato, que se rege pelas cláusulas seguintes.`],
-    ["CLÁUSULA 1ª · DO OBJETO", `O vinculado integra o elenco do Strix United na temporada ${season}, na função ${role}, em caráter exclusivo para as atividades do clube nesta temporada.`],
-    ["CLÁUSULA 2ª · DO COMPROMISSO", CONTRACT_COMMITMENT],
-    ["CLÁUSULA 3ª · DO ACEITE", `A assinatura abaixo registra o aceite no perfil autenticado, em ${signedLabel}. Foro de São Paulo.`],
-  ];
-  let cursor = rowY - 6;
-  for (const [title, body] of clauses) {
-    commands.push(line(title, 56, cursor, 7.5, "F2"));
-    cursor -= 13;
-    for (const text of wrapWords(body)) {
-      commands.push(line(text, 56, cursor, 9.2, "F1"));
-      cursor -= 12;
-    }
-    cursor -= 5;
-  }
-  // Signature block
-  commands.push(
-    line("ASSINATURA DO VINCULADO", SIGN.left, 360, 7, "F2", MUTED),
-    `${INK} RG 1.9 w 1 J 1 j`,
-    signatureCommands(contract),
-    rule(SIGN.left, 236, SIGN.left + SIGN.width, 236, INK, 0.8),
-    line(name, SIGN.left, 218, 11, "F2"),
-    line(`${identity.handle ? `${identity.handle}  ·  ` : ""}SÃO PAULO  ·  TEMPORADA ${season}`, SIGN.left, 203, 7.5, "F1", MUTED),
-    line("REGISTRO", 404, 218, 6.5, "F2", MUTED),
-    line(documentId, 404, 206, 8.5, "F2"),
-  );
-  // Footer
-  commands.push(
-    rule(56, 74, 539, 74),
-    line("Documento gerado no STRIX FC27 a partir do aceite registrado no perfil autenticado do vinculado.", 56, 58, 7, "F1", MUTED),
-    line("Página 1 de 1", 494, 58, 7, "F2", MUTED),
-  );
+  if (layer.length) commands.push("3 Tr", ...layer, "0 Tr");
 
-  const stream = commands.filter(Boolean).join("\n");
-  const resources = `<< /Font << /F1 5 0 R /F2 6 0 R >>${hasCrest ? " /XObject << /Crest 7 0 R >>" : ""} >>`;
+  const stream = commands.join("\n");
+  const title = `Contrato de vínculo · Strix United FC27 · ${season}`;
   const objects = [
-    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Catalog /Pages 2 0 R /Lang (pt-BR) >>",
     "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-    `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources ${resources} /Contents 4 0 R >>`,
-    `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`,
+    `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PAGE.width} ${PAGE.height}] /Resources << /Font << /F1 5 0 R /F2 6 0 R >> /XObject << /Sheet 7 0 R >> >> /Contents 4 0 R >>`,
+    `<< /Length ${new TextEncoder().encode(stream).length} >>\nstream\n${stream}\nendstream`,
     "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
     "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>",
-  ];
-  if (hasCrest) {
-    objects.push([
-      `<< /Type /XObject /Subtype /Image /Width ${crest.width} /Height ${crest.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${crest.bytes.length} >>\nstream\n`,
-      crest.bytes instanceof Uint8Array ? crest.bytes : new Uint8Array(crest.bytes),
+    [
+      `<< /Type /XObject /Subtype /Image /Width ${page.width} /Height ${page.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${page.bytes.length} >>\nstream\n`,
+      page.bytes instanceof Uint8Array ? page.bytes : new Uint8Array(page.bytes),
       "\nendstream",
-    ]);
-  }
+    ],
+    `<< /Title ${pdfText(title)} /Author ${pdfText(String(identity.name || "Strix United FC27"))} /Subject ${pdfText(`Registro ${documentId}`)} /Creator ${pdfText("STRIX FC27")} /CreationDate (${pdfDate(contract.signedAt)}) >>`,
+  ];
   return assemble(objects);
 }

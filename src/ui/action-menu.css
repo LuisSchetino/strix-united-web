@@ -63,11 +63,11 @@
   color:#fff;
   outline:0;
 }
-.action-menu-popover>button.is-danger{color:#e88996}
+.action-menu-popover>button.is-danger{color:#b0b0b0}
 .action-menu-popover>button.is-danger:hover,
 .action-menu-popover>button.is-danger:focus-visible{
   background:#2a1518;
-  color:#ffb4be;
+  color:#d7d7d7;
 }
 @keyframes action-menu-in{
   from{opacity:0;transform:translateY(-4px) scale(.97)}

@@ -115,3 +115,90 @@ test("seleciona a árvore eliminatória mais completa sem depender da competiç�
   const final = { sourceKind: "knockout", source: "final", fetchedAt: "2026-08-13T19:00:00Z", knockout: { currentStage: "Final", hasStrix: true, fixtures: [...quarterfinal.knockout.fixtures, { roundLabel: "Semifinais", homeTeamName: "A0", awayTeamName: "A1", status: "completed", homeScore: 2, awayScore: 1 }, { roundLabel: "Semifinais", homeTeamName: "A2", awayTeamName: "STRIX UNITED", status: "completed", homeScore: 0, awayScore: 2 }, { roundLabel: "Final", homeTeamName: "A0", awayTeamName: "STRIX UNITED", status: "scheduled", homeScore: null, awayScore: null }] } };
   assert.equal(selectPreferredKnockoutPreview([quarterfinal, final]), final);
 });
+
+test("the provider's list of tournaments in progress is read card by card", async () => {
+  const { parseTournamentList, TOURNAMENT_LISTS } = await import("../shared/competition-providers.js");
+  const html = `<div class="torneios-lista">
+    <div class="torneio-card torneio-item"><div class="torneio-logo-box"><img src="src/image/proclubs/Torneios/Logo A 1.png" alt=""></div>
+      <div class="torneio-info"><div class="torneio-title"><h3>P11 - CHAMPIONS TROPHY</h3><span class="badge-purple">EM ANDAMENTO</span></div>
+      <div class="torneio-meta"><div><span>Início<br><strong>05/10/2026</strong></span></div><div><span>Times<br><strong>16</strong></span></div><div><span>Plataforma<br><strong>PS5</strong></span></div></div></div>
+      <div class="torneio-premio"><a href="fifa.php?file=classificacao&campeonato=123" class="btn-torneio">VER</a></div></div>
+    <div class="modal fade" id="modalTorneio123"><a href="fifa.php?file=classificacao&campeonato=123">dup</a></div>
+    <div class="torneio-card torneio-item"><h3>COPA &amp; LIGA</h3><a href="fifa.php?file=classificacao&amp;campeonato=122">VER</a></div>
+    <div class="torneio-card torneio-item"><h3>SEM LINK</h3></div>
+  </div>`;
+  const list = parseTournamentList(html, TOURNAMENT_LISTS.ccb);
+  assert.deepEqual(list.map((item) => item.id), ["123", "122"]);
+  assert.equal(list[0].name, "P11 - CHAMPIONS TROPHY");
+  assert.equal(list[0].teams, 16);
+  assert.equal(list[0].startsAt, "05/10/2026");
+  assert.equal(list[0].platform, "PS5");
+  assert.equal(list[0].url, "https://ccbclubs.com.br/fifa.php?file=classificacao&campeonato=123");
+  assert.equal(list[0].logo, "https://ccbclubs.com.br/src/image/proclubs/Torneios/Logo%20A%201.png");
+  assert.equal(list[1].name, "COPA & LIGA");
+  assert.equal(validateCompetitionUrl(list[1].url).competitionId, "122");
+});
+
+test("discovery marks a tournament only when its table was read: unreadable tables stay unknown", async () => {
+  const { discoverTournaments } = await import("../shared/competition-bundle.js");
+  const list = `<div class="torneio-card torneio-item"><h3>TORNEIO X</h3><a href="fifa.php?file=classificacao&campeonato=77">VER</a></div>`;
+  const requested = [];
+  const loadPage = async (url) => {
+    requested.push(String(url));
+    return String(url).includes("file=torneio") ? list : "<html><body>sem tabela</body></html>";
+  };
+  const result = await discoverTournaments("ccb", loadPage);
+  assert.equal(requested[0], "https://ccbclubs.com.br/fifa.php?file=torneio&status=andamento");
+  assert.equal(result.tournaments.length, 1);
+  assert.equal(result.tournaments[0].id, "77");
+  assert.equal(result.tournaments[0].strix, null, "tabela vazia ou ilegível não vira 'não participa'");
+  await assert.rejects(() => discoverTournaments("desconhecido", loadPage), /Provider não suportado/);
+});
+
+test("an edition is read page by page: a failed page is retried, and what still fails is reported", async () => {
+  const { assembleCompetitionBundle } = await import("../shared/competition-bundle.js");
+  const base = "https://ccbclubs.com.br/fifa.php?file=classificacao&campeonato=77";
+  const group = (number, strix = false) => ({
+    sourceKind: "standings", externalCompetitionId: "77", source: `${base}&grupo=${number}`,
+    groups: [{ name: `Grupo ${number}`, isStrixGroup: strix, standings: [] }],
+    fixtures: [{ externalMatchId: `g${number}-1` }], relatedSourceUrls: [],
+  });
+  const attempts = {};
+  const progress = [];
+  const loadPreview = async (url) => {
+    attempts[url] = (attempts[url] || 0) + 1;
+    if (url === `${base}&grupo=2`) return { ...group(2, true), relatedSourceUrls: [`${base}&grupo=1`, `${base}&grupo=3`, `${base}&grupo=4`] };
+    if (url === `${base}&grupo=3` && attempts[url] === 1) throw new Error("provider_timeout");
+    if (url === `${base}&grupo=4`) throw new Error("provider_http_503");
+    return group(Number(new URL(url).searchParams.get("grupo")));
+  };
+  const bundle = await assembleCompetitionBundle(`${base}&grupo=2`, loadPreview, { concurrency: 2, onProgress: (state) => progress.push(`${state.done}/${state.total}`) });
+  assert.deepEqual(bundle.groups.map((item) => item.name), ["Grupo 1", "Grupo 2", "Grupo 3"], "grupos na ordem natural, com o que foi lido na segunda tentativa");
+  assert.equal(bundle.groups.find((item) => item.isStrixGroup).name, "Grupo 2");
+  assert.equal(attempts[`${base}&grupo=3`], 2);
+  assert.deepEqual(bundle.sourceReport, { expected: 4, failed: 1, failedUrls: [`${base}&grupo=4`] });
+  assert.equal(progress[0], "1/4");
+  assert.equal(progress.at(-1), "4/4");
+});
+
+test("the page reader only opens provider pages: a competition page or the tournament list", async () => {
+  const { validateProviderPageUrl, TOURNAMENT_LISTS } = await import("../shared/competition-providers.js");
+  assert.equal(validateProviderPageUrl(TOURNAMENT_LISTS.ccb), TOURNAMENT_LISTS.ccb);
+  assert.equal(validateProviderPageUrl("https://ccbclubs.com.br/fifa.php?file=classificacao&campeonato=122&grupo=2#rodadas"), "https://ccbclubs.com.br/fifa.php?file=classificacao&campeonato=122&grupo=2");
+  for (const url of ["https://ccbclubs.com.br/fifa.php?file=torneio&status=encerrado", "https://ccbclubs.com.br/admin.php", "https://example.com/fifa.php?file=classificacao&campeonato=1", "http://ccbclubs.com.br/fifa.php?file=classificacao&campeonato=1", "nada"]) {
+    assert.throws(() => validateProviderPageUrl(url), undefined, url);
+  }
+});
+
+test("a sync keeps the stored copy of a competition logo instead of going back to the provider original", async () => {
+  const { competitionLogoStem, isStoredCompetitionLogo, logoAfterSync } = await import("../shared/competition-logo.js");
+  const stored = "https://x.supabase.co/storage/v1/object/public/fc27-team-assets/competitions/ccb-123-0a1b2c3d.webp";
+  const original = "https://ccbclubs.com.br/src/image/proclubs/Torneios/Logo.png";
+  assert.equal(isStoredCompetitionLogo(stored), true);
+  assert.equal(isStoredCompetitionLogo(original), false);
+  assert.equal(logoAfterSync(stored, original), stored);
+  assert.equal(logoAfterSync(original, "https://ccbclubs.com.br/novo.png"), "https://ccbclubs.com.br/novo.png");
+  assert.equal(logoAfterSync(null, null), null);
+  assert.match(competitionLogoStem("ccb", "123", original), /^competitions\/ccb-123-[0-9a-f]{8}$/);
+  assert.notEqual(competitionLogoStem("ccb", "123", original), competitionLogoStem("ccb", "123", `${original}?v=2`));
+});

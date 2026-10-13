@@ -9,7 +9,7 @@ import { NEXT_CLUBS_BRAND } from "../brand.js";
 export function NextClubsSignature() {
   return (
     <div className="next-clubs-signature" aria-label="Competições powered by Next Clubs">
-      <img src={NEXT_CLUBS_BRAND.logo} alt="" width="1087" height="384" loading="lazy" decoding="async" />
+      <img src={NEXT_CLUBS_BRAND.logo} alt="" width="1407" height="385" loading="lazy" decoding="async" />
       <i aria-hidden="true" />
       <div>
         <span>Powered by <b>Next Clubs</b></span>

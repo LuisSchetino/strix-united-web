@@ -49,21 +49,24 @@ test("mobile history uses cards, sheet and horizontal swipe without page table o
   assert.match(css, /padding-bottom:env\(safe-area-inset-bottom\)/);
 });
 
-test("competition mobile selector, sticky standings and round navigation stay bounded", async () => {
-  const [source, css] = await Promise.all([
+test("competition on a phone: the table drops columns instead of scrolling sideways, names wrap, rounds stay bounded", async () => {
+  const [source, views, css, page] = await Promise.all([
     read("src/features/competitions/CompetitionsPage.jsx"),
+    read("src/features/competitions/competition-views.jsx"),
     read("src/features/competitions/competitions.css"),
+    read("src/features/competitions/competition-page.css"),
   ]);
   assert.match(source, /bracket-round-nav/);
   assert.match(source, /data-mobile-active/);
-  assert.match(source, /SegmentedControl/);
+  assert.match(source, /CompetitionTabs/);
   assert.match(css, /scroll-snap-type: x proximity/);
-  assert.match(css, /-webkit-line-clamp: 2/);
-  assert.match(css, /\.standings-table > header > \*:nth-child\(3\)/);
-  assert.match(css, /column-gap: 0/);
-  // The club column stays put while the numbers scroll.
-  assert.match(css, /position: sticky;/);
-  assert.match(css, /--standings-row-bg/);
+  // Secondary columns leave on a narrow screen; nothing is hidden behind a sideways scroll.
+  assert.match(page, /\.cx-table \.is-wide \{\s*display: none;/);
+  assert.doesNotMatch(page, /overflow-x: (auto|scroll)/);
+  // Club names are never cut: no ellipsis in the competition views.
+  assert.doesNotMatch(page, /text-overflow: ellipsis/);
+  assert.match(page, /\.cx-fixture-club b \{[^}]*overflow-wrap: anywhere/);
+  assert.match(views, /function FixtureLine/);
   assert.match(css, /\.bracket-round\[data-mobile-active="true"\]/);
   assert.match(source, /function BracketConnectors/);
   assert.match(source, /ResizeObserver/);

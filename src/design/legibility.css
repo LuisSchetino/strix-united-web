@@ -1,0 +1,53 @@
+/* ==========================================================================
+   Legibility and touch floor (loaded last).
+   Found by the device pass: on phones no label reads below 10px, and every
+   control offers at least a 40px target. Sizes only; nothing is restyled.
+   ========================================================================== */
+
+/* The roster tools trigger keeps its box while its code loads (no layout shift). */
+.roster-tools-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.roster-tools-actions .secondary {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 42px;
+}
+
+@media (max-width: 900px) {
+  .rastro-signature span b,
+  .rastro-data-signature span b,
+  .rastro-data-signature span {
+    font-size: 10px !important;
+  }
+  .select-control > button > span {
+    font-size: 11px !important;
+  }
+  .statistics-section-heading > div > span {
+    font-size: 10px !important;
+  }
+  .match-mobile-actions button {
+    font-size: 11px !important;
+  }
+  .match-mobile-card p > em {
+    font-size: 10px !important;
+  }
+  .match-mobile-card p > span {
+    font-size: 11px !important;
+  }
+  /* The breadcrumb is a button back to the Central: a full-height target. */
+  .crumb {
+    align-items: center;
+    min-height: 40px;
+  }
+  .match-mobile-card > button,
+  .match-mobile-card button[aria-label^="Abrir detalhes"] {
+    display: inline-grid;
+    place-items: center;
+    min-width: 44px;
+    min-height: 44px;
+  }
+}

@@ -1,6 +1,7 @@
 import { normalizeName } from "../../src/features/matches/import-core.js";
 import { expandKnockoutSlots, selectPreferredKnockoutPreview } from "../../shared/bracket-slots.js";
 import { dedupeCompetitionRows, fixtureConflictKey, teamConflictKey } from "../../shared/competition-sync-rows.js";
+import { logoAfterSync } from "../../shared/competition-logo.js";
 export {
   agendaMutationForFixture,
   saoPauloDay,
@@ -83,7 +84,7 @@ export async function persistCompetitionSync(client, { competition, edition, act
 
   ensureData(await client.from("competitions").update({
     organization: identity.organization || competition.organization,
-    logo_url: identity.logo || competition.logo_url,
+    logo_url: logoAfterSync(competition.logo_url, identity.logo),
     updated_by: actorUserId,
   }).eq("id", competition.id));
   ensureData(await client.from("competition_editions").update({

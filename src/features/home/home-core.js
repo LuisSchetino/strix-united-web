@@ -1,8 +1,10 @@
 // Home "Agora": pure model of the club's present moment. Every value comes from
 // the workspace (agenda_matches, club_matches); nothing here is inferred or filled in.
-import { agendaHeroSelection, nextAgendaMatches, saoPauloDay, todayAgendaMatches } from "../agenda/agenda-time.js";
+import { agendaHeroSelection, isResultOfGame, matchNightDay, nextAgendaMatches, saoPauloDay, todayAgendaMatches } from "../agenda/agenda-time.js";
 import { aggregateTeamStatistics, summarizeNight, uniqueMatches } from "../statistics/statistics-core.js";
 import { lineupState, untilLabel } from "../agenda/agenda-status.js";
+import { resolveLineupRosterPlayer } from "../agenda/lineup-core.js";
+import { LINEUP_SLOTS } from "../agenda/lineup-suggest.js";
 
 export { lineupState };
 
@@ -76,6 +78,69 @@ function homeMode(next, latest, now) {
   return "free";
 }
 
+/**
+ * "Minha noite": what tonight holds for the member who is signed in, read from the line-ups
+ * alone. `player` is his roster entry (null for someone who is not on the roster: there is
+ * nothing to say then).
+ *   games    — tonight's matches with the position he holds in each line-up ("" when he is
+ *              not in it; `open` while that line-up has nobody yet);
+ *   starting — in how many of them he plays;
+ *   open     — how many line-ups are still empty.
+ * Null when there is no game tonight.
+ */
+export function myNight({ player, tonight = [] } = {}) {
+  if (!player?.id || !tonight.length) return null;
+  const games = tonight.map((match) => {
+    const lineup = Array.isArray(match.lineup) ? match.lineup : [];
+    const slot = lineup.findIndex((entry) => Boolean(entry) && resolveLineupRosterPlayer(entry, [player]));
+    return {
+      id: match.id,
+      scheduledAt: match.scheduled_at,
+      opponent: match.opponent_name,
+      competition: match.round_label || match.competition_name || "Amistoso",
+      position: slot >= 0 ? LINEUP_SLOTS[slot] || "" : "",
+      open: lineupState(match).kind === "pending",
+    };
+  });
+  return {
+    games,
+    starting: games.filter((game) => game.position).length,
+    open: games.filter((game) => game.open).length,
+  };
+}
+
+/**
+ * "Preparo da noite", for whoever runs it: how many line-ups are complete and how many of the
+ * games that already kicked off have their result imported. Null without games.
+ */
+export function nightChecklist({ tonight = [], played = [], now = new Date() } = {}) {
+  const games = tonight.length + played.length;
+  if (!games) return null;
+  const started = tonight.filter((match) => new Date(match.scheduled_at).getTime() + STARTED_WINDOW_MIN * MINUTE < now.getTime()).length;
+  return {
+    games,
+    lineups: { ready: tonight.filter((match) => lineupState(match).kind === "ready").length, total: tonight.length },
+    results: { imported: played.length, due: played.length + started },
+  };
+}
+
+/**
+ * Tonight's games that already have a result: the Agenda drops a game once it is played, so
+ * the Central keeps the night's story by reading them back from the imported matches.
+ */
+export function tonightPlayed({ agenda = [], matches = [], now = new Date() } = {}) {
+  const today = saoPauloDay(now);
+  return (agenda || [])
+    .filter((row) => row.status === "completed" && saoPauloDay(row.scheduled_at) === today)
+    .map((row) => {
+      // The result must be this game's own: a first leg linked to the row does not count.
+      const match = (matches || []).find((item) => (item.agenda_match_id === row.id || item.agenda_matches?.id === row.id) && isResultOfGame(row, item));
+      return match ? { id: row.id, matchId: match.id, scheduled_at: row.scheduled_at, opponent_name: row.opponent_name, competition: row.round_label || row.competition_name || "Amistoso", resolvedLogo: row.resolvedLogo, strix: match.strix_score, opponent: match.opponent_score, result: resultOf(match) } : null;
+    })
+    .filter(Boolean)
+    .sort((left, right) => new Date(left.scheduled_at) - new Date(right.scheduled_at));
+}
+
 export function buildHomeModel({ agenda = [], matches = [], now = new Date(), players, aliases } = {}) {
   const hero = agendaHeroSelection(agenda, now);
   const tonight = todayAgendaMatches(agenda, now);
@@ -90,7 +155,7 @@ export function buildHomeModel({ agenda = [], matches = [], now = new Date(), pl
   const mode = homeMode(next, latest, now);
   let recent = null;
   if (mode === "recent") {
-    const day = saoPauloDay(latest.played_at);
+    const day = matchNightDay(latest.played_at);
     const night = summarizeNight(played, day, { players, aliases });
     const rating = aggregateTeamStatistics([latest]).averageRating;
     recent = {
@@ -108,6 +173,7 @@ export function buildHomeModel({ agenda = [], matches = [], now = new Date(), pl
     recent,
     upcoming: mode === "free" && hero.match ? hero.match : null,
     tonight,
+    played: tonightPlayed({ agenda, matches, now }),
     nextDays,
     last: latest ? { match: latest, result: resultOf(latest) } : null,
     season: played.length ? {

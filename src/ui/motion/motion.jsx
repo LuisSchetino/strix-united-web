@@ -131,9 +131,22 @@ export function MotionBadge({ state, idle = "Atualizar" }) {
   );
 }
 
-export function notify(message, tone = "success") {
-  window.dispatchEvent(new CustomEvent("strix-toast", { detail: { message, tone } }));
+/**
+ * A toast. With `action` ({ label, run }) the toast is the way back from something that just
+ * happened: pressing it runs the action (the usual one is "Desfazer") and it stays a little longer.
+ */
+export function notify(message, tone = "success", action = null) {
+  window.dispatchEvent(new CustomEvent("strix-toast", { detail: { message, tone, action } }));
 }
+
+// Line marks drawn once on arrival (pathLength 1 lets the CSS draw them).
+const TOAST_MARK = {
+  success: <path pathLength="1" d="m6 12.5 4 4L18 8" />,
+  error: <path pathLength="1" d="M12 7v6.5M12 17h.01" />,
+  warning: <path pathLength="1" d="M12 7v.01M12 10.5V17" />,
+  info: <path pathLength="1" d="M12 7v.01M12 10.5V17" />,
+};
+const TOAST_TITLE = { success: "Feito", error: "Não deu certo", warning: "Atenção", info: "Como fazer" };
 
 function ToastItem({ toast, depth, dismiss }) {
   const start = useRef(null);
@@ -147,13 +160,13 @@ function ToastItem({ toast, depth, dismiss }) {
     else setDrag(0);
   };
   return <button type="button" className={`motion-toast is-${toast.tone || "success"}${toast.leaving ? " is-leaving" : ""}`}
-    style={{ "--toast-depth": depth, "--toast-stack-y": `${depth * 8}px`, "--toast-fan-y": `${depth * -72}px`, "--toast-scale": 1 - depth * .025, "--toast-drag": `${drag}px`, zIndex: 10 - depth }}
+    style={{ "--toast-life": toast.action || toast.tone === "info" ? "7s" : toast.tone === "error" ? "6s" : "4.2s", "--toast-depth": depth, "--toast-stack-y": `${depth * 8}px`, "--toast-fan-y": `${depth * -72}px`, "--toast-scale": 1 - depth * .025, "--toast-drag": `${drag}px`, zIndex: 10 - depth }}
     onPointerDown={(event) => { start.current = event.clientX; event.currentTarget.setPointerCapture?.(event.pointerId); }}
     onPointerMove={(event) => { if (start.current !== null) setDrag(event.clientX - start.current); }}
-    onPointerUp={pointerUp} onPointerCancel={() => { start.current = null; setDrag(0); }} onClick={() => Math.abs(drag) < 5 && dismiss(toast.id)}>
-    <span aria-hidden="true">{toast.tone === "error" ? "!" : toast.tone === "warning" ? "i" : "✓"}</span>
-    <div><small>{toast.tone === "error" ? "ALGO DEU ERRADO" : toast.tone === "warning" ? "ATENÇÃO" : "TUDO CERTO"}</small><b>{toast.message}</b></div>
-    <em aria-hidden="true"><CloseIcon size={14} /></em><i aria-hidden="true" />
+    onPointerUp={pointerUp} onPointerCancel={() => { start.current = null; setDrag(0); }} onClick={() => { if (Math.abs(drag) >= 5) return; toast.action?.run?.(); dismiss(toast.id); }}>
+    <span aria-hidden="true"><svg viewBox="0 0 24 24" width="17" height="17">{TOAST_MARK[toast.tone] || TOAST_MARK.success}</svg></span>
+    <div><small>{TOAST_TITLE[toast.tone] || TOAST_TITLE.success}</small><b>{toast.message}</b></div>
+    {toast.action ? <strong className="motion-toast-action">{toast.action.label}</strong> : <em aria-hidden="true"><CloseIcon size={14} /></em>}<i aria-hidden="true" />
   </button>;
 }
 
@@ -168,13 +181,14 @@ export function ToastViewport() {
       const id = `${Date.now()}-${Math.random()}`;
       const item = { id, ...event.detail };
       setToasts((current) => [...current.slice(-2), item]);
-      window.setTimeout(() => dismiss(id), 3600);
+      // Errors stay a little longer: they usually need to be read.
+      window.setTimeout(() => dismiss(id), item.action || item.tone === "info" ? 7000 : item.tone === "error" ? 6000 : 4200);
     };
     window.addEventListener("strix-toast", receive);
     return () => window.removeEventListener("strix-toast", receive);
   }, []);
   return (
-    <div className="motion-toast-viewport" aria-live="polite" aria-atomic="false">
+    <div className="motion-toast-viewport" aria-live="polite" aria-atomic="false" role="status">
       {[...toasts].reverse().map((toast, depth) => <ToastItem toast={toast} depth={depth} dismiss={dismiss} key={toast.id}/>)}
     </div>
   );

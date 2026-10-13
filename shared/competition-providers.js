@@ -446,3 +446,84 @@ export function parseCompetitionHtml(html, rawUrl) {
     fetchedAt: new Date().toISOString(),
   };
 }
+
+// ------------------------------------------------------------- tournament lists
+// The provider's own page of tournaments in progress. A fixed address per
+// provider (never user input), read so the club can pick a competition from a
+// list instead of pasting its address.
+export const TOURNAMENT_LISTS = Object.freeze({
+  ccb: "https://ccbclubs.com.br/fifa.php?file=torneio&status=andamento",
+});
+
+/**
+ * A provider page the app may read: a competition page (standings or bracket)
+ * or the provider's own list of tournaments. Anything else is refused, so the
+ * page reader can never be pointed at an arbitrary address.
+ */
+export function validateProviderPageUrl(rawUrl) {
+  let candidate = "";
+  try { const url = new URL(rawUrl); url.hash = ""; candidate = url.toString(); } catch { throw new Error("URL inválida."); }
+  if (Object.values(TOURNAMENT_LISTS).includes(candidate)) return candidate;
+  return validateCompetitionUrl(rawUrl).url;
+}
+
+const META_LABELS = Object.freeze({ "início": "startsAt", inicio: "startsAt", times: "teams", plataforma: "platform" });
+
+/** Tournaments listed on a provider's "em andamento" page, each with the address of its standings. */
+export function parseTournamentList(html, baseUrl) {
+  const blocks = String(html || "").split(/<div[^>]*class=["'][^"']*\btorneio-item\b[^"']*["'][^>]*>/i).slice(1);
+  const seen = new Set();
+  const tournaments = [];
+  for (const block of blocks) {
+    const link = /href=["']([^"']*fifa\.php\?file=classificacao&(?:amp;)?campeonato=(\d{1,10})[^"']*)["']/i.exec(block);
+    if (!link || seen.has(link[2])) continue;
+    seen.add(link[2]);
+    const card = block.slice(0, link.index + link[0].length);
+    const name = htmlText(/<h3[^>]*>([\s\S]*?)<\/h3>/i.exec(card)?.[1] || "");
+    if (!name) continue;
+    const meta = {};
+    for (const [, label, value] of card.matchAll(/<span>\s*([^<]+?)\s*<br\s*\/?>\s*<strong>([\s\S]*?)<\/strong>/gi)) {
+      const key = META_LABELS[htmlText(label).toLocaleLowerCase("pt-BR")];
+      if (key) meta[key] = htmlText(value);
+    }
+    const image = /<img[^>]*src=["']([^"']+)["']/i.exec(card)?.[1] || "";
+    tournaments.push({
+      id: link[2],
+      name,
+      status: htmlText(/<span[^>]*class=["'][^"']*\bbadge-[^"']*["'][^>]*>([\s\S]*?)<\/span>/i.exec(card)?.[1] || ""),
+      startsAt: meta.startsAt || "",
+      teams: /^\d+$/.test(meta.teams || "") ? Number(meta.teams) : null,
+      platform: meta.platform || "",
+      logo: absoluteUrl(baseUrl, image),
+      url: absoluteUrl(baseUrl, `fifa.php?file=classificacao&campeonato=${link[2]}`),
+    });
+  }
+  return tournaments;
+}
+
+/**
+ * A cheap look at one standings page — no full parse: the groups it shows, how
+ * many clubs each lists, whether `club` is among them, and the addresses of the
+ * edition's other group pages. Used to find where Strix plays without reading
+ * every round and bracket of every tournament.
+ */
+export function scanStandingsPage(html, rawUrl, club = /\bstrix\b/i) {
+  const context = validateCompetitionUrl(rawUrl);
+  const source = String(html || "");
+  const groups = [];
+  for (const block of tableBlocks(source)) {
+    const rows = rowBlocks(block.html);
+    const header = rows.find((row) => /<th\b/i.test(row) || /\bTime\b/.test(htmlText(row)));
+    if (!header || !/\bTime\b/i.test(htmlText(header))) continue;
+    const teams = rows.filter((row) => /<td\b/i.test(row));
+    if (!teams.length) continue;
+    const prefix = source.slice(Math.max(0, block.index - 2500), block.index);
+    const name = htmlText([...prefix.matchAll(/Classifica[cç][aã]o\s*-?\s*(Grupo\s*\d+)?/gi)].at(-1)?.[1]) || "Classificação geral";
+    groups.push({ name, teams: teams.length, found: teams.some((row) => club.test(htmlText(row))) });
+  }
+  const groupUrls = relatedSourceUrls(source, context).filter((candidate) => {
+    const params = new URL(candidate).searchParams;
+    return params.get("file") === "classificacao" && params.get("grupo") && !params.has("pagina") && !params.has("forma");
+  });
+  return { groups, groupUrls };
+}

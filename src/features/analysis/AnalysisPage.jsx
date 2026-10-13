@@ -9,10 +9,14 @@ import { SelectControl } from "../../ui/SelectControl.jsx";
 import { analysisInsightKind, buildAnalysis, buildPlayerComparison, comparePeriods, playerComparisonState, selectAnalysisPeriod } from "./analysis-core.js";
 import "./analysis.css";
 import { PageHeader } from "../../ui/PageHeader.jsx";
+import { useRemembered } from "../../ui/useRemembered.js";
 
-// The first series carries the data colour; the rest are told apart by luminance and line pattern.
-const radarColors = ["var(--data)", "#f5f5f5", "#a9b0b8", "#757d86"];
-const radarDashes = ["0", "7 4", "2 4", "12 4 2 4"];
+// Comparing people needs hues that cannot be mistaken for one another: a categorical
+// palette (data blue first, no red), each also with its own line pattern. Twelve series.
+const RADAR_TONES = ["var(--data)", "#f5b841", "#3dd6a3", "#b48cff", "#ff8fd0", "#35c8f0", "#c6e24b", "#ff9a4d", "#f5f5f5", "#8fa3b8", "#7c6cf0", "#e0c097"];
+const RADAR_DASHES = ["0", "7 4", "2 4", "12 4 2 4"];
+const radarColor = (index) => RADAR_TONES[index % RADAR_TONES.length];
+const radarDash = (index) => RADAR_DASHES[index % RADAR_DASHES.length];
 
 const TREND_UNIT = { goals: "", conceded: "", passing: "p.p.", rating: "" };
 
@@ -43,7 +47,10 @@ const polygonPoints = (values, radius = 112, center = 145) => values.map((value,
   return `${center + Math.cos(angle) * distance},${center + Math.sin(angle) * distance}`;
 }).join(" ");
 
-function RadarChart({ comparison }) {
+function RadarChart({ comparison, focus = "", setFocus = () => {} }) {
+  const keyOf = (player) => player.playerId || player.handle;
+  // The focused series is drawn last, on top; the others step back.
+  const ordered = comparison.players.map((player, index) => ({ player, index })).sort((left, right) => Number(keyOf(left.player) === focus) - Number(keyOf(right.player) === focus));
   const count = comparison.axes.length;
   const axisPoints = comparison.axes.map((_, index) => {
     const angle = -Math.PI / 2 + index * (Math.PI * 2 / count);
@@ -52,15 +59,18 @@ function RadarChart({ comparison }) {
   return <div className="analysis-radar-shell"><svg className="analysis-radar" viewBox="0 0 290 290" role="img" aria-label={`Comparação de ${comparison.players.map((player) => player.name).join(", ")}`}>
     {[25, 50, 75, 100].map((level) => <polygon key={level} points={polygonPoints(Array(count).fill(level))} className="radar-grid"/>)}
     {axisPoints.map((point, index) => <g key={comparison.axes[index]}><line x1="145" y1="145" x2={point.x} y2={point.y} className="radar-axis"/><text x={point.labelX} y={point.labelY} textAnchor={point.labelX < 125 ? "end" : point.labelX > 165 ? "start" : "middle"}>{comparison.axes[index]}</text></g>)}
-    {comparison.players.map((player, index) => <polygon key={player.playerId || player.handle} points={polygonPoints(player.values)} style={{ "--radar-color": radarColors[index], "--radar-dash": radarDashes[index] }} className="radar-player"/>)}
-  </svg><div className="analysis-radar-legend">{comparison.players.map((player, index) => <article key={player.playerId || player.handle} style={{ "--radar-color": radarColors[index] }}><header><i/><div><b>{player.name}</b><span>{player.games} jogo(s)</span></div></header><dl>{comparison.axes.map((axis, axisIndex) => <div key={axis}><dt>{axis}</dt><dd className="data-value">{player.rawValues[axisIndex]}</dd></div>)}</dl></article>)}</div></div>;
+    {ordered.map(({ player, index }) => <polygon key={keyOf(player)} points={polygonPoints(player.values)} style={{ "--radar-color": radarColor(index), "--radar-dash": radarDash(index), "--radar-fill": `${Math.max(3, Math.round(24 / comparison.players.length))}%` }} className={`radar-player${focus ? (keyOf(player) === focus ? " is-focus" : " is-dim") : ""}`}/>)}
+  </svg><div className="analysis-radar-legend">{comparison.players.map((player, index) => <article key={keyOf(player)} className={focus ? (keyOf(player) === focus ? "is-focus" : "is-dim") : ""} style={{ "--radar-color": radarColor(index) }} tabIndex={0} onMouseEnter={() => setFocus(keyOf(player))} onMouseLeave={() => setFocus("")} onFocus={() => setFocus(keyOf(player))} onBlur={() => setFocus("")}><header><i/><div><b>{player.name}</b><span>{player.games} jogo(s)</span></div></header><dl>{comparison.axes.map((axis, axisIndex) => <div key={axis}><dt>{axis}</dt><dd className="data-value">{player.rawValues[axisIndex]}</dd></div>)}</dl></article>)}</div></div>;
 }
 
 function PlayerComparison({ matches, workspace, competitions }) {
-  const [period, setPeriod] = useState("30days");
-  const [competition, setCompetition] = useState("");
-  const [kind, setKind] = useState("line");
+  const [period, setPeriod] = useRemembered("analysis-compare-period", "30days");
+  const [competition, setCompetition] = useRemembered("analysis-compare-competition", "");
+  // Outfield only: the club fields a single goalkeeper, so a keeper comparison has no pair.
+  const kind = "line";
   const [playerIds, setPlayerIds] = useState([]);
+  // Pointing at a name (pill or card) singles its shape out on the radar.
+  const [focus, setFocus] = useState("");
   const baseOptions = { period, competition, kind, players: workspace.players, aliases: workspace.aliases };
   const available = useMemo(() => buildPlayerComparison(matches, baseOptions), [matches, period, competition, kind, workspace.players, workspace.aliases]);
   const availableIds = available.roster.map((player) => player.playerId).filter(Boolean).join("|");
@@ -70,11 +80,13 @@ function PlayerComparison({ matches, workspace, competitions }) {
   }, [availableIds]);
   const comparison = useMemo(() => buildPlayerComparison(matches, { ...baseOptions, playerIds }), [matches, period, competition, kind, playerIds, workspace.players, workspace.aliases]);
   const comparisonState = playerComparisonState(comparison, playerIds);
+  // A pill wears the colour of its shape on the radar (same order as the legend); unselected names stay neutral.
+  const seriesOf = new Map((comparison.players || []).map((player, index) => [player.playerId, index]));
   const togglePlayer = (id) => setPlayerIds((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
   return <section className="analysis-xray"><header><GroupMark icon={IconRadar2} /><div><h2>Raio-X do elenco</h2><p>Métricas normalizadas dentro do recorte; os valores reais continuam visíveis ao lado.</p></div></header>
-    <div className="analysis-xray-filters"><SegmentedControl className="analysis-xray-toggle" items={[["line", "LINHA"], ["goalkeeper", "GOLEIROS"]]} active={kind} onChange={setKind} label="Posição dos jogadores comparados"/><SelectControl value={period} onChange={setPeriod} label="Período do Raio-X" options={[["7days", "7 DIAS"], ["30days", "30 DIAS"], ["90days", "90 DIAS"], ["season", "TEMPORADA"], ["all", "TODO O PERÍODO"]]} /><SelectControl value={competition} onChange={setCompetition} label="Competição do Raio-X" options={[["", "TODAS AS COMPETIÇÕES"], ...competitions.map((item) => [item, item])]} /></div>
-    <div className="analysis-player-picker" aria-label="Jogadores do elenco ativo">{available.roster.map((player, index) => <button type="button" key={player.playerId} className={playerIds.includes(player.playerId) ? "selected" : ""} aria-pressed={playerIds.includes(player.playerId)} style={{ "--player-color": radarColors[Math.max(0, playerIds.indexOf(player.playerId))] || radarColors[index % radarColors.length] }} onClick={() => togglePlayer(player.playerId)}><i/><span>{player.name}</span><small>{player.hasSample ? `${player.validGames}J` : "SEM AMOSTRA"}</small></button>)}</div>
-    {comparisonState === "no-sample" ? <div className="analysis-empty"><span>SEM AMOSTRA NESTE RECORTE</span><p>Os selecionados não têm dados de partida neste período e competição.</p></div> : comparisonState === "choose" ? <div className="analysis-empty"><span>ESCOLHA JOGADORES PARA COMPARAR</span><p>Os jogadores sem amostra continuam disponíveis; escolha quem deseja comparar.</p></div> : comparisonState === "needs-more" ? <div className="analysis-empty"><span>COMPARAÇÃO INDISPONÍVEL</span><p>Selecione ao menos dois jogadores com dados válidos neste recorte.</p></div> : <RadarChart comparison={comparison}/>}
+    <div className="analysis-xray-filters"><SelectControl value={period} onChange={setPeriod} label="Período do Raio-X" options={[["7days", "7 DIAS"], ["30days", "30 DIAS"], ["90days", "90 DIAS"], ["season", "TEMPORADA"], ["all", "TODO O PERÍODO"]]} /><SelectControl value={competition} onChange={setCompetition} label="Competição do Raio-X" options={[["", "TODAS AS COMPETIÇÕES"], ...competitions.map((item) => [item, item])]} /></div>
+    <div className="analysis-player-picker" aria-label="Jogadores do elenco ativo">{available.roster.map((player, index) => <button type="button" key={player.playerId} className={playerIds.includes(player.playerId) ? "selected" : ""} aria-pressed={playerIds.includes(player.playerId)} style={{ "--player-color": seriesOf.has(player.playerId) ? radarColor(seriesOf.get(player.playerId)) : "var(--text-4)" }} onClick={() => togglePlayer(player.playerId)} onMouseEnter={() => playerIds.includes(player.playerId) && setFocus(player.playerId)} onMouseLeave={() => setFocus("")}><i/><span>{player.name}</span><small>{player.hasSample ? `${player.validGames}J` : "SEM AMOSTRA"}</small></button>)}</div>
+    {comparisonState === "no-sample" ? <div className="analysis-empty"><span>SEM AMOSTRA NESTE RECORTE</span><p>Os selecionados não têm dados de partida neste período e competição.</p></div> : comparisonState === "choose" ? <div className="analysis-empty"><span>ESCOLHA JOGADORES PARA COMPARAR</span><p>Os jogadores sem amostra continuam disponíveis; escolha quem deseja comparar.</p></div> : comparisonState === "needs-more" ? <div className="analysis-empty"><span>COMPARAÇÃO INDISPONÍVEL</span><p>Selecione ao menos dois jogadores com dados válidos neste recorte.</p></div> : <RadarChart comparison={comparison} focus={focus} setFocus={setFocus}/>}
   </section>;
 }
 
@@ -82,7 +94,7 @@ export function AnalysisPage({ workspace, profile, matches = workspace.matches |
   matches = Array.isArray(matches) ? matches : [];
   const activePlayers = Array.isArray(workspace.players) ? workspace.players : [];
   const aliases = Array.isArray(workspace.aliases) ? workspace.aliases : [];
-  const [period, setPeriod] = useState("last5");
+  const [period, setPeriod] = useRemembered("analysis-period", "last5");
   matches = matches.filter((match) => match && typeof match === "object");
   const competitions = [...new Set(matches.map((match) => match.competition_name || "Amistoso"))].sort();
   const selected = useMemo(() => selectAnalysisPeriod(matches, period), [matches, period]);

@@ -15,6 +15,24 @@
 export const CONTRACT_SEASON = "2026/27";
 export const CONTRACT_VERSION = 1;
 export const CONTRACT_METADATA_KEY = "fc27_contract";
+// Which roster entry this account is, when the names do not say it (Discord "Clayton", roster
+// "Dornelas"). Chosen by the member, kept beside the contract in the account's own data, and
+// just as trusted: it personalises what the member sees, it grants nothing.
+export const PLAYER_LINK_KEY = "fc27_player";
+export const PLAYER_LINK_NONE = "none";
+// The member is still on the "signed" screen (downloads of the contract and of the video).
+// Kept for the tab only, so a reload returns to that screen instead of skipping the downloads.
+export const CONTRACT_OPEN_KEY = "strix:contract-open";
+const tabStorage = () => { try { return globalThis.sessionStorage || null; } catch { return null; } };
+export function readContractOpen(storage = tabStorage()) {
+  try { return String(storage?.getItem(CONTRACT_OPEN_KEY) || ""); } catch { return ""; }
+}
+export function markContractOpen(userId, storage = tabStorage()) {
+  try { if (userId) storage?.setItem(CONTRACT_OPEN_KEY, String(userId)); } catch { /* the screen simply does not survive a reload */ }
+}
+export function clearContractOpen(storage = tabStorage()) {
+  try { storage?.removeItem(CONTRACT_OPEN_KEY); } catch { /* nothing to clear */ }
+}
 export const SIGNATURE_VIEWBOX = Object.freeze({ width: 600, height: 200 });
 // Teto do traço dentro do JWT. Reduzido de 2400: um traço legível cabe com folga.
 export const SIGNATURE_PATH_LIMIT = 1800;
@@ -34,6 +52,12 @@ export function normalizeHandle(value) {
 export function readContract(user) {
   const contract = user?.user_metadata?.[CONTRACT_METADATA_KEY];
   return contract && typeof contract === "object" ? contract : null;
+}
+
+/** The roster id this account declared ("none": not a player), or "" when nothing was declared. */
+export function readPlayerLink(user) {
+  const value = user?.user_metadata?.[PLAYER_LINK_KEY];
+  return typeof value === "string" ? value.trim().slice(0, 64) : "";
 }
 
 export function hasSignedContract(user, season = CONTRACT_SEASON) {
@@ -56,7 +80,34 @@ function identityMetadata(user) {
 }
 
 /** Prioridade: identidade autenticada → perfil Strix → workspace.players → fallback. */
-export function resolveContractIdentity({ session, profile, players = [] } = {}) {
+/**
+ * The roster entry of whoever is signed in. The roster has no account column: the link is the
+ * name (Discord global name, site display name or handle) written the same way on both sides.
+ * Null when no active player carries one of those names.
+ */
+export function resolveOwnPlayer({ session, profile, players = [] } = {}) {
+  // What the member declared wins over any guess by name.
+  const declared = readPlayerLink(session?.user);
+  if (declared === PLAYER_LINK_NONE) return null;
+  if (declared) {
+    const linked = (players || []).find((item) => item?.is_active !== false && String(item?.id) === declared);
+    if (linked) return linked;
+  }
+  return matchOwnPlayerByName({ session, profile, players });
+}
+
+/** The roster entry that carries one of this account's names, or null. */
+export function matchOwnPlayerByName({ session, profile, players = [] } = {}) {
+  const { meta, data } = identityMetadata(session?.user);
+  const handleRaw = [meta.user_name, meta.preferred_username, data.user_name, data.preferred_username, meta.name, data.name, meta.full_name, data.full_name]
+    .map(text).find(Boolean) || "";
+  const authName = [meta.custom_claims?.global_name, data.custom_claims?.global_name].map(text).find(Boolean) || "";
+  const name = authName || text(profile?.display_name) || [meta.full_name, meta.name, data.full_name, data.name].map(text).find(Boolean) || "";
+  const keys = new Set([name, authName, profile?.display_name, handleRaw.split("#")[0]].map(normalize).filter(Boolean));
+  return (players || []).find((item) => item?.is_active !== false && keys.has(normalize(item.display_name))) || null;
+}
+
+export function resolveContractIdentity({ session, profile, players = [], playerId = "" } = {}) {
   const user = session?.user;
   const { meta, data } = identityMetadata(user);
   const handleRaw = [meta.user_name, meta.preferred_username, data.user_name, data.preferred_username, meta.name, data.name, meta.full_name, data.full_name]
@@ -65,8 +116,9 @@ export function resolveContractIdentity({ session, profile, players = [] } = {})
   const authName = [meta.custom_claims?.global_name, data.custom_claims?.global_name].map(text).find(Boolean) || "";
   const name = authName || text(profile?.display_name) || [meta.full_name, meta.name, data.full_name, data.name].map(text).find(Boolean) || "";
 
-  const keys = new Set([name, authName, profile?.display_name, handleRaw.split("#")[0]].map(normalize).filter(Boolean));
-  const player = (players || []).find((item) => item?.is_active !== false && keys.has(normalize(item.display_name)));
+  // `playerId`: the entry being chosen on the contract, before it is saved.
+  const picked = playerId && playerId !== PLAYER_LINK_NONE ? (players || []).find((item) => item?.is_active !== false && String(item?.id) === String(playerId)) : null;
+  const player = picked || (playerId === PLAYER_LINK_NONE ? null : resolveOwnPlayer({ session, profile, players }));
   const positions = Array.isArray(player?.positions) ? player.positions.filter(Boolean) : [];
   const role = ROLE_LABELS[normalize(player?.structure_role)] || "";
   const func = [positions.join(" · "), role].filter(Boolean).join(" · ");
@@ -150,11 +202,6 @@ export function buildContractPayload({ strokes, now = new Date() }) {
   };
 }
 
-export function contractDateLabel(now = new Date()) {
-  return new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "long", year: "numeric" })
-    .format(now).toLocaleUpperCase("pt-BR");
-}
-
 /**
  * Identificador do documento: derivado do próprio aceite (temporada, data e
  * traço), então o mesmo contrato sempre mostra o mesmo número. Não é um
@@ -170,4 +217,11 @@ export function contractDocumentId(contract) {
   }
   const season = String(contract.season || CONTRACT_SEASON).replace(/\D/g, "").slice(2, 4) + String(contract.season || CONTRACT_SEASON).replace(/\D/g, "").slice(-2);
   return `STX-${season}-${hash.toString(16).toUpperCase().padStart(8, "0").slice(0, 6)}`;
+}
+
+/** "30 de setembro de 2026 às 22:17", in São Paulo time: the same label on the page and in every copy. */
+export function contractSignedLabel(iso) {
+  const date = new Date(iso);
+  if (!Number.isFinite(date.getTime())) return "";
+  return new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "long", timeStyle: "short" }).format(date);
 }

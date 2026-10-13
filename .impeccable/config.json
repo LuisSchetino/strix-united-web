@@ -1,0 +1,23 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "design-system-font",
+        "value": "arial",
+        "createdAt": "2026-10-03T15:57:09.467Z",
+        "reason": "agent decision: SVG engraving (seal ring, microtext) is rasterised as an image for PDF/MP4, where web fonts don't load; a system face keeps page and exports identical"
+      },
+      {
+        "rule": "layout-transition",
+        "value": "*",
+        "files": [
+          "src/design/shell.css"
+        ],
+        "createdAt": "2026-10-03T17:07:09.097Z",
+        "reason": "user requested: the rail must collapse slowly; its width has to change so the workspace reflows (a transform cannot), one user-triggered 460ms transition, off under reduced motion"
+      }
+    ]
+  }
+}

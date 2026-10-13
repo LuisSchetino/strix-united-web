@@ -1,0 +1,484 @@
+/* ==========================================================================
+   Visualizar partida
+   Under the fixture (a now card, see src/ui/now-card.css): the pitch on a sheet
+   where fine diagonal lines drift, and, for a competition game, the table beside
+   it. Monochrome; measured values in --data.
+   ========================================================================== */
+
+/* ------------------------------------------------------- lineup and table */
+
+.match-view-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+.match-view-grid.has-table {
+  grid-template-columns: minmax(0, 1.3fr) minmax(320px, 0.7fr);
+}
+/* Behind the pitch the sheet is not a flat panel: fine diagonal lines drift across it, slowly. */
+.match-view-grid > .modal-lineup {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+.match-view-grid > .modal-lineup::before {
+  content: "";
+  position: absolute;
+  inset: 0 -60px;
+  z-index: -1;
+  background-image: repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.04) 0 1px, transparent 1px 44px);
+  -webkit-mask-image: radial-gradient(120% 90% at 50% 40%, #000 30%, transparent 86%);
+  mask-image: radial-gradient(120% 90% at 50% 40%, #000 30%, transparent 86%);
+  animation: match-drift 9s linear infinite;
+}
+@keyframes match-drift {
+  to { transform: translateX(48.55px); }
+}
+.match-table {
+  display: grid;
+  align-content: start;
+  gap: var(--space-4);
+  padding: var(--space-6);
+  border-left: 1px solid var(--line-2);
+}
+.match-table > header {
+  display: grid;
+  gap: 4px;
+}
+.match-table > header span {
+  color: var(--text-3);
+  font-size: var(--text-label);
+  font-weight: 700;
+  letter-spacing: var(--track-label);
+}
+.match-table > header small,
+.match-table-note {
+  margin: 0;
+  color: var(--text-2);
+  font-size: var(--text-sm);
+}
+
+.match-duel {
+  display: grid;
+  gap: 12px;
+  padding: var(--space-4);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-lg);
+  background: var(--ink-2);
+}
+.match-duel-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: end;
+  gap: var(--space-3);
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line-1);
+}
+.match-duel-head > div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.match-duel-head > div:last-child {
+  justify-items: end;
+  text-align: right;
+}
+.match-duel-head strong {
+  color: var(--data);
+  font-size: 34px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+.match-duel-head span {
+  color: var(--text-1);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+.match-duel-head > i {
+  padding-bottom: 6px;
+  color: var(--text-4);
+  font-size: 14px;
+  font-style: normal;
+}
+.match-duel-row {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) 74px minmax(0, 1fr) 30px;
+  align-items: center;
+  gap: var(--space-2);
+}
+.match-duel-row b {
+  color: var(--text-3);
+  font-size: 14px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.match-duel-row b:last-child {
+  text-align: right;
+}
+.match-duel-row b.is-ahead {
+  color: var(--text-1);
+}
+.match-duel-row small {
+  color: var(--text-4);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-align: center;
+}
+.match-duel-bar {
+  display: flex;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--line-1);
+}
+.match-duel-bar.is-left {
+  justify-content: flex-end;
+}
+.match-duel-bar i {
+  width: calc(var(--value, 0) * 100%);
+  border-radius: 2px;
+  background: var(--data);
+  transform-origin: left center;
+  animation: match-bar 760ms var(--motion-ease) 320ms both;
+}
+.match-duel-bar.is-left i {
+  transform-origin: right center;
+}
+@keyframes match-bar {
+  from { transform: scaleX(0); }
+  to { transform: none; }
+}
+.match-duel > p {
+  margin: 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--line-1);
+  color: var(--text-2);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.match-table-rows {
+  display: grid;
+}
+.match-table-rows > div {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) 40px 30px 36px;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  padding: 0 10px;
+  border-top: 1px solid var(--line-1);
+  animation: data-arrive var(--motion-section) var(--motion-ease) both;
+  animation-delay: calc(360ms + var(--i, 0) * 60ms);
+}
+.match-table-rows > div.is-head {
+  min-height: 32px;
+  border-top: 0;
+  color: var(--text-4);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  animation: none;
+}
+.match-table-rows span {
+  color: var(--text-3);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.match-table-rows .is-head span {
+  color: inherit;
+  font-size: inherit;
+}
+.match-table-rows span:nth-child(n + 3) {
+  text-align: right;
+}
+.match-table-rows span:nth-child(2) {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.match-table-rows span b {
+  min-width: 0;
+  color: var(--text-2);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+.match-table-logo {
+  flex: none;
+  width: 24px;
+  height: 24px;
+}
+.match-table-rows .is-points {
+  color: var(--data);
+  font-weight: 800;
+}
+.match-table-rows > div.is-strix {
+  box-shadow: inset 2px 0 var(--text-1);
+}
+.match-table-rows > div.is-strix span b {
+  color: var(--text-1);
+  font-weight: 800;
+}
+/* The opponent of this fixture: a quieter edge than ours. */
+.match-table-rows > div.is-opponent {
+  box-shadow: inset 2px 0 var(--text-4);
+}
+.match-table-rows > div.is-opponent span b {
+  color: var(--text-1);
+}
+.match-table-rows > i {
+  height: 10px;
+  border-top: 1px dashed var(--line-2);
+}
+.match-table-rows > small {
+  padding: 10px 10px 0;
+  border-top: 1px solid var(--line-1);
+  color: var(--text-4);
+  font-size: var(--text-xs);
+}
+
+/* -------------------------------------------------- the opponent's card */
+
+.match-brief {
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-6) var(--space-8) var(--space-8);
+  border-top: 1px solid var(--line-2);
+}
+.match-brief > header {
+  display: grid;
+  gap: 4px;
+}
+.match-brief > header span,
+.match-brief h4 {
+  margin: 0;
+  color: var(--text-3);
+  font-size: var(--text-label);
+  font-weight: 700;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+}
+.match-brief > header h3 {
+  margin: 0;
+  color: var(--text-1);
+  font-size: var(--text-xl);
+  font-weight: 800;
+  letter-spacing: var(--track-tight);
+  overflow-wrap: anywhere;
+}
+.match-brief-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-8);
+}
+.match-brief article {
+  display: grid;
+  align-content: start;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.match-brief h4 {
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--line-2);
+}
+.match-brief-record,
+.match-brief-empty {
+  margin: 0;
+  color: var(--text-2);
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+}
+.match-brief-record b {
+  color: var(--text-1);
+  font-variant-numeric: tabular-nums;
+}
+.match-brief-empty {
+  color: var(--text-3);
+}
+.match-brief ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.match-brief li {
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr) auto 24px;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 44px;
+  border-bottom: 1px solid var(--line-1);
+  font-size: var(--text-sm);
+}
+.match-brief li time,
+.match-brief li small {
+  color: var(--text-3);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+}
+.match-brief li small {
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+.match-brief li span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--text-2);
+}
+.match-brief li span b {
+  color: var(--text-1);
+  font-variant-numeric: tabular-nums;
+}
+/* Result marks follow the Central's form chips: paper for a win, outline for a draw, quiet for a loss. */
+.match-brief li i {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--line-3);
+  border-radius: var(--radius-sm);
+  color: var(--text-2);
+  font-size: var(--text-label);
+  font-style: normal;
+  font-weight: 800;
+}
+.match-brief li i.is-V {
+  border-color: var(--paper-1);
+  background: var(--paper-1);
+  color: var(--text-on-light);
+}
+.match-brief li i.is-D {
+  border-color: var(--line-1);
+  color: var(--text-4);
+}
+
+/* ------------------------------------------- line-up tools (edit mode) */
+
+.lineup-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-4);
+}
+.lineup-tools button {
+  min-height: 40px;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-2);
+  font-size: var(--text-label);
+  font-weight: 800;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  transition: border-color var(--motion-micro), color var(--motion-micro), background var(--motion-micro);
+}
+.lineup-tools button:hover,
+.lineup-tools button:focus-visible {
+  border-color: var(--line-3);
+  background: var(--ink-3);
+  color: var(--text-1);
+}
+.lineup-tools button.is-undo {
+  border-color: var(--text-1);
+  color: var(--text-1);
+}
+.lineup-tools p {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--text-3);
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+}
+/* How much a player has played, under his name in the chooser. */
+.formation-roster-group > button .formation-rest {
+  color: var(--text-4);
+}
+
+@media (max-width: 860px) {
+  .match-brief {
+    padding: var(--space-5) var(--space-4) var(--space-6);
+  }
+  .match-brief-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-6);
+  }
+  .match-view-grid.has-table {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .match-table {
+    padding: var(--space-5) var(--space-4);
+    border-top: 1px solid var(--line-2);
+    border-left: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .match-view-grid > .modal-lineup::before,
+  .match-duel-bar i,
+  .match-table-rows > div {
+    animation: none;
+  }
+}
+
+/* "Strix contra eles": the record as figures on one strip, the games under it. */
+.match-brief-tally {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-sm);
+  background: var(--ink-2);
+}
+.match-brief-tally li {
+  display: grid;
+  gap: 2px;
+  padding: var(--space-3) var(--space-3);
+  border-left: 1px solid var(--line-1);
+  color: var(--text-4);
+  font-size: var(--text-label);
+  font-weight: 700;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+}
+.match-brief-tally li:first-child { border-left: 0; }
+.match-brief-tally b { color: var(--text-1); font-size: var(--text-xl); font-weight: 800; letter-spacing: var(--track-tight); font-variant-numeric: tabular-nums; }
+.match-brief-tally b i { margin: 0 2px; color: var(--text-4); font-style: normal; font-weight: 500; }
+.match-brief li { min-height: 44px; }
+.match-brief li span b { font-size: var(--text-md); }
+@media (max-width: 560px) {
+  .match-brief-tally { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .match-brief-tally li:nth-child(4) { border-left: 0; }
+  .match-brief-tally li:nth-child(n + 4) { border-top: 1px solid var(--line-1); }
+}
+/* The strip's cells are not result rows: undo what the list rules above would do to them. */
+.match-brief .match-brief-tally li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: 2px;
+  min-height: 0;
+  border-bottom: 0;
+  font-size: var(--text-label);
+}
+.match-brief .match-brief-tally b { display: flex; align-items: baseline; }
+.match-brief .match-brief-tally b i {
+  display: inline;
+  width: auto;
+  height: auto;
+  margin: 0 3px;
+  border: 0;
+  border-radius: 0;
+  color: var(--text-4);
+  font-size: inherit;
+  font-weight: 500;
+}

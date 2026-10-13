@@ -9,7 +9,7 @@ export function classifyAuthFailure(error, { hadSession = false, status = 0 } = 
   if (
     hadSession
     && (code === 401 || aborted || /jwt expired|invalid jwt|invalid_session|session_expired|token.*(expired|invalid)|not authenticated/i.test(message))
-    && !/not_in_team_server|discord_role_unmapped|insufficient_permission/i.test(message)
+    && !/not_in_team_server|discord_role_unmapped|trial_access_closed|insufficient_permission/i.test(message)
   ) {
     return "session";
   }

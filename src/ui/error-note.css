@@ -1,0 +1,61 @@
+/* One look for a failure on any page: an ink strip with a mark, the sentence, and the way out.
+   No alarm colour: the site is monochrome, the mark and the white text carry it. */
+.error-note {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  margin: var(--space-4) 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--line-3);
+  border-radius: var(--radius-md);
+  background: var(--ink-2);
+  color: var(--text-1);
+}
+.error-note > svg {
+  flex: none;
+  color: var(--text-1);
+}
+.error-note p {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  line-height: var(--leading-snug);
+}
+.error-note small {
+  color: var(--text-3);
+  font-size: var(--text-xs);
+  font-weight: 500;
+}
+.error-note button {
+  min-height: 40px;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--line-3);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-1);
+  font-size: var(--text-label);
+  font-weight: 800;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  white-space: nowrap;
+  transition: background var(--motion-micro), border-color var(--motion-micro);
+}
+.error-note button:hover:not(:disabled) {
+  border-color: var(--text-1);
+  background: var(--ink-3);
+}
+.error-note button:disabled {
+  color: var(--text-3);
+}
+@media (max-width: 560px) {
+  .error-note {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .error-note button {
+    grid-column: 1 / -1;
+  }
+}

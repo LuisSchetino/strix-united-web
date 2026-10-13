@@ -9,6 +9,7 @@ import {
   positionGroup,
   relatedNightDurationSeconds,
   relatedNightFileName,
+  squadFaces,
   suggestRelatedFromLineups,
 } from "../src/features/media/related-night-core.js";
 
@@ -85,7 +86,7 @@ test("PREENCHER PELAS ESCALAÇÕES une lineups de hoje e ignora amanhã", () => 
   assert.equal(suggested.find((row) => row.name === "João").number, 1);
 });
 
-test("13 relacionados salvos prevalecem mesmo com só 12 nas escalações", () => {
+test("com escalação, o vídeo mostra quem joga: um nome salvo que não está em nenhuma escalação fica de fora", () => {
   const workspace = workspaceWith({
     agenda: todayLineups([twelveLineupNames]),
     nightRelated: [{ night_date: "2026-09-02", player_ids: thirteenIds }],
@@ -94,22 +95,40 @@ test("13 relacionados salvos prevalecem mesmo com só 12 nas escalações", () =
   const video = collectTonightRelated(workspace, new Date(day));
   assert.equal(state.saved, true);
   assert.equal(state.suggestion.length, 12);
-  assert.equal(video.length, 13);
-  assert.ok(video.some((player) => player.id === "p13" && player.name === "Vini"));
-  assert.equal(state.suggestion.find((player) => player.id === "p13"), undefined);
-  assert.equal(video.filter((player) => player.group === "GOL").length, 2);
-  assert.equal(video.filter((player) => player.group === "DEF").length, 4);
-  assert.equal(video.filter((player) => player.group === "MEI").length, 5);
-  assert.equal(video.filter((player) => player.group === "ATA").length, 2);
+  // The saved list is what the editor shows; the video is who is in tonight's line-ups.
+  assert.equal(state.players.length, 13);
+  assert.equal(video.length, 12);
+  assert.equal(video.find((player) => player.id === "p13"), undefined);
+  // The pitch is the first game's eleven; whoever is listed beyond it goes to the strip.
+  assert.equal(video.filter((player) => player.slot != null).length, 11);
+  assert.equal(new Set(video.filter((player) => player.slot != null).map((player) => player.slot)).size, 11);
+  assert.equal(video.filter((player) => player.bench).length, 1);
 });
 
-test("lista salva editada substitui a sugestão das escalações", () => {
+test("a faixa de relacionados é quem joga os outros jogos da noite", () => {
+  const first = twelveLineupNames.slice(0, 11), second = [twelveLineupNames[0], twelveLineupNames[11]];
   const workspace = workspaceWith({
-    agenda: todayLineups([twelveLineupNames]),
-    nightRelated: [{ night_date: "2026-09-02", player_ids: ["p1", "p13"] }],
+    agenda: todayLineups([first, second]),
+    nightRelated: [{ night_date: "2026-09-02", player_ids: ["p1"] }],
   });
   const video = collectTonightRelated(workspace, new Date(day));
-  assert.deepEqual(video.map((player) => player.id).sort(), ["p1", "p13"]);
+  assert.equal(video.length, 12);
+  assert.equal(video.filter((player) => player.slot != null).length, 11);
+  const strip = video.filter((player) => player.bench);
+  assert.equal(strip.length, 1);
+  assert.equal(strip[0].name, twelveLineupNames[11]);
+});
+
+test("sem escalação no primeiro jogo, a lista fica como era: por setor, sem banco", () => {
+  const workspace = workspaceWith({ agenda: [], nightRelated: [{ night_date: "2026-09-02", player_ids: thirteenIds }] });
+  const video = collectTonightRelated(workspace, new Date(day));
+  assert.equal(video.length, 13);
+  assert.equal(video.some((player) => player.bench || player.slot != null), false);
+});
+
+test("sem lista salva não há vídeo, mesmo com escalações", () => {
+  const workspace = workspaceWith({ agenda: todayLineups([twelveLineupNames]) });
+  assert.equal(collectTonightRelated(workspace, new Date(day)).length, 0);
   assert.equal(suggestRelatedFromLineups(workspace, new Date(day)).length, 12);
 });
 
@@ -165,4 +184,19 @@ test("número da camisa vem do Elenco e não é inventado", () => {
   assert.equal(joao.position, "GOL");
   assert.equal(arruda.name, "Arruda");
   assert.equal(arruda.number, "");
+});
+
+test("o rosto da peça só pode ser de quem está no elenco atual e tem foto", () => {
+  const workspace = {
+    assetUrl: (path) => `/media/${path}`,
+    players: [
+      { id: "a", display_name: "Zeca", avatar_path: "zeca.png", is_active: true, member_type: "elenco" },
+      { id: "b", display_name: "Ana", avatar_path: "ana.png", is_active: true, member_type: "complete" },
+      { id: "c", display_name: "Saiu", avatar_path: "saiu.png", is_active: false, member_type: "elenco" },
+      { id: "d", display_name: "Teste", avatar_path: "teste.png", is_active: true, member_type: "teste" },
+      { id: "e", display_name: "Sem Foto", is_active: true, member_type: "elenco" },
+    ],
+  };
+  assert.deepEqual(squadFaces(workspace).map((player) => player.name), ["Ana", "Zeca"]);
+  assert.deepEqual(squadFaces({}), []);
 });

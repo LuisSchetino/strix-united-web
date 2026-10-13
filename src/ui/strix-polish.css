@@ -149,9 +149,7 @@
 .archive-preview>span{color:var(--sp-kicker)}
 .competition-import-modal h2{margin:6px 0 4px;font-size:22px;letter-spacing:-.02em}
 .competition-import-modal header p{color:var(--sp-muted);font-size:12px}
-.competition-url-row{align-items:end;padding:22px 24px}
-.competition-url-row label{color:var(--sp-kicker);letter-spacing:.12em}
-.competition-url-row input,
+
 .archive-preview input{
   height:46px;
   border:1px solid var(--sp-line-strong);
@@ -160,43 +158,16 @@
   color:var(--sp-text);
   transition:border-color var(--motion-micro) ease,box-shadow var(--motion-micro) ease,background var(--motion-micro) ease;
 }
-.competition-url-row input::placeholder{color:#5f6670}
-.competition-url-row input:hover{border-color:#ffffff33}
-.competition-url-row input:focus,
+
 .archive-preview input:focus{
   outline:0;
   border-color:#dfe2e5;
   box-shadow:0 0 0 3px #ffffff12;
   background:#13171c;
 }
-.competition-url-row .primary{min-height:46px;padding:0 22px;white-space:nowrap}
-.competition-url-row .primary:disabled,
-.competition-import-preview>footer .primary:disabled{
-  opacity:.6;
-  cursor:wait;
-  animation:sp-breathe 1.4s ease-in-out infinite;
-}
+
 .competition-import-modal>.competition-error{margin:0 24px 6px}
-.competition-import-preview{
-  margin:0 24px 24px;
-  background:
-    radial-gradient(circle at 16% 0,color-mix(in srgb,var(--competition-accent) 14%,transparent),transparent 46%),
-    var(--sp-surface);
-  animation:sp-rise var(--motion-section) var(--motion-ease) both;
-}
-.competition-preview-hero>img,
-.competition-preview-hero>span{background:#ffffff0d}
-.competition-preview-hero p{color:var(--sp-muted)}
-.competition-import-preview dl{background:var(--sp-line)}
-.competition-import-preview dl div{background:var(--sp-surface)}
-.competition-import-preview dt{color:var(--sp-muted);letter-spacing:.08em}
-.competition-import-preview dd{color:var(--sp-text)}
-.palette-picker>span{color:var(--sp-kicker);letter-spacing:.1em}
-.palette-picker button{transition:transform var(--motion-micro) var(--motion-ease),box-shadow var(--motion-micro) ease}
-.palette-picker button:hover{transform:scale(1.08)}
-.competition-import-preview>footer{border-top:1px solid var(--sp-line)}
-.competition-import-preview a{color:var(--sp-soft);letter-spacing:.08em;text-decoration:none;border-bottom:1px solid var(--sp-line-strong)}
-.competition-import-preview a:hover{color:#fff;border-bottom-color:#fff}
+
 @keyframes sp-rise{
   from{opacity:0;translate:0 10px}
   to{opacity:1;translate:0 0}
@@ -212,8 +183,6 @@
 .statistics-v3 .statistics-goalkeeper-card>header p,
 .statistics-v3 .statistics-goalkeeper-card>header small{color:var(--sp-muted)!important}
 
-
-
 /* ---------- Central sem jogos: logo + background vivo, nada mais ---------- */
 
 @keyframes sp-beam{
@@ -227,7 +196,6 @@
 }
 @keyframes sp-float{50%{translate:0 -5px}}
 
-.agenda-view-clubs :is(.crest,.avatar,.club-logo),
 .match-detail-score :is(.crest,.avatar,.club-logo,.match-display-mark){
   overflow:hidden!important;
   contain:none!important;
@@ -238,7 +206,6 @@
   align-self:center!important;
 }
 
-.agenda-view-clubs :is(.crest,.avatar,.club-logo) img,
 .match-detail-score :is(.crest,.avatar,.club-logo,.match-display-mark) img{
   width:100%!important;
   height:100%!important;
@@ -250,19 +217,6 @@
   transform:none!important;
 }
 
-.agenda-view-clubs{align-items:center!important}
-
-.agenda-view-clubs>div{gap:8px!important;align-items:center}
-.agenda-view-clubs :is(.crest,.avatar,.club-logo){
-  width:72px!important;
-  height:72px!important;
-  min-width:72px!important;
-  min-height:72px!important;
-  max-width:72px!important;
-  max-height:72px!important;
-  margin:0!important;
-}
-.agenda-view-clubs b{margin:0}
 
 .match-detail-score .match-display-team{align-items:center;gap:14px}
 
@@ -316,8 +270,6 @@
   .agenda-game .agenda-actions,
   .action-menu-popover,
   .agenda-confirm-dialog,
-  .competition-delete-dialog,
-  .competition-import-preview,
-  .competition-url-row .primary:disabled{animation:none!important}
+  .competition-delete-dialog{animation:none!important}
   
 }

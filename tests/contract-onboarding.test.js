@@ -112,14 +112,14 @@ test("onboarding persiste no usuário autenticado e bloqueia o app até assinar"
   assert.match(main, /hasSignedContract\(contractUser\)/);
   assert.match(main, /<ContractGate/);
   assert.ok(main.indexOf("<ContractGate") < main.indexOf('<div className="app-shell">'), "o contrato precisa vir antes do app");
-  assert.match(gate, /client\.auth\.updateUser\(\{ data: \{ \[CONTRACT_METADATA_KEY\]: payload \} \}\)/);
+  assert.match(gate, /client\.auth\.updateUser\(\{ data: \{ \[CONTRACT_METADATA_KEY\]: payload, \.\.\.\(mustChoose && chosen \? \{ \[PLAYER_LINK_KEY\]: chosen \} : \{\}\) \} \}\)/);
   assert.match(gate, /session\.user\.id !== profile\?\.user_id/, "nunca assina por uma identidade ainda não revalidada");
   assert.match(gate, /export function ContractValidating/);
   assert.match(main, /<ContractValidating \/>/);
   assert.match(main, /auth\.profile\?\.user_id === contractUser\.id/);
   assert.match(main, /contractShownFor/, "o gate fica montado até a confirmação terminar");
   assert.doesNotMatch(gate + pad, /sessionStorage|localStorage/);
-  assert.match(gate, /disabled=\{!ready \|\| busy\}/);
+  assert.match(gate, /disabled=\{!ready \|\| busy \|\| \(mustChoose && !chosen\)\}/);
   assert.match(gate, /ASSINAR E CONTINUAR/);
   assert.match(gate, /CONTRATO STRIX UNITED · FC27/);
   assert.match(pad, /onPointerDown/);
@@ -136,13 +136,14 @@ test("contrato assinado pode ser revisto e baixado sem reenviar assinatura", asy
     read("../src/features/onboarding/contract-archive.css"),
   ]);
   assert.doesNotMatch(main, /ContractArchiveAction/, "o contrato não fica no menu");
-  assert.match(main, /<SquadPageV3 workspace=\{workspace\} profile=\{auth\.profile\} contract=\{signedContract\} identity=\{contractIdentity\} client=\{auth\.client\} \/>/);
+  assert.match(main, /<SquadPageV3 workspace=\{workspace\} profile=\{auth\.profile\} contract=\{signedContract\} identity=\{contractIdentity\} client=\{auth\.client\} ownPlayer=\{ownPlayer\} declaredPlayerId=\{readPlayerLink\(auth\.session\?\.user\)\} \/>/);
   assert.match(archive, /REVER ANIMAÇÃO/);
   assert.match(archive, /<DocumentDownload contract=\{contract\} identity=\{identity\}/);
   assert.match(archive, /BAIXAR VÍDEO/);
-  assert.match(archive, /renderContractVideo\(sheetRef\.current\)/);
-  // The document is drawn from the signed payload, never printed from the screen.
-  assert.doesNotMatch(archive, /downloadSignedContractPdf\(sheetRef/);
+  // Video and document are drawn from the signed payload (the same sheet, mounted
+  // off-screen at its canonical size), never printed from the screen.
+  assert.match(archive, /renderContractVideo\(\{ contract, identity \}\)/);
+  assert.doesNotMatch(archive, /sheetRef/);
   assert.match(archive, /lockScroll: true/);
   assert.match(archive, /aria-modal="true"/);
   assert.match(css, /100dvh/);
@@ -154,4 +155,30 @@ test("nenhuma migration nova foi criada para o contrato", async () => {
   const { readdir } = await import("node:fs/promises");
   const names = await readdir(new URL("../supabase/migrations/", import.meta.url));
   assert.equal(names.some((name) => /contract|onboarding|signature/i.test(name)), false);
+});
+
+test("a member whose Discord name is not on the roster is found by the entry they declared", async () => {
+  const { PLAYER_LINK_KEY, PLAYER_LINK_NONE, matchOwnPlayerByName, readPlayerLink, resolveContractIdentity, resolveOwnPlayer } = await import("../src/features/onboarding/contract-core.js");
+  const players = [
+    { id: "p-dornelas", display_name: "Dornelas", positions: ["ZAG"], is_active: true },
+    { id: "p-clayton", display_name: "Clayton", positions: ["ATA"], is_active: true },
+    { id: "p-old", display_name: "Antigo", positions: ["GOL"], is_active: false },
+  ];
+  const account = (data = {}) => ({ user: { id: "u1", user_metadata: { custom_claims: { global_name: "Ninguém Do Elenco" }, ...data }, identities: [] } });
+  const profile = { user_id: "u1", display_name: "Ninguém Do Elenco" };
+
+  assert.equal(resolveOwnPlayer({ session: account(), profile, players }), null, "no name of the account is on the roster");
+  assert.equal(resolveOwnPlayer({ session: account({ [PLAYER_LINK_KEY]: "p-dornelas" }), profile, players }).id, "p-dornelas");
+  assert.equal(readPlayerLink(account({ [PLAYER_LINK_KEY]: " p-dornelas " }).user), "p-dornelas");
+  // The declaration wins over a name that happens to match someone else.
+  const named = { user_id: "u1", display_name: "Clayton" };
+  assert.equal(matchOwnPlayerByName({ session: account(), profile: named, players }).id, "p-clayton");
+  assert.equal(resolveOwnPlayer({ session: account({ [PLAYER_LINK_KEY]: "p-dornelas" }), profile: named, players }).id, "p-dornelas");
+  assert.equal(resolveOwnPlayer({ session: account({ [PLAYER_LINK_KEY]: PLAYER_LINK_NONE }), profile: named, players }), null, "staff who said they are not on the roster");
+  // An entry that left the roster, or an id that does not exist, falls back to the name.
+  assert.equal(resolveOwnPlayer({ session: account({ [PLAYER_LINK_KEY]: "p-old" }), profile: named, players }).id, "p-clayton");
+  assert.equal(resolveOwnPlayer({ session: account({ [PLAYER_LINK_KEY]: "nope" }), profile, players }), null);
+  // The contract shows the role of the entry being chosen, before it is saved.
+  assert.match(resolveContractIdentity({ session: account(), profile, players, playerId: "p-dornelas" }).role, /ZAG/);
+  assert.equal(resolveContractIdentity({ session: account(), profile, players, playerId: PLAYER_LINK_NONE }).role, "");
 });

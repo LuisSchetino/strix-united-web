@@ -67,10 +67,11 @@ test("timeline constrói o campo sem cena de lista", () => {
   assert.equal(timeline.scenes.filter((scene) => scene.type === "list").length, 0);
   assert.equal(relatedNightSceneAt(timeline, 0.4).type, "intro");
   assert.equal(relatedNightSceneAt(timeline, timeline.introEnd + 0.2).type, "player");
-  assert.equal(relatedNightSceneAt(timeline, timeline.duration - 0.05).type, "finale");
-  assert.equal(timeline.duration, relatedNightDurationSeconds(13));
+  assert.equal(relatedNightSceneAt(timeline, timeline.outroStart - 0.05).type, "finale");
+  assert.equal(timeline.outroStart, relatedNightDurationSeconds(13));
+  assert.equal(timeline.duration, timeline.outroStart + 5, "o encerramento comum vem depois do campo completo");
   assert.ok(timeline.introEnd >= 1.5 && timeline.introEnd <= 2);
-  assert.ok(timeline.duration - timeline.finaleStart >= 2 && timeline.duration - timeline.finaleStart <= 3.1);
+  assert.ok(timeline.outroStart - timeline.finaleStart >= 2 && timeline.outroStart - timeline.finaleStart <= 3.1);
 });
 
 test("apresentados permanecem e o painter não usa linguagem de reserva", () => {

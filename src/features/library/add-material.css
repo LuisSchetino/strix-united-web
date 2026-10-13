@@ -1,0 +1,440 @@
+/* Adicionar material: the sheet a manager uses to put a video in the Library. The link leads;
+   a card on the side shows the material as the shelf will. Header and footer stay in place,
+   only the fields scroll. Ink surfaces, hairlines, paper for what is chosen: no accent colour. */
+
+.add-material {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  width: min(980px, 100%);
+  max-height: calc(100dvh - 48px);
+  overflow: hidden;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-lg);
+  background: var(--ink-1);
+  box-shadow: var(--shadow-sheet);
+  animation: library-dialog-in var(--motion-section) var(--motion-ease) both;
+}
+.add-material > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-5) var(--space-6) var(--space-4);
+  border-bottom: 1px solid var(--line-1);
+}
+.add-material h2 {
+  margin: 0;
+  color: var(--text-1);
+  font-size: var(--text-xl);
+  font-weight: 800;
+  letter-spacing: var(--track-tight);
+}
+.add-material > header p {
+  max-width: 56ch;
+  margin: var(--space-1) 0 0;
+  color: var(--text-3);
+  font-size: var(--text-sm);
+  line-height: 1.45;
+}
+
+.add-material-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  min-height: 0;
+}
+.add-material-fields {
+  display: grid;
+  align-content: start;
+  gap: var(--space-5);
+  min-height: 0;
+  padding: var(--space-5) var(--space-6);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* ------------------------------------------------------------------ fields */
+.add-field {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.add-field > label,
+.add-field > legend,
+.add-label {
+  padding: 0;
+  color: var(--text-2);
+  font-size: var(--text-label);
+  font-weight: 700;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+}
+.add-field em {
+  margin-left: var(--space-1);
+  color: var(--text-4);
+  font-style: normal;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: none;
+}
+.add-field > p {
+  margin: 0;
+  color: var(--text-3);
+  font-size: var(--text-xs);
+  line-height: 1.45;
+}
+.add-field :is(input:not([type="radio"]), select, textarea) {
+  width: 100%;
+  min-height: var(--hit);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-sm);
+  background: var(--ink-0);
+  color: var(--text-1);
+  font: inherit;
+  font-size: var(--text-sm);
+  letter-spacing: 0;
+  transition: border-color var(--motion-micro);
+}
+.add-field textarea {
+  min-height: 84px;
+  padding: var(--space-3);
+  line-height: 1.5;
+  resize: vertical;
+}
+.add-field :is(input, select, textarea)::placeholder { color: var(--text-4); }
+.add-field :is(input:not([type="radio"]), select, textarea):hover { border-color: var(--line-3); }
+.add-field :is(input:not([type="radio"]), select, textarea):focus-visible {
+  border-color: var(--paper-1);
+  outline: 2px solid var(--paper-1);
+  outline-offset: 1px;
+}
+.add-field input[aria-invalid="true"] { border-color: var(--text-2); }
+
+/* The link: the one field that matters first, so it is the largest. */
+.add-link-box {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 56px;
+  padding: 0 var(--space-3) 0 var(--space-4);
+  border: 1px solid var(--line-3);
+  border-radius: var(--radius-md);
+  background: var(--ink-0);
+  color: var(--text-3);
+  transition: border-color var(--motion-micro);
+}
+.add-link-box:focus-within {
+  border-color: var(--paper-1);
+  outline: 2px solid var(--paper-1);
+  outline-offset: 1px;
+}
+.add-link-box svg { flex: none; }
+.add-link.is-ok .add-link-box { color: var(--text-1); }
+.add-field .add-link-box input {
+  flex: 1;
+  min-width: 0;
+  min-height: 54px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  font-size: var(--text-md);
+  outline: 0;
+}
+.add-link-box b {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-pill);
+  background: var(--paper-1);
+  color: var(--text-on-light);
+  font-size: var(--text-label);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  animation: add-material-pop var(--motion-section) var(--motion-ease) both;
+}
+@keyframes add-material-pop {
+  from { opacity: 0; transform: translateY(4px) scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+.add-link.is-ok > p { color: var(--text-2); }
+.add-link.is-bad .add-link-box { border-color: var(--text-1); }
+.add-link.is-bad > p { color: var(--text-1); font-weight: 600; }
+
+.add-inline {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-1);
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+/* Jogada / Review: two cards, one chosen. */
+.add-kind > div {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+.add-kind label {
+  position: relative;
+  display: grid;
+  gap: 2px;
+  min-height: 64px;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-md);
+  color: var(--text-2);
+  text-transform: none;
+  letter-spacing: 0;
+  cursor: pointer;
+  transition: border-color var(--motion-micro), background var(--motion-micro), color var(--motion-micro);
+}
+.add-kind label:hover { border-color: var(--line-3); }
+.add-kind input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.add-kind b {
+  color: var(--text-1);
+  font-size: var(--text-md);
+  font-weight: 800;
+}
+.add-kind small {
+  color: var(--text-3);
+  font-size: var(--text-xs);
+  font-weight: 500;
+}
+.add-kind label.is-on {
+  border-color: var(--paper-1);
+  background: var(--paper-1);
+}
+.add-kind label.is-on b { color: var(--text-on-light); }
+.add-kind label.is-on small { color: #3a3f45; }
+.add-kind label:has(input:focus-visible) {
+  outline: 2px solid var(--paper-1);
+  outline-offset: 2px;
+}
+
+.add-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.add-chips button {
+  min-height: 40px;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-2);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  transition: background var(--motion-micro), border-color var(--motion-micro), color var(--motion-micro);
+}
+.add-chips.is-positions button {
+  min-width: 52px;
+  padding: 0 var(--space-3);
+  font-size: var(--text-label);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+.add-chips button:hover {
+  border-color: var(--line-3);
+  color: var(--text-1);
+}
+.add-chips button.is-on {
+  border-color: var(--paper-1);
+  background: var(--paper-1);
+  color: var(--text-on-light);
+}
+.add-chips button:focus-visible {
+  outline: 2px solid var(--paper-1);
+  outline-offset: 2px;
+}
+
+.add-more {
+  border-top: 1px solid var(--line-1);
+  padding-top: var(--space-4);
+}
+.add-more summary {
+  width: fit-content;
+  min-height: 32px;
+  color: var(--text-2);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  cursor: pointer;
+}
+.add-more summary:hover { color: var(--text-1); }
+.add-more[open] summary { margin-bottom: var(--space-3); }
+
+/* ----------------------------------------------------------------- preview */
+.add-material-preview {
+  display: grid;
+  align-content: start;
+  gap: var(--space-3);
+  min-height: 0;
+  padding: var(--space-5) var(--space-5) var(--space-5) var(--space-5);
+  border-left: 1px solid var(--line-1);
+  background: var(--ink-0);
+  overflow-y: auto;
+}
+.add-material-preview article {
+  display: grid;
+  gap: var(--space-3);
+}
+.add-preview-cover {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--line-1);
+  border-radius: var(--radius-md);
+  background: var(--ink-1);
+  aspect-ratio: 16 / 9;
+  isolation: isolate;
+}
+.add-preview-cover img {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  animation: add-material-fade var(--motion-section) var(--motion-ease) both;
+}
+@keyframes add-material-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.add-preview-cover.has-picture::after {
+  content: "";
+  position: absolute;
+  inset: 40% 0 0;
+  z-index: -1;
+  background: linear-gradient(180deg, transparent, rgba(5, 6, 7, 0.82));
+}
+.add-preview-cover span {
+  position: absolute;
+  bottom: var(--space-3);
+  left: var(--space-3);
+  color: var(--text-1);
+  font-size: var(--text-label);
+  font-weight: 800;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+}
+.add-material-preview h3 {
+  margin: 0;
+  color: var(--text-1);
+  font-size: var(--text-md);
+  font-weight: 800;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+.add-material-preview h3.is-empty { color: var(--text-4); font-weight: 600; }
+.add-material-preview article > p {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  color: var(--text-3);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+.add-material-preview ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.add-material-preview li {
+  padding: 3px var(--space-2);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-pill);
+  color: var(--text-3);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.add-material-preview li.is-focus { color: var(--text-1); }
+.add-material-preview dl {
+  display: grid;
+  gap: var(--space-2);
+  margin: var(--space-2) 0 0;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line-1);
+}
+.add-material-preview dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.add-material-preview dt {
+  color: var(--text-4);
+  font-size: var(--text-xs);
+}
+.add-material-preview dd {
+  margin: 0;
+  color: var(--text-2);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-align: right;
+}
+
+/* ------------------------------------------------------------------ footer */
+.add-material > footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-6);
+  border-top: 1px solid var(--line-1);
+}
+.add-material > footer p {
+  min-width: 0;
+  margin: 0;
+  color: var(--text-3);
+  font-size: var(--text-sm);
+  line-height: 1.4;
+}
+.add-material > footer p.is-error { color: var(--text-1); font-weight: 600; }
+.add-material > footer > div {
+  display: flex;
+  flex: none;
+  gap: var(--space-3);
+}
+.add-material > footer .primary[aria-disabled="true"] { opacity: 0.55; }
+
+@media (max-width: 860px) {
+  /* One column: the fields and then the card flow down a single scrolling area. */
+  .add-material-body { display: block; overflow-y: auto; overscroll-behavior: contain; }
+  .add-material-fields { min-height: auto; overflow: visible; }
+  .add-material-preview { border-top: 1px solid var(--line-1); border-left: 0; overflow: visible; }
+  .add-material-preview article { grid-template-columns: 132px minmax(0, 1fr); align-items: start; column-gap: var(--space-3); }
+  .add-preview-cover { grid-row: span 3; }
+}
+@media (max-width: 620px) {
+  .add-material-layer { padding: 0; place-items: stretch; }
+  .add-material { width: 100%; max-height: 100dvh; height: 100dvh; border: 0; border-radius: 0; }
+  .add-material > header { padding: var(--space-4); }
+  .add-material-fields, .add-material-preview { padding: var(--space-4); }
+  .add-material > footer { flex-direction: column; align-items: stretch; padding: var(--space-3) var(--space-4) calc(var(--space-3) + env(safe-area-inset-bottom)); }
+  .add-material > footer > div { display: grid; grid-template-columns: auto minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .add-material, .add-link-box b, .add-preview-cover img { animation: none; }
+}

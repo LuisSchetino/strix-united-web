@@ -1,0 +1,38 @@
+/* "Copiar link": the quiet action that hands out an item's address. */
+.copy-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: var(--hit);
+  padding: 0 var(--space-4);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-2);
+  font-size: var(--text-label);
+  font-weight: 800;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  white-space: nowrap;
+  transition: border-color var(--motion-micro), color var(--motion-micro), background var(--motion-micro);
+}
+.copy-link:hover,
+.copy-link:focus-visible {
+  border-color: var(--line-3);
+  background: var(--ink-3);
+  color: var(--text-1);
+}
+.copy-link svg {
+  flex: none;
+}
+/* First in a row of dialog actions: it stays at the start, the decisions stay at the end. */
+.copy-link.is-leading {
+  margin-right: auto;
+}
+.cx-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}

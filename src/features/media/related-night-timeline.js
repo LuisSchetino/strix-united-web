@@ -1,3 +1,4 @@
+import { withOutro } from "./media-outro.js";
 import { MEDIA_FORMATS } from "./agenda-media-core.js";
 import { safeArea } from "./agenda-timeline.js";
 import {
@@ -10,7 +11,7 @@ import {
 } from "./related-night-core.js";
 import { distributeRelatedOnField } from "./related-night-layout.js";
 
-export function buildRelatedNightTimeline(players = [], { format = "story" } = {}) {
+function buildRelatedNightTimelineBody(players = [], { format = "story" } = {}) {
   const spec = MEDIA_FORMATS[format] || MEDIA_FORMATS.story;
   const count = players.length;
   const duration = relatedNightDurationSeconds(count);
@@ -97,4 +98,9 @@ export function relatedNightSceneAt(timeline, time) {
   return (timeline?.scenes || []).find((scene) => time >= scene.start && time < scene.end)
     || timeline?.scenes?.at(-1)
     || null;
+}
+
+/** The piece's own timeline, followed by the ending every video shares (see media-outro.js). */
+export function buildRelatedNightTimeline(...args) {
+  return withOutro(buildRelatedNightTimelineBody(...args));
 }

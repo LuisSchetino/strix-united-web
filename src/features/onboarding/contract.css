@@ -77,244 +77,399 @@
   white-space: nowrap;
 }
 
-/* ------------------------------------------------------------------ paper */
+/* ------------------------------------------------------------------ paper
+   One A4 sheet drawn in sheet units (--u = 1/794 of the sheet width), so the
+   page scales as a whole and the PDF/MP4 capture (a 794px clone) reads the
+   same layout. Narrow screens reflow the same sheet at a readable size. */
 
-.contract-instrument {
-  position: relative;
-  display: grid;
-  overflow: hidden;
-  gap: var(--space-5);
-  margin: 0;
-  padding: clamp(24px, 5vw, 48px) clamp(20px, 5vw, 52px) var(--space-6);
-  border-radius: 3px;
-  background: var(--paper, #f7f5f0);
-  color: var(--paper-ink, #15171b);
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.6) inset, 0 30px 80px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.35);
-  --paper-ink: #15171b;
-  --paper-muted: #5f6368;
-  --paper-hair: rgba(21, 23, 27, 0.16);
+.contract-paper {
+  container: contract / inline-size;
 }
-/* The page is framed once, inside its margin. */
-.contract-instrument::before {
-  content: "";
+.contract-instrument {
+  --u: calc(100cqw / 794);
+  --paper-ink: #15171b;
+  --paper-text: #2a2d33;
+  --paper-muted: #62666d;
+  --paper-hair: rgba(21, 23, 27, 0.2);
+  --paper-ink-blue: #1b2546;
+  --contract-serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  aspect-ratio: 794 / 1123;
+  overflow: hidden;
+  margin: 0;
+  padding: calc(var(--u) * 60) calc(var(--u) * 74) calc(var(--u) * 48);
+  border-radius: 2px;
+  background: #f5f1e7;
+  color: var(--paper-ink);
+  font-family: var(--font-sans);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.6) inset, 0 34px 90px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+.contract-instrument > *:not(.contract-art):not(.contract-watermark) {
+  position: relative;
+}
+.contract-art {
   position: absolute;
-  inset: 10px;
-  border: 1px solid var(--paper-hair);
+  inset: 0;
+  width: 100%;
+  height: 100%;
   pointer-events: none;
 }
+.contract-watermark {
+  position: absolute;
+  top: calc(560 / 1123 * 100%);
+  left: 50%;
+  width: calc(var(--u) * 360);
+  height: calc(var(--u) * 360);
+  opacity: 0.055;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+/* Letterhead */
 .contract-letterhead {
   display: grid;
-  grid-template-columns: 56px minmax(0, 1fr) auto;
+  grid-template-columns: calc(var(--u) * 72) minmax(0, 1fr) auto;
   align-items: center;
-  gap: var(--space-4);
-  padding-bottom: var(--space-4);
-  border-bottom: 1.5px solid var(--paper-ink);
+  gap: calc(var(--u) * 18);
 }
-.contract-instrument-crest {
-  width: 56px;
-  height: 56px;
+.contract-letterhead-crest {
+  width: calc(var(--u) * 72);
+  height: calc(var(--u) * 72);
 }
-.contract-letterhead b {
+.contract-letterhead-name b {
   display: block;
-  color: var(--paper-ink);
-  font-size: var(--text-xl);
-  font-weight: 800;
-  letter-spacing: 0.04em;
+  font-size: calc(var(--u) * 27);
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  line-height: 1.05;
 }
-.contract-letterhead span {
+.contract-letterhead-name span {
   display: block;
-  margin-top: 2px;
+  margin-top: calc(var(--u) * 6);
   color: var(--paper-muted);
-  font-size: var(--text-label);
+  font-size: calc(var(--u) * 9);
   font-weight: 700;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
 }
-.contract-letterhead p {
+.contract-letterhead-ref {
   display: grid;
-  justify-items: end;
-  gap: 2px;
+  gap: calc(var(--u) * 7);
   margin: 0;
   text-align: right;
 }
-.contract-letterhead em {
-  color: var(--paper-ink);
-  font-size: var(--text-xs);
-  font-style: normal;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-}
-.contract-letterhead small {
+.contract-letterhead-ref dt {
   color: var(--paper-muted);
-  font-size: var(--text-label);
-  font-weight: 600;
+  font-size: calc(var(--u) * 7.5);
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+.contract-letterhead-ref dd {
+  margin: calc(var(--u) * 2) 0 0;
+  font-size: calc(var(--u) * 11.5);
+  font-weight: 800;
+  letter-spacing: 0.03em;
   font-variant-numeric: tabular-nums;
 }
+.contract-rule {
+  display: grid;
+  gap: calc(var(--u) * 2.5);
+  margin-top: calc(var(--u) * 16);
+}
+.contract-rule i:first-child {
+  height: calc(var(--u) * 2.4);
+  background: var(--paper-ink);
+}
+.contract-rule i:last-child {
+  height: max(1px, calc(var(--u) * 0.8));
+  background: var(--paper-ink);
+}
+
+/* Title */
+.contract-title-block {
+  margin-top: calc(var(--u) * 20);
+  text-align: center;
+}
+.contract-title-block span {
+  color: var(--paper-muted);
+  font-size: calc(var(--u) * 9);
+  font-weight: 700;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+}
 .contract-title-block h3 {
-  margin: 0;
-  color: var(--paper-ink);
-  font-size: clamp(24px, 3.4vw, 32px);
-  font-weight: 800;
-  letter-spacing: var(--track-display);
+  margin: calc(var(--u) * 6) 0 0;
+  font-size: calc(var(--u) * 36);
+  font-weight: 900;
+  letter-spacing: 0.015em;
+  line-height: 1;
   text-transform: uppercase;
 }
 .contract-title-block p {
-  margin: var(--space-1) 0 0;
+  max-width: calc(var(--u) * 520);
+  margin: calc(var(--u) * 8) auto 0;
   color: var(--paper-muted);
-  font-size: var(--text-sm);
+  font-family: var(--contract-serif);
+  font-size: calc(var(--u) * 12.5);
+  font-style: italic;
+  line-height: 1.4;
 }
+
+/* Identification table */
 .contract-ledger {
+  margin-top: calc(var(--u) * 20);
+}
+.contract-ledger h4 {
+  margin: 0 0 calc(var(--u) * 7);
+  color: var(--paper-muted);
+  font-size: calc(var(--u) * 7.5);
+  font-weight: 800;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+}
+.contract-ledger dl {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr 1.3fr 0.9fr;
   margin: 0;
-  border-top: 1px solid var(--paper-hair);
+  border-top: max(1px, calc(var(--u) * 1.2)) solid var(--paper-ink);
+  border-bottom: max(1px, calc(var(--u) * 1.2)) solid var(--paper-ink);
 }
-.contract-ledger > div {
-  display: grid;
-  gap: 2px;
+.contract-ledger dl > div {
   min-width: 0;
-  padding: var(--space-2) 0;
-  border-bottom: 1px solid var(--paper-hair);
-}
-.contract-ledger > div:nth-child(even) {
-  padding-left: var(--space-4);
+  padding: calc(var(--u) * 8) calc(var(--u) * 12) calc(var(--u) * 9);
   border-left: 1px solid var(--paper-hair);
+}
+.contract-ledger dl > div:nth-child(3n + 1) {
+  padding-left: 0;
+  border-left: 0;
+}
+.contract-ledger dl > div:nth-child(-n + 3) {
+  border-bottom: 1px solid var(--paper-hair);
 }
 .contract-ledger dt {
   color: var(--paper-muted);
-  font-size: 10px;
+  font-size: calc(var(--u) * 7.2);
   font-weight: 700;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
 }
 .contract-ledger dd {
   overflow: hidden;
-  margin: 0;
-  color: var(--paper-ink);
-  font-size: var(--text-sm);
+  margin: calc(var(--u) * 4) 0 0;
+  font-size: calc(var(--u) * 11.5);
   font-weight: 700;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
+
+/* Clauses */
 .contract-clauses {
   display: grid;
-  gap: var(--space-1);
+  gap: calc(var(--u) * 8);
+  margin-top: calc(var(--u) * 18);
 }
-.contract-clauses h4 {
-  margin: var(--space-2) 0 0;
+/* Run-in clauses, as in a drafted contract: the heading opens the paragraph. */
+.contract-clause {
+  color: var(--paper-text);
+  font-family: var(--contract-serif);
+  font-size: calc(var(--u) * 11.8);
+  line-height: 1.48;
+  text-align: justify;
+}
+.contract-clause h4 {
+  display: inline;
+  margin: 0 calc(var(--u) * 6) 0 0;
+}
+.contract-clause h4 b {
+  display: inline-block;
+  margin-right: calc(var(--u) * 6);
   color: var(--paper-ink);
-  font-size: 10.5px;
+  font-family: var(--font-sans);
+  font-size: calc(var(--u) * 8);
   font-weight: 800;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
 }
-.contract-clauses h4:first-child {
-  margin-top: 0;
+.contract-clause h4 span {
+  color: var(--paper-ink);
+  font-style: italic;
+  font-weight: 600;
 }
-.contract-clauses p {
+.contract-clause p {
+  display: inline;
   margin: 0;
-  color: #2a2d31;
-  font-size: var(--text-sm);
-  line-height: 1.65;
 }
 
-/* --------------------------------------------------------------- signature */
-
-.contract-instrument-sign {
-  position: relative;
+/* Place, date and the two signatures */
+.contract-place {
+  margin: calc(var(--u) * 12) 0 0;
+  color: var(--paper-text);
+  font-family: var(--contract-serif);
+  font-size: calc(var(--u) * 12.4);
+  font-style: italic;
+  text-align: right;
+}
+.contract-signatures {
   display: grid;
-  gap: 4px;
-  padding-top: var(--space-2);
+  grid-template-columns: 1.55fr 1fr;
+  align-items: end;
+  gap: calc(var(--u) * 44);
+  margin-top: calc(var(--u) * 4);
 }
-.contract-instrument-sign > span {
-  color: var(--paper-muted);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-.contract-instrument-sign svg,
-.contract-instrument-sign .signature-pad {
-  width: 100%;
+.contract-instrument-sign,
+.contract-club-sign {
+  display: grid;
   min-width: 0;
 }
-.contract-instrument-sign > svg {
-  display: block;
-  height: clamp(100px, 18vh, 140px);
+.contract-sign-area {
+  position: relative;
+  aspect-ratio: 3 / 1;
 }
-.contract-instrument-sign path {
-  fill: none;
-  stroke: var(--paper-ink);
-  stroke-width: 2.6;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-dasharray: 1;
-  stroke-dashoffset: 1;
-  animation: contract-draw 1.6s cubic-bezier(0.4, 0, 0.2, 1) 200ms forwards;
-}
-@keyframes contract-draw {
-  to { stroke-dashoffset: 0; }
-}
-.contract-instrument-sign > i {
-  height: 1px;
-  background: var(--paper-ink);
-}
-.contract-instrument-sign em {
-  color: var(--paper-ink);
-  font-size: var(--text-md);
-  font-style: normal;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-}
-.contract-instrument-sign small {
-  color: var(--paper-muted);
-  font-size: var(--text-xs);
-}
-/* The seal settles after the stroke has been drawn: a quiet stamp, in focus. */
-.contract-seal {
-  position: absolute;
-  right: 4%;
-  top: 22%;
+.contract-seal-area {
+  position: relative;
   display: grid;
   place-items: center;
-  align-content: center;
-  width: 104px;
-  height: 104px;
-  border: 1.5px solid rgba(21, 23, 27, 0.55);
-  border-radius: 50%;
-  box-shadow: inset 0 0 0 4px var(--paper), inset 0 0 0 5px rgba(21, 23, 27, 0.35);
-  color: rgba(21, 23, 27, 0.72);
-  text-align: center;
-  transform: rotate(-8deg);
-  animation: contract-seal-in 620ms var(--motion-ease) 1.7s both;
-  pointer-events: none;
+  height: calc(var(--u) * 122);
 }
-.contract-seal b {
-  font-size: 12px;
+.contract-sign-line {
+  height: max(1px, calc(var(--u) * 1));
+  background: var(--paper-ink);
+}
+.contract-instrument-sign em,
+.contract-club-sign em {
+  margin-top: calc(var(--u) * 7);
+  font-size: calc(var(--u) * 12.5);
+  font-style: normal;
   font-weight: 800;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
 }
-.contract-seal small {
-  margin-top: 2px;
-  color: inherit;
-  font-size: 8.5px;
+.contract-instrument-sign small,
+.contract-club-sign small {
+  margin-top: calc(var(--u) * 3);
+  color: var(--paper-muted);
+  font-size: calc(var(--u) * 8);
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
 }
-@keyframes contract-seal-in {
-  from { opacity: 0; filter: blur(6px); transform: rotate(-8deg) scale(1.25); }
-  to { opacity: 1; filter: none; transform: rotate(-8deg) scale(1); }
+.contract-sign-ink,
+.contract-sign-ink svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
 }
-/* After signing, one light passes across the paper. */
-.contract-instrument.is-signed::after {
+.contract-sign-ink svg {
+  display: block;
+}
+
+/* The pen: tip on the ink, lifted between strokes (its shadow grows with --lift). */
+.contract-pen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  width: calc(var(--u) * 150);
+  height: calc(var(--u) * 150);
+  opacity: 0;
+  pointer-events: none;
+  will-change: transform, opacity;
+  filter: drop-shadow(calc(var(--u) * (3 + var(--lift, 0) * 12)) calc(var(--u) * (4 + var(--lift, 0) * 14)) calc(var(--u) * (2.5 + var(--lift, 0) * 6)) rgba(10, 12, 16, 0.32));
+}
+.contract-pen svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* The club's stamp */
+.contract-seal {
+  position: relative;
+  width: calc(var(--u) * 132);
+  height: calc(var(--u) * 132);
+  margin-top: calc(var(--u) * -18);
+  opacity: 0;
+}
+.contract-seal svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.contract-seal img {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: calc(var(--u) * 66);
+  height: calc(var(--u) * 66);
+  opacity: 0.9;
+  transform: translate(-50%, -50%);
+}
+.contract-seal.is-stamped {
+  animation: contract-stamp 620ms cubic-bezier(0.2, 0.9, 0.25, 1.15) both;
+}
+.contract-seal.is-stamped::after {
+  content: "";
+  position: absolute;
+  inset: 4%;
+  border: calc(var(--u) * 3) solid var(--paper-ink-blue);
+  border-radius: 50%;
+  opacity: 0;
+  animation: contract-stamp-ring 900ms var(--motion-ease) 260ms both;
+  pointer-events: none;
+}
+@keyframes contract-stamp {
+  0% { opacity: 0; transform: scale(1.9); filter: blur(4px); }
+  55% { opacity: 1; transform: scale(0.94); filter: blur(0); }
+  78% { transform: scale(1.025); }
+  100% { opacity: 1; transform: scale(1); filter: none; }
+}
+@keyframes contract-stamp-ring {
+  0% { opacity: 0.32; transform: scale(0.96); }
+  100% { opacity: 0; transform: scale(1.32); }
+}
+.contract-seal-pending {
+  display: grid;
+  place-items: center;
+  width: calc(var(--u) * 112);
+  height: calc(var(--u) * 112);
+  margin-top: calc(var(--u) * 14);
+  padding: calc(var(--u) * 14);
+  border: max(1px, calc(var(--u) * 1.2)) dashed var(--paper-hair);
+  border-radius: 50%;
+  color: var(--paper-muted);
+  font-size: calc(var(--u) * 7.5);
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  line-height: 1.5;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+/* When the seal lands the paper takes the blow, then one light crosses it. */
+.contract-instrument.is-sealed:not(.is-static) {
+  animation: contract-thump 360ms var(--motion-ease) 180ms both;
+}
+@keyframes contract-thump {
+  0%, 100% { transform: none; }
+  35% { transform: translateY(1.5px) scale(0.997); }
+}
+.contract-instrument.is-sealed:not(.is-static)::after {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.55) 50%, transparent 60%);
+  z-index: 3;
+  background: linear-gradient(105deg, transparent 38%, rgba(255, 255, 255, 0.6) 50%, transparent 62%);
   mix-blend-mode: soft-light;
   transform: translateX(-100%);
-  animation: contract-light 1.2s var(--motion-ease) 1.9s both;
+  animation: contract-light 1.3s var(--motion-ease) 520ms both;
   pointer-events: none;
 }
 @keyframes contract-light {
@@ -323,25 +478,116 @@
 .contract-foot {
   display: flex;
   justify-content: space-between;
-  gap: var(--space-4);
-  padding-top: var(--space-3);
+  gap: calc(var(--u) * 24);
+  margin-top: auto;
+  padding-top: calc(var(--u) * 10);
   border-top: 1px solid var(--paper-hair);
   color: var(--paper-muted);
-  font-size: 10.5px;
+  font-size: calc(var(--u) * 8);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.contract-foot span:last-child {
+  flex: 0 0 auto;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
 }
 
-/* The pad: ink on paper, a baseline, and a pen that follows the stroke. */
+/* Exports render a still sheet: no entrance, no pen, the seal in place. */
+.contract-instrument.is-static,
+.contract-instrument.is-static * {
+  animation: none !important;
+  transition: none !important;
+}
+.contract-instrument.is-static {
+  box-shadow: none;
+}
+.contract-instrument.is-static .contract-seal {
+  opacity: 1;
+}
+
+/* Narrow screens: the same sheet reflowed at a readable size. */
+@container contract (max-width: 620px) {
+  .contract-instrument {
+    --u: calc(100cqw / 430);
+    aspect-ratio: auto;
+    padding: calc(var(--u) * 34) calc(var(--u) * 26) calc(var(--u) * 28);
+  }
+  .contract-art {
+    display: none;
+  }
+  .contract-instrument::before {
+    content: "";
+    position: absolute;
+    inset: 8px;
+    border: 1px solid var(--paper-hair);
+    pointer-events: none;
+  }
+  .contract-watermark {
+    top: 38%;
+  }
+  .contract-letterhead {
+    grid-template-columns: calc(var(--u) * 56) minmax(0, 1fr);
+  }
+  .contract-letterhead-crest {
+    width: calc(var(--u) * 56);
+    height: calc(var(--u) * 56);
+  }
+  .contract-letterhead-ref {
+    grid-column: 1 / -1;
+    grid-template-columns: 1fr 1fr;
+    text-align: left;
+  }
+  .contract-title-block h3 {
+    font-size: calc(var(--u) * 30);
+  }
+  .contract-ledger dl {
+    grid-template-columns: 1fr 1fr;
+  }
+  .contract-ledger dl > div,
+  .contract-ledger dl > div:nth-child(3n + 1) {
+    padding-left: calc(var(--u) * 10);
+    border-left: 1px solid var(--paper-hair);
+    border-bottom: 1px solid var(--paper-hair);
+  }
+  .contract-ledger dl > div:nth-child(odd) {
+    padding-left: 0;
+    border-left: 0;
+  }
+  .contract-ledger dl > div:nth-last-child(-n + 2) {
+    border-bottom: 0;
+  }
+  .contract-ledger dd {
+    white-space: normal;
+  }
+  .contract-clause {
+    text-align: left;
+  }
+  .contract-signatures {
+    grid-template-columns: minmax(0, 1fr);
+    gap: calc(var(--u) * 26);
+  }
+  .contract-foot {
+    flex-direction: column;
+    gap: calc(var(--u) * 4);
+    margin-top: calc(var(--u) * 26);
+  }
+}
+
+/* The pad fills the signature box (3:1, the stored stroke's own proportion), so
+   what is drawn here is replayed undistorted on the sheet and in the exports. */
 .signature-pad {
-  position: relative;
-  height: clamp(130px, 22vh, 180px);
+  position: absolute;
+  inset: 0;
   border-radius: 2px;
-  background: rgba(21, 23, 27, 0.025);
+  background: rgba(27, 37, 70, 0.035);
   box-shadow: inset 0 0 0 1px var(--paper-hair);
-  transition: box-shadow var(--motion-control) ease;
+  transition: box-shadow var(--motion-control) ease, background var(--motion-control) ease;
 }
 .signature-pad:hover,
 .signature-pad.is-drawing {
-  box-shadow: inset 0 0 0 1px rgba(21, 23, 27, 0.32);
+  background: rgba(27, 37, 70, 0.05);
+  box-shadow: inset 0 0 0 1px rgba(21, 23, 27, 0.36);
 }
 .signature-pad canvas {
   position: absolute;
@@ -356,23 +602,14 @@
 .signature-pad.has-pen canvas {
   cursor: none;
 }
-.signature-pad-line {
-  position: absolute;
-  right: 5%;
-  bottom: 26%;
-  left: 5%;
-  height: 1px;
-  background: rgba(21, 23, 27, 0.3);
-  pointer-events: none;
-}
 .signature-pad-hint {
   position: absolute;
-  bottom: 9%;
-  left: 5%;
-  color: rgba(21, 23, 27, 0.4);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.18em;
+  bottom: 12%;
+  left: 4%;
+  color: rgba(21, 23, 27, 0.42);
+  font-size: calc(var(--u, 1px) * 8.5);
+  font-weight: 800;
+  letter-spacing: 0.22em;
   pointer-events: none;
   transition: opacity var(--motion-control) ease;
 }
@@ -382,47 +619,66 @@
 .signature-pad.is-disabled {
   opacity: 0.6;
 }
+/* The same fountain pen that writes the replay follows the pointer here. */
 .signature-pen {
   position: absolute;
   top: 0;
   left: 0;
-  width: 32px;
-  height: 32px;
-  color: var(--paper-ink, #15171b);
+  z-index: 2;
+  width: 72px;
+  height: 72px;
   opacity: 0;
   pointer-events: none;
-  transform: translate(calc(var(--pen-x, 0px) - 3px), calc(var(--pen-y, 0px) - 29px));
+  transform: translate(calc(var(--pen-x, 0px) - 3.6px), calc(var(--pen-y, 0px) - 68.4px));
   transition: opacity var(--motion-micro);
+  filter: drop-shadow(3px 5px 3px rgba(10, 12, 16, 0.3));
 }
 .signature-pen svg {
-  fill: var(--paper, #f7f5f0);
-  stroke: currentColor;
-  stroke-width: 1.6;
-  stroke-linejoin: round;
-  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.18));
-}
-/* The nib's light: a soft point where ink meets paper while drawing. */
-.signature-pen::after {
-  content: "";
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(21, 23, 27, 0.22), transparent 70%);
-  transform: translate(-2px, 2px) scale(0);
-  transition: transform var(--motion-micro) var(--motion-ease);
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 .signature-pad.has-pen .signature-pen {
   opacity: 1;
 }
-.signature-pad.is-drawing .signature-pen::after {
-  transform: translate(-2px, 2px) scale(1.4);
+.signature-pad.is-drawing .signature-pen {
+  filter: drop-shadow(2px 3px 2px rgba(10, 12, 16, 0.34));
 }
 
 /* ------------------------------------------------------------ controls */
 
+.contract-who {
+  display: grid;
+  gap: var(--space-2);
+  color: var(--text-2);
+  font-size: var(--text-xs);
+}
+.contract-who span {
+  color: var(--text-1);
+  font-size: var(--text-label);
+  font-weight: 700;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+}
+.contract-who select {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-control, 10px);
+  background: var(--ink-1, #0b0d10);
+  color: var(--text-1);
+  font: inherit;
+  font-size: var(--text-sm);
+}
+.contract-who select:focus-visible {
+  outline: 2px solid var(--text-1);
+  outline-offset: 2px;
+}
+.contract-who small {
+  color: var(--text-3, var(--text-2));
+  line-height: 1.45;
+}
 .contract-pad-tools {
   display: flex;
   justify-content: flex-end;
@@ -451,7 +707,7 @@
   color: var(--text-1);
   font-size: var(--text-sm);
   font-weight: 600;
-  animation: contract-rise var(--motion-section) var(--motion-ease) 2.1s both;
+  animation: contract-rise var(--motion-section) var(--motion-ease) 3.4s both;
 }
 .contract-confirmed svg,
 .document-download svg {
@@ -556,34 +812,6 @@
   .contract-head > em {
     display: none;
   }
-  .contract-letterhead {
-    grid-template-columns: 44px minmax(0, 1fr);
-  }
-  .contract-instrument-crest {
-    width: 44px;
-    height: 44px;
-  }
-  .contract-letterhead p {
-    grid-column: 1 / -1;
-    justify-items: start;
-    text-align: left;
-  }
-  .contract-ledger {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .contract-ledger > div:nth-child(even) {
-    padding-left: 0;
-    border-left: 0;
-  }
-  .contract-seal {
-    top: 14%;
-    width: 84px;
-    height: 84px;
-  }
-  .contract-foot {
-    flex-direction: column;
-    gap: 2px;
-  }
   .contract-downloads {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -591,17 +819,20 @@
 @media (prefers-reduced-motion:reduce) {
   .contract-sheet,
   .contract-seal,
+  .contract-seal::after,
+  .contract-instrument,
   .contract-confirmed,
-  .contract-instrument.is-signed::after,
   .contract-validating > i::after {
     animation: none !important;
   }
-  .contract-instrument.is-signed::after {
+  .contract-seal {
+    opacity: 1;
+  }
+  .contract-instrument::after {
     display: none;
   }
-  .contract-instrument-sign path {
-    animation: none;
-    stroke-dashoffset: 0;
+  .contract-pen {
+    display: none;
   }
   .signature-pen {
     transition: none;

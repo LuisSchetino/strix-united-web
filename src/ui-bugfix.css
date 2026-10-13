@@ -9,7 +9,7 @@
 .squad-dialog-layer .squad-modal-v2>footer{display:grid;gap:10px;padding:16px 24px!important;border-top:1px solid #ffffff14}
 .squad-dialog-layer footer>div{display:flex;justify-content:flex-end;gap:10px}
 .squad-dialog-layer :is(button,input){min-height:44px}
-.squad-save-error{margin:0;color:#f29aa7;font-size:13px;line-height:1.4}
+.squad-save-error{margin:0;color:#c0c0c0;font-size:13px;line-height:1.4}
 .squad-dialog-layer .member-picker button.selected small{color:#41464e}
 @media(max-width:700px){
   
@@ -41,10 +41,7 @@
 .match-preview-mark .avatar,
 .match-preview .crest,
 .match-preview .club-logo,
-.match-preview .avatar,
-.agenda-view-clubs .crest,
-.agenda-view-clubs .avatar,
-.agenda-view-clubs .club-logo{
+.match-preview .avatar{
   box-sizing:border-box;
   padding:7px;
   overflow:hidden;
@@ -53,8 +50,7 @@
 }
 
 .match-preview-mark :is(.crest,.club-logo,.avatar) img,
-.match-preview :is(.crest,.club-logo,.avatar) img,
-.agenda-view-clubs :is(.crest,.avatar,.club-logo) img{
+.match-preview :is(.crest,.club-logo,.avatar) img{
   object-fit:contain!important;
   object-position:center!important;
 }

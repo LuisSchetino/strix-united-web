@@ -36,12 +36,13 @@ test("modal de exclusão: centralizado, neutro e com o CloseButton compartilhado
   assert.match(css, /\.agenda-confirm-danger,\s*\.competition-danger\{[^}]*background:#f5f5f5!important/);
 });
 
-test("Adicionar campeonato usa o container Strix e preserva a cor da competição", async () => {
+test("Adicionar campeonato usa o container Strix e é monocromático", async () => {
   const css = await read("../src/ui/strix-polish.css");
   const modal = css.slice(css.indexOf("Adicionar campeonato"), css.indexOf("Texto descritivo"));
   assert.match(modal, /\.competition-import-modal/);
   assert.match(modal, /background:var\(--sp-surface\)/);
-  assert.match(modal, /var\(--competition-accent\)/, "a identidade da competição continua vindo da própria competição");
+  const sheet = await read("../src/features/competitions/competition-import.css");
+  assert.doesNotMatch(sheet, /competition-accent|state-(danger|warning)/, "a única cor da folha é a logo da competição");
   assert.match(css, /\.competition-import-modal>header>\.close-button/);
 });
 

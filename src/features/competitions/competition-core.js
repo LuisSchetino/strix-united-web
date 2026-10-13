@@ -1,4 +1,5 @@
 import { normalizeName } from "../matches/import-core.js";
+import { saoPauloDay } from "../agenda/agenda-time.js";
 import { bracketRoundKey } from "../../../shared/bracket-slots.js";
 
 const stageLabel = (value) => {
@@ -6,7 +7,9 @@ const stageLabel = (value) => {
   if (/round_of_16|oitava/i.test(value || "")) return "Oitavas de final";
   if (/semi/i.test(value || "")) return "Semifinais";
   if (/final/i.test(value || "")) return "Final";
-  if (/group|standings|league/i.test(value || "")) return "Classificação";
+  if (/^groups?$|fase de grupos/i.test(value || "")) return "Fase de grupos";
+  if (/league|pontos corridos/i.test(value || "")) return "Pontos corridos";
+  if (/group|standings/i.test(value || "")) return "Classificação";
   return value || "Fase não identificada";
 };
 
@@ -70,8 +73,23 @@ export function deriveCompetitionView(sources = [], persistedFixtures = [], edit
     ? (edition.outcome || (edition.final_stage ? stageLabel(edition.final_stage) : "Participação encerrada"))
     : awaitingKnockout
     ? "Aguardando mata-mata"
-    : stageLabel(knockout.knockout?.currentStage || (knockoutSource ? "knockout" : standings.phase));
-  const strixFixture = upcoming.find((fixture) => /\bstrix\b/i.test(`${fixture.home_team_name} ${fixture.away_team_name}`)) || null;
+    // More than one group is a group stage, whatever the entry page called itself.
+    : stageLabel(knockout.knockout?.currentStage || (knockoutSource ? "knockout" : standings.groups.length > 1 ? "groups" : standings.phase));
+  // Strix's games still to play, earliest first (a game without a date goes last). The list
+  // arrives in the order the source published it, which is not the order they are played in.
+  const kickoff = (fixture) => {
+    const stamp = fixture?.scheduled_at ? new Date(fixture.scheduled_at).getTime() : NaN;
+    return Number.isFinite(stamp) ? stamp : Number.POSITIVE_INFINITY;
+  };
+  const strixUpcoming = upcoming
+    .filter((fixture) => /\bstrix\b/i.test(`${fixture.home_team_name} ${fixture.away_team_name}`))
+    .sort((left, right) => kickoff(left) - kickoff(right));
+  const strixFixture = strixUpcoming[0] || null;
+  // A competition often puts two games on the same night: every game of the day of the next one.
+  const nightOf = (fixture) => (Number.isFinite(kickoff(fixture)) ? saoPauloDay(fixture.scheduled_at) : "");
+  const strixNightFixtures = strixFixture
+    ? (nightOf(strixFixture) ? strixUpcoming.filter((fixture) => nightOf(fixture) === nightOf(strixFixture)) : [strixFixture])
+    : [];
   return {
     standingsSource,
     knockoutSource,
@@ -85,6 +103,7 @@ export function deriveCompetitionView(sources = [], persistedFixtures = [], edit
     upcoming,
     providerResults,
     strixFixture,
+    strixNightFixtures,
     awaitingKnockout,
     isHistorical,
     qualificationSlots: Number(

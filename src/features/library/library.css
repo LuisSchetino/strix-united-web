@@ -884,7 +884,7 @@
 }
 
 /* Strix player: YouTube's stream under our controls. */
-.library-player-frame.is-strix-player > div iframe {
+.library-player-frame.is-strix-player iframe {
   pointer-events: none;
 }
 .strix-player-surface {
@@ -909,18 +909,10 @@
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
   animation: data-arrive var(--motion-control) var(--motion-ease) both;
 }
+/* Player glyphs come from the shared icon set; they keep their own fill and stroke. */
 .strix-player-surface svg,
 .strix-player-controls svg {
-  fill: currentColor;
-  stroke: currentColor;
-  stroke-width: 1.8;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-.strix-player-controls svg path[d^="M4 9V4"],
-.strix-player-controls svg path[d^="M4 9.5"],
-.strix-player-controls svg path[d^="M8 5.5v13M16"] {
-  fill: none;
+  flex: none;
 }
 .strix-player-controls {
   display: grid;
@@ -974,6 +966,77 @@
   border-radius: 50%;
   background: var(--paper-1);
 }
+/* Who a material is mainly for: chips in the header (a manager toggles them, a player reads them). */
+.library-focus,
+.library-focus-field > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.library-focus {
+  margin-top: var(--space-3);
+}
+.library-focus > span,
+.library-focus-field > span {
+  color: var(--text-3);
+  font-size: var(--text-label);
+  font-weight: 700;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+}
+.library-focus > b {
+  color: var(--text-1);
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+.library-focus > small,
+.library-focus-field > small {
+  flex-basis: 100%;
+  color: var(--text-4);
+  font-size: var(--text-xs);
+  line-height: var(--leading-snug);
+}
+.library-focus button,
+.library-focus-field button {
+  min-width: 48px;
+  min-height: 36px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-3);
+  font-size: var(--text-label);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  transition: background var(--motion-micro), border-color var(--motion-micro), color var(--motion-micro);
+}
+.library-focus button:hover,
+.library-focus-field button:hover {
+  border-color: var(--line-3);
+  color: var(--text-1);
+}
+.library-focus button.is-on,
+.library-focus-field button.is-on {
+  border-color: var(--paper-1);
+  background: var(--paper-1);
+  color: var(--text-on-light);
+}
+.library-focus-field {
+  display: grid;
+  gap: var(--space-2);
+}
+.library-tags em.is-focus {
+  color: var(--text-2);
+  box-shadow: inset 0 0 0 1px var(--line-3);
+}
+.library-tags em.is-for-you {
+  background: var(--paper-1);
+  box-shadow: none;
+  color: var(--text-on-light);
+  font-weight: 700;
+}
+
 .library-player-actions {
   display: flex;
   flex-wrap: wrap;
@@ -991,5 +1054,224 @@
   }
   .strix-player-controls time:first-of-type {
     display: none;
+  }
+}
+
+/* Watch-here player: the Strix cover until play, our end screen after the last frame,
+   and a guard over the Drive preview's pop-out corner. */
+.strix-player-facade {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: var(--space-3);
+  padding: 0;
+  border: 0;
+  background: var(--ink-0);
+  color: var(--text-1);
+  cursor: pointer;
+  isolation: isolate;
+}
+.strix-player-facade img {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: brightness(0.75);
+  transition: transform var(--motion-hero) var(--motion-ease), filter var(--motion-section);
+}
+.strix-player-facade:hover img {
+  transform: scale(1.03);
+  filter: brightness(0.9);
+}
+.strix-player-facade-play {
+  display: grid;
+  place-items: center;
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  background: var(--paper-1);
+  color: var(--ink-0);
+  box-shadow: 0 0 0 10px rgba(255, 255, 255, 0.08), 0 14px 40px rgba(0, 0, 0, 0.55);
+  animation: facade-pulse var(--motion-breathe) ease-in-out infinite;
+}
+.strix-player-facade-play svg {
+  fill: currentColor;
+}
+.strix-player-facade b {
+  font-size: var(--text-label);
+  font-weight: 800;
+  letter-spacing: var(--track-label);
+}
+@keyframes facade-pulse {
+  0%, 100% { box-shadow: 0 0 0 10px rgba(255, 255, 255, 0.06), 0 14px 40px rgba(0, 0, 0, 0.55); }
+  50% { box-shadow: 0 0 0 18px rgba(255, 255, 255, 0.02), 0 14px 40px rgba(0, 0, 0, 0.55); }
+}
+.strix-player-end {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: var(--space-2);
+  background: rgba(5, 6, 7, 0.94);
+  text-align: center;
+  animation: data-arrive var(--motion-section) var(--motion-ease) both;
+}
+.strix-player-end b {
+  color: var(--data);
+  font-size: var(--text-2xl);
+  font-weight: 800;
+}
+.strix-player-end span {
+  margin-bottom: var(--space-2);
+  color: var(--text-3);
+  font-size: var(--text-sm);
+}
+.drive-popout-guard {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 2;
+  width: 76px;
+  height: 64px;
+  cursor: default;
+}
+.library-player-frame {
+  -webkit-user-select: none;
+  user-select: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .strix-player-facade-play {
+    animation: none;
+  }
+}
+
+/* Fullscreen: the frame and its controls go together; an exit button is always on screen
+   (no Esc needed), the controls fade after a pause and come back on any touch or move. */
+.library-player-stage {
+  position: relative;
+  display: grid;
+}
+.library-player-stage.is-full {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  grid-template-rows: minmax(0, 1fr);
+  background: #000;
+}
+.library-player-stage:fullscreen {
+  position: static;
+  width: 100vw;
+  height: 100vh;
+}
+.library-player-stage.is-full .library-player-frame {
+  height: 100%;
+  aspect-ratio: auto;
+  border-radius: 0;
+}
+.library-player-stage.is-full .strix-player-controls {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 4;
+  padding: var(--space-6) max(var(--space-5), env(safe-area-inset-right)) max(var(--space-4), env(safe-area-inset-bottom)) max(var(--space-5), env(safe-area-inset-left));
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.82));
+  transition: opacity 280ms ease, transform 280ms var(--motion-ease);
+}
+.library-player-exit {
+  position: absolute;
+  top: max(var(--space-4), env(safe-area-inset-top));
+  right: max(var(--space-4), env(safe-area-inset-right));
+  z-index: 5;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--hit);
+  padding: 0 var(--space-4) 0 var(--space-3);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  color: #fff;
+  font-size: var(--text-label);
+  font-weight: 800;
+  letter-spacing: var(--track-label);
+  transition: opacity 280ms ease, background var(--motion-micro);
+}
+.library-player-exit:hover {
+  background: rgba(0, 0, 0, 0.75);
+}
+.library-player-exit svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.library-player-stage.is-idle .library-player-exit,
+.library-player-stage.is-idle .strix-player-controls {
+  opacity: 0;
+  pointer-events: none;
+}
+.library-player-stage.is-idle .strix-player-controls {
+  transform: translateY(8px);
+}
+.library-player-stage.is-idle {
+  cursor: none;
+}
+.strix-player-controls.is-compact {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+.strix-player-controls.is-compact > span {
+  color: var(--text-3);
+  font-size: var(--text-xs);
+}
+@media (max-width: 640px) {
+  .library-player-exit span {
+    display: none;
+  }
+  .library-player-exit {
+    padding: 0;
+    width: var(--hit);
+    justify-content: center;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .library-player-stage.is-full .strix-player-controls,
+  .library-player-exit {
+    transition: none;
+  }
+}
+
+.tracking-timed {
+  color: var(--text-3);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+/* The video never takes more than half the screen's height in the dialog, so the moments and
+   the actions under it stay in view; it keeps its 16:9 and sits centred. Fullscreen is untouched. */
+.library-player-stage:not(.is-full) {
+  width: min(100%, calc(50dvh * 16 / 9));
+  margin-inline: auto;
+}
+
+@media (max-width: 620px) {
+  /* On a phone the player's status sits above its actions, and the actions fill the row. */
+  .library-player-dialog > footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .library-player-actions {
+    justify-content: flex-end;
   }
 }

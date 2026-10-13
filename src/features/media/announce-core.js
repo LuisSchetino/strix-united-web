@@ -5,7 +5,7 @@ import { ANNOUNCE_FX_REVISION } from "./announce-fx.js";
 import { positionGroup } from "./related-night-core.js";
 
 export const ANNOUNCE_TEMPLATE_ID = "season-announce";
-export const ANNOUNCE_TEMPLATE_VERSION = "season-announce-studio-v3";
+export const ANNOUNCE_TEMPLATE_VERSION = "season-announce-studio-v9";
 export const ANNOUNCE_FPS = 30;
 export const ANNOUNCE_SEASON = "FC 27";
 export const ANNOUNCE_CACHE_DAY = "fc27";
@@ -234,16 +234,61 @@ export function individualAnnounceDuration() {
   return 10.6;
 }
 
-export function announceTeamTiming(count) {
-  if (count <= 0) return { duration: 0, intro: 0, beat: 0, overlap: 0, finale: 0, readable: 0, pages: 0 };
-  const intro = 1.45;
+// The squad film runs in chapters: the board, the council, the staff, then the
+// squad from the back line forward. Each chapter opens with its own title card.
+const SECTION_OF_ROLE = Object.freeze({ diretoria: "diretoria", conselho: "conselho", staff: "staff", manager: "staff" });
+const SECTION_COPY = Object.freeze({
+  diretoria: { title: ["A DIRETORIA", "STRIX."], kicker: "QUEM COMANDA O PROJETO" },
+  conselho: { title: ["O CONSELHO", "STRIX."], kicker: "QUEM DECIDE JUNTO" },
+  staff: { title: ["O STAFF", "STRIX."], kicker: "QUEM FAZ O CLUBE RODAR" },
+  elenco: { title: ["O ELENCO", "FC 27."], kicker: "DA DEFESA AO ATAQUE" },
+});
+const SECTION_ORDER = Object.freeze(["diretoria", "conselho", "staff", "elenco"]);
+const GROUP_RANK = Object.freeze({ GOL: 0, DEF: 1, MEI: 2, ATA: 3 });
+const POSITION_RANK = Object.freeze({ GOL: 0, ZAG: 1, LD: 2, LE: 2, VOL: 3, MC: 4, MEI: 5, ALA: 6, PE: 7, PD: 7, SA: 8, ATA: 9 });
+
+/**
+ * People grouped into chapters, in presentation order. Inside the board, the
+ * council and the staff the given order is kept; the squad runs goalkeeper,
+ * defence, midfield, attack (the given order breaks ties).
+ */
+export function announceSections(people = []) {
+  const buckets = new Map(SECTION_ORDER.map((id) => [id, []]));
+  people.forEach((person, order) => {
+    if (!person?.name) return;
+    const id = SECTION_OF_ROLE[normalizeAnnounceRole(person.extraRole)] || "elenco";
+    buckets.get(id).push({ person, order });
+  });
+  buckets.get("elenco").sort((left, right) => {
+    const a = left.person;
+    const b = right.person;
+    const group = (GROUP_RANK[a.group || positionGroup(a.position)] ?? 9) - (GROUP_RANK[b.group || positionGroup(b.position)] ?? 9);
+    if (group) return group;
+    const position = (POSITION_RANK[String(a.position || "").toUpperCase()] ?? 9) - (POSITION_RANK[String(b.position || "").toUpperCase()] ?? 9);
+    return position || left.order - right.order;
+  });
+  return SECTION_ORDER
+    .map((id) => ({ id, ...SECTION_COPY[id], people: buckets.get(id).map((entry) => entry.person) }))
+    .filter((section) => section.people.length);
+}
+
+/** Title cards appear only when the film has more than one chapter. */
+export function announceSectionCards(people = []) {
+  const sections = announceSections(people);
+  return sections.length > 1 ? sections.length : 0;
+}
+
+export function announceTeamTiming(count, sectionCards = 0) {
+  if (count <= 0) return { duration: 0, intro: 0, beat: 0, overlap: 0, finale: 0, readable: 0, pages: 0, section: 0, crest: 0 };
+  const intro = 2.1;
   const beat = 3.65;
   const overlap = 0.32;
-  const pageSize = count <= 6 ? count : count <= 8 ? 4 : 6;
-  const pages = count <= 6 ? 1 : Math.ceil(count / pageSize);
-  const finale = pages === 1 ? 4.4 : pages * 2.8;
-  const players = beat + Math.max(0, count - 1) * (beat - overlap);
-  const duration = intro + players + finale;
+  const section = 1.9;
+  // Everyone on one screen: longer lists get a little more time to be read.
+  const finale = Math.min(7.2, 4.4 + Math.max(0, count - 6) * 0.14);
+  const crest = 2.6;
+  const players = count * (beat - overlap);
+  const duration = intro + sectionCards * section + players + finale + crest;
   return {
     duration: Number(duration.toFixed(3)),
     intro: Number(intro.toFixed(3)),
@@ -251,13 +296,15 @@ export function announceTeamTiming(count) {
     overlap: Number(overlap.toFixed(3)),
     finale: Number(finale.toFixed(3)),
     readable: Number((beat - 0.5 - overlap).toFixed(3)),
-    pages,
+    pages: 1,
+    section: Number(section.toFixed(3)),
+    crest: Number(crest.toFixed(3)),
   };
 }
 
-export function announceDurationSeconds({ kind = "individual", format = "story", count = 1 } = {}) {
+export function announceDurationSeconds({ kind = "individual", format = "story", count = 1, sectionCards = 0 } = {}) {
   if (format === "feed") return 0.04;
-  if (kind === "team") return announceTeamTiming(count).duration;
+  if (kind === "team") return announceTeamTiming(count, sectionCards).duration;
   return individualAnnounceDuration();
 }
 
@@ -292,9 +339,13 @@ export function announceIdentityPayload({
   announceType = "",
   look = "editorial",
   mediaLook = "",
+  music = "",
+  model = "",
   templateVersion = ANNOUNCE_TEMPLATE_VERSION,
 } = {}) {
   return {
+    ...(model ? { model: String(model) } : {}),
+    ...(music ? { music: String(music) } : {}),
     template: ANNOUNCE_TEMPLATE_ID,
     templateVersion,
     fxRevision: ANNOUNCE_FX_REVISION,

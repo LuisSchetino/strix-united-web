@@ -85,12 +85,13 @@ test("fingerprint muda quando horário, adversário, logo ou jogo mudam", async 
 
 test("duração cresce por páginas animadas sem omitir partidas conforme a agenda aumenta", () => {
   assert.equal(agendaDurationSeconds(0), 0);
-  assert.equal(agendaDurationSeconds(1), 9.65);
-  assert.equal(agendaDurationSeconds(4), 9.65);
-  assert.equal(agendaDurationSeconds(5), 14);
-  assert.equal(agendaDurationSeconds(8), 14);
-  assert.equal(agendaDurationSeconds(9), 18.35);
-  assert.equal(agendaDurationSeconds(15), 22.7);
+  // 2.8 s de abertura + 4.35 s por página + 5 s de encerramento (escudo e cartão dos parceiros).
+  assert.equal(agendaDurationSeconds(1), 12.15);
+  assert.equal(agendaDurationSeconds(4), 12.15);
+  assert.equal(agendaDurationSeconds(5), 16.5);
+  assert.equal(agendaDurationSeconds(8), 16.5);
+  assert.equal(agendaDurationSeconds(9), 20.85);
+  assert.equal(agendaDurationSeconds(15), 25.2);
   assert.equal(agendaFileName({ day: "2026-09-02", format: "story" }), "strix-agenda-2026-09-02-story.mp4");
   assert.equal(agendaFileName({ day: "2026-09-02", format: "feed" }), "strix-agenda-2026-09-02-feed.mp4");
 });

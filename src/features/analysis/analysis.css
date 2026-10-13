@@ -219,9 +219,6 @@
   flex: 0 1 auto;
   min-width: 170px;
 }
-.analysis-xray-toggle.motion-tabs .motion-tabs-indicator {
-  transition: transform 190ms var(--motion-ease), width 190ms var(--motion-ease), opacity var(--motion-micro) ease;
-}
 
 .analysis-player-picker {
   display: flex;
@@ -296,7 +293,7 @@
   font: 700 8px var(--font-sans);
 }
 .radar-player {
-  fill: color-mix(in srgb, var(--radar-color) 10%, transparent);
+  fill: color-mix(in srgb, var(--radar-color) var(--radar-fill, 10%), transparent);
   stroke: var(--radar-color);
   stroke-width: 2;
   stroke-dasharray: var(--radar-dash, 0);
@@ -398,8 +395,7 @@
     text-align: left;
   }
   .analysis-filters > .select-control,
-  .analysis-xray-filters > .select-control,
-  .analysis-xray-filters > .analysis-xray-toggle {
+  .analysis-xray-filters > .select-control {
     width: 100%;
     min-width: 0;
   }
@@ -422,5 +418,49 @@
 @media (prefers-reduced-motion: reduce) {
   .radar-player {
     animation: none;
+  }
+}
+
+/* Raio-X: every name stays reachable (the picker wraps), each series has its own
+   hue, and pointing at a name singles its shape out. */
+.analysis-player-picker {
+  flex-wrap: wrap;
+  overflow-x: visible;
+}
+.radar-player {
+  transition: opacity var(--motion-control) ease, stroke-width var(--motion-control) ease;
+}
+.radar-player.is-dim {
+  opacity: 0.12;
+}
+.radar-player.is-focus {
+  fill: color-mix(in srgb, var(--radar-color) 26%, transparent);
+  stroke-width: 3.2;
+}
+.analysis-radar-legend article {
+  border-radius: var(--radius-sm);
+  outline: none;
+  transition: opacity var(--motion-control) ease;
+}
+.analysis-radar-legend article.is-dim {
+  opacity: 0.4;
+}
+.analysis-radar-legend article:focus-visible {
+  box-shadow: 0 0 0 2px var(--line-3);
+}
+.analysis-radar-legend header i {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 14px;
+  border-radius: 4px;
+}
+.analysis-radar-legend article > header {
+  border-top: 2px solid var(--radar-color);
+  margin-top: -1px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .radar-player,
+  .analysis-radar-legend article {
+    transition: none;
   }
 }

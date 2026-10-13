@@ -1,3 +1,30 @@
+import { aggregatePlayerStatistics } from "../statistics/statistics-core.js";
+
+/**
+ * Who stood out for Strix in one edition, from the club's own imported matches of it:
+ *   topScorer  — most goals (every name on a tie);
+ *   bestRating — highest average rating among those who played at least half of the games.
+ * Null fields when the matches carry no such data. `games` is how many matches were read.
+ */
+export function editionLeaders(matches = [], { players, aliases } = {}) {
+  const list = Array.isArray(matches) ? matches : [];
+  if (!list.length) return { games: 0, topScorer: null, bestRating: null };
+  const statistics = aggregatePlayerStatistics(list, { players, aliases });
+  const most = (rows, value) => {
+    const best = Math.max(0, ...rows.map(value));
+    return best > 0 ? rows.filter((row) => value(row) === best) : [];
+  };
+  const scorers = most(statistics.filter((row) => Number(row.goals) > 0), (row) => Number(row.goals) || 0);
+  const minimum = Math.max(1, Math.ceil(list.length / 2));
+  const rated = statistics.filter((row) => Number(row.averageRating) > 0 && (row.validGames || row.games || 0) >= minimum);
+  const leaders = most(rated, (row) => Number(Number(row.averageRating).toFixed(1)));
+  return {
+    games: list.length,
+    topScorer: scorers.length ? { names: scorers.map((row) => row.name), goals: Number(scorers[0].goals) } : null,
+    bestRating: leaders.length ? { names: leaders.map((row) => row.name), value: Number(Number(leaders[0].averageRating).toFixed(1)), minimum } : null,
+  };
+}
+
 export const campaignLevel = (edition) => {
   const outcome = String(edition.outcome || edition.final_stage || "").toLowerCase();
   if (/^campe[aã]o$/.test(outcome.trim())) return 100;

@@ -1,3 +1,5 @@
+import { matchNightDay } from "../agenda/agenda-time.js";
+
 const rows = (value) => Array.isArray(value) ? value : [];
 const number = (value) => Number.isFinite(Number(value)) ? Number(value) : 0;
 const hasNumber = (value) => value !== null && value !== undefined && String(value).trim() !== "" && Number.isFinite(Number(value));
@@ -174,7 +176,7 @@ export function buildPlayerProfile(player, matches = [], options = {}) {
     const savesByDay = new Map();
     for (const row of appearances) {
       if (!hasNumber(row.saves)) continue;
-      const day = saoPauloDay(row.match.played_at || row.match.date);
+      const day = matchNightDay(row.match.played_at || row.match.date);
       if (!day) continue;
       const current = savesByDay.get(day) || { value: 0, matches: [] };
       current.value += Number(row.saves); current.matches.push(row.match); savesByDay.set(day, current);
@@ -204,6 +206,8 @@ export function buildPositionContext(player, players = [], metric = "averageRati
   return { group, insufficient: !hasNumber(selectedValue), rank: rank || null, total: comparable.length };
 }
 
+export { matchNightDay };
+
 export function saoPauloDay(value) {
   const date = new Date(value);
   if (Number.isNaN(date.valueOf())) return "";
@@ -212,7 +216,7 @@ export function saoPauloDay(value) {
 }
 
 export function summarizeNight(matches = [], date, options = {}) {
-  const nightMatches = uniqueMatches(matches).filter((match) => saoPauloDay(match.played_at || match.date) === date);
+  const nightMatches = uniqueMatches(matches).filter((match) => matchNightDay(match.played_at || match.date) === date);
   const result = { date, games: nightMatches.length, wins: 0, draws: 0, losses: 0, goalsFor: 0, goalsAgainst: 0, cleanSheets: 0, leaders: {} };
   const totals = new Map();
   const { index: aliases, indexByEaId } = aliasIndex(options.players, options.aliases);
@@ -333,6 +337,25 @@ const playedForAward = (row) => {
   if (hasNumber(row.secondsPlayed) && Number(row.secondsPlayed) <= 0) return false;
   return hasNumber(row.rating) && Number(row.rating) > 0;
 };
+
+/**
+ * Who of the active roster played each match: `[{ match, playerIds: Set }]`, oldest first.
+ * A row counts only with evidence of playing (the same rule the night summary uses).
+ */
+export function rosterAppearances(matches = [], options = {}) {
+  const { index, indexByEaId } = aliasIndex(options.players, options.aliases);
+  return uniqueMatches(matches).map((match) => {
+    const playerIds = new Set();
+    for (const row of playerRows(match)) {
+      const quality = classifyPlayerData(row);
+      if ((quality !== "VALID" && quality !== "PARTIAL") || (hasNumber(row.secondsPlayed) && Number(row.secondsPlayed) <= 0)) continue;
+      const id = rowIdentity(row);
+      const linked = (id ? indexByEaId.get(id) : null) || index.get(normalized(row.eaName || row.name));
+      if (linked?.roster?.id && linked.roster.is_active !== false) playerIds.add(linked.roster.id);
+    }
+    return { match, playerIds };
+  });
+}
 
 /** Strix MOTM is the highest rated active-roster player when the club did not lose. */
 export function motmAwardRows(match = {}, options = {}) {

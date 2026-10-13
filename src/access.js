@@ -78,6 +78,8 @@ export const canManageCompetitions = (source) => isDev(source);
 export const canViewAnalysis = (source) => hasMinimumTier(source, "conselho");
 export const canTrackLibrary = (source) => hasMinimumTier(source, "conselho");
 export const canManageLibrary = (source) => hasMinimumTier(source, "diretoria");
+export const canPublishNotice = (source) => hasMinimumTier(source, "diretoria");
+export const canViewActivity = (source) => hasMinimumTier(source, "diretoria");
 export const canViewMedia = (source) => isDev(source);
 export const canManageMedia = (source) => isDev(source);
 export const canUseDeveloperTools = (source) => isDev(source);

@@ -1,4 +1,5 @@
 import { paintEditorialRelated } from "./editorial-media-paint.js";
+import { paintNightRelated } from "./night-paint.js";
 import { relatedNightSceneAt } from "./related-night-timeline.js";
 
 export function relatedNightFrameTime(frameIndex, timeline) {
@@ -15,7 +16,8 @@ export function renderRelatedNightFrame(ctx, {
   dayLabel,
 } = {}) {
   const resolved = Number.isFinite(timeSec) ? timeSec : time;
-  paintEditorialRelated(ctx, { timeline, time: resolved, assets, dayLabel });
+  if (timeline?.night) paintNightRelated(ctx, { timeline, time: resolved, assets, dayLabel });
+  else paintEditorialRelated(ctx, { timeline, time: resolved, assets, dayLabel });
 }
 
 export function describeRelatedNightFrame(timeline, timeSec) {

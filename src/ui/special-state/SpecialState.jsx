@@ -3,6 +3,7 @@ import { ClubLogo } from "../ClubLogo.jsx";
 import { STRIX_BRAND } from "../../brand.js";
 import { deniedPageCopy, locationForPage } from "../../access.js";
 import { useReducedMotion } from "../motion/motion.jsx";
+import { isChunkLoadError, reloadForUpdate } from "../fresh-deploy.js";
 import "./special-state.css";
 
 export function goToCentral() {
@@ -179,14 +180,16 @@ export function SpecialState({
 export class AppErrorBoundary extends Component {
   constructor(props) {
     super(props);
-    this.state = { failed: false };
+    this.state = { failed: false, outdated: false };
   }
 
-  static getDerivedStateFromError() {
-    return { failed: true };
+  static getDerivedStateFromError(error) {
+    return { failed: true, outdated: isChunkLoadError(error) };
   }
 
   componentDidCatch(error, errorInfo) {
+    // A page file that is gone because the site was updated: the fix is the new build.
+    if (isChunkLoadError(error)) reloadForUpdate();
     // Keep the user-facing fallback calm while preserving the real render trace
     // in DevTools; this must not turn a failure into an invisible fallback.
     console.error("[Strix AppErrorBoundary]", error, errorInfo?.componentStack || "");
@@ -197,7 +200,7 @@ export class AppErrorBoundary extends Component {
     return (
       <SpecialState
         kind="unexpected"
-        onRetry={() => this.setState({ failed: false })}
+        onRetry={() => (this.state.outdated ? window.location.reload() : this.setState({ failed: false }))}
         onHome={() => {
           this.setState({ failed: false });
           goToCentral();

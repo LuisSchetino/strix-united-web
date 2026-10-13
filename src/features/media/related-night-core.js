@@ -4,7 +4,7 @@ import { saoPauloDay, todayAgendaMatches } from "../agenda/agenda-time.js";
 import { formatAgendaDay, MEDIA_FORMATS } from "./agenda-media-core.js";
 
 export const RELATED_NIGHT_TEMPLATE_ID = "related-night";
-export const RELATED_NIGHT_TEMPLATE_VERSION = "related-night-studio-v2";
+export const RELATED_NIGHT_TEMPLATE_VERSION = "related-night-studio-v15";
 export const RELATED_NIGHT_FPS = 30;
 
 export const LINEUP_SLOT_POSITIONS = Object.freeze([
@@ -91,6 +91,17 @@ export function hydrateRelatedPlayers(playerIds = [], workspace = {}, extras = [
   return orderRelated(hydrated.filter((player) => player.name));
 }
 
+/**
+ * Who can be a piece's face: the current squad (active, not on trial) that has a photo, by name.
+ * Someone who left the club, or is only being tried, is not offered.
+ */
+export function squadFaces(workspace = {}) {
+  const current = (workspace.players || []).filter((player) => player?.is_active !== false && player?.member_type !== "teste");
+  return hydrateRelatedPlayers(current.map((player) => player.id), workspace)
+    .filter((player) => player.photo)
+    .sort((left, right) => left.name.localeCompare(right.name, "pt-BR"));
+}
+
 export function suggestRelatedFromLineups(workspace = {}, now = new Date()) {
   const matches = todayAgendaMatches(workspace.agenda || [], now);
   const roster = workspace.players || [];
@@ -120,6 +131,32 @@ export function nightDateKey(value) {
   return value ? saoPauloDay(value) : "";
 }
 
+/** Tonight's first game that already has someone in its line-up, or null. */
+export function firstLineupOfNight(workspace = {}, now = new Date()) {
+  return todayAgendaMatches(workspace.agenda || [], now)
+    .find((match) => (Array.isArray(match.lineup) ? match.lineup : []).some((entry) => lineupEntryName(entry))) || null;
+}
+
+/**
+ * The list seen through the night's first line-up: who is in it gets his `slot` on the pitch
+ * (and the position he plays there); who is on the list but not in that game is `bench`. The
+ * pitch then always shows a team of eleven, and everyone listed still appears. Without a
+ * line-up, or when nobody on the list is in it, the list comes back as it was.
+ */
+export function markFirstLineup(players = [], workspace = {}, now = new Date()) {
+  const first = firstLineupOfNight(workspace, now);
+  if (!first) return players;
+  const slotOf = new Map();
+  first.lineup.forEach((entry, index) => { const key = normalizePlayerKey(lineupEntryName(entry)); if (key && !slotOf.has(key)) slotOf.set(key, index); });
+  const marked = players.map((player) => {
+    const slot = slotOf.get(normalizePlayerKey(player.name));
+    if (slot == null || slot >= LINEUP_SLOT_POSITIONS.length) return { ...player, bench: true };
+    const position = lineupEntryPosition(first.lineup[slot], slot) || player.position;
+    return { ...player, slot, position, group: positionGroup(position) };
+  });
+  return marked.some((player) => player.slot != null) ? orderRelated(marked) : players;
+}
+
 export function nightRelatedRecord(workspace = {}, now = new Date()) {
   const day = saoPauloDay(now);
   const rows = Array.isArray(workspace.nightRelated) ? workspace.nightRelated : [];
@@ -129,22 +166,28 @@ export function nightRelatedRecord(workspace = {}, now = new Date()) {
 export function describeTonightRelated(workspace = {}, now = new Date()) {
   const saved = nightRelatedRecord(workspace, now);
   const suggestion = suggestRelatedFromLineups(workspace, now);
-  const players = saved
+  const players = markFirstLineup(saved
     ? hydrateRelatedPlayers(saved.player_ids || [], workspace)
-    : [];
+    : [], workspace, now);
   const savedIds = new Set(players.map((player) => player.id));
   const missingFromSaved = suggestion.filter((player) => !savedIds.has(player.id));
+  // What the video shows. With line-ups tonight, it is who plays: the first game's eleven on
+  // the pitch and whoever is in the other games' line-ups on the strip. A name saved in the
+  // list but in no line-up (someone who left, the rest of the squad) is not shown. Without
+  // any line-up, it is the saved list as it is.
+  const video = !saved ? [] : suggestion.length ? markFirstLineup(suggestion, workspace, now) : players;
   return {
     day: saoPauloDay(now),
     saved: Boolean(saved),
     players,
+    video,
     suggestion,
     missingFromSaved,
   };
 }
 
 export function collectTonightRelated(workspace = {}, now = new Date()) {
-  return describeTonightRelated(workspace, now).players;
+  return describeTonightRelated(workspace, now).video;
 }
 
 export function relatedNightIdentityPayload({
@@ -154,9 +197,14 @@ export function relatedNightIdentityPayload({
   saved = true,
   look = "editorial",
   mediaLook = "",
+  music = "",
+  model = "",
   templateVersion = RELATED_NIGHT_TEMPLATE_VERSION,
 } = {}) {
   return {
+    ...(model ? { model: String(model) } : {}),
+    // The song a video was cut on (music-library.js); absent when there is none.
+    ...(music ? { music: String(music) } : {}),
     day: String(day || ""),
     format: String(format || "story"),
     template: RELATED_NIGHT_TEMPLATE_ID,
@@ -175,6 +223,8 @@ export function relatedNightIdentityPayload({
       position: player.position || "",
       group: player.group || "",
       number: player.number ?? player.shirt_number ?? "",
+      slot: player.slot ?? null,
+      bench: Boolean(player.bench),
     })),
   };
 }

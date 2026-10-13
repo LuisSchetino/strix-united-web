@@ -1,9 +1,9 @@
-import { saoPauloDay, todayAgendaMatches } from "../agenda/agenda-time.js";
+import { agendaLeg, saoPauloDay, todayAgendaMatches } from "../agenda/agenda-time.js";
 import { lookAssetFingerprint } from "./media-look.js";
 import { CUTOUT_TEMPLATE_SEEDS } from "./cutout-text.js";
 
 export const AGENDA_TEMPLATE_ID = "agenda-day";
-export const AGENDA_TEMPLATE_VERSION = "agenda-nightshift-v3";
+export const AGENDA_TEMPLATE_VERSION = "agenda-nightshift-v14";
 export const AGENDA_FPS = 30;
 export const AGENDA_MOTION_PAGE_SIZE = 4;
 
@@ -73,12 +73,18 @@ export function collectTodayAgenda(workspace = {}, now = new Date()) {
       competition: String(competition?.name || entry.competition_name || "").trim(),
       competition_logo: String(competition?.logo_url || "").trim(),
       round: String(fixture?.round_label || "").trim(),
+      // "ida" / "volta" when the night has both legs against this club (agenda-time.js).
+      leg: agendaLeg(entry, workspace.agenda || []),
     };
   });
 }
 
-export function renderIdentityPayload({ day, format, matches = [], look = "editorial", mediaLook = "", templateVersion = AGENDA_TEMPLATE_VERSION } = {}) {
+export function renderIdentityPayload({ day, format, matches = [], look = "editorial", mediaLook = "", music = "", model = "", face = "", templateVersion = AGENDA_TEMPLATE_VERSION } = {}) {
   return {
+    // The model a piece was made in ("night": night-plan.js) and whose face it wears; absent in the official one.
+    ...(model ? { model: String(model), face: String(face || "") } : {}),
+    // The song a video was cut on (music-library.js); absent when there is none.
+    ...(music ? { music: String(music) } : {}),
     day: String(day || ""),
     format: String(format || "story"),
     template: AGENDA_TEMPLATE_ID,
@@ -94,6 +100,7 @@ export function renderIdentityPayload({ day, format, matches = [], look = "edito
       opponent: match.opponent || "",
       opponent_logo: match.opponent_logo || "",
       competition: match.competition || "",
+      ...(match.leg ? { leg: match.leg } : {}),
       competition_logo: match.competition_logo || "",
       round: match.round || "",
     })),
@@ -132,7 +139,8 @@ export function beatDuration(matchCount) {
 
 export function finaleDuration(matchCount) {
   if (matchCount <= 0) return 0;
-  return 2.5;
+  // 2.1 s for the crest to cover the frame, then the partners' card (the marks build themselves, then hold).
+  return 5;
 }
 
 export function lockupDuration(matchCount) {

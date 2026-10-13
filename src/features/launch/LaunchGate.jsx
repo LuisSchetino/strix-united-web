@@ -11,6 +11,7 @@ import {
   isOfficialLaunchHost,
   rememberLaunchReturn,
 } from "../../launch.js";
+import { ZERO_HOLD_MS } from "./opening-core.js";
 import "./launch.css";
 
 function pad2(value) {
@@ -52,6 +53,14 @@ export function LaunchGate({ mode = "countdown", config = LAUNCH_CONFIG, previou
   const [now, setNow] = useState(() => Date.now());
   const [signingIn, setSigningIn] = useState(false);
   const [signInError, setSignInError] = useState("");
+  // The countdown was running in front of someone and reached zero: it rests there for a
+  // moment ("É agora.") and the opening takes over. A gate that mounts already past the hour
+  // was never a countdown for anyone: it just lets the site in.
+  const [zero, setZero] = useState(false);
+  const sawCountdown = useRef(false);
+  // The shell passes a new function on every render; the timer below must not restart for that.
+  const unlockRef = useRef(onUnlock);
+  unlockRef.current = onUnlock;
   const parts = countdownParts(displayRemainingMs(now, config));
   const hostname = typeof window === "undefined" ? "" : window.location.hostname;
   const showInternal = mode === "countdown" && Boolean(onInternalAccess) && canShowInternalAccess(hostname);
@@ -86,15 +95,28 @@ export function LaunchGate({ mode = "countdown", config = LAUNCH_CONFIG, previou
 
   useEffect(() => {
     if (mode === "bootstrap") return undefined;
+    let handover = 0;
+    let released = false;
     const tick = () => {
       const next = Date.now();
       setNow(next);
-      if (isLaunchUnlocked(next, config)) onUnlock?.();
+      if (!isLaunchUnlocked(next, config)) {
+        if (mode === "countdown") sawCountdown.current = true;
+        return;
+      }
+      if (released) return;
+      released = true;
+      if (!sawCountdown.current) { unlockRef.current?.(); return; }
+      setZero(true);
+      handover = window.setTimeout(() => unlockRef.current?.({ live: true }), reduced ? Math.round(ZERO_HOLD_MS / 2) : ZERO_HOLD_MS);
     };
     tick();
     const id = window.setInterval(tick, reduced ? 1000 : 250);
-    return () => window.clearInterval(id);
-  }, [config, mode, onUnlock, reduced]);
+    return () => {
+      window.clearInterval(id);
+      window.clearTimeout(handover);
+    };
+  }, [config, mode, reduced]);
 
   const checking = mode === "bootstrap";
 
@@ -107,7 +129,7 @@ export function LaunchGate({ mode = "countdown", config = LAUNCH_CONFIG, previou
 
   return (
     <main
-      className={`launch-gate${checking ? " is-checking" : ""}${reduced ? " is-reduced" : ""}`}
+      className={`launch-gate${checking ? " is-checking" : ""}${reduced ? " is-reduced" : ""}${zero ? " is-zero" : ""}`}
       aria-busy={checking || undefined}
       aria-label="Lançamento FC 27"
     >
@@ -136,7 +158,7 @@ export function LaunchGate({ mode = "countdown", config = LAUNCH_CONFIG, previou
         <h1>FC 27</h1>
         <p className="launch-line">
           <i />
-          <span>{checking ? "Preparando o vestiário." : "O próximo capítulo começa em"}</span>
+          <span key={zero ? "zero" : "count"}>{checking ? "Preparando o vestiário." : zero ? "É agora." : "O próximo capítulo começa em"}</span>
           <i />
         </p>
         <div className="launch-counter" aria-hidden="true">

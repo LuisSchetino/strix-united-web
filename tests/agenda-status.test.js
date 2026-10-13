@@ -6,7 +6,8 @@ const now = new Date("2026-10-02T23:30:00Z"); // 20:30 em São Paulo
 
 test("status da Agenda fala o tempo até o jogo, nunca declara partida ao vivo", () => {
   assert.deepEqual(agendaStatus({ scheduled_at: "2026-10-03T00:10:00Z" }, now), { tone: "today", label: "em 40 min" });
-  assert.deepEqual(agendaStatus({ scheduled_at: "2026-10-02T23:10:00Z" }, now), { tone: "past", label: "Horário passou" });
+  assert.deepEqual(agendaStatus({ scheduled_at: "2026-10-02T23:10:00Z" }, now), { tone: "soon", label: "Em campo" });
+  assert.deepEqual(agendaStatus({ scheduled_at: "2026-10-02T22:10:00Z" }, now), { tone: "past", label: "Aguardando resultado" });
   assert.equal(agendaStatus({ scheduled_at: "2026-10-03T23:00:00Z" }, now).label, "Amanhã");
   assert.equal(agendaStatus({ scheduled_at: "2026-10-06T00:10:00Z" }, now).label, "Em 3 dias");
   assert.equal(agendaStatus({ scheduled_at: "2026-10-03T00:10:00Z", status: "cancelled" }, now).tone, "cancelled");

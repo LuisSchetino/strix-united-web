@@ -1,7 +1,7 @@
-import { parseCompetitionHtml, validateCompetitionUrl } from "../../shared/competition-providers.js";
-import { selectPreferredKnockoutPreview } from "../../shared/bracket-slots.js";
+import { parseCompetitionHtml, validateCompetitionUrl, validateProviderPageUrl } from "../../shared/competition-providers.js";
+import { assembleCompetitionBundle } from "../../shared/competition-bundle.js";
 
-const MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
+export const MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
 const MAX_REDIRECTS = 2;
 const TIMEOUT_MS = 9000;
 
@@ -30,8 +30,13 @@ async function readLimitedText(response) {
   return text + decoder.decode();
 }
 
-export async function fetchCompetitionPreview(rawUrl, fetchImpl = fetch) {
-  let target = validateCompetitionUrl(rawUrl).url;
+/**
+ * Opens one provider page with every guard on: the address is validated (and
+ * validated again on each redirect), the wait is bounded and only HTML is
+ * accepted. Returns the open response and the address it finally came from.
+ */
+export async function openProviderPage(rawUrl, fetchImpl = fetch, validate = validateProviderPageUrl) {
+  let target = validate(rawUrl);
   for (let redirect = 0; redirect <= MAX_REDIRECTS; redirect += 1) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort("provider_timeout"), TIMEOUT_MS);
@@ -57,47 +62,24 @@ export async function fetchCompetitionPreview(rawUrl, fetchImpl = fetch) {
       if (redirect === MAX_REDIRECTS) throw new Error("provider_redirect_limit");
       const location = response.headers.get("location");
       if (!location) throw new Error("provider_invalid_redirect");
-      target = validateCompetitionUrl(new URL(location, target).toString()).url;
+      target = validate(new URL(location, target).toString());
       continue;
     }
     if (!response.ok) throw new Error(`provider_http_${response.status}`);
     const contentType = response.headers.get("content-type") || "";
     if (!/text\/html|application\/xhtml\+xml/i.test(contentType)) throw new Error("provider_invalid_content_type");
-    const parsed = parseCompetitionHtml(await readLimitedText(response), target);
-    return { ...parsed, security: { redirects: redirect, maxBytes: MAX_RESPONSE_BYTES, fetchedUrl: target } };
+    if (Number(response.headers.get("content-length") || 0) > MAX_RESPONSE_BYTES) throw new Error("provider_response_too_large");
+    return { response, url: target, redirects: redirect };
   }
   throw new Error("provider_redirect_limit");
 }
 
+export async function fetchCompetitionPreview(rawUrl, fetchImpl = fetch) {
+  const page = await openProviderPage(rawUrl, fetchImpl, (url) => validateCompetitionUrl(url).url);
+  const parsed = parseCompetitionHtml(await readLimitedText(page.response), page.url);
+  return { ...parsed, security: { redirects: page.redirects, maxBytes: MAX_RESPONSE_BYTES, fetchedUrl: page.url } };
+}
+
 export async function fetchCompetitionBundle(rawUrl, fetchImpl = fetch) {
-  const primary = await fetchCompetitionPreview(rawUrl, fetchImpl);
-  const urls = primary.relatedSourceUrls || [];
-  const related = [];
-  for (let index = 0; index < urls.length; index += 4) {
-    const batch = await Promise.all(urls.slice(index, index + 4).map(async (url) => {
-      try { return await fetchCompetitionPreview(url, fetchImpl); } catch { return null; }
-    }));
-    related.push(...batch);
-  }
-  const sameKind = related.filter(Boolean)
-    .filter((preview) => preview.externalCompetitionId === primary.externalCompetitionId)
-    .filter((preview) => preview.sourceKind === primary.sourceKind);
-  const mergeByKey = (items, keyOf) => items.filter((item, index, all) => all.findIndex((candidate) => keyOf(candidate) === keyOf(item)) === index);
-  const mergedPrimary = {
-    ...primary,
-    groups: mergeByKey([...(primary.groups || []), ...sameKind.flatMap((preview) => preview.groups || [])], (group) => group.name),
-    fixtures: mergeByKey([...(primary.fixtures || []), ...sameKind.flatMap((preview) => preview.fixtures || [])], (fixture) => fixture.externalMatchId),
-    relatedSourceUrls: mergeByKey([...(primary.relatedSourceUrls || []), ...sameKind.flatMap((preview) => preview.relatedSourceUrls || [])], (url) => url),
-  };
-  const relatedCandidates = related
-    .filter(Boolean)
-    .filter((preview) => preview.externalCompetitionId === primary.externalCompetitionId)
-    .filter((preview) => preview.sourceKind !== primary.sourceKind)
-    .filter((preview) => preview.sourceKind !== "knockout" || preview.knockout?.hasStrix);
-  const preferredKnockout = selectPreferredKnockoutPreview(relatedCandidates);
-  const relatedPreviews = relatedCandidates
-    .filter((preview) => preview.sourceKind !== "knockout")
-    .filter((preview, index, all) => all.findIndex((item) => item.sourceKind === preview.sourceKind) === index);
-  if (preferredKnockout) relatedPreviews.push(preferredKnockout);
-  return { ...mergedPrimary, relatedPreviews };
+  return assembleCompetitionBundle(rawUrl, (url) => fetchCompetitionPreview(url, fetchImpl));
 }

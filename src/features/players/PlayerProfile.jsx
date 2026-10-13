@@ -4,6 +4,7 @@ import { CloseButton } from "../../ui/CloseButton.jsx";
 import { buildPlayerProfile, buildPositionContext, formatPlayerHandle } from "../statistics/statistics-core.js";
 import { describeEaArchetype } from "../statistics/ea-archetypes.js";
 import { DataTrend } from "../../ui/DataTrend.jsx";
+import { PlayerProgress } from "./PlayerProgress.jsx";
 
 // The one player ficha. Estatísticas shows it inline; Elenco opens it in a sheet.
 // Every value is observed EA data; a metric without a sample renders as "—".
@@ -83,6 +84,7 @@ export function PlayerProfile({ player, players, matches, workspace, onClose }) 
     {player.noSample ? <p className="statistics-profile-empty">Ainda não há atuação reconciliada com a EA para {player.name}. Forma, recordes e contexto por posição aparecem depois da primeira partida importada com este jogador.</p> : <>
     <nav className="statistics-profile-shortcuts" aria-label="Atalhos da ficha"><button type="button" onClick={() => jump("statistics-profile-form")}><SheetIcon name="form"/>VER FORMA</button><button type="button" onClick={() => jump("statistics-profile-records")}><SheetIcon name="records"/>VER RECORDES</button></nav>
     <div className="statistics-profile-season">{seasonMetrics.map(([label, value], index) => <article key={label} className="data-arrive" style={{ "--i": index }}><small>{label}</small><strong className={value === "—" ? "" : "data-value"}>{value}</strong></article>)}</div>
+    <PlayerProgress appearances={profile.appearances} goalkeeper={Boolean(player.goalkeeper)} />
     <div className="statistics-profile-lower">
       <section id="statistics-profile-form" className="statistics-profile-form"><header><div><h3>Forma recente</h3></div></header>{profile.recent.length ? <ol>{profile.recent.map((row, index) => <li key={`${row.match.id || row.match.played_at}-${index}`}><strong className="data-value">{Number(row.rating).toFixed(1)}</strong><span>{row.match.opponent_name || row.match.opponent || "Adversário"}</span><small>{dateLabel(row.match.played_at)}</small></li>)}</ol> : <p>Sem notas EA válidas neste recorte.</p>}
         <div className="statistics-form-comparisons">{comparisonLabels.map(([key, label, suffix]) => { const item = profile.comparisons[key]; if (!item) return null; const comparable = profile.appearances.length > RECENT_WINDOW; return <article key={key}><small>{label}</small><b className="data-value">{display(item.recent, suffix)}</b>{comparable ? <DataTrend trend={item.delta > 0 ? "up" : item.delta < 0 ? "down" : "stable"} delta={item.delta} unit={item.suffix === "pp" ? "p.p." : ""} against="temporada" /> : <span>últimos {profile.recent.length} jogos · temporada ainda curta</span>}</article>; })}</div>

@@ -252,3 +252,66 @@ export function relatedNightCamera(timeline, time, extras = {}) {
     originN: cam.originN ?? 0.5,
   };
 }
+
+// ---------------------------------------------------------------- line-up board
+// Where each name stands on the televised board (u across, v from the far goal
+// 0 to ours 1). Lines follow real roles: the holding midfielder behind the
+// midfield line, wing-backs and wingers on the flanks. Any number of names fits:
+// a crowded line splits into two staggered rows.
+
+const BOARD_WIDE = new Set(["ALA", "LD", "LE", "PE", "PD"]);
+
+function boardRow(centre, wide, v) {
+  const out = new Map();
+  wide.forEach((player, index) => {
+    const step = Math.floor(index / 2);
+    const u = 0.1 + step * 0.12;
+    out.set(player, { u: index % 2 ? 1 - u : u, v: v - step * 0.03 });
+  });
+  // Two centre-backs stand close together; a full line opens to the touchlines.
+  const open = centre.length <= 2 ? 0.34 : centre.length === 3 ? 0.24 : 0.15;
+  const from = wide.length ? Math.max(open, 0.3 + Math.max(0, Math.ceil(wide.length / 2) - 1) * 0.06) : open;
+  const rows = centre.length > 4 ? [centre.slice(0, Math.ceil(centre.length / 2)), centre.slice(Math.ceil(centre.length / 2))] : [centre];
+  rows.forEach((row, rowIndex) => {
+    const inset = rows.length > 1 && rowIndex === 1 ? from + 0.05 : from;
+    row.forEach((player, index) => {
+      const u = row.length === 1 ? 0.5 : inset + ((1 - inset * 2) * index) / (row.length - 1);
+      out.set(player, { u, v: rows.length > 1 ? v + (rowIndex === 0 ? 0.045 : -0.05) : v });
+    });
+  });
+  return out;
+}
+
+// Where each slot of the line-up (3-1-4-2, in the order of LINEUP_SLOTS) stands on the board.
+const FORMATION_SPOTS = [[0.37, 0.22], [0.63, 0.22], [0.08, 0.45], [0.35, 0.45], [0.65, 0.45], [0.92, 0.45], [0.5, 0.6], [0.2, 0.765], [0.5, 0.758], [0.8, 0.765], [0.5, 0.945]];
+
+/**
+ * Board position of every player, in the same order as `players`. When the list carries the
+ * first game's line-up (`slot`), each of the eleven stands on his own spot and the others are
+ * marked `bench`: they go to the strip under the pitch. Otherwise the list is spread by sector.
+ */
+export function lineupBoardPositions(players = []) {
+  if (players.some((player) => player?.slot != null)) {
+    return players.map((player) => {
+      const spot = player?.slot != null ? FORMATION_SPOTS[player.slot] : null;
+      return spot ? { u: spot[0], v: spot[1] } : { u: 0.5, v: 0.5, bench: true };
+    });
+  }
+  const buckets = { GOL: [], DEF: [], MEI: [], ATA: [] };
+  for (const player of players) buckets[buckets[player?.group] ? player.group : "MEI"].push(player);
+  const isWide = (player) => BOARD_WIDE.has(String(player.position || "").toUpperCase());
+  const placed = new Map();
+  const add = (map) => map.forEach((spot, player) => placed.set(player, spot));
+  add(boardRow(buckets.GOL, [], 0.93));
+  add(boardRow(buckets.DEF.filter((player) => !isWide(player)), buckets.DEF.filter(isWide), 0.775));
+  const holding = buckets.MEI.filter((player) => String(player.position || "").toUpperCase() === "VOL");
+  const ahead = buckets.MEI.filter((player) => !holding.includes(player));
+  if (holding.length && ahead.length) {
+    add(boardRow(holding, [], 0.635));
+    add(boardRow(ahead.filter((player) => !isWide(player)), ahead.filter(isWide), 0.49));
+  } else {
+    add(boardRow(buckets.MEI.filter((player) => !isWide(player)), buckets.MEI.filter(isWide), 0.56));
+  }
+  add(boardRow(buckets.ATA.filter((player) => !isWide(player)), buckets.ATA.filter(isWide), 0.25));
+  return players.map((player) => placed.get(player) || { u: 0.5, v: 0.5 });
+}

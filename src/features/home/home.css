@@ -512,6 +512,257 @@
   color: var(--text-3);
 }
 
+/* A row opens the game it names: the whole line is the target. */
+.home-timetable-row,
+.home-days li {
+  position: relative;
+}
+.home-row-open {
+  position: absolute;
+  inset: 0 calc(var(--space-3) * -1);
+  z-index: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  cursor: pointer;
+  transition: background var(--motion-micro);
+}
+.home-row-open:hover,
+.home-row-open:focus-visible {
+  background: var(--ink-2);
+}
+.home-timetable-row > :not(.home-row-open),
+.home-days li > :not(.home-row-open) {
+  position: relative;
+  z-index: 1;
+  pointer-events: none;
+}
+/* The member's own night, in one line above the list, and his position on each game he plays. */
+.home-mine {
+  margin: 0;
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--line-1);
+  color: var(--text-3);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  line-height: var(--leading-snug);
+}
+.home-required { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; color: var(--text-1); }
+.home-mine.is-in {
+  color: var(--text-1);
+}
+.home-timetable-row:has(.home-row-mine),
+.home-timetable-row.is-played {
+  grid-template-columns: 58px 28px minmax(0, 1fr) auto auto;
+}
+.home-row-mine {
+  padding: 4px 9px;
+  border: 1px solid var(--line-3);
+  border-radius: var(--radius-pill);
+  color: var(--text-1);
+  font-size: var(--text-label);
+  font-style: normal;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.home-row-score {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+  color: var(--text-1);
+  font-size: var(--text-xl);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--track-tight);
+}
+.home-row-score i {
+  color: var(--text-4);
+  font-style: normal;
+  font-weight: 600;
+}
+.home-timetable-row.is-played > time {
+  color: var(--text-3);
+}
+/* What the next game is worth, between the fixture and the foot. */
+.home-stake {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2) var(--space-3);
+  margin: 0;
+  color: var(--text-1);
+  font-size: var(--text-md);
+  font-weight: 600;
+  line-height: var(--leading-snug);
+}
+.home-stake span {
+  color: var(--text-3);
+  font-size: var(--text-label);
+  font-weight: 700;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+}
+.home-intro .home-stake {
+  animation: home-copy-in var(--motion-section) var(--motion-ease) 680ms both;
+}
+
+/* ------------------------------------------------------- club notice */
+
+.home-notice {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-4) 0;
+  border-top: 1px solid var(--line-2);
+  border-bottom: 1px solid var(--line-2);
+  animation: home-copy-in var(--motion-section) var(--motion-ease) 220ms both;
+}
+.home-notice > header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+}
+.home-notice > header p {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  color: var(--text-1);
+  font-size: var(--text-label);
+  font-weight: 700;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+}
+.home-notice > header small {
+  color: var(--text-3);
+  font-size: var(--text-xs);
+}
+.home-notice-body {
+  max-width: 78ch;
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--text-1);
+  font-size: var(--text-md);
+  font-weight: 600;
+  line-height: var(--leading-body);
+  white-space: pre-line;
+}
+.home-notice-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 var(--space-5);
+}
+.home-notice-meta .home-link {
+  min-height: 32px;
+}
+/* A kick-off that moved: said right under the new time. */
+.home-moved {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2) var(--space-3);
+  margin: calc(var(--space-2) * -1) 0 0;
+  color: var(--text-2);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.home-moved span,
+.agenda-moved {
+  padding: 3px 9px;
+  border: 1px solid var(--line-3);
+  border-radius: var(--radius-pill);
+  color: var(--text-1);
+  font-size: var(--text-label);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.home-notice-add {
+  margin: calc(var(--space-4) * -1) 0 0;
+}
+.notice-editor-field {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+.notice-editor-field span,
+.notice-editor-field em {
+  color: var(--text-3);
+  font-size: var(--text-label);
+  font-style: normal;
+  font-weight: 700;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+}
+.notice-editor-field em {
+  justify-self: end;
+  font-variant-numeric: tabular-nums;
+}
+.notice-editor-field textarea {
+  width: 100%;
+  min-height: 112px;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-md);
+  background: var(--ink-0);
+  color: var(--text-1);
+  font: inherit;
+  font-size: var(--text-md);
+  line-height: var(--leading-body);
+  resize: vertical;
+}
+.notice-editor-field textarea:focus-visible {
+  border-color: var(--text-1);
+  outline: none;
+}
+
+/* ------------------------------------------------ preparing the night */
+
+.home-prep {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-5);
+}
+.home-prep h3 {
+  margin: 0;
+  color: var(--text-3);
+  font-size: var(--text-label);
+  font-weight: 700;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+}
+.home-prep ul {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.home-prep li {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 40px;
+  color: var(--text-3);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.home-prep li.is-done {
+  color: var(--text-1);
+}
+.home-prep li.is-done > svg {
+  color: var(--state-success);
+}
+.home-prep li > svg {
+  justify-self: center;
+}
+
 /* The signature: where the night is right now. */
 .home-now-line {
   display: grid;
@@ -751,7 +1002,8 @@
 @media (prefers-reduced-motion: reduce) {
   .home-now.is-started .home-now-pulse::after,
   .home-intro *,
-  .home-intro-sweep {
+  .home-intro-sweep,
+  .home-notice {
     animation: none !important;
   }
 }
@@ -950,4 +1202,66 @@
   .free-night-orbit {
     display: none;
   }
+}
+
+/* The next match and tonight's list share one axis: whichever is taller, the
+   other is centred against it (a long night no longer hangs below the card). */
+.home-stage {
+  align-items: center;
+}
+
+@media (max-width: 760px) {
+  /* On a phone the member's position goes under the club's name, so the name keeps its line. */
+  .home-timetable-row:has(.home-row-mine) {
+    grid-template-columns: 58px 28px minmax(0, 1fr) auto;
+    row-gap: 6px;
+    padding-block: var(--space-3);
+  }
+  .home-timetable-row .home-row-mine {
+    grid-column: 3 / -1;
+    grid-row: 2;
+    justify-self: start;
+  }
+}
+
+/* Próximo compromisso (a night without games): the opponent is a fixture of its own under the
+   date: a hairline, the competition as a label, the club's name in display weight and its
+   crest at a size that reads, instead of a small line of text. */
+.home .free-night-fixture {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-4);
+  width: 100%;
+  margin: var(--space-2) 0 var(--space-3);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--line-2);
+}
+.home .free-night-fixture > span {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  text-align: right;
+}
+.home .free-night-fixture b {
+  color: var(--text-1);
+  font-size: var(--text-xl);
+  font-weight: 800;
+  letter-spacing: var(--track-tight);
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+.home .free-night-fixture small {
+  color: var(--text-3);
+  font-size: var(--text-label);
+  font-weight: 700;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+}
+.home .free-night-fixture .home-crest {
+  flex: none;
+}
+@media (max-width: 760px) {
+  .home .free-night-fixture { justify-content: flex-start; flex-direction: row-reverse; }
+  .home .free-night-fixture > span { text-align: left; }
 }

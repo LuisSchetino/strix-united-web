@@ -92,3 +92,49 @@ test("automatic sync persists a provider snapshot in bounded bulk requests", asy
   assert.equal("agenda_match_id" in fixturePayload, false);
   assert.ok(calls.length <= 5);
 });
+
+test("agenda rows from provider fixtures are inserted and updated, never upserted on the partial index", async () => {
+  // agenda_matches(source_fixture_id) is unique only where it is not null; ON CONFLICT
+  // cannot target a partial index ("no unique or exclusion constraint matching…").
+  const { syncProviderAgenda } = await import("../shared/provider-agenda.js");
+  const calls = [];
+  const existing = [{ id: "agenda-old", source_fixture_id: "old", opponent_name: "ANTIGO", opponent_team_id: null, competition_id: "competition", scheduled_at: "2026-10-06T22:00:00-03:00", status: "scheduled", created_by: "someone" }];
+  const client = {
+    from(table) {
+      const call = { table, operation: "select", payload: null, filters: [] };
+      const query = {
+        select() { return query; },
+        in() { return query; },
+        eq(column, value) { call.filters.push([column, value]); return query; },
+        insert(value) { call.operation = "insert"; call.payload = value; calls.push(call); return query; },
+        update(value) { call.operation = "update"; call.payload = value; calls.push(call); return query; },
+        upsert(value) { call.operation = "upsert"; call.payload = value; calls.push(call); return query; },
+        then(resolve) {
+          if (table === "agenda_matches" && call.operation === "select") return resolve({ data: existing, error: null });
+          if (table === "agenda_matches" && call.operation === "insert") return resolve({ data: call.payload.map((row, index) => ({ id: `agenda-new-${index}`, source_fixture_id: row.source_fixture_id })), error: null });
+          return resolve({ data: null, error: null });
+        },
+      };
+      return query;
+    },
+  };
+  const fixtures = [
+    { id: "new", home_team_name: "STRIX UNITED", away_team_name: "POA CITY", away_team_id: "team-poa", scheduled_at: "2026-10-05T22:00:00-03:00", status: "scheduled" },
+    { id: "old", agenda_match_id: "agenda-old", home_team_name: "SUMMIT FC", home_team_id: "team-summit", away_team_name: "STRIX UNITED", scheduled_at: "2026-10-06T22:00:00-03:00", status: "scheduled" },
+    { id: "other", home_team_name: "A", away_team_name: "B", scheduled_at: "2026-10-05T22:00:00-03:00", status: "scheduled" },
+  ];
+  const result = await syncProviderAgenda(client, { competition: { id: "competition", name: "P11" }, edition: { id: "edition" }, actorUserId: "actor", fixtures, now: new Date("2026-10-03T22:00:00-03:00") });
+  assert.deepEqual({ created: result.created, updated: result.updated, eligible: result.eligible }, { created: 1, updated: 1, eligible: 2 });
+  assert.equal(calls.some((call) => call.operation === "upsert"), false, "nenhum upsert");
+  const insert = calls.find((call) => call.table === "agenda_matches" && call.operation === "insert");
+  assert.equal(insert.payload.length, 1);
+  assert.equal(insert.payload[0].opponent_name, "POA CITY");
+  assert.equal(insert.payload[0].source_fixture_id, "new");
+  assert.equal(insert.payload[0].created_by, "actor");
+  const update = calls.find((call) => call.table === "agenda_matches" && call.operation === "update");
+  assert.equal(update.payload.opponent_name, "SUMMIT FC");
+  assert.equal("created_by" in update.payload, false, "quem criou o jogo não muda");
+  assert.deepEqual(update.filters, [["id", "agenda-old"]]);
+  const links = calls.filter((call) => call.table === "competition_fixtures");
+  assert.deepEqual(links.map((call) => [call.operation, call.payload, call.filters]), [["update", { agenda_match_id: "agenda-new-0" }, [["id", "new"]]]]);
+});

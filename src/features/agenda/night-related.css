@@ -1,19 +1,225 @@
-.night-related{
-  display:grid;gap:12px;padding:16px 18px;border:1px solid var(--strix-border);border-radius:16px;background:#0b0d10
+/* Lista da noite: the squad by sector, each name a switch (in = filled, out = outlined). */
+.night-list {
+  display: grid;
+  gap: var(--space-4);
 }
-.night-related header{display:flex;justify-content:space-between;gap:12px;align-items:flex-end}
-.night-related header span{color:#aeb4bb;font-size:10px;font-weight:900;letter-spacing:.14em}
-.night-related header h2{margin:4px 0 6px;font-size:22px}
-.night-related header p,.night-related-selected p,.night-related-note{margin:0;color:#8e969f}
-.night-related header b{font-size:28px}
-.night-related-warn{display:grid;gap:8px;margin:0;padding:10px 12px;border:1px solid #5d5340;border-radius:10px;background:#1a1710;color:#e6c37a}
-.night-related-warn p{margin:0;color:#e6c37a}
-.night-related-selected,.night-related-pool,.night-related-actions{display:flex;flex-wrap:wrap;gap:8px}
-.night-related-selected button,.night-related-pool button{
-  display:grid;justify-items:start;gap:2px;padding:8px 10px;border:1px solid var(--strix-border);border-radius:10px;background:#111419;color:#efece6
+.night-list:not(.is-compact) {
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-lg);
+  background: var(--ink-1);
 }
-.night-related-selected button.is-on{border-color:#efece6}
-.night-related-selected small{color:#8e969f;font-size:11px}
-.night-related-pool button{color:#c7ccd1}
-.night-related.is-compact header h2{font-size:18px}
-.night-related.is-compact header b{font-size:22px}
+.night-list > header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.night-list > header span {
+  display: block;
+  margin-bottom: var(--space-1);
+  color: var(--text-3);
+  font-size: var(--text-label);
+  font-weight: 700;
+  letter-spacing: var(--track-label);
+}
+.night-list > header p {
+  margin: 0;
+  color: var(--text-3);
+  font-size: var(--text-sm);
+}
+.night-list > header p b {
+  margin-right: 6px;
+  color: var(--text-1);
+  font-size: 22px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+.night-list > header em {
+  padding: 4px 10px;
+  border: 1px solid var(--line-2);
+  border-radius: 999px;
+  color: var(--text-3);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.night-list > header em.is-dirty {
+  border-color: var(--text-1);
+  color: var(--text-1);
+}
+
+.night-list-group {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.night-list-group legend {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding: 0;
+  color: var(--text-4);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+.night-list-group legend small {
+  color: var(--text-3);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+}
+.night-list-group > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.night-list-group button {
+  display: grid;
+  grid-template-columns: 20px auto;
+  grid-template-rows: auto auto;
+  align-items: center;
+  column-gap: var(--space-2);
+  min-height: 44px;
+  padding: 6px 12px 6px 8px;
+  border: 1px solid var(--line-2);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text-2);
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--motion-micro) ease, border-color var(--motion-micro) ease, color var(--motion-micro) ease, transform var(--motion-micro) var(--motion-ease);
+}
+.night-list-group button i {
+  display: grid;
+  grid-row: 1 / 3;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px var(--line-3);
+  color: var(--text-3);
+  transition: background var(--motion-micro) ease, color var(--motion-micro) ease;
+}
+.night-list-group button b {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  line-height: 1.15;
+}
+.night-list-group button small {
+  color: var(--text-4);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  line-height: 1.2;
+}
+.night-list-group button:hover:not(:disabled) {
+  border-color: var(--line-3);
+  background: var(--ink-2);
+  color: var(--text-1);
+}
+.night-list-group button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+.night-list-group button.is-on {
+  border-color: var(--paper-1);
+  background: var(--paper-1);
+  color: var(--text-on-light);
+}
+.night-list-group button.is-on small {
+  color: rgba(8, 9, 10, 0.62);
+}
+.night-list-group button.is-on i {
+  background: var(--text-on-light);
+  box-shadow: none;
+  color: var(--paper-1);
+}
+.night-list-group button.is-on:hover:not(:disabled) {
+  border-color: var(--paper-2);
+  background: var(--paper-2);
+  color: var(--text-on-light);
+}
+.night-list-group button:disabled {
+  cursor: default;
+}
+
+.night-list > footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line-1);
+}
+.night-list > footer .primary {
+  min-height: 44px;
+  margin-left: auto;
+  padding: 0 var(--space-5);
+}
+.night-list-link {
+  min-height: 40px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-2);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-decoration: underline;
+  text-decoration-color: var(--line-3);
+  text-underline-offset: 4px;
+  cursor: pointer;
+}
+.night-list-link:hover:not(:disabled) {
+  color: var(--text-1);
+  text-decoration-color: var(--text-1);
+}
+.night-list-link:disabled {
+  color: var(--text-4);
+  cursor: default;
+}
+.night-list-warn {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--line-3);
+  border-radius: var(--radius-md);
+  background: var(--ink-2);
+}
+.night-list-warn p,
+.night-list-note {
+  margin: 0;
+  color: var(--text-2);
+  font-size: var(--text-sm);
+  line-height: 1.45;
+}
+.night-list-warn button {
+  justify-self: start;
+  min-height: 36px;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+}
+.night-list-note {
+  color: var(--text-3);
+}
+@media (max-width: 560px) {
+  .night-list > footer .primary {
+    width: 100%;
+    margin-left: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .night-list-group button,
+  .night-list-group button i {
+    transition: none;
+  }
+}

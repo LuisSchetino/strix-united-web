@@ -805,3 +805,125 @@ button.now-playing.is-agenda-free .crest {
     transition: none;
   }
 }
+
+/* --------------------------------------------------- rail: collapse motion
+   The rail narrows over ~half a second instead of snapping: icons keep their
+   column, labels fade out as the edge passes them, group titles become a
+   hairline in the same box (nothing below jumps). Desktop only. */
+@media (min-width: 901px) {
+  .sidebar {
+    --rail-motion: 460ms cubic-bezier(0.22, 1, 0.36, 1);
+    transition: flex-basis var(--rail-motion), width var(--rail-motion);
+  }
+  .sidebar.is-compact {
+    padding-inline: var(--space-3);
+  }
+  .sidebar.is-compact .brand {
+    justify-content: flex-start;
+    padding: 0 var(--space-1);
+  }
+  .brand-home,
+  .menu-group button span,
+  .menu-group > p {
+    transition: opacity 260ms ease 120ms, color 260ms ease, background-size var(--rail-motion);
+  }
+  .sidebar.is-compact .brand-home {
+    display: flex;
+    flex: 0 0 0;
+    padding: 0;
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
+    transition-delay: 0s;
+  }
+  .menu-group button {
+    transition: background var(--motion-micro), color var(--motion-micro);
+  }
+  .sidebar.is-compact .menu-group button {
+    justify-content: flex-start;
+    min-height: 40px;
+    padding: 0 0 0 14px;
+  }
+  .sidebar.is-compact .menu-group button span {
+    display: block;
+    opacity: 0;
+    transition-delay: 0s;
+  }
+  .menu-group > p {
+    background: linear-gradient(var(--line-1), var(--line-1)) left center / 0% 1px no-repeat;
+  }
+  .sidebar.is-compact .menu-group > p {
+    height: auto;
+    margin: 0 var(--space-3) var(--space-2);
+    overflow: hidden;
+    background-size: 100% 1px;
+    color: transparent;
+    transition-delay: 0s;
+  }
+  .sidebar-user,
+  .sidebar-compact-account {
+    animation: rail-dock-in 360ms var(--motion-ease) 140ms both;
+  }
+}
+@keyframes rail-dock-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sidebar,
+  .brand-home,
+  .menu-group button,
+  .menu-group button span,
+  .menu-group > p {
+    transition: none !important;
+  }
+  .sidebar-user,
+  .sidebar-compact-account {
+    animation: none;
+  }
+}
+
+/* "Instalar app": a quiet row above the signature, only where the browser can install the site. */
+.sidebar-install {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: var(--hit);
+  margin-bottom: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-2);
+  text-align: left;
+  transition: border-color var(--motion-micro), background var(--motion-micro), color var(--motion-micro);
+}
+.sidebar-install:hover {
+  border-color: var(--line-3);
+  background: var(--ink-3);
+  color: var(--text-1);
+}
+.sidebar-install span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.sidebar-install b {
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+.sidebar-install small {
+  color: var(--text-4);
+  font-size: var(--text-xs);
+  line-height: var(--leading-snug);
+}
+.sidebar.is-compact .sidebar-install {
+  grid-template-columns: 1fr;
+  justify-items: center;
+  padding: var(--space-2);
+}
+.sidebar.is-compact .sidebar-install span {
+  display: none;
+}

@@ -45,7 +45,7 @@ const server = createServer(async (request, response) => {
   const startedAt = Date.now();
   try {
     const result = await loadClubMatches({ clubId, platform: FC27_PLATFORM, maxResultCount: 10 });
-    console.log(JSON.stringify({ event: "ea_fetch", club_id: clubId, fetched: result.matches.length, cached: result.cached, duration_ms: Date.now() - startedAt }));
+    console.log(JSON.stringify({ event: "ea_fetch", club_id: clubId, fetched: result.matches.length, cached: result.cached, failed_types: result.failedTypes || [], duration_ms: Date.now() - startedAt }));
     return json(response, 200, {
       ok: true,
       club_id: clubId,
@@ -53,6 +53,7 @@ const server = createServer(async (request, response) => {
       fetched_at: new Date().toISOString(),
       duration_ms: Date.now() - startedAt,
       cached: result.cached,
+      failed_types: result.failedTypes || [],
       matches: result.matches,
     });
   } catch (error) {

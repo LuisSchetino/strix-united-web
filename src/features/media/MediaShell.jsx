@@ -121,10 +121,26 @@ export function StageProgress({ job }) {
 export function StageResult({ record }) {
   const url = useMemo(() => (record?.blob ? URL.createObjectURL(record.blob) : ""), [record]);
   useEffect(() => () => { if (url) URL.revokeObjectURL(url); }, [url]);
+  const player = useRef(null);
+  const [heard, setHeard] = useState(false);
+  useEffect(() => { setHeard(false); }, [url]);
   if (!url) return null;
-  return isImageRecord(record)
-    ? <img className="media-stage-result" src={url} alt={`Peça gerada: ${record.fileName}`} />
-    : <video className="media-stage-result" src={url} controls autoPlay muted loop playsInline aria-label={`Vídeo gerado: ${record.fileName}`} />;
+  if (isImageRecord(record)) return <img className="media-stage-result" src={url} alt={`Peça gerada: ${record.fileName}`} />;
+  // A browser only starts a video by itself if it is silent. A file with a song says so, and
+  // one tap plays it from the start with sound.
+  const listen = () => {
+    const video = player.current;
+    if (!video) return;
+    video.muted = false; video.currentTime = 0;
+    video.play().catch(() => {});
+    setHeard(true);
+  };
+  return (
+    <>
+      <video ref={player} className="media-stage-result" src={url} controls autoPlay muted loop playsInline aria-label={`Vídeo gerado: ${record.fileName}`} />
+      {record.sound && !heard ? <button type="button" className="media-stage-sound" onClick={listen}><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5zM15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>OUVIR COM SOM</button> : null}
+    </>
+  );
 }
 
 const PlayIcon = () => <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor" /></svg>;

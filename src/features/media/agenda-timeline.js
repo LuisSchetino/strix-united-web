@@ -79,16 +79,19 @@ export function buildAgendaTimeline(matches = [], { format = "story" } = {}) {
     end: introEnd,
   });
 
-  for (let offset = 0; offset < count; offset += AGENDA_MOTION_PAGE_SIZE) {
+  // Pages are balanced: six games read as 3 + 3, not 4 + 2 (the page count is unchanged).
+  const pageCount = Math.ceil(count / AGENDA_MOTION_PAGE_SIZE);
+  const perPage = Math.ceil(count / pageCount);
+  for (let offset = 0; offset < count; offset += perPage) {
     const pageIndex = pages.length;
-    const pageMatches = matches.slice(offset, offset + AGENDA_MOTION_PAGE_SIZE);
+    const pageMatches = matches.slice(offset, offset + perPage);
     const start = introEnd + pageIndex * beat;
     const page = {
       id: `fixtures-${pageIndex + 1}`,
       type: "page",
       index: pageIndex,
       pageIndex,
-      pageCount: Math.ceil(count / AGENDA_MOTION_PAGE_SIZE),
+      pageCount,
       start,
       end: start + beat,
       matches: pageMatches,
@@ -120,7 +123,7 @@ export function buildAgendaTimeline(matches = [], { format = "story" } = {}) {
     safe: safeArea(spec.id),
     scenes,
     pages,
-    pageSize: AGENDA_MOTION_PAGE_SIZE,
+    pageSize: perPage,
     pageDuration: beat,
     matches,
   };

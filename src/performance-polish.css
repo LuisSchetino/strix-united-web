@@ -4,13 +4,6 @@
 /* Agenda rows keep the primary action and the actions menu as sibling controls. */
 
 /* Next Clubs remains an editorial accent, never a green surface. */
-.agenda-standing-compare{position:relative;overflow:hidden}
-.agenda-standing-compare:before{content:"";position:absolute;top:28px;left:0;width:2px;height:54px;background:var(--next-clubs-accent);opacity:.72}
-.agenda-standing-compare>header span{display:flex;align-items:center;gap:7px}
-.agenda-standing-compare>header span:before{content:"";width:5px;height:5px;border-radius:50%;background:var(--next-clubs-accent)}
-.agenda-standing-team.is-strix{border-color:rgba(199,255,47,.2)}
-.agenda-standing-team.is-strix>strong{color:var(--next-clubs-accent);background:#171b17}
-.agenda-standing-team.is-strix small{color:#b6c57f}
 
 /* Route placeholders mirror the content instead of blanketing it. */
 .workspace-skeleton{max-width:1450px;margin:30px auto;padding:0 0 48px;display:grid;gap:18px}
@@ -27,7 +20,7 @@
   
   .page-enter>.matches-feedback,.page-enter>.competition-selector{animation-duration:175ms!important;animation-delay:12ms!important}
   .page-enter>.progressive-history,.page-enter>.competition-inline{animation-duration:190ms!important;animation-delay:24ms!important}
-  .agenda-standing-compare>header{animation:performance-rise 180ms ease both}.agenda-standing-compare .agenda-standing-team{animation:performance-rise 190ms ease both}.agenda-standing-compare .agenda-standing-team:nth-child(1){animation-delay:24ms}.agenda-standing-compare .agenda-standing-team:nth-child(2){animation-delay:48ms}
+
   
 }
 @keyframes performance-rise{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
@@ -46,4 +39,4 @@
   .formation-roster-group>button{min-height:52px}
   .skeleton-metrics{grid-template-columns:repeat(2,1fr)}.skeleton-split{grid-template-columns:1fr}.skeleton-ranking{display:none}.skeleton-hero{min-height:270px;grid-template-columns:1fr 46px 1fr;gap:10px}.skeleton-hero i{width:62px}.skeleton-table-row{grid-template-columns:68px minmax(120px,1fr) 64px}.workspace-skeleton{margin-top:20px}
 }
-@media(prefers-reduced-motion:reduce){.motion-skeleton{animation:none!important}.agenda-standing-compare>header,.agenda-standing-team{animation:none!important}}
+@media(prefers-reduced-motion:reduce){.motion-skeleton{animation:none!important}}

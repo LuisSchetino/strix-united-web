@@ -13,6 +13,7 @@ import {
   suggestAgendaCandidate,
   suggestAgendaMatches,
   validateImport,
+  looksReplayed,
 } from "../src/features/matches/import-core.js";
 import { FC27_CLUB_ID } from "../shared/fc27-club.js";
 
@@ -223,4 +224,32 @@ test("payload FC27 real usa clubs.details.name, goals string e players por perso
   assert.deepEqual(match.goalScorers, ["B7N_FELIPE"]);
   assert.equal(match.performance.players.length, 2);
   assert.equal(match.performance.passes, "95/121");
+});
+
+test("a match most of Strix finished without a pass is tagged as replayed", () => {
+  const row = (passesMade, passesAttempts) => ({ passesMade, passesAttempts });
+  assert.equal(looksReplayed({ performance: { players: [row(0, 0), row(0, 0), row(0, 1), row(31, 36), row(22, 25)] } }), true);
+  assert.equal(looksReplayed({ performance: { players: [row(12, 15), row(0, 0), row(31, 36), row(22, 25)] } }), false);
+  assert.equal(looksReplayed({ performance: { players: [row(0, 0), row(0, 0)] } }), false, "too few rows to judge");
+  assert.equal(looksReplayed({ performance: { players: [{ goals: 1 }, { goals: 0 }, { goals: 0 }] } }), false, "no pass data, no tag");
+});
+
+test("goal authors come from the saved list or from the EA player rows, never invented", async () => {
+  const { matchGoalScorers } = await import("../src/features/matches/import-core.js");
+  const players = [{ name: "Oben", eaName: "Obenzera", goals: 2 }, { eaName: "SxntsTheAngel", goals: 1 }, { name: "Cedraz", goals: 0 }];
+  assert.deepEqual(matchGoalScorers({ performance: { players } }), ["Oben", "Oben", "SxntsTheAngel"]);
+  assert.deepEqual(matchGoalScorers({ goalScorers: ["Nunes"], performance: { players } }), ["Nunes"]);
+  assert.deepEqual(matchGoalScorers({ performance: { goalScorers: ["YGO"], players } }), ["YGO"]);
+  assert.deepEqual(matchGoalScorers({ performance: {} }), []);
+});
+
+test("o jogo das 23:40 e o resultado que chega depois da meia-noite são a mesma noite", () => {
+  // A partida da EA terminou às 00:08 do dia 7; na Agenda ela estava marcada para 23:40 do dia 6.
+  const match = normalizeEaMatch(eaFixture);
+  const candidate = suggestAgendaCandidate(match, [
+    { id: "agenda-noite", opponent_name: "POA CITY", scheduled_at: "2026-08-06T23:40:00-03:00", status: "scheduled" },
+  ]);
+  assert.equal(candidate.entry.id, "agenda-noite");
+  assert.equal(candidate.confidence, "strong");
+  assert.doesNotMatch(candidate.reason, /data diferente/i);
 });

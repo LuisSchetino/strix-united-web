@@ -55,3 +55,35 @@ test("vínculo da Agenda exclui removidos e mantém só registros ativos após r
   const reloaded = JSON.parse(JSON.stringify(persistedRows));
   assert.deepEqual(activeAgendaMatches(reloaded).map(({ id }) => id), ["A", "D"]);
 });
+
+test("the Agenda list keeps cancelled games in their slot; everything else still reads only active ones", async () => {
+  const { agendaListMatches, isAgendaMatchCancelled, todayAgendaMatches: today } = await import("../src/features/agenda/agenda-time.js");
+  const now = new Date("2026-10-03T20:00:00-03:00");
+  const rows = [
+    { id: "a", status: "scheduled", scheduled_at: "2026-10-03T21:10:00-03:00" },
+    { id: "b", status: "cancelled", cancelled_at: "2026-10-03T19:00:00-03:00", scheduled_at: "2026-10-03T21:40:00-03:00" },
+    { id: "c", status: "cancelled", scheduled_at: "2026-10-05T21:10:00-03:00" },
+    { id: "d", status: "cancelled", scheduled_at: "2026-10-01T21:10:00-03:00" },
+    { id: "e", status: "completed", scheduled_at: "2026-10-03T19:10:00-03:00" },
+    { id: "f", status: "scheduled", deleted_at: "2026-10-03T10:00:00-03:00", scheduled_at: "2026-10-03T22:10:00-03:00" },
+  ];
+  const list = agendaListMatches(rows, now);
+  assert.deepEqual(list.map((row) => `${row.id}:${row.list_day}:${row.temporal_status}`), ["d:past:cancelled", "a:today:today", "b:today:cancelled", "c:upcoming:cancelled"]);
+  assert.equal(isAgendaMatchCancelled(rows[1]), true);
+  assert.equal(isAgendaMatchCancelled(rows[4]), false);
+  assert.deepEqual(today(rows, now).map((row) => row.id), ["a"], "a Central e as mídias não leem jogo cancelado");
+});
+
+test("ida e volta: dois jogos da mesma noite contra o mesmo clube no mesmo campeonato", async () => {
+  const { agendaLeg } = await import("../src/features/agenda/agenda-time.js");
+  const game = (id, time, extra = {}) => ({ id, opponent_name: "Nightmare", competition_name: "Season Kickoff", scheduled_at: `2026-10-12T${time}:00-03:00`, status: "scheduled", ...extra });
+  const first = game("a", "21:10"), second = game("b", "21:40"), other = game("c", "22:10", { opponent_name: "Outro" });
+  assert.equal(agendaLeg(first, [second, first, other]), "ida");
+  assert.equal(agendaLeg(second, [second, first, other]), "volta");
+  assert.equal(agendaLeg(other, [second, first, other]), "");
+  assert.equal(agendaLeg(first, [first]), "", "um jogo só não tem ida nem volta");
+  assert.equal(agendaLeg(first, [first, game("d", "21:40", { status: "cancelled" })]), "", "o cancelado não conta");
+  assert.equal(agendaLeg(first, [first, game("e", "21:40", { scheduled_at: "2026-10-13T21:40:00-03:00" })]), "", "outro dia não conta");
+  const friendly = { competition_name: "AMISTOSO" };
+  assert.equal(agendaLeg(game("f", "21:10", friendly), [game("f", "21:10", friendly), game("g", "21:40", friendly)]), "", "amistoso não tem ida e volta");
+});

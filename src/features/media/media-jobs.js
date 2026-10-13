@@ -1,6 +1,6 @@
 import { AGENDA_TEMPLATE_ID, agendaFileName, fingerprintAgendaRender } from "./agenda-media-core.js";
-import { encodeAgendaMp4, encodeStillPng } from "./encode-mp4.js";
-import { loadAgendaAssets, loadAnnounceAssets, loadRelatedNightAssets, loadSummaryAssets } from "./media-assets.js";
+import { canEncodeSound, encodeAgendaMp4, encodeStillPng } from "./encode-mp4.js";
+import { loadAgendaAssets, loadAnnounceAssets, loadNightAgendaAssets, loadNightRelatedAssets, loadRelatedNightAssets, loadSummaryAssets } from "./media-assets.js";
 import { relatedNightFileName, fingerprintRelatedNightRender, RELATED_NIGHT_TEMPLATE_ID } from "./related-night-core.js";
 import { relatedNightFrameTime, renderRelatedNightFrame } from "./related-night-frame.js";
 import { fingerprintSummaryRender, SUMMARY_TEMPLATE_ID, summaryFileName } from "./summary-core.js";
@@ -12,6 +12,7 @@ import {
   fingerprintAnnounceRender,
 } from "./announce-core.js";
 import { announceFrameTime, renderAnnounceFrame } from "./announce-frame.js";
+import { rendersToPrune } from "./render-archive.js";
 
 const DB_NAME = "strix-fc27-media";
 const STORE = "renders";
@@ -82,6 +83,29 @@ async function writeCached(record) {
   }
 }
 
+/** Deletes the old pieces of this browser's archive (see render-archive.js). Best-effort, like the cache itself. */
+export async function pruneCachedRenders(now = Date.now()) {
+  try {
+    const db = await openDb();
+    const rows = await new Promise((resolve, reject) => {
+      const request = db.transaction(STORE, "readonly").objectStore(STORE).getAll();
+      request.onsuccess = () => resolve((request.result || []).map(({ id, template, createdAt }) => ({ id, template, createdAt })));
+      request.onerror = () => reject(request.error);
+    });
+    const ids = rendersToPrune(rows, now);
+    if (!ids.length) return 0;
+    await new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORE, "readwrite");
+      for (const id of ids) transaction.objectStore(STORE).delete(id);
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+    });
+    return ids.length;
+  } catch {
+    return 0;
+  }
+}
+
 export async function findCachedRender(fingerprint, format) {
   const record = await readCached(`${fingerprint}:${format}`);
   if (!record?.blob) return null;
@@ -109,12 +133,33 @@ export async function listCachedRenders(day, { template } = {}) {
   }
 }
 
+/**
+ * A piece cut on a song kept on this device (music-library.js): reads the song and places the
+ * official timeline on its hits. `score` is the piece's own function in film-sound.js.
+ */
+async function scoreWithSong(music, timeline, score) {
+  if (!canEncodeSound()) throw new Error("Este navegador não grava som no vídeo. Use Chrome ou Edge atualizado, ou gere sem música.");
+  const [{ readSong }, { readTrack }, film] = await Promise.all([import("./music-library.js"), import("./media-sound.js"), import("./film-sound.js")]);
+  const song = await readSong(music.id);
+  if (!song) throw new Error("A música escolhida não está mais neste aparelho. Escolha outra ou gere sem música.");
+  let track = null;
+  try { track = await readTrack(song.bytes); } catch { throw new Error("Não consegui ler essa música. Tente outro arquivo (MP3, M4A ou WAV)."); }
+  // A night timeline is rebuilt on the song's clock; an official one is laid over the song.
+  if (timeline?.night) { const scored = await film.scoreNight({ track, build: timeline.build }); return { ...scored, timeline: { ...timeline, ...scored.timeline } }; }
+  return film[score]({ timeline, track });
+}
+
+/** Progress of a render, with the encoder's note of which sound it wrote kept aside. */
+const soundAware = (note) => (progress) => { if (progress.stage === "sound") note.codec = progress.codec; else emit({ stage: progress.stage, progress }); };
+
 export async function startAgendaRender({
   matches,
   format,
   day,
   dayLabel,
   timeline,
+  // A song kept on this device (music-library.js, `{ id }`): the video is cut on its beats.
+  music = null,
   force = false,
 } = {}) {
   if (job.status === "running") return job;
@@ -123,6 +168,9 @@ export async function startAgendaRender({
     format,
     matches,
     look: timeline?.mediaLook || "campaign",
+    music: music?.id || "",
+    model: timeline?.night ? "night" : "",
+    face: timeline?.night ? timeline.face?.id || "crest" : "",
   });
   const fileName = agendaFileName({ day, format });
   if (!force) {
@@ -156,20 +204,24 @@ export async function startAgendaRender({
   });
 
   try {
-    const assets = await loadAgendaAssets(matches, {
-      onProgress: (progress) => emit({ stage: "preparing", progress }),
-    });
+    const report = { onProgress: (progress) => emit({ stage: "preparing", progress }) };
+    const assets = timeline?.night ? await loadNightAgendaAssets(matches, timeline.face, report) : await loadAgendaAssets(matches, report);
+    const scored = music?.id ? await scoreWithSong(music, timeline, "scoreAgenda") : null;
+    const wrote = { codec: "" };
     const blob = await encodeAgendaMp4({
-      timeline,
+      timeline: scored?.timeline || timeline,
       assets,
       dayLabel,
+      soundtrack: scored?.soundtrack || null,
       signal: controller.signal,
-      onProgress: (progress) => emit({ stage: progress.stage, progress }),
+      onProgress: soundAware(wrote),
     });
     const record = {
       id: `${fingerprint}:${format}`,
       fingerprint,
       format,
+      // "aac" or "opus" when the file carries the song; "" when it is silent.
+      sound: wrote.codec,
       template: AGENDA_TEMPLATE_ID,
       day,
       fileName,
@@ -207,6 +259,8 @@ export async function startRelatedNightRender({
   day,
   dayLabel,
   timeline,
+  // A song kept on this device (`{ id }`): the video is cut on its beats.
+  music = null,
   force = false,
 } = {}) {
   if (job.status === "running") return job;
@@ -215,6 +269,8 @@ export async function startRelatedNightRender({
     format,
     players,
     look: timeline?.mediaLook || "campaign",
+    music: music?.id || "",
+    model: timeline?.night ? "night" : "",
   });
   const fileName = relatedNightFileName({ day, format });
   if (!force) {
@@ -248,15 +304,17 @@ export async function startRelatedNightRender({
   });
 
   try {
-    const assets = await loadRelatedNightAssets(players, {
-      onProgress: (progress) => emit({ stage: "preparing", progress }),
-    });
+    const report = { onProgress: (progress) => emit({ stage: "preparing", progress }) };
+    const assets = timeline?.night ? await loadNightRelatedAssets(players, report) : await loadRelatedNightAssets(players, report);
+    const scored = music?.id ? await scoreWithSong(music, timeline, "scoreRelated") : null;
+    const wrote = { codec: "" };
     const blob = await encodeAgendaMp4({
-      timeline,
+      timeline: scored?.timeline || timeline,
       assets,
       dayLabel,
+      soundtrack: scored?.soundtrack || null,
       signal: controller.signal,
-      onProgress: (progress) => emit({ stage: progress.stage, progress }),
+      onProgress: soundAware(wrote),
       renderFrame: renderRelatedNightFrame,
       frameTime: relatedNightFrameTime,
     });
@@ -264,6 +322,7 @@ export async function startRelatedNightRender({
       id: `${fingerprint}:${format}`,
       fingerprint,
       format,
+      sound: wrote.codec,
       template: RELATED_NIGHT_TEMPLATE_ID,
       day,
       fileName,
@@ -301,6 +360,8 @@ export async function startSummaryRender({
   day,
   dayLabel,
   timeline,
+  // A song kept on this device (`{ id }`): the video is cut on its beats.
+  music = null,
   force = false,
 } = {}) {
   if (job.status === "running") return job;
@@ -312,6 +373,9 @@ export async function startSummaryRender({
     format,
     matches,
     look: timeline?.mediaLook || "campaign",
+    music: music?.id || "",
+    model: timeline?.night ? "night" : "",
+    face: timeline?.night ? timeline.face?.id || "crest" : "",
   });
   const fileName = summaryFileName({ day, mode, format });
   if (!force) {
@@ -345,15 +409,17 @@ export async function startSummaryRender({
   });
 
   try {
-    const assets = await loadSummaryAssets(matches, {
-      onProgress: (progress) => emit({ stage: "preparing", progress }),
-    });
+    const report = { onProgress: (progress) => emit({ stage: "preparing", progress }) };
+    const assets = timeline?.night ? await loadNightAgendaAssets(matches, timeline.face, report) : await loadSummaryAssets(matches, report);
+    const scored = music?.id ? await scoreWithSong(music, timeline, "scoreAgenda") : null;
+    const wrote = { codec: "" };
     const blob = await encodeAgendaMp4({
-      timeline,
+      timeline: scored?.timeline || timeline,
       assets,
       dayLabel,
+      soundtrack: scored?.soundtrack || null,
       signal: controller.signal,
-      onProgress: (progress) => emit({ stage: progress.stage, progress }),
+      onProgress: soundAware(wrote),
       renderFrame: renderSummaryFrame,
       frameTime: summaryFrameTime,
     });
@@ -361,6 +427,7 @@ export async function startSummaryRender({
       id: `${fingerprint}:${format}`,
       fingerprint,
       format,
+      sound: wrote.codec,
       template: SUMMARY_TEMPLATE_ID,
       day,
       fileName,
@@ -402,6 +469,8 @@ export async function startAnnounceRender({
   announceType = "",
   day = ANNOUNCE_CACHE_DAY,
   timeline,
+  // A song kept on this device (`{ id }`): the video is cut on its beats (an image has none).
+  music = null,
   force = false,
 } = {}) {
   if (job.status === "running") return job;
@@ -414,6 +483,8 @@ export async function startAnnounceRender({
     title,
     announceType,
     look: timeline?.mediaLook || "campaign",
+    music: format === "feed" ? "" : music?.id || "",
+    model: timeline?.night ? "night" : "",
   });
   const fileName = announceFileName({
     kind,
@@ -452,10 +523,10 @@ export async function startAnnounceRender({
   });
 
   try {
-    const assets = await loadAnnounceAssets(people, {
-      loadFx: format === "feed",
-      onProgress: (progress) => emit({ stage: "preparing", progress }),
-    });
+    const report = { onProgress: (progress) => emit({ stage: "preparing", progress }) };
+    const assets = timeline?.night ? await loadNightRelatedAssets(people, report) : await loadAnnounceAssets(people, { loadFx: format === "feed", ...report });
+    const scored = music?.id && format !== "feed" ? await scoreWithSong(music, timeline, "scoreAgenda") : null;
+    const wrote = { codec: "" };
     if (format === "feed") {
       emit({ stage: "image", progress: { stage: "image", ratio: 0.6 } });
     }
@@ -467,10 +538,11 @@ export async function startAnnounceRender({
         timeSec: 0,
       })
       : await encodeAgendaMp4({
-        timeline,
+        timeline: scored?.timeline || timeline,
         assets,
+        soundtrack: scored?.soundtrack || null,
         signal: controller.signal,
-        onProgress: (progress) => emit({ stage: progress.stage, progress }),
+        onProgress: soundAware(wrote),
         renderFrame: renderAnnounceFrame,
         frameTime: announceFrameTime,
       });
@@ -478,6 +550,7 @@ export async function startAnnounceRender({
       id: `${fingerprint}:${format}`,
       fingerprint,
       format,
+      sound: wrote.codec,
       template: ANNOUNCE_TEMPLATE_ID,
       day,
       fileName,

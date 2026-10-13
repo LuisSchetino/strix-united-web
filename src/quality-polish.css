@@ -12,30 +12,6 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 
 .workspace .squad-context-menu{background:#101216;border-color:var(--strix-border-strong);box-shadow:0 12px 32px #0006}
 .workspace .squad-context-menu button{min-height:44px;font-size:13px;color:#e2e5e9}
-.workspace .night-related{margin-bottom:20px;border-radius:12px}
-.workspace .night-related button{min-height:44px}
-.workspace .night-related header p,.workspace .night-related-selected p{font-size:13px;line-height:1.6}
-.workspace .night-related-pool button{border-radius:6px}
-.workspace .agenda-standing-team small{font-size:10px}
-.workspace .agenda-standing-team dl{gap:8px}
-.workspace .agenda-standing-team dt,.workspace .agenda-standing-team dd{font-size:11px}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 .agenda-modal .modal-close,.formation-roster>header button,.statistics-ranking-modal>header button{min-width:44px;min-height:44px;background:#171a1e;color:#e6e8eb}
 .library-v2 .library-tabs{background:#111317!important;border-color:var(--strix-border)!important}
@@ -69,5 +45,5 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
   .workspace .squad-context-menu{min-width:180px}
 }
 @media(prefers-reduced-motion:reduce){
-  .page-enter,.statistics-panel-enter,.competition-panel-enter,.agenda-standing-team,.club-logo-placeholder{animation:none!important;transition:none!important}
+  .page-enter,.statistics-panel-enter,.competition-panel-enter,.club-logo-placeholder{animation:none!important;transition:none!important}
 }

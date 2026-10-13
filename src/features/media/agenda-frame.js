@@ -1,4 +1,5 @@
 import { paintEditorialAgenda } from "./editorial-media-paint.js";
+import { paintNightAgenda } from "./night-paint.js";
 import { sceneAt } from "./agenda-timeline.js";
 
 export function agendaFrameTime(frameIndex, timeline) {
@@ -15,7 +16,9 @@ export function renderAgendaFrame(ctx, {
   dayLabel,
 } = {}) {
   const resolved = Number.isFinite(timeSec) ? timeSec : time;
-  paintEditorialAgenda(ctx, { timeline, time: resolved, assets, dayLabel });
+  // A timeline of the "night vision" model (night-plan.js) has its own painter.
+  if (timeline?.night) paintNightAgenda(ctx, { timeline, time: resolved, assets, dayLabel });
+  else paintEditorialAgenda(ctx, { timeline, time: resolved, assets, dayLabel });
 }
 
 export function describeAgendaFrame(timeline, timeSec) {

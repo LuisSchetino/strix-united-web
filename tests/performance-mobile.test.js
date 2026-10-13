@@ -46,12 +46,13 @@ test("route preloading and faithful skeleton variants are wired without a new qu
   assert.doesNotMatch(pkg, /react-query|tanstack|framer-motion/);
 });
 
-test("standing comparison uses the official restrained Next Clubs accent", async () => {
-  const [source, css] = await Promise.all([read("src/main.jsx"), read("src/performance-polish.css")]);
-  assert.match(source, /agenda-standing-team \$\{label === "STRIX" \? "is-strix"/);
-  assert.match(css, /--next-clubs-accent:#c7ff2f/);
-  assert.match(css, /\.agenda-standing-team\.is-strix>strong/);
-  assert.doesNotMatch(css, /box-shadow:[^;]*c7ff2f/i);
+test("the table beside a fixture is monochrome: positions and points in the data colour, no partner lime", async () => {
+  const [view, css] = await Promise.all([read("src/features/agenda/MatchView.jsx"), read("src/features/agenda/match-view.css")]);
+  assert.match(view, /export function MatchStandings/);
+  assert.match(view, /export function MatchStage/);
+  assert.match(css, /\.match-duel-head strong \{[^}]*color: var\(--data\)/);
+  assert.match(css, /prefers-reduced-motion: reduce/);
+  assert.doesNotMatch(css, /c7ff2f|next-clubs-accent/i);
 });
 
 test("provider asset response is public edge-cacheable but remains allowlisted", async () => {

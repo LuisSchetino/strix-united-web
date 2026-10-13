@@ -64,7 +64,10 @@ export function agendaMutationForFixture(current, fixture, {
       ...(fixture.status === "cancelled" ? { cancelled_at: new Date(now).toISOString() } : {}),
     },
   };
-  const status = current.status === "completed" ? "completed" : providerStatus;
+  // A played game stays played, unless the organiser moved the entry to another day: that is
+  // a new game (the return leg written over the first one) and takes the organiser's status.
+  const sameDay = saoPauloDay(current.scheduled_at) === saoPauloDay(fixture.scheduled_at);
+  const status = current.status === "completed" && sameDay ? "completed" : providerStatus;
   const changed = current.opponent_name !== opponentName
     || (current.opponent_team_id || null) !== base.opponent_team_id
     || current.competition_id !== competition.id
@@ -105,7 +108,8 @@ export async function syncProviderAgenda(client, {
   let created = 0;
   let updated = 0;
   let unchanged = 0;
-  const pendingAgenda = [];
+  const pendingInserts = [];
+  const pendingUpdates = [];
   for (const fixture of official) {
     const current = byFixture.get(fixture.id);
     const mutation = agendaMutationForFixture(current, fixture, {
@@ -117,30 +121,26 @@ export async function syncProviderAgenda(client, {
     if (mutation.action === "insert") created += 1;
     else if (mutation.action === "update") updated += 1;
     else unchanged += 1;
-    if (mutation.action !== "unchanged") pendingAgenda.push({
-      ...mutation.payload,
-      source_fixture_id: fixture.id,
-      created_by: current?.created_by || actorUserId,
-    });
+    if (mutation.action === "insert") pendingInserts.push({ ...mutation.payload, source_fixture_id: fixture.id, created_by: actorUserId });
+    else if (mutation.action === "update") pendingUpdates.push({ id: current.id, payload: { ...mutation.payload, source_fixture_id: fixture.id } });
   }
 
-  if (pendingAgenda.length) {
-    const write = await client.from("agenda_matches")
-      .upsert(pendingAgenda, { onConflict: "source_fixture_id" })
-      .select("id,source_fixture_id");
+  // Written as plain inserts and updates: the unique index on source_fixture_id is
+  // partial (only rows that have one), and ON CONFLICT cannot target a partial index.
+  if (pendingInserts.length) {
+    const write = await client.from("agenda_matches").insert(pendingInserts).select("id,source_fixture_id");
     if (write.error) throw write.error;
     for (const entry of write.data || []) byFixture.set(entry.source_fixture_id, entry);
   }
+  for (const { id, payload } of pendingUpdates) {
+    const write = await client.from("agenda_matches").update(payload).eq("id", id);
+    if (write.error) throw write.error;
+  }
 
-  const pendingLinks = official.filter((fixture) => {
+  for (const fixture of official) {
     const agenda = byFixture.get(fixture.id);
-    return agenda?.id && fixture.agenda_match_id !== agenda.id;
-  }).map((fixture) => ({
-    ...fixture,
-    agenda_match_id: byFixture.get(fixture.id).id,
-  }));
-  if (pendingLinks.length) {
-    const link = await client.from("competition_fixtures").upsert(pendingLinks, { onConflict: "id" });
+    if (!agenda?.id || fixture.agenda_match_id === agenda.id) continue;
+    const link = await client.from("competition_fixtures").update({ agenda_match_id: agenda.id }).eq("id", fixture.id);
     if (link.error) throw link.error;
   }
   return { created, updated, unchanged, eligible: official.length, ignored };

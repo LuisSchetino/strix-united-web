@@ -70,7 +70,8 @@ test("1, 3 e 6 jogos cobrem abertura, páginas de confrontos e encerramento", ()
     assert.equal(describeAgendaFrame(timeline, 0.5).sceneType, "intro");
     assert.equal(describeAgendaFrame(timeline, timeline.introEnd + 0.4).sceneType, "page");
     assert.equal(describeAgendaFrame(timeline, timeline.introEnd + 0.4).matchIndex, 0);
-    assert.equal(describeAgendaFrame(timeline, timeline.introEnd + 0.4).matchCount, Math.min(4, count));
+    // Pages are balanced: six games open with three, not four.
+    assert.equal(describeAgendaFrame(timeline, timeline.introEnd + 0.4).matchCount, Math.ceil(count / Math.ceil(count / 4)));
     assert.equal(describeAgendaFrame(timeline, timeline.finaleStart + 0.3).sceneType, "finale");
     assert.equal(describeAgendaFrame(timeline, Math.max(0, timeline.duration - 0.05)).sceneType, "finale");
     assert.ok(agendaDurationSeconds(count) === timeline.duration);

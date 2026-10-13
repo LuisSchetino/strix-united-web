@@ -3,6 +3,8 @@ import { normalizeName } from "../matches/import-core.js";
 import { expandKnockoutSlots, selectPreferredKnockoutPreview } from "../../../shared/bracket-slots.js";
 import { dedupeCompetitionRows, fixtureConflictKey, teamConflictKey } from "../../../shared/competition-sync-rows.js";
 import { syncProviderAgenda } from "../../../shared/provider-agenda.js";
+import { COMPETITION_LOGO_BUCKET, competitionLogoStem, logoAfterSync } from "../../../shared/competition-logo.js";
+import { logoThumbnail } from "./competition-logo-image.js";
 
 const ensure = (result) => {
   if (result.error) throw result.error;
@@ -14,14 +16,35 @@ const editionLabel = (preview) => {
   return `${year} · Edição atual`;
 };
 
-async function upsertCompetition(client, profile, preview, palette, accent) {
+/**
+ * The provider's logo as a small copy in the club's storage (the originals run
+ * past a megabyte). A copy already made from the same original is reused. When
+ * the copy cannot be made, the provider's own address is kept, as before.
+ */
+async function storedCompetitionLogo(client, preview, current) {
+  if (!preview.logo) return null;
+  const stem = competitionLogoStem(preview.provider, preview.externalCompetitionId, preview.logo);
+  if (current?.logo_url?.includes(stem)) return current.logo_url;
+  try {
+    const blob = await logoThumbnail(client, preview.logo);
+    const path = `${stem}.${blob.type === "image/webp" ? "webp" : "png"}`;
+    const storage = client.storage.from(COMPETITION_LOGO_BUCKET);
+    const { error } = await storage.upload(path, blob, { upsert: true, contentType: blob.type, cacheControl: "31536000" });
+    if (error) throw error;
+    return storage.getPublicUrl(path).data.publicUrl || null;
+  } catch (cause) {
+    console.warn("[competitions] logo copy not stored; keeping the provider's address", cause);
+    return null;
+  }
+}
+
+async function upsertCompetition(client, profile, preview) {
   const current = ensure(await client.from("competitions").select("*").eq("normalized_name", String(preview.name).trim().toLowerCase().replace(/\s+/g, " ")).maybeSingle());
+  const storedLogo = await storedCompetitionLogo(client, preview, current);
   const payload = {
     name: preview.name,
     organization: preview.organization || null,
-    logo_url: preview.logo || null,
-    palette: palette || [],
-    accent_color: accent || palette?.[0] || "#168cff",
+    logo_url: storedLogo || logoAfterSync(current?.logo_url, preview.logo),
     is_active: true,
     updated_by: profile.user_id,
   };
@@ -169,7 +192,7 @@ async function normalizeFixtures(client, edition, source, preview) {
   if (regularRows.length) ensure(await client.from("competition_fixtures").upsert(regularRows, { onConflict: "edition_id,external_match_id" }));
 }
 
-export async function saveCompetitionPreview(client, profile, preview, palette, accent, options = {}) {
+export async function saveCompetitionPreview(client, profile, preview, options = {}) {
   if (!canManageCompetitions(profile)) throw permissionDenied("A gestão estrutural de campeonatos é exclusiva de Desenvolvimento.");
   const candidates = [preview, ...(preview.relatedPreviews || [])];
   const preferredKnockout = selectPreferredKnockoutPreview(candidates);
@@ -182,7 +205,7 @@ export async function saveCompetitionPreview(client, profile, preview, palette, 
   const composite = knockout
     ? { ...identity, qualificationRule: identity.qualificationRule || inferredSlots, phase: "knockout", knockout: knockout.knockout, relatedPreviews: preview.relatedPreviews }
     : identity;
-  const competition = await upsertCompetition(client, profile, identity, palette, accent);
+  const competition = await upsertCompetition(client, profile, identity);
   const edition = await upsertEdition(client, profile, competition, composite, options.editionId || "");
   let source = null;
   for (const item of previews) {
@@ -213,14 +236,17 @@ export async function archiveCompetitionEdition(client, profile, edition, outcom
 
 export async function deleteCompetitionEdition(client, profile, edition) {
   if (!canManageCompetitions(profile)) throw permissionDenied("A gestão estrutural de campeonatos é exclusiva de Desenvolvimento.");
-  ensure(await client.from("competition_audit_log").insert({
-    competition_id: edition.competition_id,
-    edition_id: edition.id,
-    actor_user_id: profile.user_id,
-    action: "competition_deleted",
-    result: { label: edition.label, status: edition.status },
-  }));
   ensure(await client.from("competition_editions").delete().eq("id", edition.id));
   const remaining = ensure(await client.from("competition_editions").select("id", { count: "exact" }).eq("competition_id", edition.competition_id));
-  if (!remaining?.length) ensure(await client.from("competitions").delete().eq("id", edition.competition_id));
+  const competitionGone = !remaining?.length;
+  if (competitionGone) ensure(await client.from("competitions").delete().eq("id", edition.competition_id));
+  // The record is written after the rows are gone, and never points at a row that
+  // no longer exists (that was a foreign-key error on delete): the ids stay in the result.
+  ensure(await client.from("competition_audit_log").insert({
+    competition_id: competitionGone ? null : edition.competition_id,
+    edition_id: null,
+    actor_user_id: profile.user_id,
+    action: "competition_deleted",
+    result: { label: edition.label, status: edition.status, edition_id: edition.id, competition_id: edition.competition_id, competition_removed: competitionGone },
+  }));
 }

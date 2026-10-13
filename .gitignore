@@ -25,3 +25,7 @@ qa/
 qa/*.mp4
 
 qa/*.mp4
+
+.claude/
+entregas/
+.impeccable/review/

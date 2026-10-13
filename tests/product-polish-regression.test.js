@@ -23,16 +23,14 @@ test("team statistics use canonical FC27 identity and scoped Rastro data accents
   assert.doesNotMatch(css, /\.select-control[^}]*rastro-blue/);
 });
 
-test("roster x-ray uses shared sliding segmented tabs and custom selects", async () => {
-  const [page, css] = await Promise.all([
-    read("../src/features/analysis/AnalysisPage.jsx"),
-    read("../src/features/analysis/analysis.css"),
-  ]);
-  assert.match(page, /<SegmentedControl className="analysis-xray-toggle"/);
-  assert.equal((page.match(/className="analysis-xray-toggle"/g) || []).length, 1);
+test("roster x-ray compares outfield players with custom selects and a series for every pick", async () => {
+  const page = await read("../src/features/analysis/AnalysisPage.jsx");
+  // One goalkeeper has no pair: the x-ray reads outfield players only.
+  assert.doesNotMatch(page, /"goalkeeper", "GOLEIROS"/);
+  // 5+ picks never fall off the palette (an undefined colour painted a black polygon).
+  assert.match(page, /const radarColor = \(index\) => RADAR_TONES\[index % RADAR_TONES\.length\]/);
   assert.match(page, /<SelectControl value=\{period\}/);
   assert.match(page, /<SelectControl value=\{competition\}/);
-  assert.match(css, /\.analysis-xray-toggle\.motion-tabs \.motion-tabs-indicator[^}]*190ms/);
   assert.match(page, /Os jogadores sem amostra continuam disponíveis/);
   assert.match(page, /SEM AMOSTRA NESTE RECORTE/);
 });

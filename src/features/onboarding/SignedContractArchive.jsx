@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { CloseButton } from "../../ui/CloseButton.jsx";
 import { useDialog } from "../../ui/useDialog.js";
 import { renderContractVideo } from "./contract-export-lazy.js";
-import { CONTRACT_SEASON, contractDocumentId } from "./contract-core.js";
+import { CONTRACT_SEASON, contractDocumentId, contractSignedLabel } from "./contract-core.js";
 import { DocumentDownload } from "./DocumentDownload.jsx";
 import { ContractInstrument } from "./ContractInstrument.jsx";
 import { downloadBlob } from "../../lib/download-blob.js";
@@ -17,13 +17,6 @@ export function ContractArchiveAction({ onClick, compact = false }) {
   </button>;
 }
 
-const dateLabel = (value) => {
-  const date = new Date(value);
-  return Number.isFinite(date.getTime())
-    ? new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "long", timeStyle: "short" }).format(date)
-    : "Data não disponível";
-};
-
 export function SignedContractArchive({ contract, identity, onClose }) {
   const dialogRef = useDialog(onClose, { enabled: true, lockScroll: true });
   const [replay, setReplay] = useState(0);
@@ -31,12 +24,11 @@ export function SignedContractArchive({ contract, identity, onClose }) {
   const [rendering, setRendering] = useState(false);
   const [videoError, setVideoError] = useState("");
   const backdropRef = useRef(null);
-  const sheetRef = useRef(null);
   const downloadVideo = async () => {
     if (rendering) return;
     setVideoError("");
     try {
-      const blob = video || await (setRendering(true), renderContractVideo(sheetRef.current));
+      const blob = video || await (setRendering(true), renderContractVideo({ contract, identity }));
       setVideo(blob);
       const handle = String(identity?.handle || identity?.name || "strix").replace(/[^\w.-]+/g, "-").toLowerCase();
       downloadBlob(blob, `strix-contrato-${handle}.${blob.type?.includes("webm") ? "webm" : "mp4"}`);
@@ -65,8 +57,8 @@ export function SignedContractArchive({ contract, identity, onClose }) {
           <div><span>ARQUIVO PESSOAL · STRIX UNITED</span><h2 id="contract-archive-title">Seu vínculo FC27.</h2></div>
           <CloseButton onClick={onClose} label="Fechar contrato" />
         </header>
-        <div className="contract-archive-document" ref={sheetRef}>
-          <ContractInstrument identity={identity} season={contract.season || CONTRACT_SEASON} signedAtLabel={dateLabel(contract.signedAt)} signature={contract.signature.d} documentId={contractDocumentId(contract)} replayKey={replay} />
+        <div className="contract-archive-document">
+          <ContractInstrument identity={identity} season={contract.season || CONTRACT_SEASON} signedAtLabel={contractSignedLabel(contract.signedAt) || "Data não disponível"} signature={contract.signature.d} documentId={contractDocumentId(contract)} replayKey={replay} />
         </div>
         <footer>
           {videoError && <p className="contract-archive-error" role="alert">{videoError}</p>}

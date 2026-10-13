@@ -19,6 +19,8 @@ Disallow: /qa
 Disallow: /services
 Disallow: /supabase
 Disallow: /tools
+# Link da noite: a temporary public page, not something to index.
+Disallow: /noite/
 
 # robots.txt is a crawler hint, not access control.
 # Real protection remains in ACL, auth and backend routes.

@@ -74,7 +74,8 @@ test("11, 13 e 15 cobrem opening, jogadores e campo completo", () => {
     const lastPlayer = timeline.scenes.filter((scene) => scene.type === "player").at(-1);
     const late = describeRelatedNightFrame(timeline, lastPlayer.end - 0.05);
     assert.ok(late.onField.length >= count - 1);
-    assert.equal(relatedNightDurationSeconds(count), timeline.duration);
+    assert.equal(relatedNightDurationSeconds(count), timeline.outroStart);
+    assert.equal(timeline.duration, timeline.outroStart + 5);
   }
 });
 

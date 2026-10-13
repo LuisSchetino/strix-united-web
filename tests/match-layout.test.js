@@ -18,7 +18,7 @@ test("escudos do histórico ficam dentro de um container com limites rígidos", 
   assert.match(clubLogo, /hasAsset.*is-fallback/s);
   assert.match(clubLogoCss, /has-image\.is-logo.*background:transparent/s);
   assert.match(matchDisplayCss, /has-image:not\(\.is-framed\).*background:transparent/s);
-  assert.match(clubLogo, /onError: \(\) => setFailed\(true\)/);
+  assert.match(clubLogo, /onError: \(\) => \(clean \? setClean\(""\) : setFailed\(true\)\)/);
   assert.match(matchDisplayCss, /\.match-display-mark\{[^}]*max-width:34px[^}]*max-height:34px[^}]*overflow:hidden/s);
   assert.match(matchDisplayCss, /\.match-display-mark img\{[^}]*width:100%[^}]*height:100%[^}]*object-fit:contain/s);
   assert.match(css, /\.progressive-history \.team-mark[^}]*max-width:34px[^}]*max-height:34px[^}]*overflow:hidden/s);
@@ -27,7 +27,7 @@ test("escudos do histórico ficam dentro de um container com limites rígidos", 
   assert.match(css, /\.match-detail-score \.team-mark img\{[^}]*max-width:100%[^}]*max-height:100%[^}]*object-fit:contain/s);
   assert.match(css, /grid-template-columns:112px minmax\(320px,1fr\) 100px minmax\(120px,\.55fr\) 110px/);
   assert.match(component, /JOGADOR<\/span><span>NOTA<\/span><span>G<\/span><span>A<\/span><span>PASSES<\/span><span>CHUTES<\/span><span>DESARMES<\/span><span>DEFESAS<\/span>/s);
-  assert.match(component, /function StatIcon/);
+  assert.ok(component.includes('import { StatIcon } from "../../ui/StatIcon.jsx";'), "one football icon vocabulary, shared");
   assert.match(matchDisplay, /className="match-display-team match-display-home"[\s\S]*homeName[\s\S]*homeLogo[\s\S]*homeScore/);
   assert.match(matchDisplay, /className="match-display-team match-display-away"[\s\S]*awayScore[\s\S]*awayLogo[\s\S]*awayName/);
   assert.match(component, /is-disconnected/);

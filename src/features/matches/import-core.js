@@ -1,5 +1,6 @@
 import { FC27_CLUB_ID, isStrixClubId, readStrixKeyed } from "../../../shared/fc27-club.js";
 import { readOpponentClubId } from "../teams/ea-club-logo.js";
+import { matchNightDay } from "../agenda/agenda-time.js";
 
 export const EA_CLUB_ID = FC27_CLUB_ID;
 
@@ -235,7 +236,8 @@ function rankAgendaCandidates(match, agenda = []) {
       const strongName = exactName || safeContainment || (tokenSimilarity >= .75 && intersection.join("").length >= 5);
       const possibleName = strongName || (tokenSimilarity >= .5 && intersection.join("").length >= 6);
       if (!possibleName) return null;
-      const sameDay = localDay(match.date) === localDay(entry.scheduled_at);
+      // A game that ended after midnight is still the night's game on the Agenda.
+      const sameDay = [localDay(match.date), matchNightDay(match.date)].includes(localDay(entry.scheduled_at));
       const minutes = Math.abs(matchTime - agendaTime) / 60000;
       const confidence = strongName && sameDay && minutes <= 180 ? "strong"
         : strongName ? "probable"
@@ -298,6 +300,53 @@ export function resolvePlayerAliases(matches = [], players = [], aliases = []) {
   return result;
 }
 
+const squash = (value) => normalizeName(value).normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
+const bigrams = (value) => {
+  const grams = new Map();
+  for (let index = 0; index < value.length - 1; index += 1) {
+    const gram = value.slice(index, index + 2);
+    grams.set(gram, (grams.get(gram) || 0) + 1);
+  }
+  return grams;
+};
+// Share of letter pairs two names have in common (Dice), 0..1.
+function likeness(left, right) {
+  if (left.length < 2 || right.length < 2) return 0;
+  const a = bigrams(left);
+  const b = bigrams(right);
+  let shared = 0;
+  for (const [gram, count] of a) shared += Math.min(count, b.get(gram) || 0);
+  return (2 * shared) / (left.length - 1 + right.length - 1);
+}
+
+/**
+ * For an EA name nobody has linked yet: the roster player it most likely is, offered as a
+ * suggestion the person importing accepts with one click (never applied on its own).
+ *   taken  — roster ids already chosen for other EA names of the same match;
+ *   lineup — names on the line-up of the Agenda game this match is linked to.
+ * Returns `{ playerId, name, reason }` or null when no one stands out clearly.
+ */
+export function suggestAliasPlayer(eaName, players = [], { taken = new Set(), lineup = [] } = {}) {
+  const wanted = squash(eaName);
+  if (wanted.length < 3) return null;
+  const onLineup = new Set((Array.isArray(lineup) ? lineup : []).map(squash).filter(Boolean));
+  const scored = (Array.isArray(players) ? players : [])
+    .filter((player) => player?.is_active && !taken.has(player.id))
+    .map((player) => {
+      const name = squash(player.display_name);
+      if (name.length < 3) return null;
+      const contains = name.length >= 4 && wanted.length >= 4 && (wanted.includes(name) || name.includes(wanted));
+      const base = name === wanted ? 1 : contains ? 0.86 : likeness(name, wanted) * 0.9;
+      const listed = onLineup.has(name);
+      return { player, score: Math.min(1, base + (listed ? 0.1 : 0)), listed };
+    })
+    .filter(Boolean)
+    .sort((left, right) => right.score - left.score);
+  const [best, second] = scored;
+  if (!best || best.score < 0.62 || (second && best.score - second.score < 0.08)) return null;
+  return { playerId: best.player.id, name: best.player.display_name, reason: best.listed ? "nome parecido e está na escalação deste jogo" : "nome parecido" };
+}
+
 export function validateImport(matches, aliasSelections = {}) {
   const pending = [];
   for (const match of Array.isArray(matches) ? matches : []) {
@@ -313,4 +362,28 @@ export function validateImport(matches, aliasSelections = {}) {
 export function dedupeImportedMatches(matches, existing = []) {
   const ids = new Set((Array.isArray(existing) ? existing : []).map((match) => String(match?.external_match_id || "")).filter(Boolean));
   return (Array.isArray(matches) ? matches : []).filter((match) => match && !ids.has(String(match.id)));
+}
+
+/**
+ * A match the club abandoned and played again (a "WO" kept in EA's history):
+ * most Strix players finish with no pass at all. Shown as a tag in the import
+ * review; the match can still be imported.
+ */
+export function looksReplayed(match) {
+  const rows = (match?.performance?.players || []).filter((player) => Number.isFinite(player?.passesMade) || Number.isFinite(player?.passesAttempts));
+  if (rows.length < 3) return false;
+  const idle = rows.filter((player) => !(Number(player.passesMade) > 0)).length;
+  return idle >= 2 && idle / rows.length >= 0.5;
+}
+
+/**
+ * Goal authors of a match: the list already saved, or — when the match came
+ * from the EA and nobody typed them — one entry per goal from its player rows.
+ */
+export function matchGoalScorers(match) {
+  const saved = match?.goalScorers?.length ? match.goalScorers : match?.performance?.goalScorers;
+  if (Array.isArray(saved) && saved.length) return saved;
+  return (match?.performance?.players || [])
+    .flatMap((player) => Array.from({ length: Math.max(0, Number(player?.goals) || 0) }, () => player.name || player.eaName))
+    .filter(Boolean);
 }

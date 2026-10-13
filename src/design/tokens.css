@@ -44,15 +44,18 @@
   --paper-1: #f3f3f3;
   --paper-2: #ffffff;
 
-  /* State. Used for system feedback only, never as decoration. */
-  --state-danger: #e5484d;
-  --state-danger-soft: rgba(229, 72, 77, 0.14);
-  --state-warning: #e8b04a;
-  --state-warning-soft: rgba(232, 176, 74, 0.14);
+  /* State. Used for system feedback only, never as decoration. The product is
+     monochrome: an error or a warning has no hue of its own (no red, no amber).
+     It reads by contrast, on a quiet ink panel with a firmer hairline, and by
+     its icon and words. */
+  --state-danger: #f5f5f5;
+  --state-danger-soft: rgba(255, 255, 255, 0.05);
+  --state-warning: #c9cdd2;
+  --state-warning-soft: rgba(255, 255, 255, 0.06);
   --state-success: #4cc38a;
   --state-success-soft: rgba(76, 195, 138, 0.14);
-  --state-danger-text: #f3b4b6;   /* error copy on ink */
-  --state-warning-text: #f0cd8b;  /* warning copy on ink */
+  --state-danger-text: #f5f5f5;   /* error copy on ink */
+  --state-warning-text: #e3e6ea;  /* warning copy on ink */
 
   /* Partner scopes. */
   --rastro-blue: #2F80FF;

@@ -25,6 +25,13 @@ const clock = (seconds) => {
   const rest = `${String(Math.floor((value % 3600) / 60)).padStart(hours ? 2 : 1, "0")}:${String(value % 60).padStart(2, "0")}`;
   return hours ? `${hours}:${rest}` : rest;
 };
+/** Play time in words: "42 s", "3 min", "1 h 05 min". */
+const duration = (seconds) => {
+  const value = Math.max(0, Math.round(Number(seconds) || 0));
+  if (value < 60) return `${value} s`;
+  const minutes = Math.round(value / 60);
+  return minutes < 60 ? `${minutes} min` : `${Math.floor(minutes / 60)} h ${String(minutes % 60).padStart(2, "0")} min`;
+};
 const initials = (name) => String(name || "?").trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toLocaleUpperCase("pt-BR");
 const categoryLabel = (id) => LIBRARY_CATEGORIES.find((category) => category.id === id)?.label || "Biblioteca";
 
@@ -87,18 +94,22 @@ function MemberPanel({ member, items, close }) {
                   {row && trackable && (Number(row.progress_percent) > 0 || row.completed_at) ? <>
                     <strong className="data-value">{Math.round(Number(row.progress_percent) || 0)}%</strong>
                     <span className="data-meter" aria-hidden="true"><i style={{ "--value": (Number(row.progress_percent) || 0) / 100 }} /></span>
-                  </> : <strong className="is-quiet">{!row ? "—" : status === "external" ? "Fora do site" : trackable ? "Não iniciado" : "Sem medição"}</strong>}
+                  </> : status === "timed" ? <>
+                    <strong className="data-value">{duration(row.watched_seconds)}</strong>
+                    <small className="tracking-timed">no player</small>
+                  </> : <strong className="is-quiet">{!row ? "—" : status === "external" ? "Fora do site" : trackable ? "Não iniciado" : "Só abriu"}</strong>}
                 </div>
                 <dl>
                   <div><dt>Status</dt><dd className={`tracking-status is-${status}`}>{PROGRESS_LABEL[status]}</dd></div>
                   <div><dt>Último acesso</dt><dd>{accessLabel(row?.last_accessed_at)}</dd></div>
                   {row && trackable && Number(row.progress_percent) > 0 && <div><dt>Parou em</dt><dd>{clock(row.last_position_seconds)}</dd></div>}
+                  {row && trackable && Number(row.watched_seconds) > 0 && <div><dt>Tempo assistido</dt><dd>{duration(row.watched_seconds)}</dd></div>}
                   {Number(row?.external_open_count) > 0 && <div><dt>Em outra aba</dt><dd className="tracking-external">{row.external_open_count}× · {accessLabel(row.last_external_open_at)}</dd></div>}
                 </dl>
               </li>
             ))}
           </ol>
-          <p className="tracking-note">Progresso medido pelo player da Biblioteca. Vídeos do Google Drive registram só a abertura. "Em outra aba" conta quem abriu o material no YouTube ou no Drive pelo botão do player.</p>
+          <p className="tracking-note">O percentual conta o tempo realmente reproduzido no player da Biblioteca: pular para a frente não conclui o vídeo. Vídeos do Google Drive não informam a posição; neles fica registrado o tempo com o player aberto depois do play. "Em outra aba" registra quando a pessoa saiu do site pelo player (por exemplo, o botão de abrir do Drive).</p>
         </div>
       </section>
     </div>,

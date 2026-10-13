@@ -116,14 +116,16 @@ test("duração individual fica entre 8s e 12s e o time não é comprimido", () 
   assert.ok(four.beat >= 3 && four.beat <= 4);
   assert.ok(four.readable >= 2.5);
   assert.ok(eight.duration > 22);
-  assert.equal(eight.pages, 2);
+  assert.equal(eight.pages, 1, "todos os nomes fecham numa tela só");
   assert.ok(large.duration > eight.duration);
+  assert.ok(announceTeamTiming(8, 3).duration > eight.duration, "cada capítulo acrescenta o seu cartão");
   const eightPeople = Array.from({ length: 8 }, (_, index) => ({ id: `p${index + 1}`, name: `Jogador ${index + 1}` }));
   const eightTimeline = buildAnnounceTimeline({ kind: "team", format: "story", people: eightPeople, title: "ELENCO FC 27" });
   const eightPages = eightTimeline.scenes.filter((scene) => scene.type === "finale");
-  assert.equal(eightPages.length, 2);
-  assert.equal(eightPages[0].people.length, 4);
-  assert.equal(eightPages[1].people.length, 4);
+  assert.equal(eightPages.length, 1);
+  assert.equal(eightPages[0].people.length, 8);
+  assert.equal(eightTimeline.scenes.at(-1).type, "crest", "o filme fecha no escudo");
+  assert.equal(eightTimeline.scenes.some((scene) => scene.type === "section"), false, "só elenco: sem cartões de capítulo");
   assert.equal(announceFileName({ kind: "individual", format: "story", name: "Oben" }), "strix-anuncio-individual-oben-reels.mp4");
   assert.equal(announceFileName({ kind: "team", format: "feed", title: "ELENCO FC 27" }), "strix-anuncio-elenco-elenco-fc-27-post.png");
 });
@@ -165,11 +167,16 @@ test("os 4 modos montam timeline e o painter escreve o nome", () => {
       assert.equal(describeAnnounceFrame(timeline, 5.2).sceneType, "reframe");
       assert.equal(describeAnnounceFrame(timeline, 7.2).sceneType, "detail");
       assert.equal(describeAnnounceFrame(timeline, timeline.duration - 0.2).sceneType, "close");
-      assert.equal(timeline.duration, 10.6);
+      assert.equal(timeline.outroStart, 10.6, "o anúncio em si");
+      assert.equal(timeline.duration, 15.6, "mais o encerramento comum a todos os vídeos");
     } else {
       assert.equal(describeAnnounceFrame(timeline, 0.3).sceneType, "intro");
-      assert.equal(describeAnnounceFrame(timeline, timeline.introEnd + 0.2).sceneType, "person");
-      assert.equal(describeAnnounceFrame(timeline, timeline.duration - 0.1).sceneType, "finale");
+      // Diretoria abre o filme com o seu cartão; depois vem o elenco, da defesa ao ataque.
+      assert.equal(describeAnnounceFrame(timeline, timeline.introEnd + 0.2).sceneType, "section");
+      assert.deepEqual(timeline.scenes.filter((scene) => scene.type === "section").map((scene) => scene.section.id), ["diretoria", "elenco"]);
+      assert.deepEqual(timeline.people.map((person) => person.name), ["Oben", "João Pedro da Silva Extra", "Cedraz", "Santozz"]);
+      assert.equal(describeAnnounceFrame(timeline, timeline.finaleStart + 0.2).sceneType, "finale");
+      assert.equal(describeAnnounceFrame(timeline, timeline.duration - 0.1).sceneType, "crest");
       const hero = timeline.scenes.find((scene) => scene.type === "person");
       assert.ok(hero.end - hero.start >= 3 && hero.end - hero.start <= 4);
       assert.equal(timeline.look.variants[0], "left");

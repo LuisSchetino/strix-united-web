@@ -80,3 +80,24 @@ test("câmera começa próxima e abre no final", () => {
   assert.ok(early.zoom > finale.zoom);
   assert.ok(early.lookV > finale.lookV);
 });
+
+test("line-up board: holding midfielder behind the midfield line, wing-backs on the flanks", async () => {
+  const { lineupBoardPositions } = await import("../src/features/media/related-night-layout.js");
+  const squad = [
+    { id: "g", position: "GOL", group: "GOL" },
+    { id: "z1", position: "ZAG", group: "DEF" }, { id: "z2", position: "ZAG", group: "DEF" }, { id: "z3", position: "ZAG", group: "DEF" },
+    { id: "v", position: "VOL", group: "MEI" },
+    { id: "m1", position: "MC", group: "MEI" }, { id: "m2", position: "MC", group: "MEI" },
+    { id: "al", position: "ALA", group: "MEI" }, { id: "ar", position: "ALA", group: "MEI" },
+    { id: "a1", position: "ATA", group: "ATA" }, { id: "a2", position: "ATA", group: "ATA" },
+  ];
+  const spots = Object.fromEntries(lineupBoardPositions(squad).map((spot, index) => [squad[index].id, spot]));
+  assert.ok(spots.v.v > spots.m1.v, "o volante fica atrás dos meias");
+  assert.equal(spots.m1.v, spots.al.v, "alas na linha dos meias");
+  assert.ok(spots.al.u < 0.15 && spots.ar.u > 0.85, "um ala em cada lateral");
+  assert.ok(spots.m1.u > spots.al.u && spots.m2.u < spots.ar.u, "meias por dentro dos alas");
+  assert.ok(spots.g.v > spots.z1.v && spots.z1.v > spots.v.v && spots.m1.v > spots.a1.v, "do gol ao ataque");
+  const crowded = Array.from({ length: 6 }, (_, index) => ({ id: `d${index}`, position: "ZAG", group: "DEF" }));
+  const rows = new Set(lineupBoardPositions(crowded).map((spot) => spot.v));
+  assert.equal(rows.size, 2, "linha cheia vira duas fileiras");
+});

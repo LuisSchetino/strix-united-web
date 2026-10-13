@@ -1127,23 +1127,33 @@
 }
 .night-edition-leaders dd {
   display: flex;
-  align-items: baseline;
+  align-items: center;
+  justify-content: flex-end;
   gap: var(--space-3);
   min-width: 0;
   margin: 0;
+  padding: var(--space-2) 0;
 }
+/* Names are written whole: with two or more leaders they wrap onto a second line, and the
+   number stays on one line beside them, centred on the row. */
 .night-edition-leaders dd span {
-  overflow: hidden;
+  min-width: 0;
   color: var(--text-1);
   font-size: var(--text-sm);
   font-weight: 700;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.3;
+  text-align: right;
+  overflow-wrap: anywhere;
 }
 .night-edition-leaders dd b {
+  flex: none;
   font-size: var(--text-lg);
   font-weight: 800;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.night-edition-leaders dt {
+  flex: none;
 }
 .night-edition-leaders dd small {
   color: var(--text-3);
@@ -1185,8 +1195,9 @@
   .night-edition-rule { animation: none; }
 }
 
-/* Dados do time: each metric carries its mark in a ring; the ring draws a
-   blue arc once and the mark keeps a slow pulse of light. Labels stay white. */
+/* Dados do time: each metric carries its mark in a tile. The tile's own edge
+   is the blue line: a short beam travels around that exact border, and the
+   mark keeps a slow pulse of light. Labels stay white. */
 .statistics-v3 .statistics-stat-card.has-mark {
   grid-template-columns: auto minmax(0, 1fr);
   column-gap: var(--space-3);
@@ -1205,20 +1216,24 @@
   place-items: center;
   width: 44px;
   height: 44px;
-  border-radius: 50%;
-  box-shadow: inset 0 0 0 1px var(--line-2);
+  border-radius: 12px;
+  background: var(--ink-1);
+  box-shadow: inset 0 0 0 1px var(--data-line);
   color: var(--data);
 }
 .stat-mark::before {
   content: "";
   position: absolute;
   inset: 0;
-  border-radius: 50%;
-  background: conic-gradient(from -90deg, var(--data) 0turn, var(--data) var(--sweep, 0.28turn), transparent var(--sweep, 0.28turn));
-  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1.5px));
-  mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1.5px));
-  animation: stat-mark-arc var(--motion-hero) var(--motion-ease) both;
-  animation-delay: calc(var(--i, 0) * 70ms);
+  padding: 1.5px;
+  border-radius: inherit;
+  background: conic-gradient(from var(--sweep, 0turn), transparent 0turn, transparent 0.62turn, var(--data) 0.86turn, transparent 1turn);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  animation: stat-mark-beam 6s linear infinite;
+  animation-delay: calc(var(--i, 0) * -1s);
+  pointer-events: none;
 }
 .stat-mark::after {
   content: "";
@@ -1238,9 +1253,9 @@
   inherits: false;
   initial-value: 0turn;
 }
-@keyframes stat-mark-arc {
+@keyframes stat-mark-beam {
   from { --sweep: 0turn; }
-  to { --sweep: 0.28turn; }
+  to { --sweep: 1turn; }
 }
 @keyframes stat-mark-pulse {
   0%, 100% { opacity: 0.25; transform: scale(0.85); }
@@ -1280,6 +1295,168 @@
 @media (prefers-reduced-motion: reduce) {
   .stat-mark::before,
   .stat-mark::after {
+    animation: none;
+  }
+}
+
+/* Leitura individual: an odd roster ends with its last player centred under the two columns. */
+.statistics-roster-row:last-child:nth-child(odd){grid-column:1/-1;justify-self:center;width:50%;border-right:1px solid #202328;border-left:1px solid #202328;border-bottom:0}
+@media(max-width:620px){.statistics-roster-row:last-child:nth-child(odd){width:auto;justify-self:stretch;border-right:0;border-left:0}}
+
+/* Dados individuais · goleiro em profundidade: rates on the left, the save profile as bars. */
+.keeper-profile-grid {
+  display: grid;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+.keeper-profile {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.8fr) minmax(0, 1.6fr);
+  grid-template-areas: "head head" "rates types";
+  gap: var(--space-5) var(--space-8);
+  padding: var(--space-5) var(--space-6);
+  border: 1px solid var(--line-1);
+  border-radius: var(--radius-lg);
+  background: var(--ink-1);
+}
+.keeper-profile > header {
+  grid-area: head;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.keeper-profile > header > span {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  border-radius: 12px;
+  box-shadow: inset 0 0 0 1px var(--data-line);
+  color: var(--data);
+}
+.keeper-profile > header small {
+  display: block;
+  color: var(--text-3);
+  font-size: var(--text-label);
+  font-weight: 800;
+  letter-spacing: var(--track-label);
+}
+.keeper-profile > header h3 {
+  margin: 3px 0 0;
+  font-size: var(--text-xl);
+  font-weight: 800;
+  letter-spacing: var(--track-tight);
+}
+.keeper-profile-rates {
+  grid-area: rates;
+  display: grid;
+  align-content: start;
+  margin: 0;
+}
+.keeper-profile-rates > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--line-1);
+}
+.keeper-profile-rates > div:first-child {
+  border-top: 1px solid var(--line-1);
+}
+.keeper-profile-rates dt {
+  color: var(--text-2);
+  font-size: var(--text-label);
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+.keeper-profile-rates dd {
+  margin: 0;
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.keeper-profile-rates .is-empty dd {
+  color: var(--text-4);
+}
+.keeper-profile-types {
+  grid-area: types;
+  display: grid;
+  align-content: start;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.keeper-profile-types li {
+  display: grid;
+  grid-template-columns: 104px minmax(0, 1fr) 40px 44px;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 38px;
+}
+.keeper-profile-types span {
+  color: var(--text-1);
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+.keeper-profile-types i {
+  display: block;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--ink-3);
+}
+.keeper-profile-types i b {
+  display: block;
+  width: var(--share);
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--data-soft), var(--data));
+  transform-origin: left;
+  animation: keeper-bar var(--motion-section) var(--motion-ease) both;
+  animation-delay: calc(var(--i, 0) * 70ms);
+}
+.keeper-profile-types strong {
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.keeper-profile-types small {
+  color: var(--text-3);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.keeper-profile-empty {
+  grid-area: types;
+  margin: 0;
+  color: var(--text-3);
+  font-size: var(--text-sm);
+}
+@keyframes keeper-bar {
+  from { transform: scaleX(0); }
+  to { transform: none; }
+}
+@media (max-width: 760px) {
+  .keeper-profile {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "head" "rates" "types";
+    padding: var(--space-4);
+  }
+  .keeper-profile-types li {
+    grid-template-columns: 88px minmax(0, 1fr) 32px 38px;
+    gap: var(--space-2);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .keeper-profile-types i b {
     animation: none;
   }
 }

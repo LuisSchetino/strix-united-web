@@ -1,0 +1,194 @@
+/* Who changed what and when: a quiet list of dated lines. A line that kept what changed
+   (a line-up, a kick-off) opens to show it. */
+.activity-list {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-5) var(--space-8) var(--space-6);
+  border-top: 1px solid var(--line-2);
+}
+.activity-list h3 {
+  margin: 0;
+  color: var(--text-3);
+  font-size: var(--text-label);
+  font-weight: 700;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+}
+.activity-list p {
+  margin: 0;
+  color: var(--text-3);
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+}
+.activity-list ol {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.activity-list ol > li {
+  border-bottom: 1px solid var(--line-1);
+}
+.activity-line {
+  display: grid;
+  grid-template-columns: 104px minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-2) 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: var(--text-sm);
+  text-align: left;
+}
+button.activity-line {
+  min-height: var(--hit);
+  align-items: center;
+  cursor: pointer;
+  transition: color var(--motion-micro);
+}
+button.activity-line svg {
+  color: var(--text-3);
+  transition: transform var(--motion-section) var(--motion-ease), color var(--motion-micro);
+}
+button.activity-line:hover svg,
+.activity-list li.is-open button.activity-line svg { color: var(--text-1); }
+.activity-list li.is-open button.activity-line svg { transform: rotate(180deg); }
+button.activity-line:focus-visible {
+  outline: 2px solid var(--paper-1);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+.activity-list time {
+  color: var(--text-3);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.activity-line > span {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px var(--space-2);
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--text-2);
+}
+.activity-line b {
+  color: var(--text-1);
+  font-weight: 700;
+}
+
+/* ---------------------------------------------------------------- the detail */
+.activity-detail {
+  padding: 0 0 var(--space-4) calc(104px + var(--space-3));
+  animation: activity-open var(--motion-section) var(--motion-ease) both;
+}
+@keyframes activity-open {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: none; }
+}
+.activity-diff {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.activity-diff li {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 36px;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--ink-0);
+  color: var(--text-2);
+  font-size: var(--text-sm);
+  animation: activity-line-in var(--motion-section) var(--motion-ease) both;
+  animation-delay: calc(var(--i, 0) * 45ms);
+}
+@keyframes activity-line-in {
+  from { opacity: 0; transform: translateX(-8px); }
+  to { opacity: 1; transform: none; }
+}
+/* The sign: a paper tile for who came in, a hollow one for who left, a quiet one for a move. */
+.activity-diff i {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--line-3);
+  border-radius: 6px;
+  color: var(--text-2);
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 800;
+  line-height: 1;
+}
+.activity-diff .is-in i {
+  border-color: var(--paper-1);
+  background: var(--paper-1);
+  color: var(--text-on-light);
+}
+.activity-diff span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.activity-diff b {
+  color: var(--text-1);
+  font-weight: 800;
+}
+.activity-diff s {
+  color: var(--text-3);
+  text-decoration-color: var(--text-4);
+}
+.activity-diff em {
+  color: var(--text-2);
+  font-size: var(--text-label);
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+.activity-diff .is-total {
+  grid-template-columns: minmax(0, 1fr);
+  min-height: 28px;
+  background: none;
+  color: var(--text-3);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+}
+.activity-time {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  font-variant-numeric: tabular-nums;
+}
+.activity-list .activity-time s { color: var(--text-3); font-size: var(--text-md); }
+.activity-list .activity-time span { color: var(--text-3); }
+.activity-list .activity-time b {
+  color: var(--text-1);
+  font-size: var(--text-lg);
+  font-weight: 800;
+}
+.activity-list .activity-none { color: var(--text-3); font-size: var(--text-sm); }
+
+@media (max-width: 860px) {
+  .activity-list {
+    padding: var(--space-4) var(--space-4) var(--space-5);
+  }
+  .activity-line {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 2px var(--space-3);
+  }
+  .activity-line time { grid-column: 1 / -1; }
+  button.activity-line svg { grid-row: 2; grid-column: 2; }
+  .activity-detail { padding-left: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .activity-detail, .activity-diff li { animation: none; }
+  button.activity-line svg { transition: none; }
+}

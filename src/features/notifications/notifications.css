@@ -1,0 +1,199 @@
+/* ==========================================================================
+   Avisos · the bell in the top bar and its panel.
+   Monochrome like the rest of the shell: an unread notice is white with a dot,
+   a seen one is quiet. The panel is the product's raised ink surface.
+   ========================================================================== */
+
+.notice-bell {
+  position: relative;
+  flex: none;
+}
+.notice-bell-trigger {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: var(--hit);
+  height: var(--hit);
+  padding: 0;
+  border: 1px solid var(--line-2);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-2);
+  transition: border-color var(--motion-micro), color var(--motion-micro), background var(--motion-micro);
+}
+.notice-bell-trigger:hover,
+.notice-bell-trigger.is-open {
+  border-color: var(--line-3);
+  background: var(--ink-3);
+  color: var(--text-1);
+}
+.notice-bell-trigger b {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: var(--radius-pill);
+  background: var(--paper-1);
+  color: var(--text-on-light);
+  font-size: 10px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 18px;
+  text-align: center;
+  animation: notice-badge 320ms var(--motion-ease) both;
+}
+@keyframes notice-badge {
+  from { opacity: 0; transform: scale(0.6); }
+  to { opacity: 1; transform: none; }
+}
+
+.notice-panel {
+  position: absolute;
+  top: calc(100% + var(--space-3));
+  right: 0;
+  z-index: 60;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  width: min(400px, calc(100vw - 2 * var(--space-4)));
+  max-height: min(70dvh, 560px);
+  overflow: hidden;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-lg);
+  background: var(--ink-1);
+  box-shadow: var(--shadow-raise);
+  animation: notice-panel-in var(--motion-control) var(--motion-ease) both;
+}
+@keyframes notice-panel-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: none; }
+}
+.notice-panel > header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--line-2);
+}
+.notice-panel h2 {
+  margin: 0;
+  color: var(--text-1);
+  font-size: var(--text-md);
+  font-weight: 800;
+  letter-spacing: var(--track-tight);
+}
+.notice-panel > header p {
+  margin: 0;
+  color: var(--text-3);
+  font-size: var(--text-label);
+  font-weight: 700;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+}
+.notice-panel ol {
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  list-style: none;
+}
+.notice-panel li + li {
+  border-top: 1px solid var(--line-1);
+}
+.notice-panel li button {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-4) var(--space-5);
+  border: 0;
+  background: transparent;
+  color: var(--text-3);
+  text-align: left;
+  transition: background var(--motion-micro);
+}
+.notice-panel li button:hover,
+.notice-panel li button:focus-visible {
+  background: var(--ink-2);
+}
+.notice-panel li i {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-sm);
+  color: var(--text-3);
+}
+.notice-panel li span {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.notice-panel li b {
+  overflow-wrap: anywhere;
+  color: var(--text-2);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  line-height: var(--leading-snug);
+}
+.notice-panel li small {
+  overflow-wrap: anywhere;
+  font-size: var(--text-xs);
+  line-height: var(--leading-snug);
+}
+.notice-panel li time {
+  padding-top: 2px;
+  color: var(--text-4);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+/* New: white title, lit icon, and a dot on the icon's corner. */
+.notice-panel li.is-new b {
+  color: var(--text-1);
+}
+.notice-panel li.is-new i {
+  border-color: var(--line-3);
+  color: var(--text-1);
+}
+.notice-panel li.is-new i::after {
+  content: "";
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  width: 7px;
+  height: 7px;
+  border: 2px solid var(--ink-1);
+  border-radius: 50%;
+  background: var(--text-1);
+}
+.notice-empty {
+  margin: 0;
+  padding: var(--space-6) var(--space-5);
+  color: var(--text-3);
+  font-size: var(--text-sm);
+  line-height: var(--leading-body);
+}
+
+@media (max-width: 760px) {
+  /* On a phone the panel hangs from the top bar across the screen, clear of the bell's own position. */
+  .notice-panel {
+    position: fixed;
+    top: calc(var(--topbar-h) + var(--space-2));
+    right: var(--space-3);
+    left: var(--space-3);
+    width: auto;
+    max-height: calc(100dvh - var(--topbar-h) - 96px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .notice-bell-trigger b,
+  .notice-panel {
+    animation: none;
+  }
+}
