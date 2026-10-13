@@ -6,7 +6,10 @@
 import { RASTRO_BLUE } from "./night-look.js";
 
 export { RASTRO_BLUE };
-export const PALE = "#f4f4f1", GLOW = "rgba(255,255,255,0.5)";
+export const PALE = "#f4f4f1", GLOW = "rgba(120,176,255,0.6)";
+// The night is the club's blue, not black: the backdrop, the glass edge and the medals sit in a
+// deep navy, and the face is toned in Rastro blue instead of a grey portrait.
+export const NIGHT = "#06102a", INK = "rgba(3,9,28,";
 export const GOTHIC = '"UnifrakturCook", "Old English Text MT", serif', WIDE = '"Archivo", "Inter", Arial, sans-serif';
 export const F = 1 / 30;
 export const clamp = (value) => Math.max(0, Math.min(1, value));
@@ -81,6 +84,14 @@ function ellipseMask(layer, width, height, inner) {
   layer.fillStyle = fade; layer.fillRect(-2, -2, 4, 4);
   layer.restore();
 }
+/** Tones a grey picture in the club's blue: navy shadows, blue mid-tones, white highlights. */
+function tint(layer, width, height, amount = 0.78) {
+  layer.save();
+  layer.globalCompositeOperation = "color"; layer.globalAlpha = amount;
+  layer.fillStyle = RASTRO_BLUE; layer.fillRect(0, 0, width, height);
+  layer.restore();
+}
+
 /**
  * A picture as this model shows it: the face in hard black and white, and two copies of its
  * bright parts bleeding past their edges. Made once per picture and shape; `whole` is for a
@@ -99,6 +110,7 @@ function faceLayers(source, ratio, whole = false) {
     if (typeof layer.filter === "string") layer.filter = filter;
     if (whole) contain(layer, source, canvas.width, canvas.height); else cover(layer, source, canvas.width, canvas.height, 0.2);
     layer.filter = "none";
+    tint(layer, canvas.width, canvas.height);
     ellipseMask(layer, canvas.width, canvas.height, inner);
     return canvas;
   };
@@ -132,7 +144,7 @@ function medalOf(source) {
   const size = 220, canvas = document.createElement("canvas");
   canvas.width = canvas.height = size;
   const layer = canvas.getContext("2d");
-  layer.fillStyle = "#0b0b0b"; layer.fillRect(0, 0, size, size);
+  layer.fillStyle = NIGHT; layer.fillRect(0, 0, size, size);
   // The head sits near the top of a portrait: the square is cut from there, a little closer.
   const scale = Math.max(size / source.width, size / source.height) * 1.12, w = source.width * scale, h = source.height * scale;
   const place = (filter, alpha, mode) => {
@@ -142,7 +154,8 @@ function medalOf(source) {
   };
   place("grayscale(1) contrast(1.5) brightness(1.4)", 1, "source-over");
   place("grayscale(1) contrast(2.6) brightness(2) blur(5px)", 0.6, "screen");
-  layer.filter = "none"; layer.globalAlpha = 1; layer.globalCompositeOperation = "destination-in";
+  layer.filter = "none"; layer.globalAlpha = 1;
+  tint(layer, size, size); layer.globalAlpha = 1; layer.globalCompositeOperation = "destination-in";
   layer.beginPath(); layer.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2); layer.fill();
   medals.set(source, canvas);
   return canvas;
@@ -156,10 +169,10 @@ export function drawMedal(ctx, source, x, y, r, { alpha = 1, flare = 0, fallback
   ctx.globalAlpha *= alpha;
   if (medal) ctx.drawImage(medal, x - r, y - r, r * 2, r * 2);
   else {
-    ctx.fillStyle = "#0b0b0b"; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = NIGHT; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
     write(ctx, String(fallback), x, y - r * 0.36, { weight: 900, size: r * 0.72, stretch: "semi-expanded", align: "center" });
   }
-  ctx.strokeStyle = PALE; ctx.lineWidth = Math.max(2, r * 0.045); ctx.shadowColor = GLOW; ctx.shadowBlur = 10 + 26 * flare;
+  ctx.strokeStyle = RASTRO_BLUE; ctx.lineWidth = Math.max(3, r * 0.06); ctx.shadowColor = GLOW; ctx.shadowBlur = 10 + 26 * flare;
   ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.stroke();
   if (flare > 0.02) { ctx.globalCompositeOperation = "screen"; ctx.globalAlpha *= clamp(0.7 * flare); ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); }
   ctx.restore();
@@ -184,7 +197,7 @@ function glassParts() {
   lines = document.createElement("canvas");
   lines.width = 4; lines.height = 5;
   const layer = lines.getContext("2d");
-  layer.fillStyle = "rgba(0,0,0,0.22)"; layer.fillRect(0, 0, 4, 2);
+  layer.fillStyle = "rgba(3,9,28,0.18)"; layer.fillRect(0, 0, 4, 2);
 }
 
 /** What the glass does to everything behind it: its grey, the dark edge, the lines, the noise. */
@@ -195,11 +208,11 @@ function drawGlass(ctx, width, height, frame, flare) {
   if (flare > 0.01) { ctx.globalCompositeOperation = "screen"; ctx.fillStyle = `rgba(255,255,255,${(0.17 * flare).toFixed(3)})`; ctx.fillRect(0, 0, width, height); }
   ctx.globalCompositeOperation = "multiply";
   const grey = ctx.createRadialGradient(cx, cy, 0, cx, cy, reach);
-  grey.addColorStop(0, "#ffffff"); grey.addColorStop(0.46, "#d2d6dd"); grey.addColorStop(1, "#50545d");
+  grey.addColorStop(0, "#ffffff"); grey.addColorStop(0.46, "#d6e4ff"); grey.addColorStop(1, "#3c5a9a");
   ctx.fillStyle = grey; ctx.fillRect(0, 0, width, height);
   ctx.globalCompositeOperation = "source-over";
   const edge = ctx.createRadialGradient(cx, cy, reach * 0.38, cx, cy, reach);
-  edge.addColorStop(0, "rgba(2,3,5,0)"); edge.addColorStop(1, "rgba(2,3,5,0.84)");
+  edge.addColorStop(0, `${INK}0)`); edge.addColorStop(1, `${INK}0.8)`);
   ctx.fillStyle = edge; ctx.fillRect(0, 0, width, height);
   if (lines && ctx.createPattern) {
     ctx.save(); ctx.translate(0, frame % 5);
@@ -230,7 +243,9 @@ export function open(ctx, timeline, t, pullFrom, from = 1.13) {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over";
   if (typeof ctx.filter === "string") ctx.filter = "none";
-  ctx.fillStyle = "#0a0a0a"; ctx.fillRect(0, 0, width, height);
+  const sky = ctx.createRadialGradient(width / 2, height * 0.42, 0, width / 2, height * 0.42, Math.hypot(width / 2, height * 0.58));
+  sky.addColorStop(0, "#123a8c"); sky.addColorStop(0.55, "#0a1d4a"); sky.addColorStop(1, NIGHT);
+  ctx.fillStyle = sky; ctx.fillRect(0, 0, width, height);
   const pull = t >= pullFrom ? lerp(from, 1, clamp((t - pullFrom) / Math.max(F, plan.end - pullFrom)) ** 0.6) : 1;
   ctx.save();
   ctx.translate(width / 2, height * 0.46); ctx.scale(pull, pull); ctx.translate(-width / 2, -height * 0.46);
@@ -254,10 +269,10 @@ export function close(ctx, timeline, t, flare) {
   if (t < plan.off) return;
   ctx.save();
   const burn = 0.55 * Math.exp(-(t - plan.off) / 0.13);
-  if (burn > 0.01) { ctx.globalCompositeOperation = "screen"; ctx.fillStyle = `rgba(255,255,255,${burn.toFixed(3)})`; ctx.fillRect(0, 0, width, height); ctx.globalCompositeOperation = "source-over"; }
+  if (burn > 0.01) { ctx.globalCompositeOperation = "screen"; ctx.fillStyle = `rgba(120,176,255,${burn.toFixed(3)})`; ctx.fillRect(0, 0, width, height); ctx.globalCompositeOperation = "source-over"; }
   const eased = gone * gone * (3 - 2 * gone), reach = Math.hypot(width / 2, height * 0.58), outer = reach * (1.06 - 0.98 * eased);
   const dark = ctx.createRadialGradient(width / 2, height * 0.42, outer * 0.3, width / 2, height * 0.42, outer);
-  dark.addColorStop(0, `rgba(0,0,0,${(eased ** 2.2).toFixed(3)})`); dark.addColorStop(1, "rgba(0,0,0,1)");
+  dark.addColorStop(0, `${INK}${(eased ** 2.2).toFixed(3)})`); dark.addColorStop(1, `${INK}1)`);
   ctx.fillStyle = dark; ctx.fillRect(0, 0, width, height);
   ctx.restore();
 }
@@ -269,7 +284,7 @@ export function close(ctx, timeline, t, flare) {
 export function shade(ctx, g, top, alpha = 1) {
   if (alpha <= 0) return;
   const from = top - 150 * g.k, dark = ctx.createLinearGradient(0, from, 0, top + 40 * g.k);
-  dark.addColorStop(0, "rgba(4,4,5,0)"); dark.addColorStop(1, `rgba(4,4,5,${(0.66 * alpha).toFixed(3)})`);
+  dark.addColorStop(0, `${INK}0)`); dark.addColorStop(1, `${INK}${(0.66 * alpha).toFixed(3)})`);
   ctx.save();
   ctx.fillStyle = dark; ctx.fillRect(0, from, g.width, g.band + 130 * g.k - from);
   ctx.restore();
@@ -304,12 +319,11 @@ export function drawBand(ctx, g, alpha, { first = "", middle = "", last = "PRO C
 // The day as a readout: "08 DE OUT DE 2026" → "08 OUT 2026" (it has one narrow column).
 export const dayStamp = (dayLabel) => String(dayLabel || "").toUpperCase().replace(/\s+DE\s+/g, " ");
 
-/** A crest in the model's black and white, fitted in a square of side `size` whose top-left is (`x`, `y`). */
+/** A crest in its own colours, fitted in a square of side `size` whose top-left is (`x`, `y`). */
 export function drawCrest(ctx, bitmap, x, y, size, alpha = 1) {
   if (!bitmap || alpha <= 0) return;
   ctx.save();
   ctx.globalAlpha *= alpha;
-  if (typeof ctx.filter === "string") ctx.filter = "grayscale(1) contrast(1.3) brightness(1.3)";
   const scale = size / Math.max(bitmap.width, bitmap.height), w = bitmap.width * scale, h = bitmap.height * scale;
   ctx.drawImage(bitmap, x + (size - w) / 2, y + (size - h) / 2, w, h);
   ctx.restore();
