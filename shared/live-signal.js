@@ -11,21 +11,35 @@ export const LIVE_FRESH_MS = 3 * 60_000;
 
 const strip = (value) => String(value || "").normalize("NFD").replace(/[̀-ͯ]/g, "");
 
+// Gol escrito na fonte do placar: o OCR lê "0" como "O" e "1" como "I" ou "L".
+const SCORE = "[0-9OIL]{1,2}";
+const goals = (value) => Number(String(value).replace(/O/g, "0").replace(/[IL]/g, "1"));
+// O escudo entre a sigla e o gol vira um ou dois caracteres soltos no texto lido.
+const CREST = "(?:\\s+[^\\sA-Z0-9]{1,2}|\\s+[A-Z])?";
+
 /**
- * O placar no texto lido da tela: duas siglas, os gols e o relógio da partida. Sem relógio não é
- * partida (é menu, replay ou intervalo de tela), e o resultado é `null`.
+ * O placar no texto lido da tela: duas siglas, os gols e o relógio da partida. Entende o placar
+ * em linha ("STR 1 - 0 POA") e o empilhado do FC 27 ("STX O" / "BDL 1" / "45:17", com o escudo
+ * no meio). Sem relógio não é partida (é menu, replay ou intervalo de tela): `null`.
  */
 export function parseScoreboard(text) {
-  const clean = strip(text).toUpperCase().replace(/[–—]/g, "-").replace(/[|]/g, " ").replace(/\s+/g, " ");
+  const clean = strip(text).toUpperCase().replace(/[–—]/g, "-").replace(/[|]/g, " ").replace(/\s+/g, " ").trim();
   const clock = /(?:^|[^\d])(\d{1,3})[:.](\d{2})(?!\d)/.exec(clean);
   if (!clock) return null;
   const minute = Number(clock[1]);
   if (minute > 130 || Number(clock[2]) > 59) return null;
-  const score = /\b([A-Z]{2,5})\s+(\d{1,2})\s*(?:[-X]\s*)?(\d{1,2})\s+([A-Z]{2,5})\b/.exec(clean);
-  if (!score) return null;
-  const [, left, leftScore, rightScore, right] = score;
-  if (left === right) return null;
-  return { left, right, leftScore: Number(leftScore), rightScore: Number(rightScore), minute };
+  const board = (left, leftScore, rightScore, right) => (left === right ? null : { left, right, leftScore: goals(leftScore), rightScore: goals(rightScore), minute });
+  const end = "(?=\\s|$)";
+  // em linha: STR 1 - 0 POA
+  const inline = new RegExp(`\\b([A-Z]{2,5})\\s+(${SCORE})\\s*(?:[-X]\\s*)?(${SCORE})\\s+([A-Z]{2,5})\\b`).exec(clean);
+  if (inline && /\d/.test(inline[2] + inline[3])) return board(inline[1], inline[2], inline[3], inline[4]);
+  // empilhado: STX [escudo] O  BDL [escudo] 1
+  const stacked = new RegExp(`\\b([A-Z]{2,5})${CREST}\\s+(${SCORE})${end}\\s*(?:\\S{1,2}\\s+)?\\b([A-Z]{2,5})${CREST}\\s+(${SCORE})${end}`).exec(clean);
+  if (stacked) return board(stacked[1], stacked[2], stacked[4], stacked[3]);
+  // siglas primeiro, gols depois: STX BDL O 1
+  const columns = new RegExp(`\\b([A-Z]{2,5})\\s+([A-Z]{2,5})\\s+(${SCORE})\\s+(${SCORE})${end}`).exec(clean);
+  if (columns) return board(columns[1], columns[3], columns[4], columns[2]);
+  return null;
 }
 
 const letters = (value) => strip(value).toUpperCase().replace(/[^A-Z0-9 ]+/g, " ").trim();
