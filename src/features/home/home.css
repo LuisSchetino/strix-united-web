@@ -180,6 +180,11 @@
 .home-lineup.is-ready svg {
   color: var(--state-success);
 }
+.home-now-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
 .home-now-actions .primary svg {
   transition: translate var(--motion-micro) var(--motion-ease);
 }
@@ -1051,7 +1056,10 @@
     align-items: stretch;
     flex-direction: column;
   }
-  .home-now-actions .primary {
+  .home-now-actions {
+    flex-direction: column;
+  }
+  .home-now-actions :is(.primary, .secondary) {
     width: 100%;
   }
   .home-score-side,

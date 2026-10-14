@@ -107,7 +107,7 @@
   inset: 0;
   background:
     radial-gradient(ellipse 80% 70% at 50% 60%, color-mix(in srgb, var(--goal) 22%, transparent), transparent 70%),
-    rgba(4, 5, 7, 0.86);
+    rgba(4, 5, 7, 0.95);
   animation: goal-dim 3.8s ease-out both;
 }
 @keyframes goal-dim {
@@ -160,13 +160,25 @@
   from { opacity: 0; transform: translateX(-50%) translateY(8%) scale(1.12); }
   to { opacity: 1; transform: translateX(-50%); }
 }
-.goal-net-back {
-  transform-box: fill-box;
-  transform-origin: 50% 45%;
-  animation: goal-bulge 1.5s cubic-bezier(0.25, 1.4, 0.45, 1) 0.6s both;
+.goal-net-mesh { opacity: 0.7; }
+.goal-net-hole { opacity: 0; animation: goal-hole 1.6s ease-out 0.6s both; }
+@keyframes goal-hole {
+  0%, 100% { opacity: 0; }
+  8%, 70% { opacity: 1; }
 }
-.goal-net-side,
-.goal-net-top { opacity: 0.55; }
+.goal-net-dent {
+  opacity: 0.85;
+  transform-box: view-box;
+  transform-origin: 300px 160px;
+  animation: goal-dent 1.6s cubic-bezier(0.25, 1.3, 0.45, 1) 0.6s both;
+}
+@keyframes goal-dent {
+  0% { transform: none; }
+  14% { transform: scale(0.72); }
+  40% { transform: scale(1.06); }
+  62% { transform: scale(0.95); }
+  100% { transform: none; }
+}
 .goal-frame-img {
   transform-origin: 50% 55%;
   animation: goal-bulge-img 1.2s cubic-bezier(0.25, 1.4, 0.45, 1) 0.6s both;
@@ -330,8 +342,9 @@
   animation: goal-streak 0.7s ease-in-out 1.15s both;
 }
 @keyframes goal-streak {
-  0% { opacity: 1; transform: translate(-160%, -62%) skewX(-24deg); }
-  100% { opacity: 1; transform: translate(60%, -62%) skewX(-24deg); }
+  0% { opacity: 0; transform: translate(-160%, -62%) skewX(-24deg); }
+  15%, 85% { opacity: 1; }
+  100% { opacity: 0; transform: translate(60%, -62%) skewX(-24deg); }
 }
 .goal-band {
   display: inline-flex;
@@ -387,7 +400,8 @@
   .home-now:has(.home-live.is-goal),
   .goal-ball,
   .goal-confetti,
-  .goal-net-back,
+  .goal-net-dent,
+  .goal-net-hole,
   .goal-frame-img,
   .goal-streak { animation: none; }
   .goal-ball, .goal-confetti, .goal-streak, .goal-impact, .goal-flash { display: none; }

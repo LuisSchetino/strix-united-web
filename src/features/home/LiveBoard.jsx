@@ -125,13 +125,17 @@ function DrawnBall() {
   );
 }
 
-/** The goal in perspective: posts, crossbar, the back net and the side nets. */
+/**
+ * The goal: posts, crossbar and one continuous net. Where the ball hits, a soft round patch of
+ * the same net is pushed back (scaled towards the impact) and springs out again, faded at its
+ * edge so there is never a seam.
+ */
 function DrawnGoal({ id }) {
   return (
     <svg className="goal-frame-art" viewBox="0 0 600 300" preserveAspectRatio="xMidYMax meet">
       <defs>
-        <pattern id={`${id}-mesh`} width="14" height="12" patternUnits="userSpaceOnUse">
-          <path d="M0 6l7-6 7 6-7 6z" fill="none" stroke="currentColor" strokeWidth="1.1" />
+        <pattern id={`${id}-mesh`} width="16" height="14" patternUnits="userSpaceOnUse">
+          <path d="M0 7l8-7 8 7-8 7z" fill="none" stroke="currentColor" strokeWidth="1.2" />
         </pattern>
         <linearGradient id={`${id}-post`} x1="0" x2="1">
           <stop offset="0" stopColor="#b9c0c8" />
@@ -142,24 +146,25 @@ function DrawnGoal({ id }) {
           <stop offset="0" stopColor="#ffffff" />
           <stop offset="1" stopColor="#aab2bb" />
         </linearGradient>
-        <radialGradient id={`${id}-depth`} cx="50%" cy="45%" r="65%">
-          <stop offset="0" stopColor="#000" stopOpacity="0" />
-          <stop offset="1" stopColor="#000" stopOpacity="0.55" />
+        <radialGradient id={`${id}-soft`} cx="50%" cy="50%" r="50%">
+          <stop offset="0.55" stopColor="#fff" />
+          <stop offset="1" stopColor="#fff" stopOpacity="0" />
         </radialGradient>
+        <mask id={`${id}-patch`} maskContentUnits="userSpaceOnUse">
+          <circle cx="300" cy="160" r="120" fill={`url(#${id}-soft)`} />
+        </mask>
+        <mask id={`${id}-hole`} maskContentUnits="userSpaceOnUse">
+          <rect width="600" height="300" fill="#fff" />
+          <circle cx="300" cy="160" r="120" fill={`url(#${id}-soft)`} className="goal-net-hole" />
+        </mask>
       </defs>
-      {/* back net and side nets, behind the frame */}
-      <g className="goal-net-back">
-        <path d="M120 60H480L452 270H148z" fill={`url(#${id}-mesh)`} />
-        <path d="M120 60H480L452 270H148z" fill={`url(#${id}-depth)`} />
+      <rect x="60" y="30" width="480" height="264" fill={`url(#${id}-mesh)`} mask={`url(#${id}-hole)`} className="goal-net-mesh" />
+      <g mask={`url(#${id}-patch)`}>
+        <rect x="60" y="30" width="480" height="264" fill={`url(#${id}-mesh)`} className="goal-net-dent" />
       </g>
-      <path className="goal-net-side" d="M60 30L120 60L148 270L60 290z" fill={`url(#${id}-mesh)`} />
-      <path className="goal-net-side" d="M540 30L480 60L452 270L540 290z" fill={`url(#${id}-mesh)`} />
-      <path className="goal-net-top" d="M60 30H540L480 60H120z" fill={`url(#${id}-mesh)`} />
-      {/* the frame */}
       <rect x="50" y="22" width="20" height="272" rx="6" fill={`url(#${id}-post)`} />
       <rect x="530" y="22" width="20" height="272" rx="6" fill={`url(#${id}-post)`} />
       <rect x="50" y="18" width="500" height="18" rx="7" fill={`url(#${id}-bar)`} />
-      <path d="M60 294H540" stroke="#fff" strokeOpacity="0.35" strokeWidth="3" />
     </svg>
   );
 }
