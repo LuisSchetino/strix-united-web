@@ -23,6 +23,7 @@ import {
 import { IconListDetails, IconPencil, IconTrash } from "@tabler/icons-react";
 import { ConfirmDialog } from "../../ui/ConfirmDialog.jsx";
 import { matchClock, smallHoursNight, withMatchClock } from "./match-clock.js";
+import { manualStatsRows, withManualStats } from "./manual-stats.js";
 import { StatIcon } from "../../ui/StatIcon.jsx";
 import { canonicalPlayerName, isStrixMotm } from "../statistics/statistics-core.js";
 import { describeEaArchetype } from "../statistics/ea-archetypes.js";
@@ -100,23 +101,74 @@ function MatchPreview({ match, workspace }) {
   );
 }
 
+/**
+ * Gols e assistências de cada jogador, à mão: para quando a EA zera alguém ou a partida não tem
+ * dados da EA. Só o que muda em relação à EA é guardado (manual-stats.js) e conta no site.
+ */
+function MatchStatsEditor({ rows, setRows, base, roster, strixScore }) {
+  const shown = new Set(rows.map((row) => row.key));
+  const addable = roster.filter((player) => player.is_active && !shown.has(statsKey(player.display_name)));
+  const change = (rowKey, field, value) => setRows((current) => current.map((row) => (row.key === rowKey ? { ...row, [field]: Math.max(0, Math.min(99, Math.floor(Number(value) || 0))) } : row)));
+  const goals = rows.reduce((sum, row) => sum + row.goals, 0);
+  return (
+    <section className="match-stats-editor" aria-label="Gols e assistências por jogador">
+      <header>
+        <span>GOLS E ASSISTÊNCIAS</span>
+        <small>Quando a EA zerar alguém, ponha aqui. O que você mudar conta nas estatísticas do site.</small>
+      </header>
+      {rows.length ? (
+        <div className="match-stats-table" role="table">
+          <div className="match-stats-head" role="row"><span role="columnheader">JOGADOR</span><span role="columnheader">G</span><span role="columnheader">A</span></div>
+          {rows.map((row) => {
+            const was = base.get(row.key);
+            const changed = !was || was.goals !== row.goals || was.assists !== row.assists;
+            return (
+              <div key={row.key} role="row" className={`match-stats-row${changed ? " is-changed" : ""}`}>
+                <b role="cell">{row.label}{changed && <small>{was ? `EA: ${was.goals} G · ${was.assists} A` : "adicionado à mão"}</small>}</b>
+                <label role="cell"><span className="sr-only">Gols de {row.label}</span><input type="number" inputMode="numeric" min="0" max="99" value={row.goals} onChange={(event) => change(row.key, "goals", event.target.value)} /></label>
+                <label role="cell"><span className="sr-only">Assistências de {row.label}</span><input type="number" inputMode="numeric" min="0" max="99" value={row.assists} onChange={(event) => change(row.key, "assists", event.target.value)} /></label>
+              </div>
+            );
+          })}
+        </div>
+      ) : <p className="match-stats-empty">Esta partida não tem jogadores da EA. Adicione quem jogou.</p>}
+      {addable.length > 0 && (
+        <select className="match-stats-add" value="" onChange={(event) => {
+          const player = addable.find((item) => item.id === event.target.value);
+          if (player) setRows((current) => [...current, { key: statsKey(player.display_name), name: player.display_name, label: player.display_name, playerId: player.id, goals: 0, assists: 0 }]);
+        }} aria-label="Adicionar jogador do elenco">
+          <option value="">+ Adicionar jogador do elenco</option>
+          {addable.map((player) => <option key={player.id} value={player.id}>{player.display_name}</option>)}
+        </select>
+      )}
+      {goals !== Number(strixScore || 0) && <p className="match-stats-warning">Os jogadores somam {goals} gol{goals === 1 ? "" : "s"}; o placar do Strix é {Number(strixScore || 0)}.</p>}
+    </section>
+  );
+}
+
+const statsKey = (value) => String(value || "").trim().toLocaleLowerCase("pt-BR").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ");
+
 function EditMatchModal({ match, workspace, close, save }) {
-  const [draft, setDraft] = useState({
-    ...match,
-    scorersText: matchGoalScorers(match).join(", "),
-  });
+  const [draft, setDraft] = useState({ ...match });
+  // the roster's name for an EA name (its alias), to list players the way the club knows them
+  const display = useMemo(() => {
+    const byId = new Map((workspace.players || []).map((player) => [player.id, player.display_name]));
+    const byName = new Map((workspace.aliases || []).map((alias) => [statsKey(alias.ea_name), byId.get(alias.player_id) || alias.club_players?.display_name]));
+    return (name) => byName.get(statsKey(name)) || name;
+  }, [workspace.players, workspace.aliases]);
+  const base = useMemo(() => new Map(manualStatsRows({ ...(match.performance || {}), manualStats: [] }, display).map((row) => [row.key, row])), [match.performance, display]);
+  const [statRows, setStatRows] = useState(() => manualStatsRows(match.performance || {}, display));
   const patch = (value) => setDraft((current) => ({ ...current, ...value }));
   // Date and hour are São Paulo's, and each one changes alone (match-clock.js).
   const clock = matchClock(draft.date);
   const changeDate = (key, value) => patch({ date: withMatchClock(draft.date, key, value) });
   const night = smallHoursNight(draft.date);
-  const preview = {
-    ...draft,
-    goalScorers: draft.scorersText
-      .split(",")
-      .map((item) => item.trim())
-      .filter(Boolean),
-  };
+  // only what differs from the EA (or was added) is kept as hand-set
+  const manualStats = statRows
+    .filter((row) => { const was = base.get(row.key); return !was || was.goals !== row.goals || was.assists !== row.assists; })
+    .map((row) => ({ key: row.key, name: row.name, playerId: row.playerId || null, goals: row.goals, assists: row.assists }));
+  const performance = withManualStats({ ...(draft.performance || {}), manualStats });
+  const preview = { ...draft, performance, goalScorers: matchGoalScorers({ performance }).map((name) => display(name)) };
   return createPortal((
     <div
       className="match-flow-backdrop"
@@ -127,19 +179,13 @@ function EditMatchModal({ match, workspace, close, save }) {
         className="match-review-modal"
         onSubmit={(event) => {
           event.preventDefault();
-          save({
-            ...preview,
-            performance: {
-              ...(preview.performance || {}),
-              goalScorers: preview.goalScorers,
-            },
-          });
+          save({ ...preview, performance: { ...performance, manualStats } });
         }}
       >
         <header>
           <div>
             <span>REVISÃO · PARTIDA</span>
-            <h2>Editar antes de importar</h2>
+            <h2>{match.dbId ? "Editar partida" : "Editar antes de importar"}</h2>
             <p>O card ao lado acompanha cada alteração em tempo real.</p>
           </div>
           <CloseButton onClick={close} />
@@ -205,14 +251,7 @@ function EditMatchModal({ match, workspace, close, save }) {
                 placeholder="Amistoso, liga ou copa"
               />
             </label>
-            <label>
-              AUTORES DOS GOLS
-              <input
-                value={draft.scorersText}
-                onChange={(event) => patch({ scorersText: event.target.value })}
-                placeholder="Obenzera, SxntsTheAngel"
-              />
-            </label>
+            <MatchStatsEditor rows={statRows} setRows={setStatRows} base={base} roster={workspace.players || []} strixScore={draft.strixScore} />
           </section>
           <MatchPreview match={preview} workspace={workspace} />
         </div>
@@ -1136,7 +1175,8 @@ export function MatchesPage({ profile, workspace, client }) {
       competitionId: match.competition_id || "",
       competitionEditionId: match.competition_edition_id || "",
       agendaId: match.agenda_match_id || "",
-      performance: match.performance || {},
+      // the players as the site counts them now (rebuilt from the EA's record, hand-set numbers on top)
+      performance: (workspace.statMatches || []).find((item) => item.id === match.id)?.performance || match.performance || {},
       goalScorers: matchGoalScorers({ performance: match.performance }),
       importSource: match.source || "manual",
     });

@@ -198,3 +198,24 @@
 }
 
 .match-review-note{margin:0;color:#999b9f;font-size:12px;line-height:1.45}
+
+/* Gols e assistências à mão (MatchStatsEditor) */
+.match-stats-editor{display:grid;gap:10px;padding:14px;border:1px solid rgba(144,146,150,.24);border-radius:14px;background:#0e1014}
+.match-stats-editor>header{display:grid;gap:4px}
+.match-stats-editor>header span{color:#c7ccd1;font-size:10px;font-weight:900;letter-spacing:.12em}
+.match-stats-editor>header small{color:#8e9094;font-size:12px;line-height:1.4}
+.match-stats-table{display:grid;gap:2px}
+.match-stats-head,.match-stats-row{display:grid;grid-template-columns:minmax(0,1fr) 64px 64px;gap:8px;align-items:center}
+.match-stats-head span{color:#7e8084;font-size:9px;font-weight:900;letter-spacing:.1em}
+.match-stats-head span:not(:first-child){text-align:center}
+.match-stats-row{padding:6px 0;border-top:1px solid rgba(255,255,255,.05)}
+.match-stats-row b{display:grid;gap:2px;min-width:0;overflow:hidden;color:#eceef1;font-size:13px;text-overflow:ellipsis;white-space:nowrap}
+.match-stats-row b small{color:#7ca9c6;font-size:10px;font-weight:700}
+.match-stats-row.is-changed b{color:#fff}
+.match-review-fields .match-stats-row label{display:block}
+.match-review-fields .match-stats-row input{height:38px;padding:0 6px;text-align:center;font-weight:800;font-variant-numeric:tabular-nums}
+.match-stats-row.is-changed input{border-color:rgba(124,169,198,.6)}
+.match-stats-editor .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.match-stats-add{width:100%;height:40px;padding:0 12px;border:1px dashed rgba(144,146,150,.35);border-radius:10px;background:#131519;color:#c8cace;font:inherit;font-size:13px}
+.match-stats-empty{margin:0;color:#8e9094;font-size:12px}
+.match-stats-warning{margin:0;color:#e6c27a;font-size:12px}

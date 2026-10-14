@@ -42,6 +42,7 @@ import { PageHeader } from "./ui/PageHeader.jsx";
 import { useMinuteClock } from "./ui/useMinuteClock.js";
 import { agendaStatus, lineupState } from "./features/agenda/agenda-status.js";
 import { isOnPitch } from "../shared/live-signal.js";
+import { withManualStats } from "./features/matches/manual-stats.js";
 import { installProblemCapture } from "./features/support/problem-core.js";
 import { ReportProblem } from "./features/support/ReportProblem.jsx";
 import { LAUNCH_CONFIG, clearLaunchAccessVerification, consumeLaunchReturn, isLaunchUnlocked, launchGateDecision, readLaunchAccessVerification, rememberLaunchAccess } from "./launch.js";
@@ -324,14 +325,15 @@ function eaPerformance(raw, strix) {
 function currentMatchPerformance(match) {
   const saved = match?.performance || match?.raw_ea?.performance || {};
   const raw = match?.raw_ea;
-  if (!raw || typeof raw !== "object" || !Object.keys(raw).length) return saved;
+  if (!raw || typeof raw !== "object" || !Object.keys(raw).length) return withManualStats(saved);
   const clubs = asClubEntries(raw);
   const strix = clubs.find((club) => isStrixClubId(club?.clubId || club?.id || club?._clubKey)) || clubs[0] || {};
   const fresh = eaPerformance(raw, strix);
-  return {
+  // goals and assists set by hand (manual-stats.js) go over the EA's numbers again
+  return withManualStats({
     ...saved,
     ...Object.fromEntries(Object.entries(fresh).filter(([key, value]) => key === "players" ? value.length > 0 : value !== null && value !== undefined)),
-  };
+  });
 }
 
 function normalizeEaMatch(raw, index) {
