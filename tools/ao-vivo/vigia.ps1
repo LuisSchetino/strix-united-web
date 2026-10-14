@@ -6,13 +6,19 @@
 # placar e minuto. Nao le memoria nem rede do jogo: so a imagem da tela, como o OBS.
 #
 # Uso:
-#   LIGAR-EM-CAMPO-AUTOMATICO.cmd        (fica vigiando)
+#   ATIVAR-EM-CAMPO-AUTOMATICO.cmd       (inicia escondido com o Windows; so vigia com o FC 27 aberto)
+#   DESATIVAR-EM-CAMPO-AUTOMATICO.cmd    (desliga e tira da inicializacao)
+#   LIGAR-EM-CAMPO-AUTOMATICO.cmd        (vigia agora, com janela, ate fechar)
 #   TESTAR-EM-CAMPO.cmd                  (um print + texto lido, para calibrar)
+#
+# Com -Automatico o vigia fica esperando o jogo: confere a cada 15 s se o FC 27 esta aberto (pela
+# lista de programas do Windows, como o Gerenciador de Tarefas) e so tira print enquanto ele estiver.
 #
 # Configuracao em tools\ao-vivo\ao-vivo.config.json (copie de ao-vivo.config.example.json).
 
 param(
-  [switch]$Teste
+  [switch]$Teste,
+  [switch]$Automatico
 )
 
 $ErrorActionPreference = "Stop"
@@ -34,6 +40,22 @@ $regionLeft = [double]($config.RegionLeft)
 $regionWidth = [double]($config.RegionWidth)
 if ($regionHeight -le 0) { $regionHeight = 0.2 }
 if ($regionWidth -le 0) { $regionWidth = 1.0 }
+$gameNames = @($config.GameProcesses | Where-Object { $_ })
+if ($gameNames.Count -eq 0) { $gameNames = @("FC27", "FC27_Trial", "FC 27") }
+
+$logFolder = Join-Path $env:LOCALAPPDATA "StrixFC27"
+New-Item -ItemType Directory -Force -Path $logFolder | Out-Null
+$logPath = Join-Path $logFolder "em-campo.log"
+function Log([string]$message, [string]$color = "Gray") {
+  $line = "{0}  {1}" -f (Get-Date -Format "yyyy-MM-dd HH:mm:ss"), $message
+  Write-Host $line -ForegroundColor $color
+  if ((Test-Path $logPath) -and (Get-Item $logPath).Length -gt 1MB) { Move-Item -Force $logPath "$logPath.old" }
+  Add-Content -Path $logPath -Value $line -Encoding UTF8
+}
+
+function Test-GameOpen {
+  [bool](Get-Process -Name $gameNames -ErrorAction SilentlyContinue)
+}
 
 # Telas com escala (125%, 150%): sem isso o print sai cortado.
 Add-Type @"
@@ -127,6 +149,13 @@ if ($Teste) {
   Write-Host $text
   Write-Host ""
   Write-Host "Print e texto salvos em $folder" -ForegroundColor Green
+  if (Test-GameOpen) {
+    Write-Host ("FC 27 aberto: sim (" + ($gameNames -join ", ") + ")") -ForegroundColor Green
+  } else {
+    $guess = Get-Process | Where-Object { $_.ProcessName -match "FC|EA" } | Select-Object -ExpandProperty ProcessName -Unique
+    Write-Host ("FC 27 aberto: nao encontrado pelos nomes " + ($gameNames -join ", ")) -ForegroundColor Yellow
+    Write-Host ("Programas parecidos abertos agora: " + ($guess -join ", ")) -ForegroundColor Yellow
+  }
   if ($text -match $clockPattern) {
     try {
       $answer = Send-Text $text
@@ -140,10 +169,34 @@ if ($Teste) {
   exit 0
 }
 
-Write-Host "Vigia Em campo ligado. Deixe o FC em TELA CHEIA SEM BORDAS. Ctrl+C para parar." -ForegroundColor Green
+# Um vigia so por vez (a inicializacao do Windows e o atalho manual nao se somam).
+$created = $false
+$mutex = New-Object System.Threading.Mutex($true, "Local\StrixFC27EmCampo", [ref]$created)
+if (-not $created) {
+  Write-Host "O vigia ja esta rodando neste PC." -ForegroundColor Yellow
+  exit 0
+}
+
+if ($Automatico) {
+  Log "Vigia Em campo automatico: esperando o FC 27 abrir." "Green"
+} else {
+  Log "Vigia Em campo ligado. Ctrl+C para parar." "Green"
+}
 $lastSent = [DateTime]::MinValue
 $lastText = ""
+$gameWasOpen = $false
 while ($true) {
+  if ($Automatico) {
+    $gameOpen = Test-GameOpen
+    if ($gameOpen -ne $gameWasOpen) {
+      if ($gameOpen) { Log "FC 27 aberto: comecando a ler o placar." "Green" } else { Log "FC 27 fechado: vigia parado ate o jogo abrir de novo." "Yellow" }
+      $gameWasOpen = $gameOpen
+    }
+    if (-not $gameOpen) {
+      Start-Sleep -Seconds 15
+      continue
+    }
+  }
   try {
     Capture-Region
     $text = Read-Text
@@ -156,14 +209,14 @@ while ($true) {
         $lastSent = Get-Date
         $lastText = $text
         if ($answer.status -eq "live") {
-          Write-Host ("{0}  Em campo vs {1}  {2}x{3}  {4}'" -f (Get-Date -Format "HH:mm:ss"), $answer.opponent, $answer.strix, $answer.opponent_score, $answer.minute)
+          Log ("Em campo vs {0}  {1}x{2}  {3}'" -f $answer.opponent, $answer.strix, $answer.opponent_score, $answer.minute)
         } else {
-          Write-Host ("{0}  Placar lido, mas sem jogo na Agenda agora ({1})" -f (Get-Date -Format "HH:mm:ss"), $answer.status)
+          Log ("Placar lido, mas sem jogo na Agenda agora ({0})" -f $answer.status)
         }
       }
     }
   } catch {
-    Write-Host ("{0}  Erro: {1}" -f (Get-Date -Format "HH:mm:ss"), $_.Exception.Message) -ForegroundColor Yellow
+    Log ("Erro: " + $_.Exception.Message) "Yellow"
   }
   Start-Sleep -Seconds $interval
 }

@@ -6,5 +6,10 @@
   "RegionTop": 0,
   "RegionHeight": 0.2,
   "RegionLeft": 0,
-  "RegionWidth": 1
+  "RegionWidth": 1,
+  "GameProcesses": [
+    "FC27",
+    "FC27_Trial",
+    "FC 27"
+  ]
 }
