@@ -1,7 +1,9 @@
 // What a scheduled match means right now, in one vocabulary shared by the Home
-// and the Agenda. The agenda only knows the kickoff time and the stored status;
-// it never claims a match is being played.
+// and the Agenda. With a fresh signal from the PC watcher (tools/ao-vivo) the match
+// is on the pitch with its partial score; without one, only the kickoff time and
+// the stored status count.
 import { saoPauloDay } from "./agenda-time.js";
+import { isLiveFresh } from "../../../shared/live-signal.js";
 
 const MINUTE = 60_000;
 const DAY = 86_400_000;
@@ -50,12 +52,23 @@ export const kickoffDay = (value) => new Intl.DateTimeFormat("pt-BR", { timeZone
 /** A kick-off's time in São Paulo: "21:10". */
 export const kickoffClock = (value) => new Intl.DateTimeFormat("pt-BR", { timeZone: ZONE, hour: "2-digit", minute: "2-digit" }).format(new Date(value));
 
+/** "Em campo · 1×0 · 34'" from the last scoreboard the watcher read. */
+export function liveLabel(match) {
+  const score = Number.isFinite(match?.live_strix_score) && Number.isFinite(match?.live_opponent_score) ? ` · ${match.live_strix_score}×${match.live_opponent_score}` : "";
+  const minute = Number.isFinite(match?.live_minute) ? ` · ${match.live_minute}'` : "";
+  return `Em campo${score}${minute}`;
+}
+
 /** Status for one agenda row: tone drives the visual, label is the words. */
 export function agendaStatus(match, now = new Date()) {
   if (match?.status === "cancelled") return { tone: "cancelled", label: "Cancelado" };
   if (match?.status === "completed") return { tone: "done", label: "Jogado" };
+  // the watcher read the scoreboard a moment ago: on the pitch, with the score and the minute
+  if (isLiveFresh(match, now)) return { tone: "soon", label: liveLabel(match), live: true };
   if (match?.status === "live") return { tone: "soon", label: "Em breve" };
   const minutes = minutesUntil(match?.scheduled_at, now);
+  // the watcher saw it and stopped seeing it: the game is over, only the result is missing
+  if (match?.live_seen_at && minutes <= 0) return { tone: "past", label: "Aguardando resultado" };
   if (!Number.isFinite(minutes)) return { tone: "scheduled", label: "Agendado" };
   // From the whistle and for the length of a game it is "Em campo"; after that the game was
   // played and only its result is missing here.

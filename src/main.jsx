@@ -1641,7 +1641,7 @@ function AgendaModal({ entry, mode = "new", presets, competitions = [], leg = ""
               {queuedGames.length === 1 ? "1 jogo guardado neste envio." : `${queuedGames.length} jogos guardados neste envio.`} Este formulário já é o próximo: preencha e salve tudo de uma vez.
             </p>
           )}
-          {readOnly && <MatchStage opponent={form.opponent} logo={form.logo} date={form.date} time={form.time} competition={form.competition} group={standings?.available ? standings.group : ""} scheduledAt={entry?.db?.scheduled_at || ""} status={entry?.db?.status || ""} stake={stake} />}
+          {readOnly && <MatchStage opponent={form.opponent} logo={form.logo} date={form.date} time={form.time} competition={form.competition} group={standings?.available ? standings.group : ""} scheduledAt={entry?.db?.scheduled_at || ""} status={entry?.db?.status || ""} stake={stake} live={entry?.db || null} />}
           {!readOnly && <div className={`agenda-modal-body${!edit && gameNumber > 1 ? " is-next-game" : ""}`} key={`game-${gameNumber}`}>
             <div className="agenda-form">
               {swap && (

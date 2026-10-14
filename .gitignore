@@ -28,3 +28,5 @@ qa/*.mp4
 entregas/
 .impeccable/review/
 fx-source-unused/
+
+tools/ao-vivo/ao-vivo.config.json

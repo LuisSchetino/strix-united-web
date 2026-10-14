@@ -1,0 +1,10 @@
+{
+  "SiteUrl": "https://strixunited.com.br",
+  "Secret": "COLE_AQUI_A_MESMA_SENHA_DO_FC27_LIVE_SECRET",
+  "IntervalSeconds": 5,
+  "SendEverySeconds": 15,
+  "RegionTop": 0,
+  "RegionHeight": 0.2,
+  "RegionLeft": 0,
+  "RegionWidth": 1
+}

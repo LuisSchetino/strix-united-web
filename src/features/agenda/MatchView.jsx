@@ -15,9 +15,10 @@ const strixName = (opponent) => (/\p{Ll}/u.test(String(opponent || "")) ? "Strix
  * both clubs face to face around the kick-off in giant numerals, the day under it.
  * The moment follows the clock while the sheet is open.
  */
-export function MatchStage({ opponent, logo, date, time, competition, group = "", scheduledAt = "", status = "", stake = "" }) {
+export function MatchStage({ opponent, logo, date, time, competition, group = "", scheduledAt = "", status = "", stake = "", live = null }) {
   const now = useMinuteClock();
-  const moment = scheduledAt ? matchMoment({ scheduled_at: scheduledAt, status }, now) : null;
+  // `live` is the agenda row itself when it has the PC watcher's last scoreboard
+  const moment = scheduledAt ? matchMoment({ ...(live || {}), scheduled_at: scheduledAt, status }, now) : null;
   return (
     <NowCard
       band
