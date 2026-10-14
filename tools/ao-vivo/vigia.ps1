@@ -210,8 +210,11 @@ while ($true) {
         $lastText = $text
         if ($answer.status -eq "live") {
           Log ("Em campo vs {0}  {1}x{2}  {3}'" -f $answer.opponent, $answer.strix, $answer.opponent_score, $answer.minute)
+        } elseif ($answer.status -eq "no_scoreboard") {
+          # o site nao entendeu o placar: guarda o texto lido para ajustar a leitura
+          Log ("Relogio na tela, mas o site nao reconheceu o placar. Texto lido: " + (($text -replace "\s+", " ").Trim()))
         } else {
-          Log ("Placar lido, mas sem jogo na Agenda agora ({0})" -f $answer.status)
+          Log ("Placar lido, mas sem jogo na Agenda agora ({0}). Texto lido: {1}" -f $answer.status, (($text -replace "\s+", " ").Trim()))
         }
       }
     }
