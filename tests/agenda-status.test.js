@@ -25,7 +25,7 @@ test("rótulos curtos de tempo e escalação", () => {
 test("com o sinal do vigia do PC o jogo fica em campo com placar e minuto", () => {
   const seen = new Date(now.getTime() - 60_000).toISOString();
   const live = { scheduled_at: "2026-10-03T00:10:00Z", live_seen_at: seen, live_strix_score: 2, live_opponent_score: 1, live_minute: 34 };
-  assert.deepEqual(agendaStatus(live, now), { tone: "soon", label: "Em campo · 2×1 · 34'", live: { strix: 2, opponent: 1, minute: 34 } });
+  assert.deepEqual(agendaStatus(live, now), { tone: "soon", label: "Em campo · 2×1 · 34'", live: { strix: 2, opponent: 1, minute: 34, phase: "live" } });
   // o sinal envelheceu depois do horário: acabou, falta o resultado
   const old = { ...live, scheduled_at: "2026-10-02T22:50:00Z", live_seen_at: new Date(now.getTime() - 10 * 60_000).toISOString() };
   assert.deepEqual(agendaStatus(old, now), { tone: "past", label: "Aguardando resultado" });
@@ -39,4 +39,13 @@ test("outro jogo em campo pelo vigia: o jogo cujo horário chegou espera a vez",
   assert.deepEqual(agendaStatus(due, now, { onPitch: true }), { tone: "today", label: "Na fila" });
   assert.equal(agendaStatus(due, now).label, "Em campo");
   assert.equal(agendaStatus({ scheduled_at: "2026-10-03T00:10:00Z" }, now, { onPitch: true }).label, "em 40 min");
+});
+
+test("intervalo e fim de jogo pelo vigia", () => {
+  const ago = (s) => new Date(now.getTime() - s * 1000).toISOString();
+  const base = { scheduled_at: "2026-10-02T23:00:00Z", live_strix_score: 2, live_opponent_score: 0 };
+  assert.equal(agendaStatus({ ...base, live_seen_at: ago(120), live_minute: 45 }, now).label, "Intervalo · 2×0");
+  const ended = agendaStatus({ ...base, live_seen_at: ago(120), live_minute: 90 }, now);
+  assert.equal(ended.label, "Fim de jogo · 2×0");
+  assert.equal(ended.tone, "past");
 });

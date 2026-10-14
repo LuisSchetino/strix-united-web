@@ -4,7 +4,7 @@ import { agendaHeroSelection, isResultOfGame, matchNightDay, nextAgendaMatches, 
 import { aggregateTeamStatistics, summarizeNight, uniqueMatches } from "../statistics/statistics-core.js";
 import { lineupState, untilLabel } from "../agenda/agenda-status.js";
 import { resolveLineupRosterPlayer } from "../agenda/lineup-core.js";
-import { isLiveFresh } from "../../../shared/live-signal.js";
+import { livePhase } from "../../../shared/live-signal.js";
 import { LINEUP_SLOTS } from "../agenda/lineup-suggest.js";
 
 export { lineupState };
@@ -16,6 +16,8 @@ const MINUTE = 60_000;
 export const STARTED_WINDOW_MIN = 40;
 // A result imported within this window is still "tonight's" story on the Home.
 export const RECENT_RESULT_HOURS = 12;
+// A game the watcher saw end keeps the Home's card (final score, "Fim de jogo") this long.
+const ENDED_LEADS_MS = 20 * 60_000;
 
 const hourIn = (now) => Number(new Intl.DateTimeFormat("en-GB", { timeZone: ZONE, hour: "2-digit", hourCycle: "h23" }).format(now));
 
@@ -59,8 +61,12 @@ export const RESULT_LABEL = Object.freeze({ V: "Vitória", E: "Empate", D: "Derr
 
 function nowState(match, now) {
   if (!match) return null;
-  // the PC watcher read the scoreboard a moment ago: the game is on, with its score and minute
-  if (isLiveFresh(match, now)) return { kind: "live", label: "Ao vivo", live: { strix: match.live_strix_score, opponent: match.live_opponent_score, minute: match.live_minute } };
+  // the PC watcher's scoreboard: on the pitch, at half-time, or the final whistle (result to come)
+  const phase = livePhase(match, now);
+  const live = { strix: match.live_strix_score ?? 0, opponent: match.live_opponent_score ?? 0, minute: match.live_minute, phase };
+  if (phase === "live") return { kind: "live", label: "Ao vivo", live };
+  if (phase === "halftime") return { kind: "live", label: "Intervalo", live };
+  if (phase === "ended" && now.getTime() - new Date(match.live_seen_at).getTime() < ENDED_LEADS_MS) return { kind: "live", label: "Fim de jogo", live };
   const minutes = (new Date(match.scheduled_at).getTime() - now.getTime()) / MINUTE;
   if (minutes > 0) return { kind: "upcoming", label: relativeKickoff(match.scheduled_at, now) };
   if (minutes > -STARTED_WINDOW_MIN) return { kind: "started", label: `Começou às ${kickoffTime(match.scheduled_at)}` };
@@ -145,8 +151,11 @@ export function tonightPlayed({ agenda = [], matches = [], now = new Date() } = 
 }
 
 export function buildHomeModel({ agenda = [], matches = [], now = new Date(), players, aliases } = {}) {
-  // A game on the pitch right now (by the watcher) leads the Home over the next kick-off.
-  const onPitch = (agenda || []).find((row) => !["cancelled", "completed"].includes(row?.status) && isLiveFresh(row, now));
+  // A game on the pitch right now (by the watcher) leads the Home over the next kick-off; so does
+  // one that just ended, until its result is imported (or for ENDED_LEADS_MS).
+  const open = (agenda || []).filter((row) => !["cancelled", "completed"].includes(row?.status));
+  const onPitch = open.find((row) => ["live", "halftime"].includes(livePhase(row, now)))
+    || open.find((row) => livePhase(row, now) === "ended" && now.getTime() - new Date(row.live_seen_at).getTime() < ENDED_LEADS_MS);
   const hero = onPitch ? { match: onPitch, isToday: true } : agendaHeroSelection(agenda, now);
   const tonight = todayAgendaMatches(agenda, now);
   const upcoming = nextAgendaMatches(agenda, now);

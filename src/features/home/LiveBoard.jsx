@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { crestColor } from "../../ui/crest-color.js";
 import { goalBetween } from "./live-goal.js";
+import { STRIX_BRAND } from "../../brand.js";
 import "./live-board.css";
 
 const STRIX_COLOR = "#2F80FF";
@@ -37,10 +38,13 @@ export function LiveBoard({ match, live, kickoff }) {
     return () => { window.clearTimeout(reveal); window.clearTimeout(timer); };
   }, [reading.id, reading.strix, reading.opponent]);
 
-  const shown = goal && !goal.revealed ? goal.before : reading;
+  // a goal just arrived and its effect has not run yet: still the old score on this render
+  const arriving = goalBetween(last.current, reading) ? last.current : null;
+  const shown = goal && !goal.revealed ? goal.before : arriving || reading;
 
   const tint = goal?.side === "opponent" ? color : STRIX_COLOR;
   const minute = Number.isFinite(live.minute) ? `${live.minute}'` : "";
+  const moment = live.phase === "halftime" ? "Intervalo" : live.phase === "ended" ? "Fim de jogo" : minute;
   return (
     <div className={`home-live${goal ? ` is-goal is-goal-${goal.side}` : ""}`} style={{ "--goal": tint }}>
       <strong className="home-live-score" aria-live="polite" aria-label={`Strix United ${reading.strix} a ${reading.opponent} ${match.opponent_name}${minute ? `, ${live.minute} minutos` : ""}`}>
@@ -49,50 +53,153 @@ export function LiveBoard({ match, live, kickoff }) {
         <span key={`o${shown.opponent}`} className={goal?.revealed && goal.side === "opponent" ? "is-new" : ""}>{shown.opponent}</span>
       </strong>
       <p className="home-live-meta">
-        {minute && <b key={minute}>{minute}</b>}
+        {moment && <b key={moment}>{moment}</b>}
         <span>Começou às {kickoff}</span>
       </p>
-      {goal && <GoalBurst key={goal.at} side={goal.side} name={goal.side === "strix" ? "Strix United" : match.opponent_name} />}
+      {goal && <GoalBurst key={goal.at} side={goal.side} name={goal.side === "strix" ? "Strix United" : match.opponent_name} crest={goal.side === "strix" ? STRIX_BRAND.logo : match.resolvedLogo} score={`${reading.strix} × ${reading.opponent}`} minute={minute} />}
     </div>
   );
 }
 
-const SPARKS = Array.from({ length: 18 }, (_, index) => index);
+// The PNGs of the ball and the goal live in public/assets/gol/ (bola.png, trave.png). Until they
+// are there, or if one fails to load, the drawn versions below stand in.
+const ASSET_BALL = "/assets/gol/bola.png";
+const ASSET_GOAL = "/assets/gol/trave.png";
+const assetChecks = new Map();
+function assetReady(url) {
+  if (typeof Image === "undefined") return Promise.resolve(false);
+  if (!assetChecks.has(url)) {
+    assetChecks.set(url, new Promise((resolve) => {
+      const image = new Image();
+      image.onload = () => resolve(image.naturalWidth > 0);
+      image.onerror = () => resolve(false);
+      image.src = url;
+    }));
+  }
+  return assetChecks.get(url);
+}
+function useGoalAssets() {
+  const [assets, setAssets] = useState({ ball: false, goal: false });
+  useEffect(() => {
+    let alive = true;
+    Promise.all([assetReady(ASSET_BALL), assetReady(ASSET_GOAL)]).then(([ball, goal]) => { if (alive) setAssets({ ball, goal }); });
+    return () => { alive = false; };
+  }, []);
+  return assets;
+}
 
-/** The celebration itself, drawn over the whole card. Purely decorative. */
-function GoalBurst({ side, name }) {
-  // each burst gets its own filter id: two cards on screen never share one
-  const id = useRef(`net-${Math.random().toString(36).slice(2, 8)}`).current;
+const CONFETTI = Array.from({ length: 34 }, (_, index) => index);
+const TRAIL = [0, 1, 2, 3];
+
+/** A football drawn in SVG: shaded sphere, the classic black pentagons, a highlight. */
+function DrawnBall() {
+  return (
+    <svg viewBox="0 0 100 100" className="goal-ball-art">
+      <defs>
+        <radialGradient id="gb-shade" cx="38%" cy="32%" r="72%">
+          <stop offset="0" stopColor="#ffffff" />
+          <stop offset="0.55" stopColor="#e9ecef" />
+          <stop offset="1" stopColor="#8d949c" />
+        </radialGradient>
+        <radialGradient id="gb-gloss" cx="34%" cy="26%" r="30%">
+          <stop offset="0" stopColor="#fff" stopOpacity="0.95" />
+          <stop offset="1" stopColor="#fff" stopOpacity="0" />
+        </radialGradient>
+        <clipPath id="gb-clip"><circle cx="50" cy="50" r="47" /></clipPath>
+      </defs>
+      <circle cx="50" cy="50" r="47" fill="url(#gb-shade)" />
+      <g clipPath="url(#gb-clip)" fill="#14171b" stroke="#2b3036" strokeWidth="1.2" strokeLinejoin="round">
+        <path d="M50 33l15 11-6 18H41l-6-18z" />
+        <path d="M50 -4l12 8-4 13H42l-4-13z" />
+        <path d="M86 30l12 4 2 15-11 7-9-9z" />
+        <path d="M14 30l-12 4-2 15 11 7 9-9z" />
+        <path d="M71 80l12-3 9 11-6 13H72z" />
+        <path d="M29 80l-12-3-9 11 6 13h14z" />
+      </g>
+      <g clipPath="url(#gb-clip)" fill="none" stroke="#6c737b" strokeWidth="1.1" opacity="0.7">
+        <path d="M50 33V17M65 44l15-4M59 62l12 18M41 62l-12 18M35 44l-15-4" />
+      </g>
+      <circle cx="50" cy="50" r="47" fill="url(#gb-gloss)" />
+      <circle cx="50" cy="50" r="47" fill="none" stroke="#000" strokeOpacity="0.35" strokeWidth="1.5" />
+    </svg>
+  );
+}
+
+/** The goal in perspective: posts, crossbar, the back net and the side nets. */
+function DrawnGoal({ id }) {
+  return (
+    <svg className="goal-frame-art" viewBox="0 0 600 300" preserveAspectRatio="xMidYMax meet">
+      <defs>
+        <pattern id={`${id}-mesh`} width="14" height="12" patternUnits="userSpaceOnUse">
+          <path d="M0 6l7-6 7 6-7 6z" fill="none" stroke="currentColor" strokeWidth="1.1" />
+        </pattern>
+        <linearGradient id={`${id}-post`} x1="0" x2="1">
+          <stop offset="0" stopColor="#b9c0c8" />
+          <stop offset="0.45" stopColor="#ffffff" />
+          <stop offset="1" stopColor="#9aa2ab" />
+        </linearGradient>
+        <linearGradient id={`${id}-bar`} x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0" stopColor="#ffffff" />
+          <stop offset="1" stopColor="#aab2bb" />
+        </linearGradient>
+        <radialGradient id={`${id}-depth`} cx="50%" cy="45%" r="65%">
+          <stop offset="0" stopColor="#000" stopOpacity="0" />
+          <stop offset="1" stopColor="#000" stopOpacity="0.55" />
+        </radialGradient>
+      </defs>
+      {/* back net and side nets, behind the frame */}
+      <g className="goal-net-back">
+        <path d="M120 60H480L452 270H148z" fill={`url(#${id}-mesh)`} />
+        <path d="M120 60H480L452 270H148z" fill={`url(#${id}-depth)`} />
+      </g>
+      <path className="goal-net-side" d="M60 30L120 60L148 270L60 290z" fill={`url(#${id}-mesh)`} />
+      <path className="goal-net-side" d="M540 30L480 60L452 270L540 290z" fill={`url(#${id}-mesh)`} />
+      <path className="goal-net-top" d="M60 30H540L480 60H120z" fill={`url(#${id}-mesh)`} />
+      {/* the frame */}
+      <rect x="50" y="22" width="20" height="272" rx="6" fill={`url(#${id}-post)`} />
+      <rect x="530" y="22" width="20" height="272" rx="6" fill={`url(#${id}-post)`} />
+      <rect x="50" y="18" width="500" height="18" rx="7" fill={`url(#${id}-bar)`} />
+      <path d="M60 294H540" stroke="#fff" strokeOpacity="0.35" strokeWidth="3" />
+    </svg>
+  );
+}
+
+/** The celebration itself, drawn over the whole card, in the scoring club's colour. Decorative. */
+function GoalBurst({ side, name, crest, score, minute }) {
+  const id = useRef(`gol-${Math.random().toString(36).slice(2, 8)}`).current;
+  const assets = useGoalAssets();
   return (
     <div className={`goal-burst is-${side}`} aria-hidden="true">
       <i className="goal-flash" />
-      <svg className="goal-net" viewBox="0 0 400 220" preserveAspectRatio="xMidYMid slice">
-        <defs>
-          <pattern id={`${id}-mesh`} width="16" height="16" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-            <path d="M0 0H16M0 0V16" fill="none" stroke="currentColor" strokeWidth="1.3" />
-          </pattern>
-          <radialGradient id={`${id}-fade`} cx="50%" cy="55%" r="60%">
-            <stop offset="0" stopColor="#fff" stopOpacity="1" />
-            <stop offset="1" stopColor="#fff" stopOpacity="0" />
-          </radialGradient>
-          <mask id={`${id}-mask`}><rect width="400" height="220" fill={`url(#${id}-fade)`} /></mask>
-          <filter id={`${id}-shake`} x="-10%" y="-10%" width="120%" height="120%">
-            <feTurbulence type="fractalNoise" baseFrequency="0.018 0.03" numOctaves="2" seed="4">
-              <animate attributeName="baseFrequency" dur="0.9s" values="0.018 0.03;0.03 0.05;0.018 0.03" repeatCount="3" />
-            </feTurbulence>
-            <feDisplacementMap in="SourceGraphic" scale="0">
-              <animate attributeName="scale" begin="0.42s" dur="2.4s" values="0;46;-30;20;-10;4;0" keyTimes="0;0.12;0.28;0.45;0.62;0.8;1" fill="freeze" />
-            </feDisplacementMap>
-          </filter>
-        </defs>
-        <g filter={`url(#${id}-shake)`} mask={`url(#${id}-mask)`}>
-          <rect className="goal-net-mesh" x="-40" y="-40" width="480" height="300" fill={`url(#${id}-mesh)`} />
-        </g>
-        <path className="goal-net-frame" d="M30 214V22H370V214" fill="none" strokeWidth="6" strokeLinecap="round" />
-      </svg>
-      <i className="goal-ball"><svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="18" /><path d="M20 11l7 5-3 8h-8l-3-8z" /><path d="M20 2v9M33 10l-6 6M37 26l-13-2M26 37l-2-13M8 34l8-10M3 20l10-4M8 8l5 8" /></svg></i>
-      <span className="goal-sparks">{SPARKS.map((index) => <i key={index} style={{ "--a": `${index * 20 + (index % 3) * 7}deg`, "--d": `${110 + (index % 4) * 42}px`, "--t": `${(index % 5) * 40}ms` }} />)}</span>
-      <p className="goal-word"><b>GOL</b><small>{side === "strix" ? "do Strix" : name}</small></p>
+      <div className="goal-stage">
+        <div className="goal-frame">
+          {assets.goal ? <img className="goal-frame-img" src={ASSET_GOAL} alt="" /> : <DrawnGoal id={id} />}
+          <i className="goal-impact" />
+        </div>
+        <div className="goal-ball">
+          {TRAIL.map((index) => <i key={index} className="goal-ball-trail" style={{ "--k": index }} />)}
+          <span className="goal-ball-spin">{assets.ball ? <img src={ASSET_BALL} alt="" /> : <DrawnBall />}</span>
+        </div>
+      </div>
+      <span className="goal-confetti">{CONFETTI.map((index) => (
+        <i key={index} style={{
+          "--x": `${(index * 37) % 100}%`,
+          "--r": `${(index * 53) % 360}deg`,
+          "--d": `${(index % 7) * 70}ms`,
+          "--s": `${0.7 + (index % 4) * 0.18}`,
+          "--drift": `${((index * 29) % 120) - 60}px`,
+        }} />
+      ))}</span>
+      <div className="goal-word">
+        <i className="goal-streak" />
+        <b>GOL</b>
+        <p className="goal-band">
+          {crest ? <img className="goal-crest" src={crest} alt="" /> : null}
+          <span>{name}</span>
+          <strong>{score}</strong>
+          {minute ? <small>{minute}</small> : null}
+        </p>
+      </div>
     </div>
   );
 }

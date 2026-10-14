@@ -149,7 +149,7 @@ function NightSummary({ matches, workspace }) {
   const [open, setOpen] = useState(false);
   const availableDate = days.includes(selectedDate) ? selectedDate : days[0] || "";
   const summary = useMemo(() => availableDate ? summarizeNight(matches, availableDate, { players: workspace.players, aliases: workspace.aliases }) : null, [availableDate, matches, workspace.players, workspace.aliases]);
-  const leaderLabels = [["goals", "Artilharia", "gols", "goals"], ["assists", "Assistências", "assist.", "assists"], ["rating", "Maior nota", "", "rating"], ["passes", "Passes certos", "passes", "passes"], ["tackles", "Desarmes", "desarmes", "tackles"], ["saves", "Defesas", "defesas", "saves"], ["mom", "MOTM", "", "mom"]];
+  const leaderLabels = [["goals", "Artilharia", "gols", "goals"], ["assists", "Assistências", "assist.", "assists"], ["rating", "Maior nota", "", "rating"], ["average", "Melhor média", "", "rating"], ["shots", "Finalizações", "chutes", "goals"], ["passes", "Passes certos", "passes", "passes"], ["tackles", "Desarmes", "desarmes", "tackles"], ["saves", "Defesas", "defesas", "saves"], ["mom", "MOTM", "", "mom"]];
   if (!days.length || !summary) return null;
   const last = summary.matches.at(-1);
   const record = [["Partidas", summary.games], ["Vitórias", summary.wins], ["Empates", summary.draws], ["Derrotas", summary.losses]];

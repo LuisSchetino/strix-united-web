@@ -3,7 +3,7 @@
 // is on the pitch with its partial score; without one, only the kickoff time and
 // the stored status count.
 import { saoPauloDay } from "./agenda-time.js";
-import { isLiveFresh } from "../../../shared/live-signal.js";
+import { livePhase } from "../../../shared/live-signal.js";
 
 const MINUTE = 60_000;
 const DAY = 86_400_000;
@@ -42,7 +42,9 @@ export function matchMoment(match, now = new Date()) {
   const tone = status.tone === "today" || status.tone === "soon" ? "today"
     : status.tone === "past" || status.tone === "done" ? "past"
       : status.tone === "cancelled" ? "cancelled" : "quiet";
+  if (status.live?.phase === "halftime") return { tone, label: "Intervalo", live: status.live };
   if (status.live) return { tone, label: `Ao vivo${Number.isFinite(status.live.minute) ? ` · ${status.live.minute}'` : ""}`, live: status.live };
+  if (status.final) return { tone, label: "Fim de jogo", live: status.final };
   return { tone, label: status.tone === "today" ? `Hoje · ${status.label}` : status.label };
 }
 
@@ -70,9 +72,12 @@ export function agendaStatus(match, now = new Date(), { onPitch = false } = {}) 
   if (match?.status === "cancelled") return { tone: "cancelled", label: "Cancelado" };
   if (match?.status === "completed") return { tone: "done", label: "Jogado" };
   // the watcher read the scoreboard a moment ago: on the pitch, with the score and the minute
-  if (isLiveFresh(match, now)) {
-    return { tone: "soon", label: liveLabel(match), live: { strix: match.live_strix_score, opponent: match.live_opponent_score, minute: match.live_minute } };
-  }
+  const phase = livePhase(match, now);
+  const live = { strix: match?.live_strix_score ?? 0, opponent: match?.live_opponent_score ?? 0, minute: match?.live_minute, phase };
+  if (phase === "live") return { tone: "soon", label: liveLabel(match), live };
+  if (phase === "halftime") return { tone: "soon", label: `Intervalo · ${live.strix}×${live.opponent}`, live };
+  // the clock went past 85' and the scoreboard left the screen: final whistle, the result is coming
+  if (phase === "ended") return { tone: "past", label: `Fim de jogo · ${live.strix}×${live.opponent}`, final: live };
   if (match?.status === "live") return { tone: "soon", label: "Em breve" };
   const minutes = minutesUntil(match?.scheduled_at, now);
   // the watcher saw it and stopped seeing it: the game is over, only the result is missing

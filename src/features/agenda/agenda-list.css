@@ -555,3 +555,27 @@
     display: none;
   }
 }
+
+/* intervalo e fim de jogo: o mesmo selo, sem o vermelho de bola rolando */
+.agenda-status.is-live.is-halftime,
+.agenda-status.is-live.is-final {
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 0 0 1px var(--line-2);
+}
+.agenda-status.is-halftime .live-dot,
+.agenda-status.is-final .live-dot {
+  animation: none;
+  box-shadow: none;
+}
+.agenda-status.is-halftime .live-dot { background: var(--text-1); }
+.agenda-status.is-final .live-dot { background: var(--text-3); }
+.agenda-status.is-halftime .live-tag,
+.agenda-status.is-final .live-tag { color: var(--text-2); }
+.agenda-game.is-soon:has(.is-halftime),
+.agenda-game:has(.is-final) { background: transparent; }
+@media (max-width: 760px) {
+  .agenda-status.is-live.is-halftime,
+  .agenda-status.is-live.is-final { color: var(--text-2) !important; }
+  .agenda-game:has(.is-halftime) .agenda-live-line span,
+  .agenda-game:has(.is-final) .agenda-live-line span { color: var(--text-3); }
+}

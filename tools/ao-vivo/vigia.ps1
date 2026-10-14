@@ -32,8 +32,10 @@ if (-not (Test-Path $configPath)) {
 $config = Get-Content $configPath -Raw | ConvertFrom-Json
 $site = ([string]$config.SiteUrl).TrimEnd("/")
 $secret = [string]$config.Secret
-$interval = [Math]::Max(2, [int]($config.IntervalSeconds))
-$sendEvery = [Math]::Max(5, [int]($config.SendEverySeconds))
+# No FC um minuto de jogo passa em uns 8 s: o vigia le a tela a cada 2-3 s e manda o placar
+# a cada 4 s enquanto o relogio anda (configuracoes antigas com 5 s / 15 s ficam mais rapidas).
+$interval = [Math]::Min(3, [Math]::Max(2, [int]($config.IntervalSeconds)))
+$sendEvery = 4
 $regionTop = [double]($config.RegionTop)
 $regionHeight = [double]($config.RegionHeight)
 $regionLeft = [double]($config.RegionLeft)
@@ -203,8 +205,8 @@ while ($true) {
     if ($text -match $clockPattern) {
       $changed = $text -ne $lastText
       $elapsed = ((Get-Date) - $lastSent).TotalSeconds
-      # placar mudou (ou o relogio andou): manda; parado no intervalo: um aviso por minuto
-      if (($changed -and $elapsed -ge $sendEvery) -or $elapsed -ge 60) {
+      # placar mudou (ou o relogio andou): manda; relogio parado: um aviso a cada 30 s
+      if (($changed -and $elapsed -ge $sendEvery) -or $elapsed -ge 30) {
         $answer = Send-Text $text
         $lastSent = Get-Date
         $lastText = $text

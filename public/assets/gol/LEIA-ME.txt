@@ -1,0 +1,4 @@
+Coloque aqui os PNGs da animacao de gol (fundo transparente):
+  bola.png   - a bola
+  trave.png  - a trave com a rede
+Sem eles o site usa a bola e a trave desenhadas.

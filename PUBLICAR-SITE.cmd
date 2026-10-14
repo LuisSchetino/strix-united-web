@@ -14,6 +14,8 @@ echo == 4/5 Montando o site
 call pnpm build || goto fail
 echo == 5/5 Publicando
 call npx wrangler pages deploy dist --project-name=strix-united-fc27 --branch=main --commit-dirty=true || goto fail
+echo == Reiniciando o vigia Em campo
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0tools\ao-vivo\reiniciar-vigia.ps1"
 echo.
 echo PRONTO. Site publicado.
 pause

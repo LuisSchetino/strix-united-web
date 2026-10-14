@@ -183,3 +183,18 @@ test("handle é normalizado apenas para apresentação", async () => {
   assert.equal(formatPlayerHandle("NUNES"), "@nunes");
   assert.equal(formatPlayerHandle("@nunes"), "@nunes");
 });
+
+test("resumo da noite: maior nota é a de um jogo; média à parte; nome sem vínculo também conta", () => {
+  const players = [{ id: "felipe", display_name: "FELIPE", is_active: true }, { id: "yuri", display_name: "YURI", is_active: true }];
+  const aliases = [{ ea_name: "Felipe", player_id: "felipe" }, { ea_name: "Yuri", player_id: "yuri" }];
+  const game = (id, at, rows) => ({ id, played_at: at, strix_score: 1, opponent_score: 0, performance: { players: rows } });
+  const matches = [
+    game("a", "2026-10-14T00:40:00.000Z", [{ eaName: "Felipe", rating: 7.6 }, { eaName: "Yuri", rating: 6.0 }]),
+    game("b", "2026-10-14T01:10:00.000Z", [{ eaName: "Felipe", rating: 7.6 }, { eaName: "Yuri", rating: 6.4 }]),
+    game("c", "2026-10-14T03:10:00.000Z", [{ eaName: "Yuri", rating: 8.7 }, { eaName: "oBEENzada", rating: 8.1, saves: 14 }]),
+  ];
+  const summary = summarizeNight(matches, "2026-10-13", { players, aliases });
+  assert.deepEqual(summary.leaders.rating, { value: 8.7, names: ["YURI"] });
+  assert.deepEqual(summary.leaders.average, { value: 7.6, names: ["FELIPE"] });
+  assert.equal(summary.leaders.saves.names[0], "oBEENzada");
+});

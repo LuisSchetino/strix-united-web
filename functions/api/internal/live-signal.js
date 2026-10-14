@@ -38,7 +38,7 @@ export async function onRequestPost({ request, env }) {
   const now = new Date();
   const client = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
   const { data: rows, error } = await client.from("agenda_matches")
-    .select("id, opponent_name, scheduled_at, status, live_started_at")
+    .select("id, opponent_name, scheduled_at, status, live_seen_at, live_started_at, live_minute, live_strix_score, live_opponent_score")
     .gte("scheduled_at", new Date(now.getTime() - 3 * 3_600_000).toISOString())
     .lte("scheduled_at", new Date(now.getTime() + 3 * 3_600_000).toISOString());
   if (error) return response({ error: "agenda_unavailable" }, 502);

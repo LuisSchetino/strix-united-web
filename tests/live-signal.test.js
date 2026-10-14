@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { isLiveFresh, liveUpdate, parseScoreboard, pickAgendaMatch, tagScore } from "../shared/live-signal.js";
+import { isLiveFresh, livePhase, liveUpdate, parseScoreboard, pickAgendaMatch, tagScore } from "../shared/live-signal.js";
 
 test("lê o placar e o relógio no texto da tela", () => {
   assert.deepEqual(parseScoreboard("STR 1 - 0 POA 34:12"), { left: "STR", right: "POA", leftScore: 1, rightScore: 0, minute: 34 });
@@ -83,4 +83,42 @@ test("grava o placar do ponto de vista do Strix e sabe quando o sinal envelheceu
 test("placar empilhado do Strix acha o jogo da noite", () => {
   const rows = [{ id: "x", opponent_name: "Bandoleiros", scheduled_at: "2026-10-02T00:00:00Z", status: "scheduled" }];
   assert.deepEqual(pickAgendaMatch(rows, parseScoreboard("STX O\nBDL 1\n45:17"), now), { row: rows[0], strixLeft: true });
+});
+
+test("às 23:23 com jogos às 23:10 e 23:40, sem sigla conhecida, é o das 23:10", () => {
+  const at = new Date("2026-10-03T02:23:00Z"); // 23:23
+  const rows = [
+    { id: "1110", opponent_name: "Maquina", scheduled_at: "2026-10-03T02:10:00Z", status: "scheduled" },
+    { id: "1140", opponent_name: "Velocity", scheduled_at: "2026-10-03T02:40:00Z", status: "scheduled" },
+  ];
+  assert.equal(pickAgendaMatch(rows, parseScoreboard("STX 0\nQQQ 0\n05:00"), at)?.row.id, "1110");
+  // a sigla forte do outro jogo vence: a noite adiantou
+  assert.equal(pickAgendaMatch(rows, parseScoreboard("STX 0\nVEL 0\n05:00"), at)?.row.id, "1140");
+});
+
+test("o jogo em campo continua sendo ele; o que terminou sai da disputa", () => {
+  const at = new Date("2026-10-03T02:40:00Z");
+  const seen = (s) => new Date(at.getTime() - s * 1000).toISOString();
+  const rows = [
+    { id: "a", opponent_name: "Maquina", scheduled_at: "2026-10-03T02:10:00Z", status: "scheduled", live_seen_at: seen(10), live_minute: 60, live_strix_score: 1, live_opponent_score: 0 },
+    { id: "b", opponent_name: "Night HuntersES", scheduled_at: "2026-10-03T02:40:00Z", status: "scheduled" },
+  ];
+  // o mesmo jogo, relógio andando
+  assert.equal(pickAgendaMatch(rows, parseScoreboard("STX 1\nMAQ 0\n61:00"), at)?.row.id, "a");
+  // o das 23:10 acabou (90', sem sinal há 2 min): o placar novo é do jogo seguinte
+  const ended = [{ ...rows[0], live_seen_at: seen(120), live_minute: 90 }, rows[1]];
+  assert.equal(livePhase(ended[0], at), "ended");
+  assert.equal(pickAgendaMatch(ended, parseScoreboard("STX 0\nQQQ 0\n02:00"), at)?.row.id, "b");
+  // relógio voltou para 2' num jogo que estava em 60': é outro jogo
+  assert.equal(pickAgendaMatch([{ ...rows[0], live_seen_at: seen(200) }, rows[1]], parseScoreboard("STX 0\nNHE 0\n02:00"), at)?.row.id, "b");
+});
+
+test("fases do sinal: em campo, intervalo, fim de jogo", () => {
+  const at = new Date("2026-10-03T02:40:00Z");
+  const row = (s, minute) => ({ live_seen_at: new Date(at.getTime() - s * 1000).toISOString(), live_minute: minute });
+  assert.equal(livePhase(row(20, 30), at), "live");
+  assert.equal(livePhase(row(120, 45), at), "halftime");
+  assert.equal(livePhase(row(120, 89), at), "ended");
+  assert.equal(livePhase(row(120, 60), at), "");
+  assert.equal(livePhase({}, at), "");
 });

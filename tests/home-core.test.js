@@ -80,7 +80,7 @@ test("jogo com sinal do vigia lidera a Home ao vivo, com placar e minuto", () =>
   assert.equal(model.mode, "next");
   assert.equal(model.next.match.id, "a");
   assert.equal(model.next.state.kind, "live");
-  assert.deepEqual(model.next.state.live, { strix: 2, opponent: 1, minute: 67 });
+  assert.deepEqual(model.next.state.live, { strix: 2, opponent: 1, minute: 67, phase: "live" });
   // sinal velho: volta a valer o próximo horário
   const stale = buildHomeModel({ agenda, matches: [], now: new Date("2026-10-02T23:58:00Z") });
   assert.equal(stale.next.match.id, "b");

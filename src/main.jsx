@@ -41,7 +41,7 @@ import { HomePage } from "./features/home/HomePage.jsx";
 import { PageHeader } from "./ui/PageHeader.jsx";
 import { useMinuteClock } from "./ui/useMinuteClock.js";
 import { agendaStatus, lineupState } from "./features/agenda/agenda-status.js";
-import { isLiveFresh } from "../shared/live-signal.js";
+import { isOnPitch } from "../shared/live-signal.js";
 import { LAUNCH_CONFIG, clearLaunchAccessVerification, consumeLaunchReturn, isLaunchUnlocked, launchGateDecision, readLaunchAccessVerification, rememberLaunchAccess } from "./launch.js";
 import { preloadClubLogos } from "./ui/provider-assets.js";
 import { STRIX_BRAND } from "./brand.js";
@@ -120,6 +120,9 @@ import { shrinkImage } from "./ui/shrink-image.js";
 import { freshImport, isStaleBuild, watchForNewDeploy } from "./ui/fresh-deploy.js";
 import "./features/night/public-night.css";
 import { announceLocation, clearTarget, copyLink, openTarget, useDeepTarget } from "./ui/useDeepTarget.js";
+
+const LIVE_KEYS = new Set(["live_seen_at", "live_started_at", "live_strix_score", "live_opponent_score", "live_minute"]);
+const LIVE_SELECT = `id, ${[...LIVE_KEYS].join(", ")}`;
 
 const routeLoaders = {
   partidas: () => import("./features/matches/MatchesPage.jsx").then((module) => ({ default: module.MatchesPage })),
@@ -816,6 +819,23 @@ function useFc27Workspace(client, profile) {
       }
     }
   };
+  // The PC watcher writes only the live_* columns, every few seconds: those changes are patched
+  // into the rows already on screen instead of reloading the whole workspace each time.
+  const agendaRef = useRef(state.agenda);
+  agendaRef.current = state.agenda;
+  const patchLiveRows = (rows) => {
+    const byId = new Map(agendaRef.current.map((row) => [row.id, row]));
+    const patches = new Map();
+    for (const row of rows || []) {
+      const current = row?.id ? byId.get(row.id) : null;
+      if (!current) return false;
+      const changed = Object.keys(row).filter((key) => !LIVE_KEYS.has(key) && key !== "updated_at" && key in current && JSON.stringify(row[key]) !== JSON.stringify(current[key]));
+      if (changed.length) return false;
+      patches.set(row.id, Object.fromEntries([...LIVE_KEYS].filter((key) => key in row).map((key) => [key, row[key]])));
+    }
+    if (patches.size) setState((current) => ({ ...current, agenda: current.agenda.map((row) => (patches.has(row.id) ? { ...row, ...patches.get(row.id) } : row)) }));
+    return true;
+  };
   const scheduleRealtimeRefresh = () => {
     clearTimeout(realtimeRefreshTimer.current);
     realtimeRefreshTimer.current = setTimeout(() => { void refresh(); }, 120);
@@ -825,7 +845,7 @@ function useFc27Workspace(client, profile) {
     void refresh();
     const channel = client
       .channel("fc27-team-data")
-      .on("postgres_changes", { event: "*", schema: "public", table: "agenda_matches" }, scheduleRealtimeRefresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "agenda_matches" }, (change) => { if (!patchLiveRows([change.new])) scheduleRealtimeRefresh(); })
       .on("postgres_changes", { event: "*", schema: "public", table: "opponent_logos" }, scheduleRealtimeRefresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "club_players" }, scheduleRealtimeRefresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "club_player_aliases" }, scheduleRealtimeRefresh)
@@ -845,23 +865,32 @@ function useFc27Workspace(client, profile) {
   }, [client, profile?.user_id]);
 
   // The phone drops the realtime socket when the screen sleeps or the app goes to the background:
-  // coming back always refreshes, and while a game of the night is near its kick-off (or the PC
-  // watcher is sending its scoreboard) the agenda is also re-read every 20 s.
+  // coming back always refreshes. While a game is on the pitch (the PC watcher is sending its
+  // scoreboard) the live columns are re-read every 4 s, a light query; near a kick-off the whole
+  // workspace is re-read every 20 s.
   useEffect(() => {
     if (!client || !profile?.user_id) return undefined;
     const back = () => { if (document.visibilityState === "visible") scheduleRealtimeRefresh(); };
     document.addEventListener("visibilitychange", back);
     window.addEventListener("focus", back);
+    let tick = 0;
     const timer = setInterval(() => {
       if (document.visibilityState !== "visible") return;
-      const at = Date.now();
-      const near = state.agenda.some((match) => {
-        if (["cancelled", "completed"].includes(match.status)) return false;
+      tick += 1;
+      const now = new Date();
+      const at = now.getTime();
+      const open = state.agenda.filter((match) => !["cancelled", "completed"].includes(match.status));
+      const playing = open.some((match) => isOnPitch(match, now));
+      const near = open.some((match) => {
         const kickoff = new Date(match.scheduled_at).getTime();
-        return (Number.isFinite(kickoff) && kickoff - at < 30 * 60_000 && at - kickoff < 3 * 3_600_000) || isLiveFresh(match, new Date(at));
+        return Number.isFinite(kickoff) && kickoff - at < 30 * 60_000 && at - kickoff < 3 * 3_600_000;
       });
-      if (near) void refresh();
-    }, 20_000);
+      if (near && tick % 5 === 0) { void refresh(); return; }
+      if (playing || near) {
+        void client.from("agenda_matches").select(LIVE_SELECT).gte("live_seen_at", new Date(at - 3 * 3_600_000).toISOString())
+          .then(({ data }) => { if (data?.length && !patchLiveRows(data)) scheduleRealtimeRefresh(); });
+      }
+    }, 4_000);
     return () => {
       document.removeEventListener("visibilitychange", back);
       window.removeEventListener("focus", back);
@@ -2269,7 +2298,7 @@ function AgendaLive({ navigate, workspace, profile, client = null, required = nu
   };
   const now = useMinuteClock();
   // a game the PC watcher sees on the pitch right now: the others whose time came wait their turn
-  const onPitchNow = items.some((item) => isLiveFresh(item.db, now));
+  const onPitchNow = items.some((item) => isOnPitch(item.db, now));
   const firstUpcoming = visible.findIndex((item) => !item.cancelled && new Date(item.db.scheduled_at).getTime() > now.getTime());
   const nowLineIndex = firstUpcoming === -1 ? visible.length : firstUpcoming;
   const nextTodayId = tab === "today" && firstUpcoming !== -1 ? visible[firstUpcoming].id : "";
@@ -2376,6 +2405,7 @@ function AgendaLive({ navigate, workspace, profile, client = null, required = nu
         <div className="agenda-list-heading"><span>{tab === "next" ? "DATA · HORÁRIO" : "HORÁRIO"}</span><span>PARTIDA</span><span>CAMPEONATO</span><span>STATUS</span><span aria-hidden="true" /></div>
         {visible.length ? visible.map((item, index) => {
           const status = agendaStatus(item.db, now, { onPitch: onPitchNow });
+          const board = status.live || status.final || null;
           const lineup = lineupState(item.db);
           const showNowLine = tab === "today" && index === nowLineIndex;
           return (
@@ -2388,15 +2418,15 @@ function AgendaLive({ navigate, workspace, profile, client = null, required = nu
               <time className={tab === "next" ? "future-kickoff" : ""}>{tab === "next" && <span>{item.date}</span>}<b>{item.time}</b></time>
               <div className="agenda-match">
                 <Avatar name={item.opponent} logo={item.logo} />
-                <div>{item.previousOpponent && <small className="replaced-opponent"><s>{item.previousOpponent}</s></small>}<b>{item.opponent}</b>{status.live ? <small className="agenda-live-line"><b>{status.live.strix}<i>×</i>{status.live.opponent}</b>{Number.isFinite(status.live.minute) ? <span>{status.live.minute}'</span> : null}</small> : null}<small className={`agenda-lineup is-${lineup.kind}${status.live ? " is-live-hidden" : ""}`}>{item.cancelled ? item.competition : lineup.short}</small>{(() => { const moved = rescheduleOf(item.db, now); return moved ? <small className="agenda-moved-line"><i className="agenda-moved">Horário mudou</i>{rescheduleLabel(moved)}</small> : null; })()}</div>
+                <div>{item.previousOpponent && <small className="replaced-opponent"><s>{item.previousOpponent}</s></small>}<b>{item.opponent}</b>{board ? <small className="agenda-live-line"><b>{board.strix}<i>×</i>{board.opponent}</b><span>{status.final ? "Fim de jogo" : status.live.phase === "halftime" ? "Intervalo" : Number.isFinite(board.minute) ? `${board.minute}'` : ""}</span></small> : null}<small className={`agenda-lineup is-${lineup.kind}${board ? " is-live-hidden" : ""}`}>{item.cancelled ? item.competition : lineup.short}</small>{(() => { const moved = rescheduleOf(item.db, now); return moved ? <small className="agenda-moved-line"><i className="agenda-moved">Horário mudou</i>{rescheduleLabel(moved)}</small> : null; })()}</div>
               </div>
               <span className="game-competition">{item.competition}{item.leg ? <i className="leg-tag">{item.leg === "ida" ? "Jogo de ida" : "Jogo de volta"}</i> : null}</span>
-              {status.live ? (
-                <em className="agenda-status is-live" aria-label={status.label}>
+              {board ? (
+                <em className={`agenda-status is-live${status.final ? " is-final" : status.live.phase === "halftime" ? " is-halftime" : ""}`} aria-label={status.label}>
                   <i className="live-dot" aria-hidden="true" />
-                  <span className="live-tag">Ao vivo</span>
-                  <b className="live-score">{status.live.strix}<i>×</i>{status.live.opponent}</b>
-                  {Number.isFinite(status.live.minute) ? <span className="live-minute">{status.live.minute}'</span> : null}
+                  <span className="live-tag">{status.final ? "Fim" : status.live.phase === "halftime" ? "Intervalo" : "Ao vivo"}</span>
+                  <b className="live-score">{board.strix}<i>×</i>{board.opponent}</b>
+                  {status.live?.phase === "live" && Number.isFinite(board.minute) ? <span className="live-minute">{board.minute}'</span> : null}
                 </em>
               ) : <em className={`agenda-status is-${status.tone}`}>{status.label}</em>}
             </button>

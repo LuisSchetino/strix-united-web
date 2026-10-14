@@ -222,7 +222,7 @@ export function summarizeNight(matches = [], date, options = {}) {
   const { index: aliases, indexByEaId } = aliasIndex(options.players, options.aliases);
   const add = (playerKey, name, key, value) => {
     if (!hasNumber(value)) return;
-    const current = totals.get(playerKey) || { name, goals: 0, assists: 0, passes: 0, tackles: 0, saves: 0, mom: 0, ratingTotal: 0, ratingGames: 0 };
+    const current = totals.get(playerKey) || { name, goals: 0, assists: 0, passes: 0, tackles: 0, saves: 0, shots: 0, mom: 0, ratingTotal: 0, ratingGames: 0 };
     current[key] += Number(value);
     totals.set(playerKey, current);
   };
@@ -234,16 +234,21 @@ export function summarizeNight(matches = [], date, options = {}) {
       if ((classifyPlayerData(row) !== "VALID" && classifyPlayerData(row) !== "PARTIAL") || (hasNumber(row.secondsPlayed) && Number(row.secondsPlayed) <= 0)) continue;
       const id = rowIdentity(row);
       const linked = (id ? indexByEaId.get(id) : null) || aliases.get(normalized(row.eaName || row.name));
-      if (Array.isArray(options.players) && (!linked?.roster || linked.roster.is_active === false)) continue;
+      // A player who left the roster is out; one whose EA name nobody linked yet still counts,
+      // under the name the EA gives him, so the night never loses a performance.
+      if (Array.isArray(options.players) && linked?.roster && linked.roster.is_active === false) continue;
       const name = linked?.display || canonicalPlayerName(row.eaName || row.name, options.players, options.aliases);
       const playerKey = linked?.roster?.id ? `roster:${linked.roster.id}` : id ? `ea:${id}` : `name:${normalized(name)}`;
-      if (!totals.has(playerKey)) totals.set(playerKey, { name, goals: 0, assists: 0, passes: 0, tackles: 0, saves: 0, mom: 0, ratingTotal: 0, ratingGames: 0 });
+      if (!totals.has(playerKey)) totals.set(playerKey, { name, goals: 0, assists: 0, passes: 0, tackles: 0, saves: 0, shots: 0, mom: 0, ratingTotal: 0, ratingGames: 0 });
       const passes = passPair(row);
       add(playerKey, name, "goals", row.goals); add(playerKey, name, "assists", row.assists);
-      add(playerKey, name, "passes", passes.made); add(playerKey, name, "tackles", row.tackles); add(playerKey, name, "saves", row.saves);
+      add(playerKey, name, "passes", passes.made); add(playerKey, name, "tackles", row.tackles); add(playerKey, name, "saves", row.saves); add(playerKey, name, "shots", row.shots);
       if (motmAwardRows(match, options).some((award) => award.nameKey === normalized(row.eaName || row.name) || (id && award.eaPlayerId === id))) add(playerKey, name, "mom", 1);
       const record = totals.get(playerKey);
-      if (hasNumber(row.rating)) { record.ratingTotal += Number(row.rating); record.ratingGames += 1; }
+      if (hasNumber(row.rating)) {
+        record.ratingTotal += Number(row.rating); record.ratingGames += 1;
+        record.bestRating = Math.max(record.bestRating || 0, Number(row.rating));
+      }
     }
   }
   const leaderFor = (key, accessor = (item) => item[key]) => {
@@ -251,8 +256,13 @@ export function summarizeNight(matches = [], date, options = {}) {
     const max = Math.max(0, ...candidates.map((item) => item.value));
     return max > 0 ? { value: Number(max.toFixed(1)), names: candidates.filter((item) => item.value === max).map((item) => item.name) } : null;
   };
-  for (const key of ["goals", "assists", "passes", "tackles", "saves", "mom"]) result.leaders[key] = leaderFor(key);
-  result.leaders.rating = leaderFor("rating", (item) => item.ratingGames ? item.ratingTotal / item.ratingGames : 0);
+  for (const key of ["goals", "assists", "shots", "passes", "tackles", "saves", "mom"]) result.leaders[key] = leaderFor(key);
+  // "Maior nota": the best rating of a single game of the night. The night's average comes apart,
+  // and only for players with two games or more (one game is already its own best rating).
+  result.leaders.rating = leaderFor("rating", (item) => item.bestRating || 0);
+  result.leaders.average = nightMatches.length > 1
+    ? leaderFor("average", (item) => (item.ratingGames >= 2 ? item.ratingTotal / item.ratingGames : 0))
+    : null;
   // The night as played, in kickoff order: the edition lists these as they happened.
   result.matches = nightMatches
     .map((match) => ({ id: match.id, opponent: match.opponent_name, competition: match.competition_name || "Amistoso", playedAt: match.played_at || match.date, for: number(match.strix_score), against: number(match.opponent_score) }))

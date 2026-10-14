@@ -41,10 +41,10 @@ function NowBlock({ next, navigate, stake, now }) {
   const { match, state, lineup, isToday } = next;
   const moved = rescheduleOf(match, now);
   return (
-    <section className={`home-now home-intro is-${state.kind}`} aria-labelledby="home-now-title">
+    <section className={`home-now home-intro is-${state.kind}${state.live && state.live.phase !== "live" ? ` is-${state.live.phase}` : ""}`} aria-labelledby="home-now-title">
       <i className="home-intro-sweep" aria-hidden="true" />
       <header className="home-now-head">
-        <p className="home-now-when"><span className="home-now-pulse" aria-hidden="true" /><span key={state.label} className="home-now-state">{state.live ? "Ao vivo" : `${isToday ? "Hoje" : "Próxima partida"} · ${state.label}`}</span></p>
+        <p className="home-now-when"><span className="home-now-pulse" aria-hidden="true" /><span key={state.label} className="home-now-state">{state.live ? state.label : `${isToday ? "Hoje" : "Próxima partida"} · ${state.label}`}</span></p>
         <p className="home-now-competition">{match.round_label || match.competition_name || "Amistoso"}</p>
       </header>
       {state.live
