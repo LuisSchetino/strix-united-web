@@ -42,6 +42,7 @@ export function matchMoment(match, now = new Date()) {
   const tone = status.tone === "today" || status.tone === "soon" ? "today"
     : status.tone === "past" || status.tone === "done" ? "past"
       : status.tone === "cancelled" ? "cancelled" : "quiet";
+  if (status.live) return { tone, label: `Ao vivo${Number.isFinite(status.live.minute) ? ` · ${status.live.minute}'` : ""}`, live: status.live };
   return { tone, label: status.tone === "today" ? `Hoje · ${status.label}` : status.label };
 }
 
@@ -59,12 +60,19 @@ export function liveLabel(match) {
   return `Em campo${score}${minute}`;
 }
 
-/** Status for one agenda row: tone drives the visual, label is the words. */
-export function agendaStatus(match, now = new Date()) {
+/**
+ * Status for one agenda row: tone drives the visual, label is the words. On the pitch by the PC
+ * watcher it also carries `live` with the score and the minute. `onPitch` says another game of the
+ * night is being played right now (by the watcher): a game whose time has come then waits its turn
+ * instead of claiming to be on the pitch too.
+ */
+export function agendaStatus(match, now = new Date(), { onPitch = false } = {}) {
   if (match?.status === "cancelled") return { tone: "cancelled", label: "Cancelado" };
   if (match?.status === "completed") return { tone: "done", label: "Jogado" };
   // the watcher read the scoreboard a moment ago: on the pitch, with the score and the minute
-  if (isLiveFresh(match, now)) return { tone: "soon", label: liveLabel(match), live: true };
+  if (isLiveFresh(match, now)) {
+    return { tone: "soon", label: liveLabel(match), live: { strix: match.live_strix_score, opponent: match.live_opponent_score, minute: match.live_minute } };
+  }
   if (match?.status === "live") return { tone: "soon", label: "Em breve" };
   const minutes = minutesUntil(match?.scheduled_at, now);
   // the watcher saw it and stopped seeing it: the game is over, only the result is missing
@@ -72,6 +80,7 @@ export function agendaStatus(match, now = new Date()) {
   if (!Number.isFinite(minutes)) return { tone: "scheduled", label: "Agendado" };
   // From the whistle and for the length of a game it is "Em campo"; after that the game was
   // played and only its result is missing here.
+  if (minutes <= 0 && onPitch && minutes > -3 * IN_PLAY_MINUTES) return { tone: "today", label: "Na fila" };
   if (minutes <= 0) return minutes > -IN_PLAY_MINUTES ? { tone: "soon", label: "Em campo" } : { tone: "past", label: "Aguardando resultado" };
   const days = dayDistance(match.scheduled_at, now);
   if (days === 0) return { tone: "today", label: untilLabel(minutes) };

@@ -31,6 +31,18 @@ test("sigla parece o nome do adversário", () => {
   assert.equal(tagScore("SFC", "Sinceridade FC"), 2);
   assert.equal(tagScore("SNC", "Sinceridade"), 1);
   assert.equal(tagScore("XYZ", "Maquina"), 0);
+  // o jogo escreve NHE para o Night HuntersES
+  assert.equal(tagScore("NHE", "Night HuntersES"), 4);
+  assert.equal(tagScore("NHE", "Night Hunters ES"), 4);
+  assert.equal(tagScore("NHE", "Night Hunters"), 4);
+});
+
+test("NHE no placar acha o Night HuntersES, mesmo com outro jogo mais perto do horário", () => {
+  const rows = [
+    { id: "bdl", opponent_name: "BDL Esports", scheduled_at: "2026-10-02T00:20:00Z", status: "scheduled" },
+    { id: "nh", opponent_name: "Night HuntersES", scheduled_at: "2026-10-02T00:50:00Z", status: "scheduled" },
+  ];
+  assert.deepEqual(pickAgendaMatch(rows, parseScoreboard("STX 1\nNHE O\n12:40"), now), { row: rows[1], strixLeft: true });
 });
 
 const now = new Date("2026-10-02T00:20:00Z"); // 21:20 em São Paulo

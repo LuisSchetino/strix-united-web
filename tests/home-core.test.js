@@ -69,3 +69,19 @@ test("sem agenda e sem histórico a Home não inventa conteúdo", () => {
   assert.equal(model.season, null);
   assert.deepEqual(model.tonight, []);
 });
+
+test("jogo com sinal do vigia lidera a Home ao vivo, com placar e minuto", () => {
+  const live = new Date("2026-10-02T23:50:00Z");
+  const agenda = [
+    { id: "a", scheduled_at: "2026-10-02T23:10:00Z", opponent_name: "BDL Esports", status: "scheduled", live_seen_at: "2026-10-02T23:49:20Z", live_strix_score: 2, live_opponent_score: 1, live_minute: 67 },
+    { id: "b", scheduled_at: "2026-10-03T00:10:00Z", opponent_name: "Night Hunters", status: "scheduled" },
+  ];
+  const model = buildHomeModel({ agenda, matches: [], now: live });
+  assert.equal(model.mode, "next");
+  assert.equal(model.next.match.id, "a");
+  assert.equal(model.next.state.kind, "live");
+  assert.deepEqual(model.next.state.live, { strix: 2, opponent: 1, minute: 67 });
+  // sinal velho: volta a valer o próximo horário
+  const stale = buildHomeModel({ agenda, matches: [], now: new Date("2026-10-02T23:58:00Z") });
+  assert.equal(stale.next.match.id, "b");
+});

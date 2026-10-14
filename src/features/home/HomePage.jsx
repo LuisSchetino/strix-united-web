@@ -9,6 +9,7 @@ import { notify } from "../../ui/motion/motion.jsx";
 import { agoLabel, rescheduleLabel, rescheduleOf } from "../notifications/notifications-core.js";
 import { NoticeEditor } from "./NoticeEditor.jsx";
 import { AnimatedNumber } from "../../ui/motion/motion.jsx";
+import { LiveBoard } from "./LiveBoard.jsx";
 import "./home.css";
 
 const ZONE = "America/Sao_Paulo";
@@ -43,11 +44,13 @@ function NowBlock({ next, navigate, stake, now }) {
     <section className={`home-now home-intro is-${state.kind}`} aria-labelledby="home-now-title">
       <i className="home-intro-sweep" aria-hidden="true" />
       <header className="home-now-head">
-        <p className="home-now-when"><span className="home-now-pulse" aria-hidden="true" /><span key={state.label} className="home-now-state">{isToday ? "Hoje" : "Próxima partida"} · {state.label}</span></p>
+        <p className="home-now-when"><span className="home-now-pulse" aria-hidden="true" /><span key={state.label} className="home-now-state">{state.live ? "Ao vivo" : `${isToday ? "Hoje" : "Próxima partida"} · ${state.label}`}</span></p>
         <p className="home-now-competition">{match.round_label || match.competition_name || "Amistoso"}</p>
       </header>
-      <time className="home-kickoff" dateTime={match.scheduled_at}>{kickoffTime(match.scheduled_at)}</time>
-      {moved && <p className="home-moved"><span>Horário mudou</span>{rescheduleLabel(moved)}</p>}
+      {state.live
+        ? <LiveBoard match={match} live={state.live} kickoff={kickoffTime(match.scheduled_at)} />
+        : <time className="home-kickoff" dateTime={match.scheduled_at}>{kickoffTime(match.scheduled_at)}</time>}
+      {!state.live && moved && <p className="home-moved"><span>Horário mudou</span>{rescheduleLabel(moved)}</p>}
       <h2 id="home-now-title" className="home-fixture">
         <span className="home-fixture-side"><Strix size={52} priority /><b>{strixName(match.opponent_name)}</b></span>
         <span className="home-fixture-x" aria-label="contra">×</span>

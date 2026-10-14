@@ -1,3 +1,5 @@
+import { isLiveFresh } from "../../../shared/live-signal.js";
+
 const ZONE = "America/Sao_Paulo";
 const rows = (value) => Array.isArray(value) ? value : [];
 
@@ -125,7 +127,8 @@ export function agendaListMatches(matches = [], now = new Date()) {
         ...match,
         status: cancelled ? "cancelled" : match.status,
         temporal_status: cancelled ? "cancelled" : classifyAgendaMatch(match, now),
-        list_day: day === today ? "today" : day > today ? "upcoming" : "past",
+        // a game on the pitch (by the PC watcher) stays in "today" past midnight
+        list_day: day === today || (!cancelled && isLiveFresh(match, now)) ? "today" : day > today ? "upcoming" : "past",
       };
     })
     .sort((left, right) => new Date(left.scheduled_at) - new Date(right.scheduled_at));

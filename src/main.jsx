@@ -41,6 +41,7 @@ import { HomePage } from "./features/home/HomePage.jsx";
 import { PageHeader } from "./ui/PageHeader.jsx";
 import { useMinuteClock } from "./ui/useMinuteClock.js";
 import { agendaStatus, lineupState } from "./features/agenda/agenda-status.js";
+import { isLiveFresh } from "../shared/live-signal.js";
 import { LAUNCH_CONFIG, clearLaunchAccessVerification, consumeLaunchReturn, isLaunchUnlocked, launchGateDecision, readLaunchAccessVerification, rememberLaunchAccess } from "./launch.js";
 import { preloadClubLogos } from "./ui/provider-assets.js";
 import { STRIX_BRAND } from "./brand.js";
@@ -842,6 +843,31 @@ function useFc27Workspace(client, profile) {
       client.removeChannel(channel);
     };
   }, [client, profile?.user_id]);
+
+  // The phone drops the realtime socket when the screen sleeps or the app goes to the background:
+  // coming back always refreshes, and while a game of the night is near its kick-off (or the PC
+  // watcher is sending its scoreboard) the agenda is also re-read every 20 s.
+  useEffect(() => {
+    if (!client || !profile?.user_id) return undefined;
+    const back = () => { if (document.visibilityState === "visible") scheduleRealtimeRefresh(); };
+    document.addEventListener("visibilitychange", back);
+    window.addEventListener("focus", back);
+    const timer = setInterval(() => {
+      if (document.visibilityState !== "visible") return;
+      const at = Date.now();
+      const near = state.agenda.some((match) => {
+        if (["cancelled", "completed"].includes(match.status)) return false;
+        const kickoff = new Date(match.scheduled_at).getTime();
+        return (Number.isFinite(kickoff) && kickoff - at < 30 * 60_000 && at - kickoff < 3 * 3_600_000) || isLiveFresh(match, new Date(at));
+      });
+      if (near) void refresh();
+    }, 20_000);
+    return () => {
+      document.removeEventListener("visibilitychange", back);
+      window.removeEventListener("focus", back);
+      clearInterval(timer);
+    };
+  }, [client, profile?.user_id, state.agenda]);
 
   // The club notice arrives with a later migration. Its listener has a channel of its own, opened
   // only once the table answers, so a database without it keeps every other live update intact.
@@ -2242,6 +2268,8 @@ function AgendaLive({ navigate, workspace, profile, client = null, required = nu
     clearTarget("agenda");
   };
   const now = useMinuteClock();
+  // a game the PC watcher sees on the pitch right now: the others whose time came wait their turn
+  const onPitchNow = items.some((item) => isLiveFresh(item.db, now));
   const firstUpcoming = visible.findIndex((item) => !item.cancelled && new Date(item.db.scheduled_at).getTime() > now.getTime());
   const nowLineIndex = firstUpcoming === -1 ? visible.length : firstUpcoming;
   const nextTodayId = tab === "today" && firstUpcoming !== -1 ? visible[firstUpcoming].id : "";
@@ -2347,7 +2375,7 @@ function AgendaLive({ navigate, workspace, profile, client = null, required = nu
       <section className="agenda-list" aria-busy={workspace.loading} {...swipeTabs}>
         <div className="agenda-list-heading"><span>{tab === "next" ? "DATA · HORÁRIO" : "HORÁRIO"}</span><span>PARTIDA</span><span>CAMPEONATO</span><span>STATUS</span><span aria-hidden="true" /></div>
         {visible.length ? visible.map((item, index) => {
-          const status = agendaStatus(item.db, now);
+          const status = agendaStatus(item.db, now, { onPitch: onPitchNow });
           const lineup = lineupState(item.db);
           const showNowLine = tab === "today" && index === nowLineIndex;
           return (
@@ -2360,10 +2388,17 @@ function AgendaLive({ navigate, workspace, profile, client = null, required = nu
               <time className={tab === "next" ? "future-kickoff" : ""}>{tab === "next" && <span>{item.date}</span>}<b>{item.time}</b></time>
               <div className="agenda-match">
                 <Avatar name={item.opponent} logo={item.logo} />
-                <div>{item.previousOpponent && <small className="replaced-opponent"><s>{item.previousOpponent}</s></small>}<b>{item.opponent}</b><small className={`agenda-lineup is-${lineup.kind}`}>{item.cancelled ? item.competition : lineup.short}</small>{(() => { const moved = rescheduleOf(item.db, now); return moved ? <small className="agenda-moved-line"><i className="agenda-moved">Horário mudou</i>{rescheduleLabel(moved)}</small> : null; })()}</div>
+                <div>{item.previousOpponent && <small className="replaced-opponent"><s>{item.previousOpponent}</s></small>}<b>{item.opponent}</b>{status.live ? <small className="agenda-live-line"><b>{status.live.strix}<i>×</i>{status.live.opponent}</b>{Number.isFinite(status.live.minute) ? <span>{status.live.minute}'</span> : null}</small> : null}<small className={`agenda-lineup is-${lineup.kind}${status.live ? " is-live-hidden" : ""}`}>{item.cancelled ? item.competition : lineup.short}</small>{(() => { const moved = rescheduleOf(item.db, now); return moved ? <small className="agenda-moved-line"><i className="agenda-moved">Horário mudou</i>{rescheduleLabel(moved)}</small> : null; })()}</div>
               </div>
               <span className="game-competition">{item.competition}{item.leg ? <i className="leg-tag">{item.leg === "ida" ? "Jogo de ida" : "Jogo de volta"}</i> : null}</span>
-              <em className={`agenda-status is-${status.tone}`}>{status.label}</em>
+              {status.live ? (
+                <em className="agenda-status is-live" aria-label={status.label}>
+                  <i className="live-dot" aria-hidden="true" />
+                  <span className="live-tag">Ao vivo</span>
+                  <b className="live-score">{status.live.strix}<i>×</i>{status.live.opponent}</b>
+                  {Number.isFinite(status.live.minute) ? <span className="live-minute">{status.live.minute}'</span> : null}
+                </em>
+              ) : <em className={`agenda-status is-${status.tone}`}>{status.label}</em>}
             </button>
             {canManageAgenda(profile) && <button className="agenda-more" data-agenda-menu-trigger aria-haspopup="menu" aria-expanded={actions === item.id} aria-label={`Ações para ${item.opponent}`} onClick={(event) => { event.stopPropagation(); setActions(actions === item.id ? null : item.id); }}><Icon name="more" size={20} /></button>}
             {canManageAgenda(profile) && actions === item.id && <div className="agenda-actions" role="menu" onClick={(event) => event.stopPropagation()} onKeyDown={(event) => {

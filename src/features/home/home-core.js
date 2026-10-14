@@ -4,6 +4,7 @@ import { agendaHeroSelection, isResultOfGame, matchNightDay, nextAgendaMatches, 
 import { aggregateTeamStatistics, summarizeNight, uniqueMatches } from "../statistics/statistics-core.js";
 import { lineupState, untilLabel } from "../agenda/agenda-status.js";
 import { resolveLineupRosterPlayer } from "../agenda/lineup-core.js";
+import { isLiveFresh } from "../../../shared/live-signal.js";
 import { LINEUP_SLOTS } from "../agenda/lineup-suggest.js";
 
 export { lineupState };
@@ -58,6 +59,8 @@ export const RESULT_LABEL = Object.freeze({ V: "Vitória", E: "Empate", D: "Derr
 
 function nowState(match, now) {
   if (!match) return null;
+  // the PC watcher read the scoreboard a moment ago: the game is on, with its score and minute
+  if (isLiveFresh(match, now)) return { kind: "live", label: "Ao vivo", live: { strix: match.live_strix_score, opponent: match.live_opponent_score, minute: match.live_minute } };
   const minutes = (new Date(match.scheduled_at).getTime() - now.getTime()) / MINUTE;
   if (minutes > 0) return { kind: "upcoming", label: relativeKickoff(match.scheduled_at, now) };
   if (minutes > -STARTED_WINDOW_MIN) return { kind: "started", label: `Começou às ${kickoffTime(match.scheduled_at)}` };
@@ -142,7 +145,9 @@ export function tonightPlayed({ agenda = [], matches = [], now = new Date() } = 
 }
 
 export function buildHomeModel({ agenda = [], matches = [], now = new Date(), players, aliases } = {}) {
-  const hero = agendaHeroSelection(agenda, now);
+  // A game on the pitch right now (by the watcher) leads the Home over the next kick-off.
+  const onPitch = (agenda || []).find((row) => !["cancelled", "completed"].includes(row?.status) && isLiveFresh(row, now));
+  const hero = onPitch ? { match: onPitch, isToday: true } : agendaHeroSelection(agenda, now);
   const tonight = todayAgendaMatches(agenda, now);
   const upcoming = nextAgendaMatches(agenda, now);
   const todayKey = saoPauloDay(now);

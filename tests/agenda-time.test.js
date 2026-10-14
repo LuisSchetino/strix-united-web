@@ -87,3 +87,13 @@ test("ida e volta: dois jogos da mesma noite contra o mesmo clube no mesmo campe
   const friendly = { competition_name: "AMISTOSO" };
   assert.equal(agendaLeg(game("f", "21:10", friendly), [game("f", "21:10", friendly), game("g", "21:40", friendly)]), "", "amistoso não tem ida e volta");
 });
+
+test("jogo ao vivo pelo vigia continua em Hoje depois da meia-noite", async () => {
+  const { agendaListMatches } = await import("../src/features/agenda/agenda-time.js");
+  const now = new Date("2026-10-04T00:10:00-03:00");
+  const rows = [
+    { id: "live", status: "scheduled", scheduled_at: "2026-10-03T23:40:00-03:00", live_seen_at: "2026-10-04T00:09:30-03:00" },
+    { id: "over", status: "scheduled", scheduled_at: "2026-10-03T23:10:00-03:00", live_seen_at: "2026-10-03T23:58:00-03:00" },
+  ];
+  assert.deepEqual(agendaListMatches(rows, now).map((row) => `${row.id}:${row.list_day}`), ["over:past", "live:today"]);
+});

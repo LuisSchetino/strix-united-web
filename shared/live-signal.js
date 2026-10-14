@@ -42,7 +42,16 @@ export function parseScoreboard(text) {
   return null;
 }
 
-const letters = (value) => strip(value).toUpperCase().replace(/[^A-Z0-9 ]+/g, " ").trim();
+// "HuntersES" é "Hunters ES": a maiúscula depois da minúscula começa outra palavra.
+const letters = (value) => strip(value).replace(/([a-z])([A-Z])/g, "$1 $2").toUpperCase().replace(/[^A-Z0-9 ]+/g, " ").trim();
+
+/**
+ * Siglas que o jogo mostra e que não saem do nome do clube: sigla → começo do nome do
+ * adversário na Agenda. Vale o que o placar do FC 27 escreve de fato.
+ */
+export const OPPONENT_TAG_ALIASES = Object.freeze({
+  NHE: "NIGHT HUNTERS",
+});
 
 /**
  * Quanto uma sigla do placar parece o nome do adversário (0 = nada). Vale o começo do nome
@@ -53,6 +62,8 @@ export function tagScore(tag, name) {
   const words = letters(name).split(" ").filter(Boolean);
   if (!tag || !words.length) return 0;
   const joined = words.join("");
+  const alias = OPPONENT_TAG_ALIASES[tag];
+  if (alias && words.join(" ").startsWith(alias)) return 4;
   if (joined.startsWith(tag)) return 3;
   // palavras curtas entram inteiras: "Sinceridade FC" vira "SFC"
   const initials = words.map((word) => (word.length <= 3 ? word : word[0])).join("");
@@ -118,5 +129,6 @@ export function liveUpdate(board, strixLeft, now = new Date(), previous = {}) {
 /** O jogo está em campo agora pelo último sinal do vigia? */
 export function isLiveFresh(match, now = new Date()) {
   const seen = new Date(match?.live_seen_at || "").getTime();
-  return Number.isFinite(seen) && now.getTime() - seen <= LIVE_FRESH_MS && now.getTime() >= seen - 60_000;
+  // a little slack for a reading newer than the page's minute clock (or a PC clock ahead)
+  return Number.isFinite(seen) && now.getTime() - seen <= LIVE_FRESH_MS && now.getTime() >= seen - 2 * 60_000;
 }

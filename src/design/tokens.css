@@ -61,6 +61,8 @@
   --rastro-blue: #2F80FF;
   --rastro-blue-soft: rgba(47, 128, 255, 0.16);
   --rastro-blue-subtle: rgba(47, 128, 255, 0.08);
+  /* The one red on the site: a game on the pitch right now (the PC watcher's "ao vivo"). */
+  --live-red: #ff4d5e;
   --next-clubs-accent: #c7ff2f;
 
   /* Data. Rastro Blue as information: a measured value, its trend, its mark. */

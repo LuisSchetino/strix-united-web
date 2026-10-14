@@ -32,8 +32,8 @@ export function MatchStage({ opponent, logo, date, time, competition, group = ""
       <FaceOff
         home={{ name: strixName(opponent), logo: STRIX_BRAND.logo }}
         away={{ name: opponent || "—", logo }}
-        time={time}
-        day={scheduledAt ? kickoffDay(scheduledAt) : date}
+        time={moment?.live ? `${moment.live.strix ?? 0}×${moment.live.opponent ?? 0}` : time}
+        day={moment?.live ? `Começou às ${time}` : scheduledAt ? kickoffDay(scheduledAt) : date}
         dateTime={scheduledAt}
       />
       {stake && <p className="now-card-stake"><span>Em jogo</span>{stake}</p>}
