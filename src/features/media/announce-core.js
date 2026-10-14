@@ -238,10 +238,10 @@ export function individualAnnounceDuration() {
 // squad from the back line forward. Each chapter opens with its own title card.
 const SECTION_OF_ROLE = Object.freeze({ diretoria: "diretoria", conselho: "conselho", staff: "staff", manager: "staff" });
 const SECTION_COPY = Object.freeze({
-  diretoria: { title: ["A DIRETORIA", "STRIX."], kicker: "QUEM COMANDA O PROJETO" },
-  conselho: { title: ["O CONSELHO", "STRIX."], kicker: "QUEM DECIDE JUNTO" },
-  staff: { title: ["O STAFF", "STRIX."], kicker: "QUEM FAZ O CLUBE RODAR" },
-  elenco: { title: ["O ELENCO", "FC 27."], kicker: "DA DEFESA AO ATAQUE" },
+  diretoria: { title: ["DIRETORIA", "STRIX."], kicker: "QUEM COMANDA O STRIX" },
+  conselho: { title: ["CONSELHO", "STRIX."], kicker: "QUEM DECIDE JUNTO" },
+  staff: { title: ["STAFF", "STRIX."], kicker: "QUEM FAZ O CLUBE RODAR" },
+  elenco: { title: ["ELENCO", "FC 27."], kicker: "DA DEFESA AO ATAQUE" },
 });
 const SECTION_ORDER = Object.freeze(["diretoria", "conselho", "staff", "elenco"]);
 const GROUP_RANK = Object.freeze({ GOL: 0, DEF: 1, MEI: 2, ATA: 3 });

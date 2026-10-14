@@ -1847,8 +1847,8 @@ export function paintEditorialAnnounce(ctx, { timeline, time = 0, assets } = {})
   }
   const person = scene?.person || people[0];
   if (!person) return;
-  const index = scene?.index || 0;
-  const asset = assets?.byId?.[person.id] || assets?.players?.[index];
+  // his own picture only: the pictures are not in the film's order (see night-announce-paint.js)
+  const asset = assets?.byId?.[person.id] || null;
   const accent = roleAccent(person);
   playScene(ctx, timeline, elapsed, length, () => paintPersonScene(ctx, timeline, person, asset, elapsed, {
     kicker: accent ? "" : GROUP_WORD[person.group] || "",

@@ -61,7 +61,11 @@ export function wrapLines(ctx, text, { family = WIDE, weight = 700, size, stretc
 
 // A name is set in the blackletter only when it is letters: its numerals are not used.
 export const lettersOnly = (name) => /^[\p{L} .'-]+$/u.test(name);
-export const asWritten = (name) => String(name || "").toLowerCase().replace(/(^|[\s.'-])(\p{L})/gu, (all, lead, letter) => lead + letter.toUpperCase());
+// Each word capitalised, except the small joining words inside a name ("Cara do Café").
+const JOINERS = new Set(["da", "das", "de", "do", "dos", "e"]);
+export const asWritten = (name) => String(name || "").toLowerCase()
+  .replace(/(^|[\s.'-])(\p{L})/gu, (all, lead, letter) => lead + letter.toUpperCase())
+  .replace(/(?<=\s)(Da|Das|De|Do|Dos|E)(?=\s)/gu, (word) => (JOINERS.has(word.toLowerCase()) ? word.toLowerCase() : word));
 
 // ---------------------------------------------------------------- the face
 const layers = new WeakMap();
