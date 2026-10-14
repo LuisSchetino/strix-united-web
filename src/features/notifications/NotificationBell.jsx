@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { IconAward, IconBell, IconBooks, IconClock, IconShirtSport, IconSoccerField, IconSpeakerphone, IconTrophy } from "@tabler/icons-react";
+import { IconAward, IconBell, IconBooks, IconClock, IconMessageReport, IconShirtSport, IconSoccerField, IconSpeakerphone, IconTrophy } from "@tabler/icons-react";
 import { useMinuteClock } from "../../ui/useMinuteClock.js";
 import { agoLabel, markSeen, readSeen } from "./notifications-core.js";
 import "./notifications.css";
@@ -12,6 +12,7 @@ const KIND_ICON = {
   material: IconBooks,
   milestone: IconAward,
   competition: IconTrophy,
+  problem: IconMessageReport,
 };
 
 /**

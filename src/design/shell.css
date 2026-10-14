@@ -927,3 +927,34 @@ button.now-playing.is-agenda-free .crest {
 .sidebar.is-compact .sidebar-install span {
   display: none;
 }
+
+/* "Reportar problema": a quiet line in the dock, for when something on the site went wrong. */
+.sidebar-report {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: 40px;
+  margin-bottom: var(--space-2);
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-3);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-align: left;
+  transition: background var(--motion-micro), color var(--motion-micro);
+}
+.sidebar-report:hover,
+.sidebar-report:focus-visible {
+  background: var(--ink-3);
+  color: var(--text-1);
+}
+.sidebar.is-compact .sidebar-report {
+  justify-content: center;
+  padding: 0;
+}
+.sidebar.is-compact .sidebar-report span {
+  display: none;
+}

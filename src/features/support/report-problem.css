@@ -1,0 +1,187 @@
+/* "Reportar problema": the same ink dialog as the confirmations, with room to write. */
+.report-layer {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: grid;
+  place-items: center;
+  padding: var(--space-5);
+  background: rgba(5, 6, 7, 0.74);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  animation: motion-overlay-in var(--motion-modal) var(--motion-ease) both;
+}
+.report-dialog {
+  display: grid;
+  gap: var(--space-4);
+  width: min(520px, 100%);
+  max-height: calc(100dvh - 2 * var(--space-5));
+  overflow-y: auto;
+  padding: var(--space-6);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-lg);
+  background: var(--ink-1);
+  box-shadow: var(--shadow-sheet);
+  color: var(--text-1);
+  outline: none;
+  animation: confirm-dialog-in var(--motion-section) var(--motion-ease) both;
+}
+.report-dialog header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.report-mark {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px var(--line-3);
+}
+.report-dialog header small {
+  color: var(--text-3);
+  font-size: var(--text-label);
+  font-weight: 800;
+  letter-spacing: var(--track-label);
+}
+.report-dialog h2 {
+  margin: 2px 0 0;
+  font-size: var(--text-xl);
+  font-weight: 800;
+  letter-spacing: var(--track-tight);
+  line-height: 1.2;
+}
+.report-field .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.report-field textarea {
+  display: block;
+  width: 100%;
+  min-height: 120px;
+  resize: vertical;
+  padding: var(--space-3);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-md);
+  background: var(--ink-0, #050607);
+  color: var(--text-1);
+  font: inherit;
+  font-size: var(--text-md);
+  line-height: 1.5;
+}
+.report-field textarea:focus-visible {
+  outline: none;
+  border-color: var(--line-3);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.08);
+}
+.report-attach {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--hit);
+  padding: var(--space-2) var(--space-3);
+  border: 1px dashed var(--line-3);
+  border-radius: var(--radius-md);
+  color: var(--text-2);
+  cursor: pointer;
+}
+.report-attach:hover { color: var(--text-1); border-color: var(--text-3); }
+.report-attach span { display: grid; gap: 2px; }
+.report-attach b { color: var(--text-1); font-size: var(--text-sm); }
+.report-attach small { color: var(--text-3); font-size: var(--text-xs); }
+.report-attach input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.report-attach:focus-within { box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.08); }
+.report-picture figure {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0;
+  padding: var(--space-2);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-md);
+}
+.report-picture img {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-sm, 6px);
+  object-fit: cover;
+}
+.report-picture figcaption {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-2);
+  font-size: var(--text-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.report-remove {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  margin-left: auto;
+  padding: 0;
+  border-radius: 50%;
+}
+.report-context {
+  color: var(--text-3);
+  font-size: var(--text-xs);
+}
+.report-context summary {
+  cursor: pointer;
+  font-weight: 700;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+}
+.report-context dl {
+  display: grid;
+  gap: 6px;
+  margin: var(--space-2) 0 0;
+}
+.report-context dl div {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr);
+  gap: var(--space-2);
+}
+.report-context dt { color: var(--text-3); }
+.report-context dd { margin: 0; overflow-wrap: anywhere; color: var(--text-2); }
+.report-error {
+  margin: 0;
+  color: var(--state-danger-text);
+  font-size: var(--text-xs);
+}
+.report-dialog footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+.report-dialog footer button {
+  min-height: var(--hit);
+  padding: 0 var(--space-5);
+  font-size: var(--text-label);
+  font-weight: 800;
+  letter-spacing: var(--track-label);
+}
+@media (max-width: 560px) {
+  .report-layer { align-items: end; padding: 0; }
+  .report-dialog {
+    width: 100%;
+    max-height: 92dvh;
+    padding: var(--space-5) var(--space-4) calc(var(--space-5) + env(safe-area-inset-bottom));
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  }
+  .report-dialog footer button { flex: 1; }
+}

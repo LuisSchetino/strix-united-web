@@ -137,6 +137,9 @@ export function commandItems({ profile, workspace = {}, navigate, now = new Date
   if (extras.install) {
     actions.push({ id: "action-install", kind: "action", label: "Instalar o Strix neste aparelho", meta: "Ação", icon: "plus", run: extras.install });
   }
+  if (extras.report) {
+    actions.push({ id: "action-report", kind: "action", label: "Reportar problema", meta: "Ação · algo deu errado no site", icon: "report", run: extras.report });
+  }
   if (extras.signOut) {
     actions.push({ id: "action-sign-out", kind: "action", label: "Sair da conta", meta: "Ação", icon: "logout", run: extras.signOut });
   }

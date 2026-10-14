@@ -9,6 +9,8 @@ import { clubMilestones } from "../players/milestones.js";
 import { rosterProfiles } from "../players/roster-profiles.js";
 import { NotificationBell } from "./NotificationBell.jsx";
 import { buildNotifications } from "./notifications-core.js";
+import { problemNotices } from "../support/problem-core.js";
+import { writeRemembered } from "../../ui/useRemembered.js";
 
 const WEEK = 7 * 86_400_000;
 
@@ -37,8 +39,15 @@ export function NotificationCenter({ workspace, profile, ownPlayer, library, nav
       // While the day's required plays are owed, the bell does not say where he plays either.
       now, player: ownPlayer, mine: lineupsLocked ? null : mine, agenda: workspace.agenda, matches: workspace.matches,
       library: glance, milestones, notice: workspace.notice, endedEditions: ended, canArchive: canManageCompetitions(profile),
+      problems: problemNotices({ reports: workspace.problemReports, profile, now }),
     }),
-    [now, ownPlayer, mine, lineupsLocked, workspace.agenda, workspace.matches, glance, milestones, workspace.notice, ended, profile],
+    [now, ownPlayer, mine, lineupsLocked, workspace.agenda, workspace.matches, glance, milestones, workspace.notice, ended, profile, workspace.problemReports],
   );
-  return <NotificationBell notices={notices} onOpen={(target) => target?.page && navigate(target.page, target.id ? { id: target.id, params: target.params } : undefined)} />;
+  const open = (target) => {
+    if (!target?.page) return;
+    // a notice may open its page on a given tab (the Desenvolvedor's "Problemas")
+    if (Array.isArray(target.remember)) writeRemembered(target.remember[0], target.remember[1]);
+    navigate(target.page, target.id ? { id: target.id, params: target.params } : undefined);
+  };
+  return <NotificationBell notices={notices} onOpen={open} />;
 }

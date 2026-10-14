@@ -45,9 +45,9 @@ export function rescheduleLabel(change) {
  */
 export function buildNotifications({
   now = new Date(), player = null, mine = null, agenda = [], matches = [],
-  library = null, milestones = [], notice = null, endedEditions = [], canArchive = false,
+  library = null, milestones = [], notice = null, endedEditions = [], canArchive = false, problems = [],
 } = {}) {
-  const out = [];
+  const out = [...(problems || [])];
 
   if (notice?.body) {
     out.push({ key: `notice:${notice.id}:${notice.updated_at || notice.created_at}`, kind: "notice", title: "Recado da diretoria", text: notice.body, at: notice.updated_at || notice.created_at, target: { page: "central" } });

@@ -1,0 +1,178 @@
+/* Desenvolvedor › Problemas */
+.problems-panel {
+  padding: 20px;
+  border: 1px solid var(--strix-border, var(--line-2));
+  border-radius: 15px;
+  background: #0b0d10;
+}
+.problems-panel > header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+.problems-panel > header span {
+  color: #c7ccd1;
+  font-size: var(--text-label);
+  font-weight: 800;
+  letter-spacing: var(--track-label);
+}
+.problems-panel h2 {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 4px 0 0;
+  font-size: var(--text-xl);
+}
+.problems-panel h2 em {
+  color: var(--text-3);
+  font-size: var(--text-sm);
+  font-style: normal;
+  font-weight: 600;
+}
+.problems-filter {
+  display: inline-flex;
+  gap: 4px;
+  padding: 3px;
+  border: 1px solid var(--line-2);
+  border-radius: 11px;
+}
+.problems-filter button {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-3);
+  font-size: var(--text-label);
+  font-weight: 800;
+  letter-spacing: var(--track-label);
+}
+.problems-filter button.is-active {
+  background: var(--text-1);
+  color: var(--ink-0);
+}
+.problems-empty { margin: 0; color: var(--text-3); }
+.problems-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.problem-card {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--line-2);
+  border-radius: 13px;
+  background: var(--ink-1);
+}
+.problem-card.is-resolved { opacity: 0.72; }
+.problem-card > header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.problem-card > header time {
+  margin-left: auto;
+  color: var(--text-3);
+  font-size: var(--text-xs);
+}
+.problem-status {
+  padding: 3px 9px;
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1px var(--line-3);
+  color: var(--text-1);
+  font-size: var(--text-label);
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+}
+.problem-card.is-open .problem-status { background: var(--text-1); color: var(--ink-0); box-shadow: none; }
+.problem-card.is-resolved .problem-status { color: var(--state-success); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--state-success) 50%, transparent); }
+.problem-message {
+  margin: 0;
+  color: var(--text-1);
+  font-size: var(--text-md);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.problem-facts {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  font-size: var(--text-xs);
+}
+.problem-facts div {
+  display: grid;
+  grid-template-columns: 80px minmax(0, 1fr);
+  gap: 8px;
+}
+.problem-facts dt { color: var(--text-3); }
+.problem-facts dd { margin: 0; color: var(--text-2); overflow-wrap: anywhere; }
+.problem-errors { font-size: var(--text-xs); color: var(--text-3); }
+.problem-errors summary { cursor: pointer; font-weight: 700; }
+.problem-errors ol {
+  display: grid;
+  gap: 6px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.problem-errors li {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: 2px 8px;
+}
+.problem-errors li span { color: var(--text-3); text-transform: uppercase; font-weight: 700; }
+.problem-errors code { color: var(--text-1); overflow-wrap: anywhere; white-space: pre-wrap; }
+.problem-errors small { grid-column: 2; color: var(--text-4); }
+.problem-picture img {
+  display: block;
+  max-width: min(100%, 420px);
+  max-height: 320px;
+  border: 1px solid var(--line-2);
+  border-radius: 10px;
+  object-fit: contain;
+}
+.problem-picture-button,
+.problem-card footer button,
+.problem-resolve button {
+  min-height: 38px;
+  padding: 0 14px;
+  font-size: var(--text-label);
+  font-weight: 800;
+  letter-spacing: var(--track-label);
+}
+.problem-picture-button { justify-self: start; }
+.problem-card footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.problem-resolve {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.problem-resolve input {
+  flex: 1 1 240px;
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--line-2);
+  border-radius: 9px;
+  background: var(--ink-0);
+  color: var(--text-1);
+  font: inherit;
+  font-size: var(--text-sm);
+}
+@media (max-width: 560px) {
+  .problems-panel { padding: 14px; }
+  .problem-card footer button, .problem-resolve button { flex: 1; }
+}

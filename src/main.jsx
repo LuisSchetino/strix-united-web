@@ -1,6 +1,6 @@
 import {
   IconArrowsExchange, IconBallFootball, IconBell, IconBooks, IconBroadcast, IconCalendar, IconChartBar, IconChartRadar,
-  IconChevronLeft, IconChevronRight, IconClock, IconDots, IconFileText, IconLayoutGrid, IconLink, IconLogout, IconMenu2, IconPencil,
+  IconChevronLeft, IconChevronRight, IconClock, IconDots, IconFileText, IconLayoutGrid, IconLink, IconLogout, IconMenu2, IconMessageReport, IconPencil,
   IconDeviceMobileDown, IconPlus, IconSearch, IconShield, IconShoe, IconSoccerField, IconTrash, IconTrophy, IconUpload, IconUsers, IconVideo, IconX,
 } from "@tabler/icons-react";
 import React, { StrictMode, Suspense, lazy, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -42,6 +42,8 @@ import { PageHeader } from "./ui/PageHeader.jsx";
 import { useMinuteClock } from "./ui/useMinuteClock.js";
 import { agendaStatus, lineupState } from "./features/agenda/agenda-status.js";
 import { isOnPitch } from "../shared/live-signal.js";
+import { installProblemCapture } from "./features/support/problem-core.js";
+import { ReportProblem } from "./features/support/ReportProblem.jsx";
 import { LAUNCH_CONFIG, clearLaunchAccessVerification, consumeLaunchReturn, isLaunchUnlocked, launchGateDecision, readLaunchAccessVerification, rememberLaunchAccess } from "./launch.js";
 import { preloadClubLogos } from "./ui/provider-assets.js";
 import { STRIX_BRAND } from "./brand.js";
@@ -156,6 +158,7 @@ const icons = {
   arrow: IconChevronRight, upload: IconUpload, edit: IconPencil, trash: IconTrash, details: IconFileText,
   goal: IconBallFootball, assist: IconShoe, pass: IconArrowsExchange, shield: IconShield, link: IconLink,
   chevronLeft: IconChevronLeft, more: IconDots, grid: IconLayoutGrid, clock: IconClock, install: IconDeviceMobileDown,
+  report: IconMessageReport,
 };
 function Icon({ name, size = 20 }) {
   const Glyph = icons[name];
@@ -673,6 +676,8 @@ function useFc27Workspace(client, profile) {
     nightRelated: [],
     notice: null,
     noticeAvailable: false,
+    problemReports: [],
+    problemsAvailable: false,
     schemaPending: false,
     error: "",
   });
@@ -688,7 +693,7 @@ function useFc27Workspace(client, profile) {
       return refreshInFlight.current;
     }
     const task = (async () => {
-    const [agendaResult, logosResult, playersResult, aliasesResult, matchesResult, competitionsResult, editionsResult, sourcesResult, fixturesResult, teamsResult, flagsResult, nightRelatedResult, noticeResult] = await Promise.all([
+    const [agendaResult, logosResult, playersResult, aliasesResult, matchesResult, competitionsResult, editionsResult, sourcesResult, fixturesResult, teamsResult, flagsResult, nightRelatedResult, noticeResult, problemsResult] = await Promise.all([
       client.from("agenda_matches").select("*, opponent_logos!agenda_matches_opponent_logo_id_fkey(*)").order("scheduled_at", { ascending: true }),
       readAllLogos(client),
       client.from("club_players").select("*").order("display_name"),
@@ -702,6 +707,8 @@ function useFc27Workspace(client, profile) {
       client.from("system_flags").select("*").order("key"),
       client.from("night_related").select("*").order("night_date", { ascending: false }),
       client.from("club_notices").select("*").eq("is_active", true).order("created_at", { ascending: false }).limit(1),
+      // "Reportar problema": each member reads their own reports; dev reads all (RLS).
+      client.from("problem_reports").select("*").order("created_at", { ascending: false }).limit(200),
     ]);
     const failure = [agendaResult, logosResult, playersResult, aliasesResult, matchesResult].find((result) => result.error)?.error;
     if (failure) {
@@ -805,6 +812,8 @@ function useFc27Workspace(client, profile) {
       // The club notice is optional: before its migration the Central simply has none and nobody is offered to write one.
       notice: noticeResult.error ? null : (noticeResult.data || [])[0] || null,
       noticeAvailable: !noticeResult.error,
+      problemReports: problemsResult.error ? [] : (problemsResult.data || []),
+      problemsAvailable: !problemsResult.error,
       schemaPending: optionalResults.some((result) => isMissingOptionalSchema(result.error)),
       error: optionalFailure?.message || "",
     });
@@ -908,6 +917,27 @@ function useFc27Workspace(client, profile) {
       .subscribe();
     return () => { client.removeChannel(channel); };
   }, [client, profile?.user_id, state.noticeAvailable]);
+
+  useEffect(() => {
+    if (!client || !profile?.user_id || !state.problemsAvailable) return undefined;
+    const channel = client
+      .channel("fc27-problem-reports")
+      .on("postgres_changes", { event: "*", schema: "public", table: "problem_reports" }, scheduleRealtimeRefresh)
+      .subscribe();
+    return () => { client.removeChannel(channel); };
+  }, [client, profile?.user_id, state.problemsAvailable]);
+  const setProblemStatus = async (id, status, note = "") => {
+    if (profile?.access_tier !== "dev") throw permissionDenied("Só o Desenvolvimento muda o status de um problema.");
+    const resolved = status === "resolved";
+    const { error } = await client.from("problem_reports").update({
+      status,
+      resolution_note: resolved ? String(note || "").trim().slice(0, 600) : "",
+      resolved_at: resolved ? new Date().toISOString() : null,
+      resolved_by: resolved ? profile.user_id : null,
+    }).eq("id", id);
+    if (error) throw error;
+    await refresh();
+  };
 
   const resolveLogo = async (name, file) => {
     const existing = matchingLogo(state.logos, name);
@@ -1173,6 +1203,7 @@ function useFc27Workspace(client, profile) {
     upsertClubMatch,
     removeClubMatch,
     savePlayerAliases,
+    setProblemStatus,
     upsertClubMatches: async (matches, source = "ea_api") => {
       try {
         for (const match of matches) await upsertClubMatch(match, match.importSource || source, false);
@@ -1303,6 +1334,7 @@ function Sidebar({
   setMobileOpen,
   profile,
   signOut,
+  onReport,
 }) {
   const warmRoute = (id) => () => { void preloadRoute(id); };
   const installMode = useInstallMode();
@@ -1368,6 +1400,12 @@ function Sidebar({
         <button type="button" className="sidebar-install" onClick={() => void installApp()} aria-label="Instalar o Strix neste aparelho" data-tooltip={collapsed ? "Instalar app" : undefined}>
           <Icon name="install" size={18} />
           <span><b>Instalar app</b><small>Abre em tela cheia, com ícone no aparelho</small></span>
+        </button>
+      )}
+      {onReport && (
+        <button type="button" className="sidebar-report" onClick={() => { setMobileOpen(false); onReport(); }} aria-label="Reportar problema" data-tooltip={collapsed ? "Reportar problema" : undefined}>
+          <Icon name="report" size={18} />
+          <span>Reportar problema</span>
         </button>
       )}
       <RastroSignature compact={collapsed} />
@@ -3426,6 +3464,7 @@ function App() {
     [compact, setCompact] = useRemembered("menu-compact", false, { scope: "device" }),
     [mobileOpen, setMobileOpen] = useState(false),
     [command, setCommand] = useState(false),
+    [reportOpen, setReportOpen] = useState(false),
     [createOpen, setCreateOpen] = useState(false),
     [contractSignedFor, setContractSignedFor] = useState(""),
     [contractShownFor, setContractShownFor] = useState(readContractOpen),
@@ -3623,6 +3662,7 @@ function App() {
     library: { items: library.items, resume: libraryNow.resume ? { id: libraryNow.resume.item.id, title: libraryNow.resume.item.title } : null },
     tour: () => { navigate("central"); setTour("open"); },
     install: installMode ? () => void installApp() : undefined,
+    report: () => setReportOpen(true),
   };
   // The walk waits for the opening to leave: one thing at a time.
   const tourOpen = !openingNode && (tour === "open" || (tour === "auto" && !workspace.loading && active === "central" && shouldShowTour(window.localStorage, auth.profile.user_id)));
@@ -3653,6 +3693,7 @@ function App() {
         setMobileOpen={setMobileOpen}
         profile={auth.profile}
         signOut={auth.signOut}
+        onReport={() => setReportOpen(true)}
       />
       <main className="workspace">
         <header className="topbar">
@@ -3723,6 +3764,7 @@ function App() {
       )}
       {openingNode}
       {tourOpen && !command && <Tour profile={auth.profile} canSeeAnalysis={canViewPage(auth.profile, "analise")} onDone={closeTour} />}
+      {reportOpen && <ReportProblem client={auth.client} profile={auth.profile} onClose={() => setReportOpen(false)} onSent={() => void workspace.refresh()} />}
       <ToastViewport />
     </div>
   );
@@ -3730,6 +3772,7 @@ function App() {
 export { Sidebar, CentralLive, AgendaLive, FormationPicker, SquadPageV3, DataPage };
 
 watchForNewDeploy();
+installProblemCapture();
 if (document.getElementById("root")) createRoot(document.getElementById("root")).render(
   <StrictMode>
     <AppErrorBoundary>
