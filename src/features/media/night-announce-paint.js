@@ -57,7 +57,7 @@ function paintOne(ctx, timeline, t, assets) {
   } else nameBlock(ctx, g, t, plan.name, person, { phrase: timeline.phrase, phraseAt: plan.phrase });
   drawBand(ctx, g, ramp(t, plan.intro[1], 0.4, linear), { first: FIRST, middle: `${TYPE_LABEL[timeline.announceType] || "JOGADOR"}\nTEMPORADA FC 27` });
   dashes(ctx, g);
-  close(ctx, timeline, t, flare);
+  close(ctx, timeline, t, flare, assets);
 }
 
 /** A title such as "ELENCO FC 27" as the two lines it is set in; the second is blackletter only when it is letters. */
@@ -199,7 +199,7 @@ function paintSquad(ctx, timeline, t, assets) {
     band(`${pad2(scene.index + 1)} / ${pad2(people.length)}`);
   }
   dashes(ctx, g);
-  close(ctx, timeline, t, flare);
+  close(ctx, timeline, t, flare, assets);
 }
 
 export function paintNightAnnounce(ctx, { timeline, time = 0, assets } = {}) {

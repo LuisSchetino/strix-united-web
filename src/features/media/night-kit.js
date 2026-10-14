@@ -4,6 +4,7 @@
 // out). The pieces themselves are night-paint.js, night-summary-paint.js and
 // night-announce-paint.js; when things happen comes from night-plan.js.
 import { RASTRO_BLUE } from "./night-look.js";
+import { drawMarkBuilding, markSize, sponsorMarksOf } from "./partner-marks.js";
 
 export { RASTRO_BLUE };
 export const PALE = "#f4f4f1", GLOW = "rgba(47,128,255,0.75)";
@@ -263,9 +264,10 @@ export function open(ctx, timeline, t, pullFrom, from = 1.13) {
  * hit burns the picture white for an instant; then it drifts out of focus behind the glass
  * while the dark edge closes in on the face, until nothing is left.
  */
-export function close(ctx, timeline, t, flare) {
+export function close(ctx, timeline, t, flare, assets = null) {
   const { width, height, night: plan } = timeline, gone = goneAt(plan, t);
   ctx.restore();
+  if (!timeline.still && plan.partners != null && t >= plan.partners) drawPartners(ctx, timeline, t, sponsorMarksOf(assets));
   if (gone > 0.01 && ctx.canvas && typeof ctx.filter === "string") {
     ctx.save();
     ctx.filter = `blur(${(30 * gone ** 1.4).toFixed(1)}px)`;
@@ -334,5 +336,43 @@ export function drawCrest(ctx, bitmap, x, y, size, alpha = 1) {
   if (typeof ctx.filter === "string") ctx.filter = "grayscale(1) contrast(1.3) brightness(1.3)";
   const scale = size / Math.max(bitmap.width, bitmap.height), w = bitmap.width * scale, h = bitmap.height * scale;
   ctx.drawImage(bitmap, x + (size - w) / 2, y + (size - h) / 2, w, h);
+  ctx.restore();
+}
+
+/**
+ * The partners' card, before the light goes out: the piece dims, "PARCEIROS OFICIAIS" comes up,
+ * the marks build themselves in white one after the other (Rastro left to right, Next Clubs from
+ * its X), a blue line grows from the middle under them and the club signs below it.
+ */
+export function drawPartners(ctx, timeline, t, marks = []) {
+  const { width, height, night: plan } = timeline;
+  if (!marks.length) return;
+  const at = plan.partners, k = height / 1920, s = Math.max(k, 0.8), middle = height * 0.47;
+  const dim = ramp(t, at, 0.5, linear);
+  ctx.save();
+  const veil = ctx.createRadialGradient(width / 2, middle, 0, width / 2, middle, Math.max(width, height) * 0.7);
+  veil.addColorStop(0, `rgba(4,5,7,${(0.95 * dim).toFixed(3)})`); veil.addColorStop(1, `rgba(2,3,4,${(0.99 * dim).toFixed(3)})`);
+  ctx.fillStyle = veil; ctx.fillRect(0, 0, width, height);
+  const light = ctx.createRadialGradient(width / 2, middle, 0, width / 2, middle, width * 0.62);
+  light.addColorStop(0, `rgba(47,128,255,${(0.2 * dim).toFixed(3)})`); light.addColorStop(1, "rgba(47,128,255,0)");
+  ctx.fillStyle = light; ctx.fillRect(0, 0, width, height);
+  readout(ctx, marks.length === 1 ? "PARCEIRO OFICIAL" : "PARCEIROS OFICIAIS", width / 2, middle - 210 * k, 26 * s, { align: "center", color: PALE, alpha: 0.85 * ramp(t, at + 0.2, 0.4), tracking: 0.3 });
+  // the marks, one row, every one the same height, a thin blue line between them
+  const height0 = 140 * k, gap = 110 * k, room = width - 200, each = (room - gap * (marks.length - 1)) / marks.length;
+  const sizes = marks.map((mark) => markSize(mark, height0, each)), total = sizes.reduce((sum, size) => sum + size.w, 0) + gap * (marks.length - 1);
+  let x = width / 2 - total / 2;
+  ctx.shadowColor = GLOW; ctx.shadowBlur = 22 * k;
+  marks.forEach((mark, index) => {
+    const p = clamp((t - (at + 0.45 + index * 0.35)) / 1.05);
+    if (p > 0) {
+      drawMarkBuilding(ctx, mark, x, middle, sizes[index], p);
+      if (index) { ctx.save(); ctx.shadowBlur = 0; ctx.globalAlpha *= clamp(p * 2) * 0.8; ctx.fillStyle = RASTRO_BLUE; ctx.fillRect(x - gap / 2 - 1, middle - height0 * 0.42, 2, height0 * 0.84); ctx.restore(); }
+    }
+    x += sizes[index].w + gap;
+  });
+  ctx.shadowBlur = 0;
+  const run = ramp(t, at + 0.9, 1);
+  if (run > 0) { const half = (width / 2 - 110) * run; ctx.fillStyle = RASTRO_BLUE; ctx.globalAlpha = 0.9; ctx.fillRect(width / 2 - half, middle + 140 * k, half * 2, 3 * k); ctx.globalAlpha = 1; }
+  readout(ctx, "STRIX UNITED   ·   TEMPORADA FC 27", width / 2, middle + 180 * k, 20 * s, { align: "center", color: RASTRO_BLUE, alpha: ramp(t, at + 1.2, 0.4) });
   ctx.restore();
 }

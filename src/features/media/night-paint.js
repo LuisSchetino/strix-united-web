@@ -63,7 +63,7 @@ export function paintNightAgenda(ctx, { timeline, time = 0, assets, dayLabel = "
     ctx.restore();
   });
 
-  close(ctx, timeline, t, flare);
+  close(ctx, timeline, t, flare, assets);
 }
 
 // ---------------------------------------------------------------- Relacionados da noite
@@ -160,5 +160,5 @@ export function paintNightRelated(ctx, { timeline, time = 0, assets, dayLabel = 
     drawBand(ctx, g, 1, { first, middle: `${count}\nNOITE DE JOGO` });
   }
   dashes(ctx, g);
-  close(ctx, timeline, t, flare);
+  close(ctx, timeline, t, flare, assets);
 }

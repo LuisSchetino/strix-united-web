@@ -61,11 +61,13 @@ function pagesOn(count, clock, at, base) {
 const pageBlinks = (pages) => pages.flatMap((page) => [[page.start, 1], ...page.rows.flatMap((row, i) => [[row.at, i ? 0.65 : 0], [row.lit, 0.3]])]);
 
 /** What every plan carries: the frame rate, the ending (`off` → `end`, the light going out) and the blinks. */
+// Before the light goes out the partners sign the piece: their card takes this many beats.
+export const PARTNER_BEATS = 6;
 const finish = (clock, fps, frame, parts, offBeat, blinks) => {
-  const off = frame(clock.at(offBeat).at), last = clock.at(offBeat + 4).at;
+  const partners = frame(clock.at(offBeat).at), off = frame(clock.at(offBeat + PARTNER_BEATS).at), last = clock.at(offBeat + PARTNER_BEATS + 4).at;
   return {
-    fps, beat: clock.beat, ...parts, off, end: frame(last), endSound: last,
-    duration: Math.ceil((last + 0.55) * fps) / fps, blinks: [...blinks, [off, 1]], punchAt: clock.punchAt,
+    fps, beat: clock.beat, ...parts, partners, off, end: frame(last), endSound: last,
+    duration: Math.ceil((last + 0.55) * fps) / fps, blinks: [...blinks, [partners, 0.6], [off, 1]], punchAt: clock.punchAt,
   };
 };
 

@@ -87,5 +87,5 @@ export function paintNightSummary(ctx, { timeline, time = 0, assets } = {}) {
     drawBand(ctx, g, ramp(t, T, 0.27, linear), band);
   }
 
-  close(ctx, timeline, t, flare);
+  close(ctx, timeline, t, flare, assets);
 }
